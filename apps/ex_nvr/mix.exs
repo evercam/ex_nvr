@@ -17,9 +17,6 @@ defmodule ExNVR.MixProject do
     ]
   end
 
-  # Configuration for the OTP application.
-  #
-  # Type `mix help compile.app` for more information.
   def application do
     [
       mod: {ExNVR.Application, []},
@@ -41,7 +38,15 @@ defmodule ExNVR.MixProject do
       {:ecto_sqlite3, ">= 0.0.0"},
       {:jason, "~> 1.2"},
       {:swoosh, "~> 1.3"},
-      {:finch, "~> 0.13"}
+      {:finch, "~> 0.13"},
+      {:membrane_core, "~> 0.11.3"},
+      {:membrane_rtsp, "~> 0.5.0"},
+      {:membrane_rtp_plugin, "~> 0.21.0"},
+      {:membrane_rtp_h264_plugin, "~> 0.15.1"},
+      {:membrane_h264_plugin, "~> 0.2.1"},
+      {:membrane_mp4_plugin, "~> 0.19.0"},
+      {:membrane_file_plugin, "~> 0.13.2"},
+      {:connection, "~> 1.1.0"}
     ]
   end
 
