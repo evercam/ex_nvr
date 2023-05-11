@@ -1,5 +1,26 @@
 defmodule ExNVR.Pipeline do
-  @moduledoc false
+  @moduledoc """
+  Main pipeline that stream videos footages and store them as chunks of configurable duration.
+
+  ## Architecture
+  The general architecture of the pipeline is as follows:
+    * The pipeline starts first an element called `:rtsp_stream` which is responsible for connecting to the RTSP uri and
+    streaming the media packets.
+    * Once the pipeline receives a notification about an established session with RTSP server, the `RTP` session bin is
+    linked to the output of the RTSP source
+    * The new RTP stream is linked to a segmenter, which is responsible for chunking the video footage, it emits a new
+    notifcation to the parent each time a new segment starts
+    * The pipeline links the output of the `Segmenter` element with an MP4 payloader and muxer and save it to a temporary
+    folder
+    * Once the video chunk is flused to disk, the Pipeline call `ExNVR.Recordings.save/1` to store the record.
+
+  ## Limitations
+
+  There's some limitation on the pipeline working, the pipeline supports:
+    * Only video streams
+    * Only one video stream
+    * Only H264 encoded streams
+  """
 
   use Membrane.Pipeline
 
@@ -101,7 +122,13 @@ defmodule ExNVR.Pipeline do
       })
     ]
 
-    {[spec: spec], update_pending_recordings(state, {old_segment_starttime, new_segment_starttime})}
+    {[spec: spec],
+     update_pending_recordings(state, {old_segment_starttime, new_segment_starttime})}
+  end
+
+  @impl true
+  def handle_child_notification({:rtsp_connection_lost, _reason}, :rtsp_source, _ctx, state) do
+    {[notify_child: {:segmenter, :reset}], state}
   end
 
   # Once the sink receive end of stream and flush the segment to the filesystem

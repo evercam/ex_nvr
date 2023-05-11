@@ -45,6 +45,13 @@ defmodule ExNVR.RTSP.ConnectionManager do
     Connection.start_link(__MODULE__, args)
   end
 
+  @spec start(Keyword.t()) :: GenServer.on_start()
+  def start(args) do
+    Membrane.Logger.debug("ConnectionManager: start, args: #{inspect(args)}")
+
+    Connection.start(__MODULE__, args)
+  end
+
   @impl true
   def init(opts) do
     Membrane.Logger.debug("ConnectionManager: Initializing")
@@ -125,37 +132,12 @@ defmodule ExNVR.RTSP.ConnectionManager do
 
     connection_status = %{connection_status | reconnect_attempt: 1}
 
-    if is_nil(connection_status.rtsp_session) do
-      {:connect, :reload, connection_status}
-    else
-      Membrane.Logger.debug("ConnectionManager: RTSP session up, ignoring reconnect request")
-      {:noreply, connection_status}
-    end
-  end
-
-  @impl true
-  def handle_info(
-        {:DOWN, _ref, :process, pid, reason},
-        %ConnectionStatus{rtsp_session: rtsp_session} = connection_status
-      )
-      when reason != :normal do
-    Membrane.Logger.debug("ConnectionManager: Received DOWN message from #{inspect(pid)}")
-
-    case pid do
-      ^rtsp_session ->
-        Membrane.Logger.warn("RTSP.ConnectionManager: RTSP session crashed")
-
-      process ->
-        Membrane.Logger.warn("RTSP.ConnectionManager: #{inspect(process)} process crashed")
+    if not is_nil(connection_status.rtsp_session) do
+      Membrane.Logger.debug("ConnectionManager: close current connection and reconnect")
+      RTSP.close(connection_status.rtsp_session)
     end
 
-    {:disconnect, :reload, connection_status}
-  end
-
-  @impl true
-  def handle_info({:DOWN, _ref, :process, _pid, reason}, connection_status)
-      when reason == :normal do
-    {:noreply, connection_status}
+    {:connect, :reload, %{connection_status | rtsp_session: nil}}
   end
 
   @impl true
@@ -188,9 +170,8 @@ defmodule ExNVR.RTSP.ConnectionManager do
          stream_uri: stream_uri,
          endpoint: endpoint
        }) do
-    case RTSP.start(stream_uri, ExNVR.RTSP.TCPSocket, media_receiver: endpoint) do
+    case RTSP.start_link(stream_uri, ExNVR.RTSP.TCPSocket, media_receiver: endpoint) do
       {:ok, session} ->
-        Process.monitor(session)
         session
 
       {:error, error} ->

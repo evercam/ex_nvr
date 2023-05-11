@@ -5,7 +5,7 @@ defmodule ExNVR.RTSP.TCPSocket do
   the RTSP session.
 
   Supported options:
-    * timeout - time after request will be deemed missing and error shall be
+    * connection_timeout - time after request will be deemed missing and error shall be
      returned.
     * media_receiver - The pid of a process where to send media data
   """
@@ -15,6 +15,8 @@ defmodule ExNVR.RTSP.TCPSocket do
   require Membrane.Logger
 
   alias Membrane.RTSP.Transport.TCPSocket
+
+  @media_wait_timeout 10_000
 
   @impl true
   def init(connection_info, options) do
@@ -48,14 +50,19 @@ defmodule ExNVR.RTSP.TCPSocket do
   defp play?(_), do: false
 
   defp handle_media_packets(socket, media_receiver) do
-    with {:ok, <<0x24::8, _channel::8, size::16>>} <- :gen_tcp.recv(socket, 4),
-         {:ok, packet} when byte_size(packet) == size <- :gen_tcp.recv(socket, size) do
+    with {:ok, <<0x24::8, _channel::8, size::16>>} <-
+           :gen_tcp.recv(socket, 4, @media_wait_timeout),
+         {:ok, packet} when byte_size(packet) == size <-
+           :gen_tcp.recv(socket, size, @media_wait_timeout) do
       send(media_receiver, {:media_packet, packet})
+      handle_media_packets(socket, media_receiver)
     else
+      {:error, reason} ->
+        send(media_receiver, {:rtsp_connection_lost, reason})
+
       _ ->
         Membrane.Logger.debug("ignore packet, not an RTP packet")
+        handle_media_packets(socket, media_receiver)
     end
-
-    handle_media_packets(socket, media_receiver)
   end
 end

@@ -38,15 +38,11 @@ defmodule ExNVR.Segmenter do
 
   @impl true
   def handle_init(_ctx, options) do
-    state = %{
-      stream_format: nil,
-      target_segment_duration: Membrane.Time.seconds(options.segment_duration),
-      current_segment_duration: 0,
-      last_buffer_pts: nil,
-      buffer: [],
-      buffer?: true,
-      start_time: nil
-    }
+    state =
+      Map.merge(init_state(), %{
+        stream_format: nil,
+        target_segment_duration: Membrane.Time.seconds(options.segment_duration)
+      })
 
     {[], state}
   end
@@ -132,5 +128,25 @@ defmodule ExNVR.Segmenter do
       true ->
         {[buffer: {Pad.ref(:output, state.start_time), buf}], state}
     end
+  end
+
+  @impl true
+  def handle_parent_notification(:reset, _ctx, %{start_time: nil} = state) do
+    {[], state}
+  end
+
+  @impl true
+  def handle_parent_notification(:reset, _ctx, state) do
+    {[end_of_stream: {Pad.ref(:output, state.start_time)}], Map.merge(state, init_state())}
+  end
+
+  defp init_state() do
+    %{
+      current_segment_duration: 0,
+      last_buffer_pts: nil,
+      buffer: [],
+      buffer?: true,
+      start_time: nil
+    }
   end
 end
