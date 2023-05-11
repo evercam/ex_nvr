@@ -1,13 +1,23 @@
-defmodule ExNVR.Model.Camera do
+defmodule ExNVR.Model.Device do
   @moduledoc false
 
   use Ecto.Schema
 
   alias Ecto.Changeset
 
-  schema "cameras" do
+  @type t :: %__MODULE__{
+    id: binary(),
+    name: binary(),
+    type: binary(),
+    config: map(),
+    inserted_at: DateTime.t(),
+    updated_at: DateTime.t()
+  }
+
+  @primary_key {:id, :binary_id, autogenerate: true}
+  schema "devices" do
     field :name, :string
-    field :type, Ecto.Enum, values: [:ip]
+    field :type, Ecto.Enum, values: [:IP]
     field :config, :map
 
     timestamps(type: :utc_datetime_usec)

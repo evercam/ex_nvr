@@ -35,17 +35,21 @@ defmodule ExNVR.Pipeline do
     @typedoc """
     Pipeline state
 
-    `stream_uri` - the RTSP stream
-    `media_options` - the media description got from calling DESCRIBE method on the RTSP uri
+    `device_id` - Id of the device where to pull the media stream
+    `stream_uri` - RTSP stream
+    `media_options` - Media description got from calling DESCRIBE method on the RTSP uri
     `recordings_temp_dir` - Folder where to store recordings temporarily
+    `pending_recordings` - Recordings that needs to be stored (still written to the temp directory)
     """
     @type t :: %__MODULE__{
+            device_id: binary(),
             stream_uri: binary(),
             media_options: map(),
-            recordings_temp_dir: Path.t()
+            recordings_temp_dir: Path.t(),
+            pending_recordings: map()
           }
 
-    @enforce_keys [:stream_uri]
+    @enforce_keys [:device_id, :stream_uri]
 
     defstruct @enforce_keys ++
                 [
@@ -63,7 +67,8 @@ defmodule ExNVR.Pipeline do
   @impl true
   def handle_init(_ctx, options) do
     state = %State{
-      stream_uri: options[:stream_uri]
+      device_id: options.device_id,
+      stream_uri: options.stream_uri
     }
 
     source = child(:rtsp_source, %Source{stream_uri: state.stream_uri})
@@ -107,10 +112,7 @@ defmodule ExNVR.Pipeline do
         _ctx,
         state
       ) do
-    Membrane.Logger.info("""
-    New segment: #{new_segment_starttime}
-    Start flushing old segment
-    """)
+    Membrane.Logger.info("New segment: #{new_segment_starttime}")
 
     spec = [
       get_child(:segmenter)
@@ -135,6 +137,8 @@ defmodule ExNVR.Pipeline do
   # we can delete the childs
   @impl true
   def handle_element_end_of_stream({:sink, seg_ref}, _pad, _ctx, state) do
+    Membrane.Logger.info("Save completed segment #{seg_ref} ...")
+
     children = [
       {:h264_mp4_payloader, seg_ref},
       {:mp4_muxer, seg_ref},
@@ -143,9 +147,10 @@ defmodule ExNVR.Pipeline do
 
     {recording, state} = pop_in(state, [:pending_recordings, seg_ref])
 
-    case ExNVR.Recordings.save(recording) do
+    case ExNVR.Recordings.create(recording) do
       {:ok, _} ->
         File.rm(recording.path)
+        Membrane.Logger.info("Segment saved successfully")
 
       {:error, error} ->
         Membrane.Logger.error("""
@@ -189,6 +194,7 @@ defmodule ExNVR.Pipeline do
         state,
         [:pending_recordings, new_segment_starttime],
         %{
+          device_id: state.device_id,
           start_date: Membrane.Time.to_datetime(new_segment_starttime),
           path: Path.join(state.recordings_temp_dir, "#{new_segment_starttime}.mp4")
         }

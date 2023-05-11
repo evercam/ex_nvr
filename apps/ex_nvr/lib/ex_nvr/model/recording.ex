@@ -11,12 +11,15 @@ defmodule ExNVR.Model.Recording do
           filename: binary()
         }
 
-  @required_fields [:start_date, :end_date, :filename]
+  @required_fields [:device_id, :start_date, :end_date, :filename]
 
+  @foreign_key_type :binary_id
   schema "recordings" do
     field :start_date, :utc_datetime_usec
     field :end_date, :utc_datetime_usec
     field :filename, :string
+
+    belongs_to :device, ExNVR.Model.Device
   end
 
   def changeset(params) do

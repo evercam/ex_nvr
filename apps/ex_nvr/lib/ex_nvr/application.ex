@@ -10,7 +10,8 @@ defmodule ExNVR.Application do
     children = [
       ExNVR.Repo,
       {Phoenix.PubSub, name: ExNVR.PubSub},
-      {Finch, name: ExNVR.Finch}
+      {Finch, name: ExNVR.Finch},
+      Task.child_spec(fn -> ExNVR.start() end)
     ]
 
     Supervisor.start_link(children, strategy: :one_for_one, name: ExNVR.Supervisor)

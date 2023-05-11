@@ -1,6 +1,6 @@
 defmodule ExNVR.Recordings do
   @moduledoc """
-  Context to create/update/delete recordings metadata
+  Context to create/update/delete recordings and recordings metadata
   """
 
   alias ExNVR.Model.Recording
@@ -9,8 +9,8 @@ defmodule ExNVR.Recordings do
 
   @type error :: {:error, Ecto.Changeset.t() | File.posix()}
 
-  @spec save(map()) :: {:ok, Recording.t()} | error()
-  def save(%{path: path} = params) do
+  @spec create(map()) :: {:ok, Recording.t()} | error()
+  def create(%{path: path} = params) do
     with {:ok, data} <- File.read(path),
          :ok <- File.write(recording_path(params), data) do
       params
