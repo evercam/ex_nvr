@@ -2,7 +2,7 @@
 
 NVR (Network Video Recorder) for Elixir using [Membrane Framework](https://github.com/membraneframework)
 
-## Features we plan to implement
+## Roadmap
 ### v1
 - [ ] Ingest RTSP stream and save to disk
 - [ ] Transcode RTSP stream to WebRTC to play live stream in browser.
