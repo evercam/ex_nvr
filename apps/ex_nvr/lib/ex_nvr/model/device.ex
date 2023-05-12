@@ -6,13 +6,13 @@ defmodule ExNVR.Model.Device do
   alias Ecto.Changeset
 
   @type t :: %__MODULE__{
-    id: binary(),
-    name: binary(),
-    type: binary(),
-    config: map(),
-    inserted_at: DateTime.t(),
-    updated_at: DateTime.t()
-  }
+          id: binary(),
+          name: binary(),
+          type: binary(),
+          config: map(),
+          inserted_at: DateTime.t(),
+          updated_at: DateTime.t()
+        }
 
   @primary_key {:id, :binary_id, autogenerate: true}
   schema "devices" do

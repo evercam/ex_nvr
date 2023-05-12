@@ -51,7 +51,7 @@ defmodule ExNVR.RTSP.Source do
   end
 
   @impl true
-  def handle_info({:media_packet, _packet}, _context, state) do
+  def handle_info({:media_packet, _packet}, _ctx, state) do
     {[], state}
   end
 
@@ -62,7 +62,7 @@ defmodule ExNVR.RTSP.Source do
     Membrane.Logger.warn("RTSP connection lost due to #{reason}, reconnecting ...")
     ConnectionManager.reconnect(state.connection_manager)
 
-    {[notify_parent: {:rtsp_connection_lost, reason}], state}
+    {[event: {:output, %Membrane.Event.Discontinuity{}}], state}
   end
 
   @impl true

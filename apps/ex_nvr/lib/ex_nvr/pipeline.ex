@@ -118,7 +118,7 @@ defmodule ExNVR.Pipeline do
       get_child(:segmenter)
       |> via_out(Pad.ref(:output, new_segment_starttime))
       |> child({:h264_mp4_payloader, new_segment_starttime}, Membrane.MP4.Payloader.H264)
-      |> child({:mp4_muxer, new_segment_starttime}, Membrane.MP4.Muxer.ISOM)
+      |> child({:mp4_muxer, new_segment_starttime}, %Membrane.MP4.Muxer.ISOM{fast_start: true})
       |> child({:sink, new_segment_starttime}, %Membrane.File.Sink{
         location: Path.join(state.recordings_temp_dir, "#{new_segment_starttime}.mp4")
       })
@@ -128,22 +128,31 @@ defmodule ExNVR.Pipeline do
      update_pending_recordings(state, {old_segment_starttime, new_segment_starttime})}
   end
 
-  @impl true
-  def handle_child_notification({:rtsp_connection_lost, _reason}, :rtsp_source, _ctx, state) do
-    {[notify_child: {:segmenter, :reset}], state}
-  end
-
   # Once the sink receive end of stream and flush the segment to the filesystem
   # we can delete the childs
   @impl true
   def handle_element_end_of_stream({:sink, seg_ref}, _pad, _ctx, state) do
-    Membrane.Logger.info("Save completed segment #{seg_ref} ...")
-
     children = [
       {:h264_mp4_payloader, seg_ref},
       {:mp4_muxer, seg_ref},
       {:sink, seg_ref}
     ]
+
+    # The reason to start the timer, is File sink will merge and close the file
+    # only when it receives a terminate message. We give it some time to close
+    # the file. There's an issue related to that (https://github.com/membraneframework/membrane_file_plugin/issues/37)
+    {[remove_child: children, start_timer: {{:segment_timer, seg_ref}, Membrane.Time.seconds(1)}],
+     state}
+  end
+
+  @impl true
+  def handle_element_end_of_stream(_child, _pad, _ctx, state) do
+    {[], state}
+  end
+
+  @impl true
+  def handle_info({:save_segment, seg_ref}, _ctx, state) do
+    Membrane.Logger.info("Save completed segment #{seg_ref} ...")
 
     {recording, state} = pop_in(state, [:pending_recordings, seg_ref])
 
@@ -159,17 +168,33 @@ defmodule ExNVR.Pipeline do
         """)
     end
 
-    {[remove_child: children], state}
-  end
-
-  @impl true
-  def handle_element_end_of_stream(_child, _pad, _ctx, state) do
     {[], state}
   end
 
   @impl true
   def handle_tick(:playback_timer, _ctx, state) do
     {[stop_timer: :playback_timer, playback: :playing], state}
+  end
+
+  @impl true
+  def handle_tick({:segment_timer, seg_ref}, _ctx, state) do
+    Membrane.Logger.info("Save completed segment #{seg_ref} ...")
+
+    {recording, state} = pop_in(state, [:pending_recordings, seg_ref])
+
+    case ExNVR.Recordings.create(recording) do
+      {:ok, _} ->
+        File.rm(recording.path)
+        Membrane.Logger.info("Segment saved successfully")
+
+      {:error, error} ->
+        Membrane.Logger.error("""
+        Could not save recording #{inspect(recording)}
+        #{inspect(error)}
+        """)
+    end
+
+    {[stop_timer: {:segment_timer, seg_ref}], state}
   end
 
   defp handle_rtsp_stream_setup(%{rtpmap: rtpmap} = media_options, state) do

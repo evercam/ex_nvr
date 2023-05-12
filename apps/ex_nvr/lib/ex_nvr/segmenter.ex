@@ -12,7 +12,9 @@ defmodule ExNVR.Segmenter do
 
   use Membrane.Filter
 
-  alias Membrane.{Buffer, H264}
+  require Membrane.Logger
+
+  alias Membrane.{Buffer, Event, H264}
 
   def_options segment_duration: [
                 spec: non_neg_integer(),
@@ -131,12 +133,12 @@ defmodule ExNVR.Segmenter do
   end
 
   @impl true
-  def handle_parent_notification(:reset, _ctx, %{start_time: nil} = state) do
+  def handle_event(:input, %Event.Discontinuity{}, _ctx, %{start_time: nil} = state) do
     {[], state}
   end
 
   @impl true
-  def handle_parent_notification(:reset, _ctx, state) do
+  def handle_event(:input, %Event.Discontinuity{}, _ctx, state) do
     {[end_of_stream: {Pad.ref(:output, state.start_time)}], Map.merge(state, init_state())}
   end
 
