@@ -118,7 +118,6 @@ defmodule ExNVR.RTSP.ConnectionManager do
 
     send(connection_status.endpoint, {:connection_info, :disconnected})
 
-    # TODO: change once RTSP Endpoint supports reconnecting to the same stream
     {:noconnect, connection_status, :hibernate}
   end
 

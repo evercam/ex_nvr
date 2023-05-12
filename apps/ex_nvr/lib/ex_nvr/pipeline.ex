@@ -30,6 +30,8 @@ defmodule ExNVR.Pipeline do
   alias Membrane.RTP.SessionBin
 
   defmodule State do
+    @moduledoc false
+
     use Bunch.Access
 
     @typedoc """
