@@ -98,7 +98,7 @@ defmodule ExNVR.Pipeline do
     spec = [
       get_child(:rtp)
       |> via_out(Pad.ref(:output, ssrc), options: [depayloader: Membrane.RTP.H264.Depayloader])
-      |> child(:rtp_parser, Membrane.H264.Parser)
+      |> child(:rtp_parser, %Membrane.H264.Parser{framerate: {0, 0}})
       |> child(:segmenter, %ExNVR.Segmenter{
         segment_duration: 60
       })
@@ -109,25 +109,38 @@ defmodule ExNVR.Pipeline do
 
   @impl true
   def handle_child_notification(
-        {:new_media_segment, {old_segment_starttime, new_segment_starttime}},
+        {:new_media_segment, segment_ref},
         :segmenter,
         _ctx,
         state
       ) do
-    Membrane.Logger.info("New segment: #{new_segment_starttime}")
+    Membrane.Logger.info("New segment: #{segment_ref}")
 
     spec = [
       get_child(:segmenter)
-      |> via_out(Pad.ref(:output, new_segment_starttime))
-      |> child({:h264_mp4_payloader, new_segment_starttime}, Membrane.MP4.Payloader.H264)
-      |> child({:mp4_muxer, new_segment_starttime}, %Membrane.MP4.Muxer.ISOM{fast_start: true})
-      |> child({:sink, new_segment_starttime}, %Membrane.File.Sink{
-        location: Path.join(state.recordings_temp_dir, "#{new_segment_starttime}.mp4")
+      |> via_out(Pad.ref(:output, segment_ref))
+      |> child({:h264_mp4_payloader, segment_ref}, Membrane.MP4.Payloader.H264)
+      |> child({:mp4_muxer, segment_ref}, %Membrane.MP4.Muxer.ISOM{fast_start: true})
+      |> child({:sink, segment_ref}, %Membrane.File.Sink{
+        location: Path.join(state.recordings_temp_dir, "#{segment_ref}.mp4")
       })
     ]
 
-    {[spec: spec],
-     update_pending_recordings(state, {old_segment_starttime, new_segment_starttime})}
+    {[spec: spec], state}
+  end
+
+  def handle_child_notification({:completed_segment, {pad_ref, segment}}, :segmenter, _ctx, state) do
+    segment =
+      Map.merge(segment, %{
+        device_id: state.device_id,
+        path: Path.join(state.recordings_temp_dir, "#{pad_ref}.mp4")
+      })
+
+    {[], put_in(state, [:pending_recordings, pad_ref], segment)}
+  end
+
+  def handle_child_notification(_notification, _element, _ctx, state) do
+    {[], state}
   end
 
   # Once the sink receive end of stream and flush the segment to the filesystem

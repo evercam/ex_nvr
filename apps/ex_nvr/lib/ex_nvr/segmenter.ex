@@ -50,8 +50,7 @@ defmodule ExNVR.Segmenter do
   end
 
   @impl true
-  def handle_stream_format(:input, %H264{} = h264, _ctx, state) do
-    stream_format = if h264.framerate == nil, do: %H264{h264 | framerate: {0, 0}}, else: h264
+  def handle_stream_format(:input, stream_format, _ctx, state) do
     {[], %{state | stream_format: stream_format}}
   end
 
@@ -91,45 +90,14 @@ defmodule ExNVR.Segmenter do
         last_buffer_pts: buf.pts
     }
 
-    {[notify_parent: {:new_media_segment, {nil, state.start_time}}], state}
+    {[notify_parent: {:new_media_segment, state.start_time}], state}
   end
 
   @impl true
   def handle_process(:input, %Buffer{} = buf, _ctx, state) do
-    frame_duration = buf.pts - state.last_buffer_pts
-
-    state = %{
-      state
-      | current_segment_duration: state.current_segment_duration + frame_duration,
-        last_buffer_pts: buf.pts
-    }
-
-    segment_duration = state.current_segment_duration
-
-    cond do
-      state.buffer? ->
-        state = %{state | buffer: [buf | state.buffer]}
-        {[], state}
-
-      buf.metadata.h264.key_frame? and segment_duration >= state.target_segment_duration ->
-        pad_ref = state.start_time
-
-        state = %{
-          state
-          | start_time: state.start_time + segment_duration,
-            current_segment_duration: 0,
-            buffer?: true,
-            buffer: [buf]
-        }
-
-        {[
-           end_of_stream: Pad.ref(:output, pad_ref),
-           notify_parent: {:new_media_segment, {pad_ref, state.start_time}}
-         ], state}
-
-      true ->
-        {[buffer: {Pad.ref(:output, state.start_time), buf}], state}
-    end
+    state
+    |> update_segment_duration(buf)
+    |> handle_buffer(buf)
   end
 
   @impl true
@@ -139,7 +107,44 @@ defmodule ExNVR.Segmenter do
 
   @impl true
   def handle_event(:input, %Event.Discontinuity{}, _ctx, state) do
-    {[end_of_stream: {Pad.ref(:output, state.start_time)}], Map.merge(state, init_state())}
+    {[end_of_stream: Pad.ref(:output, state.start_time)] ++ completed_segment_action(state),
+     Map.merge(state, init_state())}
+  end
+
+  defp handle_buffer(%{buffer?: true} = state, buffer) do
+    {[], %{state | buffer: [buffer | state.buffer]}}
+  end
+
+  defp handle_buffer(state, %Buffer{metadata: %{h264: %{key_frame?: true}}} = buffer)
+       when state.current_segment_duration >= state.target_segment_duration do
+    completed_segment_action = completed_segment_action(state)
+    pad_ref = state.start_time
+
+    state = %{
+      state
+      | start_time: state.start_time + state.current_segment_duration,
+        current_segment_duration: 0,
+        buffer?: true,
+        buffer: [buffer]
+    }
+
+    {[
+       end_of_stream: Pad.ref(:output, pad_ref),
+       notify_parent: {:new_media_segment, state.start_time}
+     ] ++ completed_segment_action, state}
+  end
+
+  defp handle_buffer(state, buffer),
+    do: {[buffer: {Pad.ref(:output, state.start_time), buffer}], state}
+
+  defp update_segment_duration(state, %Buffer{pts: pts} = buf) do
+    frame_duration = pts - state.last_buffer_pts
+
+    %{
+      state
+      | current_segment_duration: state.current_segment_duration + frame_duration,
+        last_buffer_pts: buf.pts
+    }
   end
 
   defp init_state() do
@@ -150,5 +155,15 @@ defmodule ExNVR.Segmenter do
       buffer?: true,
       start_time: nil
     }
+  end
+
+  defp completed_segment_action(state) do
+    msg = %{
+      start_date: Membrane.Time.to_datetime(state.start_time),
+      end_date: Membrane.Time.to_datetime(state.start_time + state.current_segment_duration),
+      duration: Membrane.Time.as_seconds(state.current_segment_duration)
+    }
+
+    [notify_parent: {:completed_segment, {state.start_time, msg}}]
   end
 end
