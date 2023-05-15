@@ -227,27 +227,4 @@ defmodule ExNVR.Pipeline do
     {[spec: spec, start_timer: {:playback_timer, Membrane.Time.milliseconds(300)}],
      %State{state | media_options: media_options}}
   end
-
-  defp update_pending_recordings(state, {old_segment_starttime, new_segment_starttime}) do
-    state =
-      put_in(
-        state,
-        [:pending_recordings, new_segment_starttime],
-        %{
-          device_id: state.device_id,
-          start_date: Membrane.Time.to_datetime(new_segment_starttime),
-          path: Path.join(state.recordings_temp_dir, "#{new_segment_starttime}.mp4")
-        }
-      )
-
-    if old_segment_starttime != nil do
-      put_in(
-        state,
-        [:pending_recordings, old_segment_starttime, :end_date],
-        Membrane.Time.to_datetime(new_segment_starttime)
-      )
-    else
-      state
-    end
-  end
 end

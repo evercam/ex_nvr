@@ -3,9 +3,8 @@ defmodule ExNVR.Recordings do
   Context to create/update/delete recordings and recordings metadata
   """
 
-  alias ExNVR.Model.Recording
-
-  @recordings_dir "./data/recordings"
+  alias ExNVR.Model.{Device, Recording}
+  alias ExNVR.Repo
 
   @type error :: {:error, Ecto.Changeset.t() | File.posix()}
 
@@ -16,11 +15,19 @@ defmodule ExNVR.Recordings do
       params
       |> Map.put(:filename, recording_path(params) |> Path.basename())
       |> Recording.changeset()
-      |> ExNVR.Repo.insert()
+      |> Repo.insert()
+    end
+  end
+
+  @spec get_blob(Device.t(), binary()) :: binary() | nil
+  def get_blob(%Device{id: id}, filename) do
+    with %Recording{} = rec <- Repo.get_by(Recording, %{device_id: id, filename: filename}) do
+      File.read!(recording_path(rec))
     end
   end
 
   defp recording_path(%{start_date: start_date}) do
-    Path.join(@recordings_dir, "#{DateTime.to_unix(start_date, :microsecond)}.mp4")
+    directory = Application.get_env(:ex_nvr, :recording_directory)
+    Path.join(directory, "#{DateTime.to_unix(start_date, :microsecond)}.mp4")
   end
 end
