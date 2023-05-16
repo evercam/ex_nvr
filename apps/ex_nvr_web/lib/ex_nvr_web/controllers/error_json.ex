@@ -2,7 +2,7 @@ defmodule ExNVRWeb.ErrorJSON do
   # If you want to customize a particular status code,
   # you may add your own clauses, such as:
 
-  def render("404.json", assigns \\ []) do
+  def render("404.json", assigns) do
     msg = assigns[:message] || "not found"
     %{message: msg}
   end

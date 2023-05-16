@@ -1,0 +1,56 @@
+openapi: 3.0.0
+info:
+  title: ExNVR API
+  description: Manage ExNVR via API endpoints
+  version: 0.1.0
+servers:
+  - url: 'http://localhost:4000'
+paths:
+  /api/devices/{device_id}/recordings/{recording_id}/blob:
+    get:
+      summary: Get recording blob
+      description: | 
+        Download the video chunk with the specified `recording id` in the specified `device`
+      operationId: getRecordingBlob
+      tags:
+        - Recording
+      parameters:
+        - $ref: '#/components/parameters/device_id'
+        - $ref: '#/components/parameters/recording_id'
+      responses:
+        '200':
+          description: Success
+          content:
+            video/mp4:
+              schema:
+                type: string
+                format: binary
+        '400':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: The error message
+components:
+  parameters:
+    device_id:
+      name: device_id
+      description: The id of the device
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      example: d0d83123-b3af-48b0-b9ea-2569179a7517
+    recording_id:
+      name: recording_id
+      description: The filename of the recording
+      in: path
+      required: true
+      schema:
+        type: string
+      example: 11236565645.mp4
