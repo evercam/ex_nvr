@@ -20,10 +20,11 @@ defmodule ExNVRWeb.Router do
     get "/", PageController, :home
   end
 
-  # Other scopes may use custom stacks.
-  # scope "/api", ExNVRWeb do
-  #   pipe_through :api
-  # end
+  scope "/api", ExNVRWeb do
+    pipe_through :api
+
+    get "/devices/:device_id/recordings/:recording_id/blob", API.RecordingController, :blob
+  end
 
   # Enable LiveDashboard and Swoosh mailbox preview in development
   if Application.compile_env(:ex_nvr_web, :dev_routes) do

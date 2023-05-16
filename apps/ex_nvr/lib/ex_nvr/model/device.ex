@@ -45,7 +45,7 @@ defmodule ExNVR.Model.Device do
     end
   end
 
-  defp validate_camera_config(:ip, config) do
+  defp validate_camera_config(:IP, config) do
     types = %{
       stream_uri: :string,
       username: :string,

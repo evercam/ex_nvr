@@ -15,4 +15,7 @@ defmodule ExNVR.Devices do
 
   @spec list() :: [Device.t()]
   def list(), do: Repo.all(Device)
+
+  @spec get(binary()) :: Device.t() | nil
+  def get(device_id), do: Repo.get(Device, device_id)
 end

@@ -7,6 +7,9 @@ config :ex_nvr, ExNVR.Repo,
   stacktrace: true,
   show_sensitive_data_on_connection_error: true
 
+config :ex_nvr,
+  recording_directory: Path.expand("../data/recordings", Path.dirname(__ENV__.file))
+
 # For development, we disable any cache and enable
 # debugging and code reloading.
 #
