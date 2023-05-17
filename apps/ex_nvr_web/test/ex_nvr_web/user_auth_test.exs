@@ -14,6 +14,7 @@ defmodule ExNVRWeb.UserAuthTest do
     conn =
       conn
       |> Map.replace!(:secret_key_base, ExNVRWeb.Endpoint.config(:secret_key_base))
+      |> fetch_query_params()
       |> init_test_session(%{})
 
     %{user: user_fixture(), conn: conn}
@@ -57,6 +58,7 @@ defmodule ExNVRWeb.UserAuthTest do
         |> put_session(:user_token, user_token)
         |> put_req_cookie(@remember_me_cookie, user_token)
         |> fetch_cookies()
+        |> fetch_query_params()
         |> UserAuth.log_out_user()
 
       refute get_session(conn, :user_token)
@@ -94,7 +96,10 @@ defmodule ExNVRWeb.UserAuthTest do
 
     test "authenticates user from cookies", %{conn: conn, user: user} do
       logged_in_conn =
-        conn |> fetch_cookies() |> UserAuth.log_in_user(user, %{"remember_me" => "true"})
+        conn
+        |> fetch_cookies()
+        |> fetch_query_params()
+        |> UserAuth.log_in_user(user, %{"remember_me" => "true"})
 
       user_token = logged_in_conn.cookies[@remember_me_cookie]
       %{value: signed_token} = logged_in_conn.resp_cookies[@remember_me_cookie]
@@ -109,6 +114,24 @@ defmodule ExNVRWeb.UserAuthTest do
 
       assert get_session(conn, :live_socket_id) ==
                "users_sessions:#{Base.url_encode64(user_token)}"
+    end
+
+    test "authenticates user from bearer header", %{conn: conn, user: user} do
+      user_token = Accounts.generate_user_bearer_token(user)
+
+      conn =
+        conn |> put_req_header("authorization", user_token) |> UserAuth.fetch_current_user([])
+
+      assert conn.assigns.current_user.id == user.id
+    end
+
+    test "authenticates user from query params", %{conn: conn, user: user} do
+      user_token = Accounts.generate_user_bearer_token(user)
+      query_params = %{"authorization" => user_token}
+
+      conn = conn |> Map.put(:query_params, query_params) |> UserAuth.fetch_current_user([])
+
+      assert conn.assigns.current_user.id == user.id
     end
 
     test "does not authenticate if data is missing", %{conn: conn, user: user} do

@@ -89,22 +89,57 @@ defmodule ExNVRWeb.UserAuth do
   and remember me token.
   """
   def fetch_current_user(conn, _opts) do
-    {user_token, conn} = ensure_user_token(conn)
-    user = user_token && Accounts.get_user_by_session_token(user_token)
+    {user_token, context, conn} = ensure_user_token(conn)
+    user = fetch_user_by_token(user_token, context)
     assign(conn, :current_user, user)
   end
 
   defp ensure_user_token(conn) do
-    if token = get_session(conn, :user_token) do
-      {token, conn}
-    else
-      conn = fetch_cookies(conn, signed: [@remember_me_cookie])
+    cond do
+      token = get_session(conn, :user_token) ->
+        {token, "session", conn}
 
-      if token = conn.cookies[@remember_me_cookie] do
-        {token, put_token_in_session(conn, token)}
-      else
-        {nil, conn}
-      end
+      token = fetch_token_from_headers_or_query_params(conn) ->
+        {token, "bearer", conn}
+
+      true ->
+        conn = fetch_cookies(conn, signed: [@remember_me_cookie])
+
+        if token = conn.cookies[@remember_me_cookie] do
+          {token, "session", put_token_in_session(conn, token)}
+        else
+          {nil, "session", conn}
+        end
+    end
+  end
+
+  defp fetch_token_from_headers_or_query_params(conn) do
+    if token = fetch_from_headers(conn), do: token, else: fetch_from_query_params(conn)
+  end
+
+  defp fetch_from_headers(conn) do
+    conn
+    |> get_req_header("authorization")
+    |> List.first()
+    |> case do
+      nil -> nil
+      token -> String.trim_leading(token, "Bearer ") |> decode_bearer_token()
+    end
+  end
+
+  defp fetch_from_query_params(%{query_params: query_params}),
+    do: decode_bearer_token(query_params["authorization"])
+
+  defp fetch_user_by_token(nil, _context), do: nil
+  defp fetch_user_by_token(token, "session"), do: Accounts.get_user_by_session_token(token)
+  defp fetch_user_by_token(token, "bearer"), do: Accounts.get_user_by_bearer_token(token)
+
+  defp decode_bearer_token(nil), do: nil
+
+  defp decode_bearer_token(token) do
+    case Base.decode64(token) do
+      {:ok, decoded_token} -> decoded_token
+      _ -> nil
     end
   end
 

@@ -8,7 +8,6 @@ defmodule ExNVR.Accounts do
 
   alias ExNVR.Accounts.{User, UserToken, UserNotifier}
 
-
   def get_user_by_email(email) when is_binary(email) do
     Repo.get_by(User, email: email)
   end
@@ -20,7 +19,6 @@ defmodule ExNVR.Accounts do
   end
 
   def get_user!(id), do: Repo.get!(User, id)
-
 
   def register_user(attrs) do
     %User{}
@@ -101,6 +99,12 @@ defmodule ExNVR.Accounts do
     token
   end
 
+  def generate_user_bearer_token(user) do
+    {token, user_token} = UserToken.build_bearer_token(user)
+    Repo.insert!(user_token)
+    token
+  end
+
   def get_user_by_session_token(token) do
     {:ok, query} = UserToken.verify_session_token_query(token)
     Repo.one(query)
@@ -138,7 +142,6 @@ defmodule ExNVR.Accounts do
     |> Ecto.Multi.delete_all(:tokens, UserToken.user_and_contexts_query(user, ["confirm"]))
   end
 
-
   def deliver_user_reset_password_instructions(%User{} = user, reset_password_url_fun)
       when is_function(reset_password_url_fun, 1) do
     {encoded_token, user_token} = UserToken.build_email_token(user, "reset_password")
@@ -164,5 +167,10 @@ defmodule ExNVR.Accounts do
       {:ok, %{user: user}} -> {:ok, user}
       {:error, :user, changeset, _} -> {:error, changeset}
     end
+  end
+
+  def get_user_by_bearer_token(token) do
+    {:ok, query} = UserToken.verify_bearer_token_query(token)
+    Repo.one(query)
   end
 end

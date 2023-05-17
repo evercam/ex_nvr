@@ -15,6 +15,8 @@ defmodule ExNVRWeb.Router do
 
   pipeline :api do
     plug :accepts, ["json"]
+    plug :fetch_session
+    plug :fetch_current_user
   end
 
   scope "/", ExNVRWeb do
@@ -26,6 +28,7 @@ defmodule ExNVRWeb.Router do
   scope "/api", ExNVRWeb do
     pipe_through :api
 
+    post "/users/login", API.UserSessionController, :login
     get "/devices/:device_id/recordings/:recording_id/blob", API.RecordingController, :blob
   end
 
