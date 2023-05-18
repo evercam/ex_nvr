@@ -116,8 +116,8 @@ defmodule ExNVRWeb.UserAuthTest do
                "users_sessions:#{Base.url_encode64(user_token)}"
     end
 
-    test "authenticates user from bearer header", %{conn: conn, user: user} do
-      user_token = Accounts.generate_user_bearer_token(user)
+    test "authenticates user from authorization header", %{conn: conn, user: user} do
+      user_token = Accounts.generate_user_access_token(user)
 
       conn =
         conn |> put_req_header("authorization", user_token) |> UserAuth.fetch_current_user([])
@@ -126,8 +126,8 @@ defmodule ExNVRWeb.UserAuthTest do
     end
 
     test "authenticates user from query params", %{conn: conn, user: user} do
-      user_token = Accounts.generate_user_bearer_token(user)
-      query_params = %{"authorization" => user_token}
+      user_token = Accounts.generate_user_access_token(user)
+      query_params = %{"access_token" => user_token}
 
       conn = conn |> Map.put(:query_params, query_params) |> UserAuth.fetch_current_user([])
 

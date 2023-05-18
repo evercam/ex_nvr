@@ -99,8 +99,8 @@ defmodule ExNVR.Accounts do
     token
   end
 
-  def generate_user_bearer_token(user) do
-    {token, user_token} = UserToken.build_bearer_token(user)
+  def generate_user_access_token(user) do
+    {token, user_token} = UserToken.build_access_token(user)
     Repo.insert!(user_token)
     token
   end
@@ -169,8 +169,8 @@ defmodule ExNVR.Accounts do
     end
   end
 
-  def get_user_by_bearer_token(token) do
-    {:ok, query} = UserToken.verify_bearer_token_query(token)
+  def get_user_by_access_token(token) do
+    {:ok, query} = UserToken.verify_access_token_query(token)
     Repo.one(query)
   end
 end

@@ -12,7 +12,7 @@ defmodule ExNVR.Accounts.UserToken do
   @confirm_validity_in_days 7
   @change_email_validity_in_days 7
   @session_validity_in_days 15
-  @bearer_token_validity_in_days 2
+  @access_token_validity_in_days 2
 
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
@@ -49,9 +49,9 @@ defmodule ExNVR.Accounts.UserToken do
     {token, %UserToken{token: token, context: "session", user_id: user.id}}
   end
 
-  def build_bearer_token(user) do
+  def build_access_token(user) do
     token = :crypto.strong_rand_bytes(@rand_size)
-    {Base.encode64(token), %UserToken{token: token, context: "bearer", user_id: user.id}}
+    {Base.encode64(token), %UserToken{token: token, context: "access", user_id: user.id}}
   end
 
   @doc """
@@ -72,11 +72,11 @@ defmodule ExNVR.Accounts.UserToken do
     {:ok, query}
   end
 
-  def verify_bearer_token_query(token) do
+  def verify_access_token_query(token) do
     query =
-      from token in token_and_context_query(token, "bearer"),
+      from token in token_and_context_query(token, "access"),
         join: user in assoc(token, :user),
-        where: token.inserted_at > ago(@bearer_token_validity_in_days, "day"),
+        where: token.inserted_at > ago(@access_token_validity_in_days, "day"),
         select: user
 
     {:ok, query}

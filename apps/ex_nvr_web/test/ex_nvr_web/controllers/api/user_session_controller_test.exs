@@ -16,7 +16,7 @@ defmodule ExNVRWeb.API.UserSessionControllerTest do
         })
         |> json_response(200)
 
-      assert response["token"]
+      assert response["access_token"]
     end
 
     test "missing required field", %{conn: conn, user: user} do

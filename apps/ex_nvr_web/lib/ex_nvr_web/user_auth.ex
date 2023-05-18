@@ -100,7 +100,7 @@ defmodule ExNVRWeb.UserAuth do
         {token, "session", conn}
 
       token = fetch_token_from_headers_or_query_params(conn) ->
-        {token, "bearer", conn}
+        {token, "access", conn}
 
       true ->
         conn = fetch_cookies(conn, signed: [@remember_me_cookie])
@@ -123,20 +123,20 @@ defmodule ExNVRWeb.UserAuth do
     |> List.first()
     |> case do
       nil -> nil
-      token -> String.trim_leading(token, "Bearer ") |> decode_bearer_token()
+      token -> String.trim_leading(token, "Bearer ") |> decode_access_token()
     end
   end
 
   defp fetch_from_query_params(%{query_params: query_params}),
-    do: decode_bearer_token(query_params["authorization"])
+    do: decode_access_token(query_params["access_token"])
 
   defp fetch_user_by_token(nil, _context), do: nil
   defp fetch_user_by_token(token, "session"), do: Accounts.get_user_by_session_token(token)
-  defp fetch_user_by_token(token, "bearer"), do: Accounts.get_user_by_bearer_token(token)
+  defp fetch_user_by_token(token, "access"), do: Accounts.get_user_by_access_token(token)
 
-  defp decode_bearer_token(nil), do: nil
+  defp decode_access_token(nil), do: nil
 
-  defp decode_bearer_token(token) do
+  defp decode_access_token(token) do
     case Base.decode64(token) do
       {:ok, decoded_token} -> decoded_token
       _ -> nil

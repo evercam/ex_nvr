@@ -10,8 +10,8 @@ defmodule ExNVRWeb.API.UserSessionController do
   def login(conn, params) do
     with {:ok, %{username: username, password: pass}} <- validate_login_params(params),
          %User{} = user <- Accounts.get_user_by_email_and_password(username, pass) do
-      token = Accounts.generate_user_bearer_token(user)
-      json(conn, %{token: token})
+      token = Accounts.generate_user_access_token(user)
+      json(conn, %{access_token: token})
     else
       nil ->
         conn
