@@ -63,4 +63,12 @@ defmodule ExNVRWeb.ConnCase do
     |> Phoenix.ConnTest.init_test_session(%{})
     |> Plug.Conn.put_session(:user_token, token)
   end
+
+  def log_in_user_with_access_token(conn, user) do
+    token = ExNVR.Accounts.generate_user_access_token(user)
+
+    conn
+    |> Phoenix.ConnTest.init_test_session(%{})
+    |> Plug.Conn.put_req_header("authorization", "Bearer #{token}")
+  end
 end

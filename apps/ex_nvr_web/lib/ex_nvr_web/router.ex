@@ -19,6 +19,10 @@ defmodule ExNVRWeb.Router do
     plug :fetch_current_user
   end
 
+  pipeline :api_require_authenticated_user do
+    plug :require_authenticated_user, api: true
+  end
+
   scope "/", ExNVRWeb do
     pipe_through :browser
 
@@ -29,7 +33,12 @@ defmodule ExNVRWeb.Router do
     pipe_through :api
 
     post "/users/login", API.UserSessionController, :login
-    get "/devices/:device_id/recordings/:recording_id/blob", API.RecordingController, :blob
+
+    scope "/devices/:device_id" do
+      pipe_through :api_require_authenticated_user
+
+      get "/recordings/:recording_id/blob", API.RecordingController, :blob
+    end
   end
 
   # Enable LiveDashboard and Swoosh mailbox preview in development

@@ -293,5 +293,11 @@ defmodule ExNVRWeb.UserAuthTest do
       refute conn.halted
       refute conn.status
     end
+
+    test "return json error when api option is true", %{conn: conn} do
+      conn = UserAuth.require_authenticated_user(conn, api: true)
+      assert conn.halted
+      assert json_response(conn, 401) == %{"message" => "unauthorized"}
+    end
   end
 end

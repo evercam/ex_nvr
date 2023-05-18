@@ -1,6 +1,7 @@
 defmodule ExNVRWeb.API.RecordingControllerTest do
   use ExNVRWeb.ConnCase
 
+  alias ExNVR.AccountsFixtures
   alias Faker.Random
 
   setup_all do
@@ -8,14 +9,14 @@ defmodule ExNVRWeb.API.RecordingControllerTest do
   end
 
   setup do
-    conn = build_conn() |> init_test_session(%{})
+    conn = build_conn() |> log_in_user_with_access_token(AccountsFixtures.user_fixture())
     %{conn: conn}
   end
 
   describe "GET /api/devices/:device_id/recordings/:recording_id/blob" do
     setup do
       device = create_device!()
-      %{device: device}
+      %{device: device, user: AccountsFixtures.user_fixture()}
     end
 
     test "get recording blob", %{device: device, conn: conn} do

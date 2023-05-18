@@ -1,6 +1,7 @@
 defmodule ExNVRWeb.UserAuth do
   use ExNVRWeb, :verified_routes
 
+  import ExNVRWeb.Controller.Helpers
   import Plug.Conn
   import Phoenix.Controller
 
@@ -234,6 +235,14 @@ defmodule ExNVRWeb.UserAuth do
   If you want to enforce the user email is confirmed before
   they use the application at all, here would be a good place.
   """
+  def require_authenticated_user(conn, api: true) do
+    if conn.assigns[:current_user] do
+      conn
+    else
+      unauthorized(conn)
+    end
+  end
+
   def require_authenticated_user(conn, _opts) do
     if conn.assigns[:current_user] do
       conn
