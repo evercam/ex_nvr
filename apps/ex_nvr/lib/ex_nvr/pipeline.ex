@@ -153,11 +153,9 @@ defmodule ExNVR.Pipeline do
       {:sink, seg_ref}
     ]
 
-    # The reason to start the timer, is File sink will merge and close the file
-    # only when it receives a terminate message. We give it some time to close
-    # the file. There's an issue related to that (https://github.com/membraneframework/membrane_file_plugin/issues/37)
-    {[remove_child: children, start_timer: {{:segment_timer, seg_ref}, Membrane.Time.seconds(1)}],
-     state}
+    state = do_save_recording(state, seg_ref)
+
+    {[remove_child: children], state}
   end
 
   @impl true
@@ -166,50 +164,8 @@ defmodule ExNVR.Pipeline do
   end
 
   @impl true
-  def handle_info({:save_segment, seg_ref}, _ctx, state) do
-    Membrane.Logger.info("Save completed segment #{seg_ref} ...")
-
-    {recording, state} = pop_in(state, [:pending_recordings, seg_ref])
-
-    case ExNVR.Recordings.create(recording) do
-      {:ok, _} ->
-        File.rm(recording.path)
-        Membrane.Logger.info("Segment saved successfully")
-
-      {:error, error} ->
-        Membrane.Logger.error("""
-        Could not save recording #{inspect(recording)}
-        #{inspect(error)}
-        """)
-    end
-
-    {[], state}
-  end
-
-  @impl true
   def handle_tick(:playback_timer, _ctx, state) do
     {[stop_timer: :playback_timer, playback: :playing], state}
-  end
-
-  @impl true
-  def handle_tick({:segment_timer, seg_ref}, _ctx, state) do
-    Membrane.Logger.info("Save completed segment #{seg_ref} ...")
-
-    {recording, state} = pop_in(state, [:pending_recordings, seg_ref])
-
-    case ExNVR.Recordings.create(recording) do
-      {:ok, _} ->
-        File.rm(recording.path)
-        Membrane.Logger.info("Segment saved successfully")
-
-      {:error, error} ->
-        Membrane.Logger.error("""
-        Could not save recording #{inspect(recording)}
-        #{inspect(error)}
-        """)
-    end
-
-    {[stop_timer: {:segment_timer, seg_ref}], state}
   end
 
   defp handle_rtsp_stream_setup(%{rtpmap: rtpmap} = media_options, state) do
@@ -226,5 +182,23 @@ defmodule ExNVR.Pipeline do
 
     {[spec: spec, start_timer: {:playback_timer, Membrane.Time.milliseconds(300)}],
      %State{state | media_options: media_options}}
+  end
+
+  defp do_save_recording(state, recording_ref) do
+    {recording, state} = pop_in(state, [:pending_recordings, recording_ref])
+
+    case ExNVR.Recordings.create(recording) do
+      {:ok, _} ->
+        Membrane.Logger.info("segment saved successfully")
+        File.rm(recording.path)
+
+      {:error, error} ->
+        Membrane.Logger.error("""
+        Could not save recording #{inspect(recording)}
+        #{inspect(error)}
+        """)
+    end
+
+    state
   end
 end
