@@ -6,6 +6,44 @@ info:
 servers:
   - url: 'http://localhost:4000'
 paths:
+  /api/users/login:
+    post:
+      summary: Login user
+      description: |
+        Login the user into the system
+
+        The issued access token has a validity of `2 days`.
+      operationId: login
+      tags:
+        - User
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+              required: [username, password]
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                    description: An access token to use to authorize subsequent requests
+        '400':
+          $ref: "#/components/responses/BadArg"
   /api/devices/{device_id}/recordings/{recording_id}/blob:
     get:
       summary: Get recording blob
@@ -36,6 +74,24 @@ paths:
                     type: string
                     description: The error message
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: opaque
+  schemas:
+    Error:
+      type: object
+      properties:
+        code:
+          type: string
+          description: A unique error code
+        description:
+          type: string
+          description: The description of the error
+        details:
+          type: object
+          description: Other details related to the error.
   parameters:
     device_id:
       name: device_id
@@ -54,3 +110,12 @@ components:
       schema:
         type: string
       example: 11236565645.mp4
+  responses:
+    BadArg:
+      description: Bad Arguments
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+security:
+  - bearerAuth: []

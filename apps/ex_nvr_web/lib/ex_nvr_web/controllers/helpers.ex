@@ -10,10 +10,16 @@ defmodule ExNVRWeb.Controller.Helpers do
   alias ExNVRWeb.ErrorJSON
 
   @spec not_found(Conn.t()) :: Conn.t()
-  def not_found(conn) do
+  def not_found(conn), do: render_error(conn, 404)
+
+  @spec unauthorized(Conn.t()) :: Conn.t()
+  def unauthorized(conn), do: render_error(conn, 401)
+
+  defp render_error(conn, status) do
     conn
-    |> put_status(404)
+    |> put_status(status)
     |> put_view(ErrorJSON)
-    |> render("404.json")
+    |> render("#{status}.json")
+    |> halt()
   end
 end
