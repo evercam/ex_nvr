@@ -14,6 +14,7 @@ defmodule ExNVR.Elements.Segmenter do
 
   require Membrane.Logger
 
+  alias ExNVR.Elements.Segmenter.Segment
   alias Membrane.{Buffer, Event, H264}
 
   def_options segment_duration: [
@@ -158,12 +159,12 @@ defmodule ExNVR.Elements.Segmenter do
   end
 
   defp completed_segment_action(state) do
-    msg = %{
+    segment = %Segment{
       start_date: Membrane.Time.to_datetime(state.start_time),
       end_date: Membrane.Time.to_datetime(state.start_time + state.current_segment_duration),
       duration: Membrane.Time.as_seconds(state.current_segment_duration)
     }
 
-    [notify_parent: {:completed_segment, {state.start_time, msg}}]
+    [notify_parent: {:completed_segment, {state.start_time, segment}}]
   end
 end

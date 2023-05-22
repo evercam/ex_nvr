@@ -7,6 +7,7 @@ defmodule ExNVR.Elements.StorageBin do
 
   require Membrane.Logger
 
+  alias ExNVR.Elements.Segmenter.Segment
   alias Membrane.H264
 
   def_input_pad :input,
@@ -42,7 +43,8 @@ defmodule ExNVR.Elements.StorageBin do
     state = %{
       device_id: opts.device_id,
       recordings_temp_dir: System.tmp_dir!(),
-      pending_recordings: %{}
+      pending_segments: %{},
+      segment_extension: ".mp4"
     }
 
     {[spec: spec], state}
@@ -71,14 +73,19 @@ defmodule ExNVR.Elements.StorageBin do
   end
 
   @impl true
-  def handle_child_notification({:completed_segment, {pad_ref, segment}}, :segmenter, _ctx, state) do
-    segment =
-      Map.merge(segment, %{
-        device_id: state.device_id,
-        path: Path.join(state.recordings_temp_dir, "#{pad_ref}.mp4")
-      })
+  def handle_child_notification(
+        {:completed_segment, {pad_ref, %Segment{} = segment}},
+        :segmenter,
+        _ctx,
+        state
+      ) do
+    segment = %Segment{
+      segment
+      | path: Path.join(state.recordings_temp_dir, "#{pad_ref}#{state.segment_extension}"),
+        device_id: state.device_id
+    }
 
-    {[], put_in(state, [:pending_recordings, pad_ref], segment)}
+    {[], put_in(state, [:pending_segments, pad_ref], segment)}
   end
 
   # Once the sink receive end of stream and flush the segment to the filesystem
@@ -102,7 +109,7 @@ defmodule ExNVR.Elements.StorageBin do
   end
 
   defp do_save_recording(state, recording_ref) do
-    {recording, state} = pop_in(state, [:pending_recordings, recording_ref])
+    {recording, state} = pop_in(state, [:pending_segments, recording_ref])
 
     case ExNVR.Recordings.create(recording) do
       {:ok, _} ->

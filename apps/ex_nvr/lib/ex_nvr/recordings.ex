@@ -10,6 +10,8 @@ defmodule ExNVR.Recordings do
 
   @spec create(map()) :: {:ok, Recording.t()} | error()
   def create(%{path: path} = params) do
+    params = if is_struct(params), do: Map.from_struct(params), else: params
+
     with {:ok, data} <- File.read(path),
          :ok <- File.write(recording_path(params), data) do
       params
