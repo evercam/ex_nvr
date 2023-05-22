@@ -1,6 +1,6 @@
-defmodule ExNVR.Segmenter do
+defmodule ExNVR.Elements.Segmenter do
   @moduledoc """
-  Element that marks the beginning of a new segment.
+  Element responsible for splitting the stream into segments of fixed duration.
 
   Once the duration of a segment reach the `segment_duration` specified, a new notification is
   sent to the parent to inform it of the start of a new segment.
@@ -14,6 +14,7 @@ defmodule ExNVR.Segmenter do
 
   require Membrane.Logger
 
+  alias ExNVR.Elements.Segmenter.Segment
   alias Membrane.{Buffer, Event, H264}
 
   def_options segment_duration: [
@@ -158,12 +159,12 @@ defmodule ExNVR.Segmenter do
   end
 
   defp completed_segment_action(state) do
-    msg = %{
+    segment = %Segment{
       start_date: Membrane.Time.to_datetime(state.start_time),
       end_date: Membrane.Time.to_datetime(state.start_time + state.current_segment_duration),
       duration: Membrane.Time.as_seconds(state.current_segment_duration)
     }
 
-    [notify_parent: {:completed_segment, {state.start_time, msg}}]
+    [notify_parent: {:completed_segment, {state.start_time, segment}}]
   end
 end

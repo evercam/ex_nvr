@@ -1,4 +1,4 @@
-defmodule ExNVR.RTSP.TCPSocket do
+defmodule ExNVR.Elements.RTSP.TCPSocket do
   @moduledoc """
   This module is a wrapper around Membrane.RTSP.Transport.TCPSocket and augments
   it with the possibility to receive media data via the same connection that's used for

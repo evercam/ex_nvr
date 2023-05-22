@@ -1,4 +1,4 @@
-defmodule ExNVR.RTSP.ConnectionManager do
+defmodule ExNVR.Elements.RTSP.ConnectionManager do
   @moduledoc false
 
   use Connection
@@ -169,7 +169,7 @@ defmodule ExNVR.RTSP.ConnectionManager do
          stream_uri: stream_uri,
          endpoint: endpoint
        }) do
-    case RTSP.start_link(stream_uri, ExNVR.RTSP.TCPSocket, media_receiver: endpoint) do
+    case RTSP.start_link(stream_uri, ExNVR.Elements.RTSP.TCPSocket, media_receiver: endpoint) do
       {:ok, session} ->
         session
 

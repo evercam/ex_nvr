@@ -26,7 +26,7 @@ defmodule ExNVR.Pipeline do
 
   require Membrane.Logger
 
-  alias ExNVR.RTSP.Source
+  alias ExNVR.Elements.RTSP.Source
   alias Membrane.RTP.SessionBin
 
   defmodule State do
@@ -99,67 +99,16 @@ defmodule ExNVR.Pipeline do
       get_child(:rtp)
       |> via_out(Pad.ref(:output, ssrc), options: [depayloader: Membrane.RTP.H264.Depayloader])
       |> child(:rtp_parser, %Membrane.H264.Parser{framerate: {0, 0}})
-      |> child(:segmenter, %ExNVR.Segmenter{
-        segment_duration: 60
-      })
-    ]
-
-    {[spec: spec], state}
-  end
-
-  @impl true
-  def handle_child_notification(
-        {:new_media_segment, segment_ref},
-        :segmenter,
-        _ctx,
-        state
-      ) do
-    Membrane.Logger.info("New segment: #{segment_ref}")
-
-    spec = [
-      get_child(:segmenter)
-      |> via_out(Pad.ref(:output, segment_ref))
-      |> child({:h264_mp4_payloader, segment_ref}, Membrane.MP4.Payloader.H264)
-      |> child({:mp4_muxer, segment_ref}, %Membrane.MP4.Muxer.ISOM{fast_start: true})
-      |> child({:sink, segment_ref}, %Membrane.File.Sink{
-        location: Path.join(state.recordings_temp_dir, "#{segment_ref}.mp4")
-      })
-    ]
-
-    {[spec: spec], state}
-  end
-
-  def handle_child_notification({:completed_segment, {pad_ref, segment}}, :segmenter, _ctx, state) do
-    segment =
-      Map.merge(segment, %{
+      |> child(:storage_bin, %ExNVR.Elements.StorageBin{
         device_id: state.device_id,
-        path: Path.join(state.recordings_temp_dir, "#{pad_ref}.mp4")
+        target_segment_duration: 30
       })
+    ]
 
-    {[], put_in(state, [:pending_recordings, pad_ref], segment)}
+    {[spec: spec], state}
   end
 
   def handle_child_notification(_notification, _element, _ctx, state) do
-    {[], state}
-  end
-
-  # Once the sink receive end of stream and flush the segment to the filesystem
-  # we can delete the childs
-  @impl true
-  def handle_element_end_of_stream({:sink, seg_ref}, _pad, _ctx, state) do
-    children = [
-      {:h264_mp4_payloader, seg_ref},
-      {:mp4_muxer, seg_ref},
-      {:sink, seg_ref}
-    ]
-
-    state = do_save_recording(state, seg_ref)
-
-    {[remove_child: children], state}
-  end
-
-  @impl true
-  def handle_element_end_of_stream(_child, _pad, _ctx, state) do
     {[], state}
   end
 
@@ -182,23 +131,5 @@ defmodule ExNVR.Pipeline do
 
     {[spec: spec, start_timer: {:playback_timer, Membrane.Time.milliseconds(300)}],
      %State{state | media_options: media_options}}
-  end
-
-  defp do_save_recording(state, recording_ref) do
-    {recording, state} = pop_in(state, [:pending_recordings, recording_ref])
-
-    case ExNVR.Recordings.create(recording) do
-      {:ok, _} ->
-        Membrane.Logger.info("segment saved successfully")
-        File.rm(recording.path)
-
-      {:error, error} ->
-        Membrane.Logger.error("""
-        Could not save recording #{inspect(recording)}
-        #{inspect(error)}
-        """)
-    end
-
-    state
   end
 end
