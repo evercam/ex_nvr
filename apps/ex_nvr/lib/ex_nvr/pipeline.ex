@@ -73,10 +73,14 @@ defmodule ExNVR.Pipeline do
   @doc """
   Start HLS live streaming.
 
-  The `token` is used for generating segments' names
+  The `segment_name_prefix` is used for generating segments' names
   """
   def start_hls_streaming(segment_name_prefix) do
     Pipeline.call(__MODULE__, {:start_hls_streaming, segment_name_prefix}, 60_000)
+  end
+
+  def stop_hls_streaming() do
+    Pipeline.call(__MODULE__, :stop_hls_streaming)
   end
 
   @impl true
@@ -165,7 +169,7 @@ defmodule ExNVR.Pipeline do
       |> via_out(:copy)
       |> child(:hls_bin, %ExNVR.Elements.HLSBin{
         location: @hls_live_streaming_directory,
-        token: segment_name_prefix
+        segment_name_prefix: segment_name_prefix
       })
     ]
 
@@ -173,6 +177,12 @@ defmodule ExNVR.Pipeline do
 
     {[spec: {spec, crash_group: {"hls", :temporary}}],
      %{state | hls_streaming_state: :starting, hls_pending_callers: [from]}}
+  end
+
+  @impl true
+  def handle_call(:stop_hls_streaming, _ctx, state) do
+    {[reply: :ok, remove_child: :hls_bin],
+     %{state | hls_streaming_state: :stopped, hls_pending_callers: []}}
   end
 
   @impl true
