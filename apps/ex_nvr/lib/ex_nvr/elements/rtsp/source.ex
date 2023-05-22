@@ -1,4 +1,4 @@
-defmodule ExNVR.RTSP.Source do
+defmodule ExNVR.Elements.RTSP.Source do
   @moduledoc """
   Element that starts an RTSP session and read packets from the same connection
   """
@@ -8,7 +8,7 @@ defmodule ExNVR.RTSP.Source do
 
   require Membrane.Logger
 
-  alias ExNVR.RTSP.ConnectionManager
+  alias ExNVR.Elements.RTSP.ConnectionManager
   alias Membrane.{Buffer, RemoteStream}
 
   @max_reconnect_attempts 3

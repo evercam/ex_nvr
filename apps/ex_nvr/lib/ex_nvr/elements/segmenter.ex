@@ -1,6 +1,6 @@
-defmodule ExNVR.Segmenter do
+defmodule ExNVR.Elements.Segmenter do
   @moduledoc """
-  Element that marks the beginning of a new segment.
+  Element responsible for splitting the stream into segments of fixed duration.
 
   Once the duration of a segment reach the `segment_duration` specified, a new notification is
   sent to the parent to inform it of the start of a new segment.
