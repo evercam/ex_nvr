@@ -45,8 +45,11 @@ defmodule ExNVR.MixProject do
       {:membrane_rtp_plugin, "~> 0.21.0"},
       {:membrane_rtp_h264_plugin, "~> 0.15.1"},
       {:membrane_h264_plugin, "~> 0.2.1"},
-      {:membrane_mp4_plugin, "~> 0.19.0"},
+      {:membrane_mp4_plugin, "~> 0.21.0"},
       {:membrane_file_plugin, "~> 0.13.3"},
+      {:membrane_http_adaptive_stream_plugin, "~> 0.14.0"},
+      {:membrane_h264_ffmpeg_plugin, "~> 0.26.2"},
+      {:membrane_ffmpeg_swscale_plugin, "~> 0.11.1"},
       {:connection, "~> 1.1.0"}
     ]
   end
