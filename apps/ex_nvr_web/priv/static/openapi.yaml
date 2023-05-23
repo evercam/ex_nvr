@@ -73,6 +73,26 @@ paths:
                   message:
                     type: string
                     description: The error message
+  /api/devices/{device_id}/hls/index.m3u8:
+    get:
+      summary: Start HLS streaming
+      description: | 
+        Start HLS live view streaming.
+
+        The manifest will have two playlists, high quality video with resolution `1080x720` and 
+        a low quality video with resolution `640x480`.
+      operationId: startHlsStreaming
+      tags:
+        - Streaming
+      parameters:
+        - $ref: '#/components/parameters/device_id'
+      responses:
+        '200':
+          description: Success
+          content:
+            text/plain:
+              schema:
+                type: string
 components:
   securitySchemes:
     bearerAuth:
