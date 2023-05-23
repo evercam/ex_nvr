@@ -35,6 +35,7 @@ defmodule ExNVRWeb.ConnCase do
 
   setup tags do
     ExNVR.DataCase.setup_sandbox(tags)
+    Application.put_env(:ex_nvr, :recording_directory, tags.tmp_dir)
     {:ok, conn: Phoenix.ConnTest.build_conn()}
   end
 

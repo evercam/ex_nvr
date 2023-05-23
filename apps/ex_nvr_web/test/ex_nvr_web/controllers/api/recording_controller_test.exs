@@ -1,12 +1,11 @@
 defmodule ExNVRWeb.API.RecordingControllerTest do
   use ExNVRWeb.ConnCase
 
-  alias ExNVR.{AccountsFixtures, RecordingsFixtures}
+
+  alias ExNVR.{AccountsFixtures, DevicesFixtures, RecordingsFixtures}
   alias Faker.Random
 
-  setup_all do
-    on_exit(fn -> clean_recording_directory() end)
-  end
+  @moduletag :tmp_dir
 
   setup do
     conn = build_conn() |> log_in_user_with_access_token(AccountsFixtures.user_fixture())
@@ -73,10 +72,12 @@ defmodule ExNVRWeb.API.RecordingControllerTest do
       %{user: AccountsFixtures.user_fixture()}
     end
 
-    test "get recording blob", %{device: device, conn: conn} do
+    test "get recording blob", %{tmp_dir: tmp_dir, device: device, conn: conn} do
+      file_path = Path.join(tmp_dir, UUID.uuid4())
       content = Random.Elixir.random_bytes(20)
-      file_path = create_temp_file!(content)
-      recording = create_recording!(device_id: device.id, path: file_path)
+      File.write!(file_path, content)
+
+      recording = RecordingsFixtures.recording_fixture(device_id: device.id, path: file_path)
 
       response =
         conn
@@ -84,8 +85,6 @@ defmodule ExNVRWeb.API.RecordingControllerTest do
         |> response(200)
 
       assert response == content
-
-      File.rm!(file_path)
     end
 
     test "get blob of not existing recording", %{device: device, conn: conn} do
