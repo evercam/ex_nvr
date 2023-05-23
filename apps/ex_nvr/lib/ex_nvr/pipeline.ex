@@ -76,11 +76,15 @@ defmodule ExNVR.Pipeline do
   The `segment_name_prefix` is used for generating segments' names
   """
   def start_hls_streaming(segment_name_prefix) do
-    Pipeline.call(__MODULE__, {:start_hls_streaming, segment_name_prefix}, 60_000)
+    Pipeline.call(
+      Process.whereis(__MODULE__),
+      {:start_hls_streaming, segment_name_prefix},
+      60_000
+    )
   end
 
   def stop_hls_streaming() do
-    Pipeline.call(__MODULE__, :stop_hls_streaming)
+    Pipeline.call(Process.whereis(__MODULE__), :stop_hls_streaming)
   end
 
   @impl true

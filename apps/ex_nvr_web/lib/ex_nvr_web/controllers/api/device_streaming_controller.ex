@@ -17,7 +17,7 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
   end
 
   def hls_stream_segment(conn, %{"segment_name" => segment_name}) do
-    # segment names are in the following format <segment_name>_<id>.<extension>
+    # segment names are in the following format <segment_name>_<track_id>_<segment_id>.<extension>
     # this is a temporary measure until Membrane HLS plugin supports query params
     # in segment files
     if not String.ends_with?(segment_name, ".m3u8") do
