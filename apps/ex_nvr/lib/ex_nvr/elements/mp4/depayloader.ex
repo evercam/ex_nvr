@@ -38,47 +38,47 @@ defmodule ExNVR.Elements.MP4.Depayloader do
        recordings: [],
        depayloader: nil,
        frame_rate: nil,
-       current_file: nil,
        current_pts: 0,
-       last_access_unit_pts: nil
+       last_access_unit_pts: nil,
+       pending_buffers: [],
+       buffer?: true
      }}
   end
 
   @impl true
   def handle_setup(_ctx, state) do
-    Membrane.Logger.debug("Setup the element: fetch recordings after date #{inspect(state.start_date)}")
+    Membrane.Logger.debug(
+      "Setup the element: fetch recordings after date #{inspect(state.start_date)}"
+    )
 
-    state =
-      case Recordings.get_recordings_after(state.start_date) do
-        [first_recoding | rest] ->
-          %{state | recordings: rest, current_file: first_recoding.filename}
-
-        _ ->
-          state
-      end
-
-    {[], state}
+    {[], %{state | recordings: Recordings.get_recordings_after(state.start_date)}}
   end
 
   @impl true
-  def handle_playing(_ctx, state), do: open_file(state)
+  def handle_playing(_ctx, state), do: maybe_read_next_file(state)
 
   @impl true
   def handle_demand(:output, _size, :buffers, _ctx, %{frame_rate: {frames, seconds}} = state) do
     case Native.read_access_unit(state.depayloader) do
-      {:ok, buffers, pts} ->
+      {:ok, buffers, pts, keyframes} ->
         buffers =
-          buffers
-          |> Enum.zip(pts)
-          |> Enum.map(fn {payload, pts} ->
+          [buffers, pts, keyframes]
+          |> Enum.zip()
+          |> Enum.map(fn {payload, pts, key_frame?} ->
             pts = div(pts * seconds * Membrane.Time.second(), frames)
-            %Buffer{payload: payload, pts: pts + state.current_pts}
+
+            %Buffer{
+              payload: payload,
+              pts: pts + state.current_pts,
+              metadata: %{key_frame?: key_frame?}
+            }
           end)
 
-        {[buffer: {:output, buffers}, redemand: :output],
-         %{state | last_access_unit_pts: List.last(buffers).pts}}
+        {actions, state} = prepare_buffer_actions(state, buffers)
+        {actions ++ [redemand: :output], state}
 
       {:error, _reason} ->
+        state = %{state | recordings: tl(state.recordings)}
         maybe_read_next_file(state)
     end
   end
@@ -88,14 +88,12 @@ defmodule ExNVR.Elements.MP4.Depayloader do
     {[end_of_stream: :output], state}
   end
 
-  defp maybe_read_next_file(%{recordings: [next_recording | rest]} = state) do
+  defp maybe_read_next_file(state) do
     Membrane.Logger.debug("Reached end of file of the current file")
 
     state = %{
       state
-      | recordings: rest,
-        current_file: next_recording.filename,
-        current_pts: state.last_access_unit_pts,
+      | current_pts: state.last_access_unit_pts || 0,
         last_access_unit_pts: nil
     }
 
@@ -105,13 +103,41 @@ defmodule ExNVR.Elements.MP4.Depayloader do
   end
 
   defp open_file(state) do
-    Membrane.Logger.debug("Open current file: #{state.current_file}")
+    Membrane.Logger.debug("Open current file: #{hd(state.recordings).filename}")
 
-    filename = Path.join(recording_directory(), state.current_file)
+    filename = Path.join(recording_directory(), hd(state.recordings).filename)
     {depayloader, frame_rate} = Native.open_file!(filename)
 
     {[stream_format: {:output, %H264.RemoteStream{alignment: :au}}],
      %{state | depayloader: depayloader, frame_rate: frame_rate}}
+  end
+
+  defp prepare_buffer_actions(%{buffer?: true} = state, buffers) do
+    time_diff =
+      DateTime.diff(state.start_date, hd(state.recordings).start_date) |> Membrane.Time.seconds()
+
+    last_pts = List.last(buffers).pts
+
+    if last_pts >= time_diff do
+      Enum.concat(buffers, state.pending_buffers)
+      |> Enum.split_while(&(not &1.metadata.key_frame?))
+      |> then(fn {first, second} -> [hd(second) | Enum.reverse(first)] end)
+      |> then(
+        &{[buffer: {:output, &1}],
+         %{state | buffer?: false, last_access_unit_pts: last_pts, pending_buffers: []}}
+      )
+    else
+      {[],
+       %{
+         state
+         | pending_buffers: buffers ++ state.pending_buffers,
+           last_access_unit_pts: last_pts
+       }}
+    end
+  end
+
+  defp prepare_buffer_actions(state, buffers) do
+    {[buffer: {:output, buffers}], %{state | last_access_unit_pts: List.last(buffers).pts}}
   end
 
   defp recording_directory(), do: Application.get_env(:ex_nvr, :recording_directory)
