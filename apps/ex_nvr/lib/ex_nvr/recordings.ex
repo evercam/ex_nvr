@@ -22,9 +22,9 @@ defmodule ExNVR.Recordings do
   end
 
   @spec get_recordings_after(DateTime.t()) :: [Recording.t()]
-  def get_recordings_after(start_date) do
-    start_date
-    |> Recording.after_date()
+  def get_recordings_after(date, opts \\ []) do
+    date
+    |> Recording.after_date(opts)
     |> Repo.all()
   end
 

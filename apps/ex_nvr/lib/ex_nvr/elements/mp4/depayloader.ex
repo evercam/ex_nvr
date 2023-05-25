@@ -1,6 +1,6 @@
 defmodule ExNVR.Elements.MP4.Depayloader do
   @moduledoc """
-  An Element responsible for reading MP4 files and extracting NAL units.
+  An Element responsible for reading recordings files and extracting access units.
 
   It uses FFmpeg and NIF to do the job.
   """
@@ -35,6 +35,7 @@ defmodule ExNVR.Elements.MP4.Depayloader do
     {[],
      %{
        start_date: options.start_date,
+       last_recording_date: options.start_date,
        recordings: [],
        depayloader: nil,
        frame_rate: nil,
@@ -47,15 +48,15 @@ defmodule ExNVR.Elements.MP4.Depayloader do
 
   @impl true
   def handle_setup(_ctx, state) do
-    Membrane.Logger.debug(
-      "Setup the element: fetch recordings after date #{inspect(state.start_date)}"
-    )
-
-    {[], %{state | recordings: Recordings.get_recordings_after(state.start_date)}}
+    Membrane.Logger.debug("Setup the element, start fetching recordings")
+    {[], maybe_read_recordings(state)}
   end
 
   @impl true
-  def handle_playing(_ctx, state), do: maybe_read_next_file(state)
+  def handle_playing(_ctx, state) do
+    {actions, state} = maybe_read_next_file(state)
+    {[stream_format: {:output, %H264.RemoteStream{alignment: :au}}] ++ actions, state}
+  end
 
   @impl true
   def handle_demand(:output, _size, :buffers, _ctx, %{frame_rate: {frames, seconds}} = state) do
@@ -78,7 +79,7 @@ defmodule ExNVR.Elements.MP4.Depayloader do
         {actions ++ [redemand: :output], state}
 
       {:error, _reason} ->
-        state = %{state | recordings: tl(state.recordings)}
+        state = maybe_read_recordings(%{state | recordings: tl(state.recordings)})
         maybe_read_next_file(state)
     end
   end
@@ -97,9 +98,7 @@ defmodule ExNVR.Elements.MP4.Depayloader do
         last_access_unit_pts: nil
     }
 
-    {actions, state} = open_file(state)
-
-    {actions ++ [redemand: :output], state}
+    {[redemand: :output], open_file(state)}
   end
 
   defp open_file(state) do
@@ -108,8 +107,7 @@ defmodule ExNVR.Elements.MP4.Depayloader do
     filename = Path.join(recording_directory(), hd(state.recordings).filename)
     {depayloader, frame_rate} = Native.open_file!(filename)
 
-    {[stream_format: {:output, %H264.RemoteStream{alignment: :au}}],
-     %{state | depayloader: depayloader, frame_rate: frame_rate}}
+    %{state | depayloader: depayloader, frame_rate: frame_rate}
   end
 
   defp prepare_buffer_actions(%{buffer?: true} = state, buffers) do
@@ -139,6 +137,22 @@ defmodule ExNVR.Elements.MP4.Depayloader do
   defp prepare_buffer_actions(state, buffers) do
     {[buffer: {:output, buffers}], %{state | last_access_unit_pts: List.last(buffers).pts}}
   end
+
+  defp maybe_read_recordings(%{recordings: []} = state) do
+    Membrane.Logger.debug(
+      "fetch recordings after date: date=#{inspect(state.last_recording_date)}"
+    )
+
+    case Recordings.get_recordings_after(state.last_recording_date) do
+      [] ->
+        state
+
+      recordings ->
+        %{state | recordings: recordings, last_recording_date: List.last(recordings).end_date}
+    end
+  end
+
+  defp maybe_read_recordings(state), do: state
 
   defp recording_directory(), do: Application.get_env(:ex_nvr, :recording_directory)
 end

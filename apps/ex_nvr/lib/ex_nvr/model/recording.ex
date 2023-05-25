@@ -24,8 +24,10 @@ defmodule ExNVR.Model.Recording do
     belongs_to :device, ExNVR.Model.Device
   end
 
-  def after_date(query \\ __MODULE__, date) do
+  def after_date(query \\ __MODULE__, date, opts \\ []) do
     where(query, [r], r.end_date > ^date)
+    |> limit(^(opts[:limit] || 50))
+    |> order_by([asc: :start_date])
   end
 
   def changeset(params) do
