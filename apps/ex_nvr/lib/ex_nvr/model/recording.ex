@@ -3,6 +3,8 @@ defmodule ExNVR.Model.Recording do
 
   use Ecto.Schema
 
+  import Ecto.Query
+
   alias Ecto.Changeset
 
   @type t :: %__MODULE__{
@@ -20,6 +22,12 @@ defmodule ExNVR.Model.Recording do
     field :filename, :string
 
     belongs_to :device, ExNVR.Model.Device
+  end
+
+  def after_date(query \\ __MODULE__, date, opts) do
+    where(query, [r], r.end_date > ^date)
+    |> limit(^(opts[:limit] || 50))
+    |> order_by(asc: :start_date)
   end
 
   def changeset(params) do

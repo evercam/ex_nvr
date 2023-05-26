@@ -21,6 +21,13 @@ defmodule ExNVR.Recordings do
     end
   end
 
+  @spec get_recordings_after(DateTime.t()) :: [Recording.t()]
+  def get_recordings_after(date, opts \\ []) do
+    date
+    |> Recording.after_date(opts)
+    |> Repo.all()
+  end
+
   @spec get_blob(Device.t(), binary()) :: binary() | nil
   def get_blob(%Device{id: id}, filename) do
     with %Recording{} = rec <- Repo.get_by(Recording, %{device_id: id, filename: filename}) do

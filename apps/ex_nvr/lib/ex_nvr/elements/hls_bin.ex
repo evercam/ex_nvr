@@ -7,8 +7,8 @@ defmodule ExNVR.Elements.HLSBin do
 
   use Membrane.Bin
 
-  alias Membrane.H264
-  alias Membrane.HTTPAdaptiveStream.Sink
+  alias Membrane.{H264, ResourceGuard}
+  alias Membrane.HTTPAdaptiveStream.{SinkBin, Storages}
 
   @high_quality "1080x720"
   @low_quality "640x480"
@@ -36,32 +36,31 @@ defmodule ExNVR.Elements.HLSBin do
               ]
 
   @impl true
-  def handle_init(_ctx, %__MODULE__{} = options) do
+  def handle_init(ctx, %__MODULE__{} = options) do
+    segment_prefix = options.segment_name_prefix
+
+    ResourceGuard.register(ctx.resource_guard, fn ->
+      File.rm_rf!(options.location)
+    end)
+
     spec = [
       bin_input(:input)
       |> child(:hls_forwarder, ExNVR.Elements.HLS.Forwarder)
       |> child(:hls_decoder, Membrane.H264.FFmpeg.Decoder)
       |> child(:hls_tee, Membrane.Tee.Master),
-      child(:hls, %Sink{
-        manifest_config: %{
-          name: "index",
-          module: Membrane.HTTPAdaptiveStream.HLS
-        },
-        storage: %Membrane.HTTPAdaptiveStream.Storages.FileStorage{
-          directory: options.location
-        },
-        track_config: %Sink.TrackConfig{
-          target_window_duration: Membrane.Time.seconds(60),
-          mode: :live,
-          segment_naming_fun: fn track ->
-            "#{options.segment_name_prefix}_#{track.id}_#{track.next_segment_id}"
-          end
-        }
+      child(:hls, %SinkBin{
+        manifest_module: Membrane.HTTPAdaptiveStream.HLS,
+        storage: %Storages.FileStorage{directory: options.location},
+        mode: :live,
+        target_window_duration: Membrane.Time.seconds(60),
+        segment_naming_fun: fn track ->
+          "#{segment_prefix}_#{track.id}_#{track.next_segment_id}"
+        end
       })
     ]
 
-    spec = maybe_add_high_quality_elements(spec)
-    spec = maybe_add_low_quality_elements(spec)
+    spec = maybe_add_high_quality_elements(spec, segment_prefix)
+    spec = maybe_add_low_quality_elements(spec, segment_prefix)
 
     {[spec: spec], %{}}
   end
@@ -71,13 +70,18 @@ defmodule ExNVR.Elements.HLSBin do
     {[notify_parent: notification], state}
   end
 
-  defp maybe_add_high_quality_elements(spec) do
+  @impl true
+  def handle_child_notification(_notification, _element, _ctx, state) do
+    {[], state}
+  end
+
+  defp maybe_add_high_quality_elements(spec, segment_prefix) do
     spec ++
       [
         get_child(:hls_tee)
         |> via_out(:master)
         |> child(:hls_high_rescaler, %Membrane.FFmpeg.SWScale.Scaler{
-          output_width: 1080,
+          output_width: 1280,
           output_height: 720
         })
         |> child(:hls_high_encoder, %Membrane.H264.FFmpeg.Encoder{
@@ -88,22 +92,20 @@ defmodule ExNVR.Elements.HLSBin do
           alignment: :au,
           attach_nalus?: true
         })
-        |> child(:hls_high_payloader, Membrane.MP4.Payloader.H264)
-        |> child(:hls_high_muxer, Membrane.MP4.Muxer.CMAF)
-        |> via_in(Pad.ref(:input, @high_quality),
-          options: [segment_duration: Membrane.Time.seconds(5)]
+        |> via_in(Pad.ref(:input, "#{segment_prefix}_#{@high_quality}"),
+          options: [encoding: :H264, segment_duration: Membrane.Time.seconds(5)]
         )
         |> get_child(:hls)
       ]
   end
 
-  defp maybe_add_low_quality_elements(spec) do
+  defp maybe_add_low_quality_elements(spec, segment_prefix) do
     spec ++
       [
         get_child(:hls_tee)
         |> via_out(:copy)
         |> child(:hls_low_rescaler, %Membrane.FFmpeg.SWScale.Scaler{
-          output_width: 640,
+          output_width: 856,
           output_height: 480
         })
         |> child(:hls_low_encoder, %Membrane.H264.FFmpeg.Encoder{
@@ -114,10 +116,8 @@ defmodule ExNVR.Elements.HLSBin do
           alignment: :au,
           attach_nalus?: true
         })
-        |> child(:hls_low_payloader, Membrane.MP4.Payloader.H264)
-        |> child(:hls_low_muxer, Membrane.MP4.Muxer.CMAF)
-        |> via_in(Pad.ref(:input, @low_quality),
-          options: [segment_duration: Membrane.Time.seconds(5)]
+        |> via_in(Pad.ref(:input, "#{segment_prefix}_#{@low_quality}"),
+          options: [encoding: :H264, segment_duration: Membrane.Time.seconds(5)]
         )
         |> get_child(:hls)
       ]

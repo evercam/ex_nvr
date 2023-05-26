@@ -30,3 +30,14 @@ erl_crash.dump
 *.db
 *.db-*
 
+# Object files
+*.o
+*.ko
+*.obj
+*.elf
+
+# Shared objects (inc. Windows DLLs)
+*.dll
+*.so
+*.so.*
+*.dylib

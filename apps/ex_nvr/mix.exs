@@ -13,6 +13,7 @@ defmodule ExNVR.MixProject do
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
+      compilers: [:unifex, :bundlex] ++ Mix.compilers(),
       deps: deps()
     ]
   end
@@ -50,6 +51,7 @@ defmodule ExNVR.MixProject do
       {:membrane_http_adaptive_stream_plugin, "~> 0.14.0"},
       {:membrane_h264_ffmpeg_plugin, "~> 0.26.2"},
       {:membrane_ffmpeg_swscale_plugin, "~> 0.11.1"},
+      {:membrane_realtimer_plugin, "~> 0.6.1"},
       {:connection, "~> 1.1.0"}
     ]
   end

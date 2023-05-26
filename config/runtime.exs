@@ -19,7 +19,8 @@ if config_env() == :prod do
     pool_size: String.to_integer(System.get_env("POOL_SIZE") || "5")
 
   config :ex_nvr,
-    recording_directory: System.fetch_env!("EXNVR_RECORDING_DIRECTORY")
+    recording_directory: System.fetch_env!("EXNVR_RECORDING_DIRECTORY"),
+    hls_directory: System.get_env("EXNVR_HLS_DIRECTORY", "./data/hls")
 
   # The secret key base is used to sign/encrypt cookies and other secrets.
   # A default value is used in config/dev.exs and config/test.exs but you

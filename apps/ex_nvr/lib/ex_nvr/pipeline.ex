@@ -29,8 +29,6 @@ defmodule ExNVR.Pipeline do
   alias ExNVR.Elements.RTSP.Source
   alias Membrane.RTP.SessionBin
 
-  @hls_live_streaming_directory "/home/ghilas/p/Evercam/ex_nvr/data/hls"
-
   defmodule State do
     @moduledoc false
 
@@ -75,10 +73,10 @@ defmodule ExNVR.Pipeline do
 
   The `segment_name_prefix` is used for generating segments' names
   """
-  def start_hls_streaming(segment_name_prefix) do
+  def start_hls_streaming(segment_name_prefix, directory) do
     Pipeline.call(
       Process.whereis(__MODULE__),
-      {:start_hls_streaming, segment_name_prefix},
+      {:start_hls_streaming, {segment_name_prefix, directory}},
       60_000
     )
   end
@@ -164,7 +162,7 @@ defmodule ExNVR.Pipeline do
 
   @impl true
   def handle_call(
-        {:start_hls_streaming, segment_name_prefix},
+        {:start_hls_streaming, {segment_name_prefix, directory}},
         %{from: from},
         %{hls_streaming_state: :stopped} = state
       ) do
@@ -172,12 +170,10 @@ defmodule ExNVR.Pipeline do
       get_child(:tee)
       |> via_out(:copy)
       |> child(:hls_bin, %ExNVR.Elements.HLSBin{
-        location: @hls_live_streaming_directory,
+        location: directory,
         segment_name_prefix: segment_name_prefix
       })
     ]
-
-    clean_hls_directory()
 
     {[spec: {spec, crash_group: {"hls", :temporary}}],
      %{state | hls_streaming_state: :starting, hls_pending_callers: [from]}}
@@ -191,7 +187,7 @@ defmodule ExNVR.Pipeline do
 
   @impl true
   def handle_crash_group_down("hls", _ctx, state) do
-    Membrane.Logger.error("Hls group crashed, stopped live streaming...")
+    Membrane.Logger.error("Hls group crashed, stop live streaming...")
     {[], %{state | hls_streaming_state: :stopped}}
   end
 
@@ -209,11 +205,5 @@ defmodule ExNVR.Pipeline do
 
     {[spec: spec, start_timer: {:playback_timer, Membrane.Time.milliseconds(300)}],
      %State{state | media_options: media_options}}
-  end
-
-  defp clean_hls_directory() do
-    @hls_live_streaming_directory
-    |> File.ls!()
-    |> Enum.each(&File.rm_rf!(Path.join(@hls_live_streaming_directory, &1)))
   end
 end
