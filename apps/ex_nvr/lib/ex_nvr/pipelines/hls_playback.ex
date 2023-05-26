@@ -83,4 +83,13 @@ defmodule ExNVR.Pipelines.HlsPlayback do
   def handle_call(:stop_streaming, _ctx, state) do
     {[reply: :ok, terminate: :shutdown], state}
   end
+
+  def child_spec(arg) do
+    %{
+      id: __MODULE__,
+      start: {__MODULE__, :start_link, [arg]},
+      restart: :temporary,
+      type: :supervisor
+    }
+  end
 end

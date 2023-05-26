@@ -140,8 +140,23 @@ defmodule ExNVR.Elements.RTSP.ConnectionManager do
   end
 
   @impl true
+  def handle_info(
+        {:DOWN, _ref, :process, pid, reason},
+        %ConnectionStatus{rtsp_session: pid} = connection_status
+      )
+      when reason != :normal do
+    send(connection_status.endpoint, {:connection_info, {:connection_failed, :session_crashed}})
+    {:connect, :reload, %{connection_status | rtsp_session: nil}}
+  end
+
+  @impl true
   def handle_info({:EXIT, _from, reason}, connection_status) do
     {:disconnect, {:error, reason}, connection_status}
+  end
+
+  @impl true
+  def handle_info(_, state) do
+    {:noreply, state}
   end
 
   defp maybe_reconnect(
@@ -169,8 +184,9 @@ defmodule ExNVR.Elements.RTSP.ConnectionManager do
          stream_uri: stream_uri,
          endpoint: endpoint
        }) do
-    case RTSP.start_link(stream_uri, ExNVR.Elements.RTSP.TCPSocket, media_receiver: endpoint) do
+    case RTSP.start(stream_uri, ExNVR.Elements.RTSP.TCPSocket, media_receiver: endpoint) do
       {:ok, session} ->
+        Process.monitor(session)
         session
 
       {:error, error} ->
@@ -184,8 +200,9 @@ defmodule ExNVR.Elements.RTSP.ConnectionManager do
     end
   end
 
-  defp start_rtsp_session(%ConnectionStatus{rtsp_session: rtsp_session}) do
-    rtsp_session
+  defp start_rtsp_session(%ConnectionStatus{rtsp_session: rtsp_session} = connection_status) do
+    RTSP.close(rtsp_session)
+    start_rtsp_session(%ConnectionStatus{connection_status | rtsp_session: nil})
   end
 
   defp get_rtsp_description(%ConnectionStatus{rtsp_session: rtsp_session} = connection_status) do

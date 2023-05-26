@@ -42,6 +42,7 @@ defmodule ExNVR.Pipeline do
     `device_id` - Id of the device where to pull the media stream
     `stream_uri` - RTSP stream
     `media_options` - Media description got from calling DESCRIBE method on the RTSP uri
+    `segment_duration` - The duration of each video chunk saved by the storage bin.
     `hls_streaming_state` - The current state of the HLS live streaming
     `hls_pending_callers` - List of callers (pid) that waits for first hls segment to be available
     """
@@ -49,6 +50,7 @@ defmodule ExNVR.Pipeline do
             device_id: binary(),
             stream_uri: binary(),
             media_options: map(),
+            segment_duration: non_neg_integer(),
             hls_streaming_state: hls_state(),
             hls_pending_callers: [GenServer.from()]
           }
@@ -57,6 +59,7 @@ defmodule ExNVR.Pipeline do
 
     defstruct @enforce_keys ++
                 [
+                  segment_duration: 60,
                   media_options: nil,
                   hls_streaming_state: :stopped,
                   hls_pending_callers: []
@@ -88,13 +91,21 @@ defmodule ExNVR.Pipeline do
   @impl true
   def handle_init(_ctx, options) do
     state = %State{
-      device_id: options.device_id,
-      stream_uri: options.stream_uri
+      device_id: options[:device_id],
+      stream_uri: options[:stream_uri],
+      segment_duration: options[:segment_duration] || 60
     }
 
-    source = child(:rtsp_source, %Source{stream_uri: state.stream_uri})
+    spec = [
+      child(:rtsp_source, %Source{stream_uri: state.stream_uri})
+    ]
 
-    {[spec: [source]], state}
+    {[spec: spec], state}
+  end
+
+  @impl true
+  def handle_child_notification(:connection_lost, :rtsp_source, ctx, state) do
+    {[], state}
   end
 
   @impl true
@@ -122,7 +133,7 @@ defmodule ExNVR.Pipeline do
       |> via_out(:master)
       |> child(:storage_bin, %ExNVR.Elements.StorageBin{
         device_id: state.device_id,
-        target_segment_duration: 30
+        target_segment_duration: state.segment_duration
       })
     ]
 
@@ -198,9 +209,7 @@ defmodule ExNVR.Pipeline do
     spec = [
       get_child(:rtsp_source)
       |> via_in(Pad.ref(:rtp_input, make_ref()))
-      |> child(:rtp, %SessionBin{
-        fmt_mapping: fmt_mapping
-      })
+      |> child(:rtp, %SessionBin{fmt_mapping: fmt_mapping})
     ]
 
     {[spec: spec, start_timer: {:playback_timer, Membrane.Time.milliseconds(300)}],

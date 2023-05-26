@@ -11,6 +11,7 @@ defmodule ExNVR.Application do
       ExNVR.Repo,
       {Phoenix.PubSub, name: ExNVR.PubSub},
       {Finch, name: ExNVR.Finch},
+      {ExNVR.Pipelines.Supervisor, []},
       Task.child_spec(fn -> ExNVR.start() end)
     ]
 

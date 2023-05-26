@@ -57,8 +57,8 @@ defmodule ExNVR.Elements.RTSP.TCPSocket do
       send(media_receiver, {:media_packet, packet})
       handle_media_packets(socket, media_receiver)
     else
-      {:error, reason} ->
-        send(media_receiver, {:rtsp_connection_lost, reason})
+      {:error, _reason} ->
+        raise "connection lost"
 
       _ ->
         Membrane.Logger.debug("ignore packet, not an RTP packet")

@@ -1,21 +1,20 @@
 defmodule ExNVR do
   @moduledoc false
 
-  alias ExNVR.{Devices, Pipeline}
+  alias ExNVR.{Devices, Pipelines}
   alias ExNVR.Model.Device
 
   @doc """
   Start the main pipeline
   """
   def start() do
-    Devices.list()
-    |> List.first()
-    |> case do
-      nil ->
-        :ok
+    for device <- Devices.list() do
+      options = [
+        device_id: device.id,
+        stream_uri: build_stream_uri(device)
+      ]
 
-      %Device{} = device ->
-        Pipeline.start_link(%{device_id: device.id, stream_uri: build_stream_uri(device)})
+      Pipelines.Supervisor.start_pipeline(options)
     end
   end
 

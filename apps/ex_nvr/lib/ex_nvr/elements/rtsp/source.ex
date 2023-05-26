@@ -11,7 +11,7 @@ defmodule ExNVR.Elements.RTSP.Source do
   alias ExNVR.Elements.RTSP.ConnectionManager
   alias Membrane.{Buffer, RemoteStream}
 
-  @max_reconnect_attempts 3
+  @max_reconnect_attempts 10
   @reconnect_delay 3_000
 
   def_options stream_uri: [
@@ -29,7 +29,7 @@ defmodule ExNVR.Elements.RTSP.Source do
 
   @impl true
   def handle_setup(_context, state) do
-    do_handle_setup(state)
+    {[], do_handle_setup(state)}
   end
 
   @impl true
@@ -55,25 +55,29 @@ defmodule ExNVR.Elements.RTSP.Source do
     {[], state}
   end
 
-  # Received when the rtsp connection failed to receive media packets for
-  # a certain duration or the connection closed
   @impl true
-  def handle_info({:rtsp_connection_lost, reason}, _ctx, state) do
-    Membrane.Logger.warn("RTSP connection lost due to #{reason}, reconnecting ...")
-    ConnectionManager.reconnect(state.connection_manager)
-
-    {[event: {:output, %Membrane.Event.Discontinuity{}}], state}
+  def handle_info({:connection_info, {:connection_failed, error}}, ctx, state) do
+    Membrane.Logger.error("could not connect to RTSP server due to #{inspect(error)}")
+    {connection_lost_actions(ctx), state}
   end
 
   @impl true
-  def handle_info({:DOWN, _ref, :process, pid, reason}, _ctx, %{connection_manager: pid} = state) do
+  def handle_info({:DOWN, _ref, :process, pid, reason}, ctx, %{connection_manager: pid} = state) do
     Membrane.Logger.warn("connection manager exited due to #{inspect(reason)}, reconnect ...")
-    do_handle_setup(state)
+    {connection_lost_actions(ctx), do_handle_setup(state)}
   end
 
   @impl true
   def handle_info(_other, _context, state) do
     {[], state}
+  end
+
+  defp connection_lost_actions(%{playback: state}) do
+    if state == :playing do
+      [event: {:output, %Membrane.Event.Discontinuity{}}, notify_parent: :connection_lost]
+    else
+      [notify_parent: :connection_lost]
+    end
   end
 
   defp do_handle_setup(state) do
