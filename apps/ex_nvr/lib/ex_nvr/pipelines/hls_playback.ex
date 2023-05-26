@@ -36,7 +36,7 @@ defmodule ExNVR.Pipelines.HlsPlayback do
       |> child(:realtimer, Membrane.Realtimer)
       |> child(:parser, %Membrane.H264.Parser{framerate: {0, 0}})
       |> child(:decoder, Membrane.H264.FFmpeg.Decoder)
-      |> child(:scaler, %Membrane.FFmpeg.SWScale.Scaler{output_height: 720})
+      |> child(:scaler, %Membrane.FFmpeg.SWScale.Scaler{output_width: 1280, output_height: 720})
       |> child(:encoder, %Membrane.H264.FFmpeg.Encoder{
         profile: :baseline,
         gop_size: 50

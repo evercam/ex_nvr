@@ -80,12 +80,21 @@ paths:
         Start HLS live view streaming.
 
         The manifest will have two playlists, high quality video with resolution `1080x720` and 
-        a low quality video with resolution `640x480`.
+        a low quality video with resolution `856x480`.
       operationId: startHlsStreaming
       tags:
         - Streaming
       parameters:
         - $ref: '#/components/parameters/device_id'
+        - name: pos
+          in: query
+          description: |
+            Start streaming from the given date time.
+
+            If this `param` is provided, only high quality is enabled 
+          schema:
+            type: string
+            format: date-time
       responses:
         '200':
           description: Success
