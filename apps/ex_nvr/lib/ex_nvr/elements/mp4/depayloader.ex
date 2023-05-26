@@ -115,15 +115,25 @@ defmodule ExNVR.Elements.MP4.Depayloader do
       DateTime.diff(state.start_date, hd(state.recordings).start_date) |> Membrane.Time.seconds()
 
     last_pts = List.last(buffers).pts
+    pending_buffers = Enum.reverse(buffers) ++ state.pending_buffers
 
     if last_pts >= time_diff do
-      Enum.concat(buffers, state.pending_buffers)
-      |> Enum.split_while(&(not &1.metadata.key_frame?))
-      |> then(fn {first, second} -> [hd(second) | Enum.reverse(first)] end)
-      |> then(
-        &{[buffer: {:output, &1}],
-         %{state | buffer?: false, last_access_unit_pts: last_pts, pending_buffers: []}}
-      )
+      {first, second} = Enum.split_while(pending_buffers, &(not &1.metadata.key_frame?))
+
+      # rewrite the pts of the buffers as the hd(second) will have pts of 0
+      first_pts = hd(second).pts
+
+      buffers =
+        Enum.map([hd(second) | Enum.reverse(first)], &%Buffer{&1 | pts: &1.pts - first_pts})
+
+      {[buffer: {:output, buffers}],
+       %{
+         state
+         | buffer?: false,
+           pending_buffers: [],
+           last_access_unit_pts: last_pts - first_pts,
+           current_pts: -first_pts
+       }}
     else
       {[],
        %{

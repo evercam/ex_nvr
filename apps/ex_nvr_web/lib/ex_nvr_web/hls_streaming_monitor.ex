@@ -8,14 +8,17 @@ defmodule ExNVRWeb.HlsStreamingMonitor do
 
   use GenServer
 
+  require Logger
+
   @cleanup_interval 3_000
-  @stale_time 60
+  @stale_time 45
 
   def start_link(_opts) do
     GenServer.start_link(__MODULE__, nil, name: __MODULE__)
   end
 
   def register(id, cleanup_fn) do
+    Logger.info("Register new HLS stream: #{id}")
     :ets.insert(__MODULE__, {id, cleanup_fn, current_time_s()})
   end
 
@@ -52,7 +55,13 @@ defmodule ExNVRWeb.HlsStreamingMonitor do
       current_time_s() - last_access_time >= @stale_time
     end)
     |> Enum.each(fn {key, clean_up_fn, _} ->
-      clean_up_fn.()
+      Logger.info(
+        "HLS stream not used for more than #{@stale_time} seconds, stop streaming and clean up"
+      )
+
+      # don't crash the process if there's a problem
+      # in clean up function
+      Task.start(clean_up_fn)
       :ets.delete(__MODULE__, key)
     end)
   end
