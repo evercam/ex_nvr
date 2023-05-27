@@ -104,7 +104,7 @@ defmodule ExNVR.Pipeline do
   end
 
   @impl true
-  def handle_child_notification(:connection_lost, :rtsp_source, ctx, state) do
+  def handle_child_notification(:connection_lost, :rtsp_source, _ctx, state) do
     {[], state}
   end
 

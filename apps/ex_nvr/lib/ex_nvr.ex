@@ -1,19 +1,52 @@
 defmodule ExNVR do
   @moduledoc false
 
-  alias ExNVR.{Devices, Pipelines}
+  require Logger
+
+  alias ExNVR.{Accounts, Devices, Pipelines}
   alias ExNVR.Model.Device
 
   @doc """
   Start the main pipeline
   """
   def start() do
+    create_directories()
+    create_admin_user()
+    run_pipelines()
+  end
+
+  # create recording & HLS directories
+  defp create_directories() do
+    File.mkdir_p!(recording_directory())
+    File.mkdir_p!(Application.get_env(:ex_nvr, :hls_directory))
+  end
+
+  defp create_admin_user() do
+    # if no user create an admin
+    if Accounts.count_users() == 0 do
+      username = Application.get_env(:ex_nvr, :admin_username)
+      password = Application.get_env(:ex_nvr, :admin_password)
+
+      with {:error, changeset} =
+             Accounts.register_user(%{email: username, password: password, role: :admin}) do
+        Logger.error("""
+        Could not create admin user, exiting app...
+        #{inspect(changeset)}
+        """)
+
+        System.halt(-1)
+      end
+    end
+  end
+
+  defp run_pipelines() do
     for device <- Devices.list() do
       options = [
         device_id: device.id,
         stream_uri: build_stream_uri(device)
       ]
 
+      File.mkdir!(Path.join(recording_directory(), device.id))
       Pipelines.Supervisor.start_pipeline(options)
     end
   end
@@ -30,4 +63,6 @@ defmodule ExNVR do
     |> then(&%URI{&1 | userinfo: userinfo})
     |> URI.to_string()
   end
+
+  defp recording_directory(), do: Application.get_env(:ex_nvr, :recording_directory)
 end

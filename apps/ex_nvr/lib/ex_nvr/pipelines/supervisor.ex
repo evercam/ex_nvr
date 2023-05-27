@@ -7,7 +7,7 @@ defmodule ExNVR.Pipelines.Supervisor do
 
   alias ExNVR.Pipeline
 
-  def start_link(opts) do
+  def start_link(_opts) do
     DynamicSupervisor.start_link(strategy: :one_for_one, name: __MODULE__)
   end
 

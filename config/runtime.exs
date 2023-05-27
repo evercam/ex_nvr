@@ -20,7 +20,9 @@ if config_env() == :prod do
 
   config :ex_nvr,
     recording_directory: System.fetch_env!("EXNVR_RECORDING_DIRECTORY"),
-    hls_directory: System.get_env("EXNVR_HLS_DIRECTORY", "./data/hls")
+    hls_directory: System.get_env("EXNVR_HLS_DIRECTORY", "./data/hls"),
+    admin_username: System.get_env("EXNVR_ADMIN_USERNAME", "admin@localhost"),
+    admin_password: System.get_env("EXNVR_ADMIN_PASSWORD", "P@ssw0rd")
 
   # The secret key base is used to sign/encrypt cookies and other secrets.
   # A default value is used in config/dev.exs and config/test.exs but you

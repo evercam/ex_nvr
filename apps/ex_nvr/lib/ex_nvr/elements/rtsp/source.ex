@@ -91,6 +91,6 @@ defmodule ExNVR.Elements.RTSP.Source do
 
     Process.monitor(connection_manager)
 
-    {[], %{state | connection_manager: connection_manager}}
+    %{state | connection_manager: connection_manager}
   end
 end

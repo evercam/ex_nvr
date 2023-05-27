@@ -35,8 +35,8 @@ defmodule ExNVR.Recordings do
     end
   end
 
-  defp recording_path(%{start_date: start_date}) do
+  defp recording_path(%{device_id: device_id, start_date: start_date}) do
     directory = Application.get_env(:ex_nvr, :recording_directory)
-    Path.join(directory, "#{DateTime.to_unix(start_date, :microsecond)}.mp4")
+    Path.join([directory, device_id, "#{DateTime.to_unix(start_date, :microsecond)}.mp4"])
   end
 end

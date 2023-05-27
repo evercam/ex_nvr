@@ -4,9 +4,9 @@ defmodule ExNVR.Accounts do
   """
 
   import Ecto.Query, warn: false
-  alias ExNVR.Repo
 
   alias ExNVR.Accounts.{User, UserToken, UserNotifier}
+  alias ExNVR.Repo
 
   def get_user_by_email(email) when is_binary(email) do
     Repo.get_by(User, email: email)
@@ -29,6 +29,8 @@ defmodule ExNVR.Accounts do
   def change_user_registration(%User{} = user, attrs \\ %{}) do
     User.registration_changeset(user, attrs, hash_password: false, validate_email: false)
   end
+
+  def count_users(), do: Repo.aggregate(User, :count)
 
   ## Settings
   def change_user_email(user, attrs \\ %{}) do
