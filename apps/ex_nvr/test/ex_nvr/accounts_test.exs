@@ -61,12 +61,12 @@ defmodule ExNVR.AccountsTest do
     end
 
     test "validates email and password when given" do
-      {:error, changeset} = Accounts.register_user(%{email: "not valid", password: "not valid"})
+      {:error, changeset} = Accounts.register_user(%{email: "invalid", password: "invalid"})
 
       errors = errors_on(changeset)
 
       assert ["must have the @ sign and no spaces"] = errors.email
-      assert "should be at least 12 character(s)" in errors.password
+      assert "should be at least 8 character(s)" in errors.password
     end
 
     test "validates maximum values for email and password for security" do
@@ -264,13 +264,13 @@ defmodule ExNVR.AccountsTest do
     test "validates password", %{user: user} do
       {:error, changeset} =
         Accounts.update_user_password(user, valid_user_password(), %{
-          password: "not valid",
+          password: "invalid",
           password_confirmation: "another"
         })
 
       errors = errors_on(changeset)
 
-      assert "should be at least 12 character(s)" in errors.password
+      assert "should be at least 8 character(s)" in errors.password
       assert ["does not match password"] = errors.password_confirmation
     end
 
@@ -473,13 +473,13 @@ defmodule ExNVR.AccountsTest do
     test "validates password", %{user: user} do
       {:error, changeset} =
         Accounts.reset_user_password(user, %{
-          password: "not valid",
+          password: "invalid",
           password_confirmation: "another"
         })
 
       errors = errors_on(changeset)
 
-      assert "should be at least 12 character(s)" in errors.password
+      assert "should be at least 8 character(s)" in errors.password
       assert ["does not match password"] = errors.password_confirmation
     end
 

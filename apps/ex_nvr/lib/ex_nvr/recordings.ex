@@ -46,6 +46,11 @@ defmodule ExNVR.Recordings do
   end
 
   # Runs
+  @spec list_runs(map()) :: [Run.t()]
+  def list_runs(params) do
+    Repo.all(Run.filter(params))
+  end
+
   def deactivate_runs(device_id) do
     Repo.update_all(Run.deactivate_query(device_id), set: [active: false])
   end

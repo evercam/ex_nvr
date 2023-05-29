@@ -10,9 +10,11 @@ defmodule ExNVR do
   Start the main pipeline
   """
   def start() do
-    create_directories()
-    create_admin_user()
-    run_pipelines()
+    if Application.get_env(:ex_nvr, :run_pipelines, true) do
+      create_directories()
+      create_admin_user()
+      run_pipelines()
+    end
   end
 
   # create recording & HLS directories
