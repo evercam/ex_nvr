@@ -8,6 +8,7 @@ defmodule ExNVR.Elements.StorageBin do
   require Membrane.Logger
 
   alias ExNVR.Elements.Segmenter.Segment
+  alias ExNVR.Model.Run
   alias Membrane.H264
 
   def_input_pad :input,
@@ -44,7 +45,8 @@ defmodule ExNVR.Elements.StorageBin do
       device_id: opts.device_id,
       recordings_temp_dir: System.tmp_dir!(),
       pending_segments: %{},
-      segment_extension: ".mp4"
+      segment_extension: ".mp4",
+      run: nil
     }
 
     {[spec: spec], state}
@@ -74,7 +76,7 @@ defmodule ExNVR.Elements.StorageBin do
 
   @impl true
   def handle_child_notification(
-        {:completed_segment, {pad_ref, %Segment{} = segment}},
+        {:completed_segment, {pad_ref, %Segment{} = segment, end_run?}},
         :segmenter,
         _ctx,
         state
@@ -84,6 +86,8 @@ defmodule ExNVR.Elements.StorageBin do
       | path: Path.join(state.recordings_temp_dir, "#{pad_ref}#{state.segment_extension}"),
         device_id: state.device_id
     }
+
+    state = run_from_segment(state, segment, end_run?)
 
     {[], put_in(state, [:pending_segments, pad_ref], segment)}
   end
@@ -111,18 +115,35 @@ defmodule ExNVR.Elements.StorageBin do
   defp do_save_recording(state, recording_ref) do
     {recording, state} = pop_in(state, [:pending_segments, recording_ref])
 
-    case ExNVR.Recordings.create(recording) do
-      {:ok, _} ->
+    case ExNVR.Recordings.create(state.run, recording) do
+      {:ok, _, run} ->
         Membrane.Logger.info("segment saved successfully")
         File.rm(recording.path)
+        {%{state | run: run}, recording}
 
       {:error, error} ->
         Membrane.Logger.error("""
         Could not save recording #{inspect(recording)}
         #{inspect(error)}
         """)
-    end
 
-    {state, recording}
+        {%{state | run: nil}, recording}
+    end
+  end
+
+  defp run_from_segment(state, segment, end_run?) do
+    if is_nil(state.run) do
+      %{
+        state
+        | run: %Run{
+            start_date: segment.start_date,
+            end_date: segment.end_date,
+            device_id: segment.device_id,
+            active: not end_run?
+          }
+      }
+    else
+      %{state | run: %Run{state.run | end_date: segment.end_date, active: not end_run?}}
+    end
   end
 end

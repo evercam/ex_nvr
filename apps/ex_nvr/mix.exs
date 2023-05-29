@@ -52,7 +52,8 @@ defmodule ExNVR.MixProject do
       {:membrane_h264_ffmpeg_plugin, "~> 0.26.2"},
       {:membrane_ffmpeg_swscale_plugin, "~> 0.11.1"},
       {:membrane_realtimer_plugin, "~> 0.6.1"},
-      {:connection, "~> 1.1.0"}
+      {:connection, "~> 1.1.0"},
+      {:faker, "~> 0.17", only: :test}
     ]
   end
 

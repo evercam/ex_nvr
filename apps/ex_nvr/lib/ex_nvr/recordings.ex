@@ -3,21 +3,31 @@ defmodule ExNVR.Recordings do
   Context to create/update/delete recordings and recordings metadata
   """
 
-  alias ExNVR.Model.{Device, Recording}
+  alias Ecto.Multi
+  alias ExNVR.Model.{Device, Recording, Run}
   alias ExNVR.Repo
 
   @type error :: {:error, Ecto.Changeset.t() | File.posix()}
 
-  @spec create(map()) :: {:ok, Recording.t()} | error()
-  def create(%{path: path} = params) do
+  @spec create(Run.t(), map()) :: {:ok, Recording.t(), Run.t()} | error()
+  def create(%Run{} = run, %{path: path} = params) do
     params = if is_struct(params), do: Map.from_struct(params), else: params
 
     with {:ok, data} <- File.read(path),
          :ok <- File.write(recording_path(params), data) do
-      params
-      |> Map.put(:filename, recording_path(params) |> Path.basename())
-      |> Recording.changeset()
-      |> Repo.insert()
+      recording_changeset =
+        params
+        |> Map.put(:filename, recording_path(params) |> Path.basename())
+        |> Recording.changeset()
+
+      Multi.new()
+      |> Multi.insert(:recording, recording_changeset)
+      |> Multi.insert(:run, run, on_conflict: :replace_all)
+      |> Repo.transaction()
+      |> case do
+        {:ok, %{recording: recording, run: run}} -> {:ok, recording, run}
+        {:error, _, changeset, _} -> {:error, changeset}
+      end
     end
   end
 
@@ -33,6 +43,16 @@ defmodule ExNVR.Recordings do
     with %Recording{} = rec <- Repo.get_by(Recording, %{device_id: id, filename: filename}) do
       File.read!(recording_path(rec))
     end
+  end
+
+  # Runs
+  @spec list_runs(map()) :: [Run.t()]
+  def list_runs(params) do
+    Repo.all(Run.filter(params))
+  end
+
+  def deactivate_runs(device_id) do
+    Repo.update_all(Run.deactivate_query(device_id), set: [active: false])
   end
 
   defp recording_path(%{device_id: device_id, start_date: start_date}) do

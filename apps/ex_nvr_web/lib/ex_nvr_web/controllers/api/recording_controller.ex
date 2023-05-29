@@ -1,13 +1,28 @@
 defmodule ExNVRWeb.API.RecordingController do
   @moduledoc false
-
   use ExNVRWeb, :controller
+
+  action_fallback ExNVRWeb.API.FallbackController
 
   import ExNVRWeb.Controller.Helpers
 
   plug ExNVRWeb.Plug.Device
 
+  alias Ecto.Changeset
   alias ExNVR.Recordings
+
+  @spec index(Plug.Conn.t(), map()) :: Plug.Conn.t() | {:error, Changeset.t()}
+  def index(conn, params) do
+    device = conn.assigns.device
+
+    with {:ok, params} <- validate_index_req_params(params) do
+      params
+      |> Map.put(:device_id, device.id)
+      |> Recordings.list_runs()
+      |> Enum.map(&Map.take(&1, [:start_date, :end_date, :active]))
+      |> then(&json(conn, &1))
+    end
+  end
 
   @spec blob(Plug.Conn.t(), map) :: Plug.Conn.t()
   def blob(conn, %{"recording_id" => recording_filename}) do
@@ -21,5 +36,13 @@ defmodule ExNVRWeb.API.RecordingController do
     else
       not_found(conn)
     end
+  end
+
+  defp validate_index_req_params(params) do
+    types = %{start_date: :utc_datetime_usec}
+
+    {%{}, types}
+    |> Changeset.cast(params, Map.keys(types))
+    |> Changeset.apply_action(:create)
   end
 end

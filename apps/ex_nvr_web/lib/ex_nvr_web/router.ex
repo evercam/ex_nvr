@@ -37,6 +37,7 @@ defmodule ExNVRWeb.Router do
     scope "/devices/:device_id" do
       pipe_through :api_require_authenticated_user
 
+      get "/recordings", API.RecordingController, :index
       get "/recordings/:recording_id/blob", API.RecordingController, :blob
 
       get "/hls/index.m3u8", API.DeviceStreamingController, :hls_stream

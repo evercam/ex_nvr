@@ -3,16 +3,18 @@ defmodule ExNVR do
 
   require Logger
 
-  alias ExNVR.{Accounts, Devices, Pipelines}
+  alias ExNVR.{Accounts, Devices, Pipelines, Recordings}
   alias ExNVR.Model.Device
 
   @doc """
   Start the main pipeline
   """
   def start() do
-    create_directories()
-    create_admin_user()
-    run_pipelines()
+    if Application.get_env(:ex_nvr, :run_pipelines, true) do
+      create_directories()
+      create_admin_user()
+      run_pipelines()
+    end
   end
 
   # create recording & HLS directories
@@ -46,7 +48,10 @@ defmodule ExNVR do
         stream_uri: build_stream_uri(device)
       ]
 
-      File.mkdir!(Path.join(recording_directory(), device.id))
+      File.mkdir_p!(Path.join(recording_directory(), device.id))
+      # make last active run inactive
+      # may happens on application crash
+      Recordings.deactivate_runs(device.id)
       Pipelines.Supervisor.start_pipeline(options)
     end
   end

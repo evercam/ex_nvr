@@ -108,7 +108,7 @@ defmodule ExNVR.Elements.Segmenter do
 
   @impl true
   def handle_event(:input, %Event.Discontinuity{}, _ctx, state) do
-    {[end_of_stream: Pad.ref(:output, state.start_time)] ++ completed_segment_action(state),
+    {[end_of_stream: Pad.ref(:output, state.start_time)] ++ completed_segment_action(state, true),
      Map.merge(state, init_state())}
   end
 
@@ -158,13 +158,13 @@ defmodule ExNVR.Elements.Segmenter do
     }
   end
 
-  defp completed_segment_action(state) do
+  defp completed_segment_action(state, discontinuity \\ false) do
     segment = %Segment{
       start_date: Membrane.Time.to_datetime(state.start_time),
       end_date: Membrane.Time.to_datetime(state.start_time + state.current_segment_duration),
       duration: Membrane.Time.as_seconds(state.current_segment_duration)
     }
 
-    [notify_parent: {:completed_segment, {state.start_time, segment}}]
+    [notify_parent: {:completed_segment, {state.start_time, segment, discontinuity}}]
   end
 end

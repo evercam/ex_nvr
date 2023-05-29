@@ -44,6 +44,45 @@ paths:
                     description: An access token to use to authorize subsequent requests
         '400':
           $ref: "#/components/responses/BadArg"
+  /api/devices/{device_id}/recordings:
+    get:
+      summary: Get recordings
+      description: Get all dates where there's available footages
+      operationId: getRecordings
+      tags:
+        - Recording
+      parameters:
+        - $ref: '#/components/parameters/device_id'
+        - name: start_date
+          in: query
+          required: false
+          description: Filter by start date
+          schema:
+            type: string
+            format: date-time
+          example: 2023-01-15T10:00:01Z
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  start_date:
+                    type: string
+                    format: date-time
+                    description: The start date of the run
+                  end_date:
+                    type: string
+                    format: date-time
+                    description: The end date of the run
+                  active:
+                    type: boolean
+                    description: |
+                      `true` if this an active run (still recording), `false` otherwise
+        '400':
+          $ref: "#/components/responses/BadArg"
   /api/devices/{device_id}/recordings/{recording_id}/blob:
     get:
       summary: Get recording blob

@@ -37,12 +37,19 @@ defmodule ExNVRWeb.Testing.Utils do
     }
 
     params = Map.merge(recording_params, Map.new(overrides))
-    ExNVR.Recordings.create(params)
+
+    run = %ExNVR.Model.Run{
+      device_id: params.device_id,
+      start_date: params.start_date,
+      end_date: params.end_date
+    }
+
+    ExNVR.Recordings.create(run, params)
   end
 
   def create_recording!(overrides \\ []) do
     case create_recording(overrides) do
-      {:ok, recording} ->
+      {:ok, recording, _run} ->
         recording
 
       error ->
