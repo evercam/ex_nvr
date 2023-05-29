@@ -53,7 +53,7 @@ paths:
         - Recording
       parameters:
         - $ref: '#/components/parameters/device_id'
-        - start_date:
+        - name: start_date
           in: query
           required: false
           description: Filter by start date
