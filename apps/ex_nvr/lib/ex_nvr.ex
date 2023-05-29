@@ -29,7 +29,7 @@ defmodule ExNVR do
       username = Application.get_env(:ex_nvr, :admin_username)
       password = Application.get_env(:ex_nvr, :admin_password)
 
-      with {:error, changeset} =
+      with {:error, changeset} <-
              Accounts.register_user(%{email: username, password: password, role: :admin}) do
         Logger.error("""
         Could not create admin user, exiting app...
