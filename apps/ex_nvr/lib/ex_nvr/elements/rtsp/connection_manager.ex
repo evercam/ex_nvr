@@ -84,27 +84,27 @@ defmodule ExNVR.Elements.RTSP.ConnectionManager do
       maybe_reconnect(connection_status)
     else
       try do
-      with {:ok, connection_status} <- get_rtsp_description(connection_status),
-           {:ok, connection_status} <- setup_rtsp_connection(connection_status),
-           :ok <- play(connection_status) do
-        send(
-          connection_status.endpoint,
-          {:rtsp_setup_complete, connection_status.endpoint_options}
-        )
-
-        {:ok, %{connection_status | reconnect_attempt: 0}}
-      else
-        {:error, :unauthorized} ->
-          Membrane.Logger.debug(
-            "ConnectionManager: Unauthorized. Attempting immediate reconnect..."
+        with {:ok, connection_status} <- get_rtsp_description(connection_status),
+             {:ok, connection_status} <- setup_rtsp_connection(connection_status),
+             :ok <- play(connection_status) do
+          send(
+            connection_status.endpoint,
+            {:rtsp_setup_complete, connection_status.endpoint_options}
           )
 
-          {:backoff, 0, connection_status}
+          {:ok, %{connection_status | reconnect_attempt: 0}}
+        else
+          {:error, :unauthorized} ->
+            Membrane.Logger.debug(
+              "ConnectionManager: Unauthorized. Attempting immediate reconnect..."
+            )
 
-        {:error, error} ->
-          Membrane.Logger.debug("ConnectionManager: Connection failed: #{inspect(error)}")
+            {:backoff, 0, connection_status}
 
-          send(connection_status.endpoint, {:connection_info, {:connection_failed, error}})
+          {:error, error} ->
+            Membrane.Logger.debug("ConnectionManager: Connection failed: #{inspect(error)}")
+
+            send(connection_status.endpoint, {:connection_info, {:connection_failed, error}})
 
             maybe_reconnect(connection_status)
         end
