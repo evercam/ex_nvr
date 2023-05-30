@@ -56,6 +56,8 @@ defmodule ExNVR.Elements.RTSP.ConnectionManager do
   def init(opts) do
     Membrane.Logger.debug("ConnectionManager: Initializing")
 
+    Process.monitor(opts[:endpoint])
+
     {:connect, :init,
      %ConnectionStatus{
        stream_uri: opts[:stream_uri],
@@ -81,6 +83,7 @@ defmodule ExNVR.Elements.RTSP.ConnectionManager do
     if is_nil(rtsp_session) do
       maybe_reconnect(connection_status)
     else
+      try do
       with {:ok, connection_status} <- get_rtsp_description(connection_status),
            {:ok, connection_status} <- setup_rtsp_connection(connection_status),
            :ok <- play(connection_status) do
@@ -103,6 +106,18 @@ defmodule ExNVR.Elements.RTSP.ConnectionManager do
 
           send(connection_status.endpoint, {:connection_info, {:connection_failed, error}})
 
+            maybe_reconnect(connection_status)
+        end
+      catch
+        # We catch exits here because the process crash before
+        # RTSP session returns timeout
+        :exit, error ->
+          Membrane.Logger.error("""
+          EXIT error when trying to connect to rtsp server
+          #{inspect(error)}
+          """)
+
+          kill_children(connection_status)
           maybe_reconnect(connection_status)
       end
     end
@@ -150,8 +165,12 @@ defmodule ExNVR.Elements.RTSP.ConnectionManager do
   end
 
   @impl true
-  def handle_info({:EXIT, _from, reason}, connection_status) do
-    {:disconnect, {:error, reason}, connection_status}
+  def handle_info(
+        {:DOWN, _ref, :process, pid, reason},
+        %ConnectionStatus{endpoint: pid} = connection_status
+      ) do
+    kill_children(connection_status)
+    {:stop, reason, connection_status}
   end
 
   @impl true
@@ -254,7 +273,7 @@ defmodule ExNVR.Elements.RTSP.ConnectionManager do
     end
   end
 
-  defp play(%ConnectionStatus{rtsp_session: rtsp_session, endpoint: _endpoint}) do
+  defp play(%ConnectionStatus{rtsp_session: rtsp_session}) do
     Membrane.Logger.debug("ConnectionManager: Setting RTSP on play mode")
 
     case RTSP.play(rtsp_session) do
