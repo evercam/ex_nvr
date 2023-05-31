@@ -56,6 +56,8 @@ defmodule ExNVR.Elements.RTSP.ConnectionManager do
   def init(opts) do
     Membrane.Logger.debug("ConnectionManager: Initializing")
 
+    Process.monitor(opts[:endpoint])
+
     {:connect, :init,
      %ConnectionStatus{
        stream_uri: opts[:stream_uri],
@@ -81,29 +83,45 @@ defmodule ExNVR.Elements.RTSP.ConnectionManager do
     if is_nil(rtsp_session) do
       maybe_reconnect(connection_status)
     else
-      with {:ok, connection_status} <- get_rtsp_description(connection_status),
-           {:ok, connection_status} <- setup_rtsp_connection(connection_status),
-           :ok <- play(connection_status) do
-        send(
-          connection_status.endpoint,
-          {:rtsp_setup_complete, connection_status.endpoint_options}
-        )
-
-        {:ok, %{connection_status | reconnect_attempt: 0}}
-      else
-        {:error, :unauthorized} ->
-          Membrane.Logger.debug(
-            "ConnectionManager: Unauthorized. Attempting immediate reconnect..."
+      try do
+        with {:ok, connection_status} <- get_rtsp_description(connection_status),
+             {:ok, connection_status} <- setup_rtsp_connection(connection_status),
+             :ok <- play(connection_status) do
+          send(
+            connection_status.endpoint,
+            {:rtsp_setup_complete, connection_status.endpoint_options}
           )
 
-          {:backoff, 0, connection_status}
+          {:ok, %{connection_status | reconnect_attempt: 0}}
+        else
+          {:error, :unauthorized} ->
+            Membrane.Logger.debug(
+              "ConnectionManager: Unauthorized. Attempting immediate reconnect..."
+            )
 
-        {:error, error} ->
-          Membrane.Logger.debug("ConnectionManager: Connection failed: #{inspect(error)}")
+            {:backoff, 0, connection_status}
 
-          send(connection_status.endpoint, {:connection_info, {:connection_failed, error}})
+          {:error, error} ->
+            Membrane.Logger.debug("ConnectionManager: Connection failed: #{inspect(error)}")
 
-          maybe_reconnect(connection_status)
+            send(connection_status.endpoint, {:connection_info, {:connection_failed, error}})
+
+            maybe_reconnect(connection_status)
+        end
+      catch
+        # We catch exits here because the process crash before
+        # RTSP session returns timeout
+        :exit, error ->
+          Membrane.Logger.error("""
+          EXIT error when trying to connect to rtsp server
+          #{inspect(error)}
+          """)
+
+          # A strange bug in membrane RTSP, when the media data are sent
+          # with the PLAY response, the rtsp session doesn't respond and enter
+          # an infinite loop
+          Process.exit(connection_status.rtsp_session, :kill)
+          {:ok, connection_status}
       end
     end
   end
@@ -150,8 +168,12 @@ defmodule ExNVR.Elements.RTSP.ConnectionManager do
   end
 
   @impl true
-  def handle_info({:EXIT, _from, reason}, connection_status) do
-    {:disconnect, {:error, reason}, connection_status}
+  def handle_info(
+        {:DOWN, _ref, :process, pid, reason},
+        %ConnectionStatus{endpoint: pid} = connection_status
+      ) do
+    kill_children(connection_status)
+    {:stop, reason, connection_status}
   end
 
   @impl true
@@ -201,6 +223,7 @@ defmodule ExNVR.Elements.RTSP.ConnectionManager do
   end
 
   defp start_rtsp_session(%ConnectionStatus{rtsp_session: rtsp_session} = connection_status) do
+    IO.inspect("Stop rtsp session")
     RTSP.close(rtsp_session)
     start_rtsp_session(%ConnectionStatus{connection_status | rtsp_session: nil})
   end
@@ -254,7 +277,7 @@ defmodule ExNVR.Elements.RTSP.ConnectionManager do
     end
   end
 
-  defp play(%ConnectionStatus{rtsp_session: rtsp_session, endpoint: _endpoint}) do
+  defp play(%ConnectionStatus{rtsp_session: rtsp_session}) do
     Membrane.Logger.debug("ConnectionManager: Setting RTSP on play mode")
 
     case RTSP.play(rtsp_session) do

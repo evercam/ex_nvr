@@ -11,7 +11,7 @@ defmodule ExNVR.Elements.RTSP.Source do
   alias ExNVR.Elements.RTSP.ConnectionManager
   alias Membrane.{Buffer, RemoteStream}
 
-  @max_reconnect_attempts 10
+  @max_reconnect_attempts :infinity
   @reconnect_delay 3_000
 
   def_options stream_uri: [

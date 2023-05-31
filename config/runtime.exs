@@ -1,11 +1,5 @@
 import Config
 
-# config/runtime.exs is executed for all environments, including
-# during releases. It is executed after compilation and before the
-# system starts, so it is typically used to load production configuration
-# and secrets from environment variables or elsewhere. Do not define
-# any compile-time configuration in here, as it won't be applied.
-# The block below contains prod specific runtime configuration.
 if config_env() == :prod do
   database_path =
     System.get_env("DATABASE_PATH") ||
@@ -36,24 +30,17 @@ if config_env() == :prod do
       You can generate one by calling: mix phx.gen.secret
       """
 
+  url = URI.parse(System.get_env("EXNVR_URL", "http://localhost:4000"))
+
   config :ex_nvr_web, ExNVRWeb.Endpoint,
     http: [
-      # Enable IPv6 and bind on all interfaces.
-      # Set it to  {0, 0, 0, 0, 0, 0, 0, 1} for local network only access.
       ip: {0, 0, 0, 0, 0, 0, 0, 0},
       port: String.to_integer(System.get_env("PORT") || "4000")
     ],
-    secret_key_base: secret_key_base
+    secret_key_base: secret_key_base,
+    url: [scheme: url.scheme, host: url.host, port: url.port]
 
-  # ## Using releases
-  #
-  # If you are doing OTP releases, you need to instruct Phoenix
-  # to start each relevant endpoint:
-  #
-  #     config :ex_nvr_web, ExNVRWeb.Endpoint, server: true
-  #
-  # Then you can assemble a release by calling `mix release`.
-  # See `mix help release` for more information.
+  config :ex_nvr_web, ExNVRWeb.Endpoint, server: true
 
   # ## SSL Support
   #

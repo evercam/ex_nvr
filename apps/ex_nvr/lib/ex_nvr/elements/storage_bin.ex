@@ -117,9 +117,9 @@ defmodule ExNVR.Elements.StorageBin do
 
     case ExNVR.Recordings.create(state.run, recording) do
       {:ok, _, run} ->
-        Membrane.Logger.info("segment saved successfully")
+        Membrane.Logger.info("Segment saved successfully")
         File.rm(recording.path)
-        {%{state | run: run}, recording}
+        {maybe_new_run(state, run), recording}
 
       {:error, error} ->
         Membrane.Logger.error("""
@@ -127,23 +127,23 @@ defmodule ExNVR.Elements.StorageBin do
         #{inspect(error)}
         """)
 
-        {%{state | run: nil}, recording}
+        {maybe_new_run(state, nil), recording}
     end
   end
 
   defp run_from_segment(state, segment, end_run?) do
     if is_nil(state.run) do
-      %{
-        state
-        | run: %Run{
-            start_date: segment.start_date,
-            end_date: segment.end_date,
-            device_id: segment.device_id,
-            active: not end_run?
-          }
-      }
+      run =
+        Map.take(segment, [:start_date, :end_date, :device_id])
+        |> Map.put(:active, not end_run?)
+        |> then(&struct(Run, &1))
+
+      %{state | run: run}
     else
       %{state | run: %Run{state.run | end_date: segment.end_date, active: not end_run?}}
     end
   end
+
+  defp maybe_new_run(state, run) when not is_nil(run) and run.active, do: %{state | run: run}
+  defp maybe_new_run(state, _run), do: %{state | run: nil}
 end

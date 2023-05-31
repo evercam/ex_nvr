@@ -47,15 +47,15 @@ exit_open_file:
 static int get_filtered_packets(UnifexEnv *env, UnifexPayload ***ret_frames, 
                                int64_t **ret_pts, int **ret_keyframes, int max_au, 
                                int *count, State* state) {
-  AVPacket filtered_packet; av_init_packet(&filtered_packet);
-  filtered_packet.size = 0;
-  filtered_packet.data = NULL;
+  AVPacket *filtered_packet = av_packet_alloc();
+  filtered_packet->size = 0;
+  filtered_packet->data = NULL;
 
   UnifexPayload **access_units = unifex_alloc((max_au) * sizeof(*access_units));
   int64_t *pts = unifex_alloc((max_au) * sizeof(*pts));
   int *keyframes = unifex_alloc((max_au) * sizeof(*keyframes));
   
-  int ret = av_bsf_receive_packet(state->bsf_ctx, &filtered_packet);
+  int ret = av_bsf_receive_packet(state->bsf_ctx, filtered_packet);
   while (ret != AVERROR(EAGAIN) && ret != AVERROR_EOF)
   {
     if (ret < 0) {
@@ -64,35 +64,35 @@ static int get_filtered_packets(UnifexEnv *env, UnifexPayload ***ret_frames,
     }
 
     access_units[*count] = unifex_alloc(sizeof(UnifexPayload));
-    unifex_payload_alloc(env, UNIFEX_PAYLOAD_BINARY, filtered_packet.size, access_units[*count]);
-    memcpy(access_units[*count]->data, filtered_packet.data, filtered_packet.size);
-    pts[*count] = filtered_packet.pts;
-    keyframes[*count] = filtered_packet.flags & AV_PKT_FLAG_KEY;
+    unifex_payload_alloc(env, UNIFEX_PAYLOAD_BINARY, filtered_packet->size, access_units[*count]);
+    memcpy(access_units[*count]->data, filtered_packet->data, filtered_packet->size);
+    pts[*count] = filtered_packet->pts;
+    keyframes[*count] = filtered_packet->flags & AV_PKT_FLAG_KEY;
 
     (*count)++;
 
-    ret = av_bsf_receive_packet(state->bsf_ctx, &filtered_packet);
+    ret = av_bsf_receive_packet(state->bsf_ctx, filtered_packet);
   }
 
 exit_get_filtered_packets:
   *ret_frames = access_units;
   *ret_pts = pts;
   *ret_keyframes = keyframes;
-  av_packet_unref(&filtered_packet);
+  av_packet_unref(filtered_packet);
   return ret;
 }
 
 UNIFEX_TERM read_access_unit(UnifexEnv* env, State* state) {
   UNIFEX_TERM res;
-  AVPacket packet; av_init_packet(&packet);
+  AVPacket *packet = av_packet_alloc();
 
   UnifexPayload **out_access_units = NULL;
   int64_t *out_pts = NULL;
   int *out_keyframes = NULL;
   int count = 0;
 
-  if (av_read_frame(state->format_ctx, &packet) == 0) {
-    if (av_bsf_send_packet(state->bsf_ctx, &packet) < 0) {
+  if (av_read_frame(state->format_ctx, packet) == 0) {
+    if (av_bsf_send_packet(state->bsf_ctx, packet) < 0) {
       res = read_access_unit_result_error(env, "send_packet");
       goto exit_read_access_unit;
     }
@@ -125,6 +125,6 @@ UNIFEX_TERM read_access_unit(UnifexEnv* env, State* state) {
   }
 
 exit_read_access_unit:
-  av_packet_unref(&packet);
+  av_packet_unref(packet);
   return res;
 }
