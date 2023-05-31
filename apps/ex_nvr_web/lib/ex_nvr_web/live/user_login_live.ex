@@ -3,18 +3,24 @@ defmodule ExNVRWeb.UserLoginLive do
 
   def render(assigns) do
     ~H"""
-    <div class="mx-auto max-w-sm">
+    <div class="flex flex-col items-center justify-center h-screen bg-white dark:bg-gray-800">
       <.header class="text-center">
-        Sign in to account
+        <span class="text-gray-900 dark:text-white">Sign in to account</span>
       </.header>
 
-      <.simple_form for={@form} id="login_form" action={~p"/users/login"} phx-update="ignore">
+      <.simple_form
+        class="bg-white dark:bg-gray-800"
+        for={@form}
+        id="login_form"
+        action={~p"/users/login"}
+        phx-update="ignore"
+      >
         <.input field={@form[:email]} type="email" label="Email" required />
         <.input field={@form[:password]} type="password" label="Password" required />
 
         <:actions>
           <.input field={@form[:remember_me]} type="checkbox" label="Keep me logged in" />
-          <.link href={~p"/users/reset-password"} class="text-sm font-semibold">
+          <.link href={~p"/users/reset-password"} class="text-sm font-semibold dark:text-white">
             Forgot your password?
           </.link>
         </:actions>
@@ -31,6 +37,6 @@ defmodule ExNVRWeb.UserLoginLive do
   def mount(_params, _session, socket) do
     email = live_flash(socket.assigns.flash, :email)
     form = to_form(%{"email" => email}, as: "user")
-    {:ok, assign(socket, form: form), temporary_assigns: [form: form]}
+    {:ok, assign(socket, form: form), temporary_assigns: [form: form], layout: false}
   end
 end
