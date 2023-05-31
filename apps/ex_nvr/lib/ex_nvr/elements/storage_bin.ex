@@ -117,7 +117,8 @@ defmodule ExNVR.Elements.StorageBin do
 
     case ExNVR.Recordings.create(state.run, recording) do
       {:ok, _, run} ->
-        Membrane.Logger.info("segment saved successfully")
+        Membrane.Logger.info("Segment saved successfully")
+        File.rm(recording.path)
         {maybe_new_run(state, run), recording}
 
       {:error, error} ->

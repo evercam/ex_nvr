@@ -30,12 +30,15 @@ if config_env() == :prod do
       You can generate one by calling: mix phx.gen.secret
       """
 
+  url = URI.parse(System.get_env("EXNVR_URL", "http://localhost:4000"))
+
   config :ex_nvr_web, ExNVRWeb.Endpoint,
     http: [
       ip: {0, 0, 0, 0, 0, 0, 0, 0},
       port: String.to_integer(System.get_env("PORT") || "4000")
     ],
-    secret_key_base: secret_key_base
+    secret_key_base: secret_key_base,
+    url: [scheme: url.scheme, host: url.host, port: url.port]
 
   config :ex_nvr_web, ExNVRWeb.Endpoint, server: true
 

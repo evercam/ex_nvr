@@ -13,7 +13,7 @@ defmodule ExNVR.Recordings do
   def create(%Run{} = run, %{path: path} = params) do
     params = if is_struct(params), do: Map.from_struct(params), else: params
 
-    with :ok <- File.rename(path, recording_path(params)) do
+    with :ok <- File.cp(path, recording_path(params)) do
       recording_changeset =
         params
         |> Map.put(:filename, recording_path(params) |> Path.basename())

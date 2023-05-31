@@ -35,8 +35,9 @@ variables needed to configure `ex_nvr` are:
 | **Env variable** | **descritpion** |
 |------------------|-----------------|
 | DATABASE_PATH    | The path where Sqlite database will be created. |
-| SECRET_KEY_BASE  | A 64 byte key that's used by **Pheonix** to encrypt cookies |
 | EXNVR_RECORDING_DIRECTORY | The directory where video footages will be stored |
 | EXNVR_HLS_DIRECTORY | The directory where hls playlists will be stored. Default to: `./data/hls`. <br/><br/>It is not necessary to expose this folder via volumes since the playlists are deleted each time the user stop streaming.
 | EXNVR_ADMIN_USERNAME | The username(email) of the admin user to create on first startup. Default to: `admin@localhost`. |
-| EXNVR_ADMIN_PASSWORD | The password of the admin user to create on first startup. Default to: `P@ssw0rd`. | 
+| EXNVR_ADMIN_PASSWORD | The password of the admin user to create on first startup. Default to: `P@ssw0rd`. |
+| SECRET_KEY_BASE  | A 64 byte key that's used by **Pheonix** to encrypt cookies |
+| EXNVR_URL | The `url` to use for generating URLs and as a default value for `check_origins` of the websocket. Default to: `http://localhost:4000` |

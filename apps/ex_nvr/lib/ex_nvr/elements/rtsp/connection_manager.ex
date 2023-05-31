@@ -117,8 +117,11 @@ defmodule ExNVR.Elements.RTSP.ConnectionManager do
           #{inspect(error)}
           """)
 
-          kill_children(connection_status)
-          maybe_reconnect(connection_status)
+          # A strange bug in membrane RTSP, when the media data are sent
+          # with the PLAY response, the rtsp session doesn't respond and enter
+          # an infinite loop
+          Process.exit(connection_status.rtsp_session, :kill)
+          {:ok, connection_status}
       end
     end
   end
@@ -220,6 +223,7 @@ defmodule ExNVR.Elements.RTSP.ConnectionManager do
   end
 
   defp start_rtsp_session(%ConnectionStatus{rtsp_session: rtsp_session} = connection_status) do
+    IO.inspect("Stop rtsp session")
     RTSP.close(rtsp_session)
     start_rtsp_session(%ConnectionStatus{connection_status | rtsp_session: nil})
   end
