@@ -10,7 +10,7 @@ defmodule ExNVR.Elements.MP4.Depayloader do
   require Membrane.Logger
 
   alias ExNVR.Elements.MP4.Depayloader.Native
-  alias ExNVR.Recordings
+  alias ExNVR.{Recordings, Utils}
   alias Membrane.{Buffer, H264}
 
   def_output_pad :output,
@@ -18,7 +18,11 @@ defmodule ExNVR.Elements.MP4.Depayloader do
     accepted_format: %H264.RemoteStream{alignment: :au},
     availability: :always
 
-  def_options start_date: [
+  def_options device_id: [
+                spec: binary(),
+                description: "The device id"
+              ],
+              start_date: [
                 spec: DateTime.t(),
                 description: """
                 The start date from which we start getting access units from recordings.
@@ -34,6 +38,7 @@ defmodule ExNVR.Elements.MP4.Depayloader do
 
     {[],
      %{
+       device_id: options.device_id,
        start_date: options.start_date,
        last_recording_date: options.start_date,
        recordings: [],
@@ -104,7 +109,7 @@ defmodule ExNVR.Elements.MP4.Depayloader do
   defp open_file(state) do
     Membrane.Logger.debug("Open current file: #{hd(state.recordings).filename}")
 
-    filename = Path.join(recording_directory(), hd(state.recordings).filename)
+    filename = Path.join(Utils.recording_dir(state.device.id), hd(state.recordings).filename)
     {depayloader, frame_rate} = Native.open_file!(filename)
 
     %{state | depayloader: depayloader, frame_rate: frame_rate}
@@ -163,6 +168,4 @@ defmodule ExNVR.Elements.MP4.Depayloader do
   end
 
   defp maybe_read_recordings(state), do: state
-
-  defp recording_directory(), do: Application.get_env(:ex_nvr, :recording_directory)
 end

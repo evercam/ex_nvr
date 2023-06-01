@@ -67,6 +67,5 @@ defmodule ExNVRWeb.Testing.Utils do
     path
   end
 
-  def clean_recording_directory(),
-    do: File.rm_rf!(Application.get_env(:ex_nvr, :recording_directory))
+  def clean_recording_directory(), do: File.rm_rf!(ExNVR.Utils.recording_dir())
 end

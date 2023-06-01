@@ -24,7 +24,7 @@ defmodule ExNVR.Elements.RTSP.Source do
 
   @impl true
   def handle_init(_context, %__MODULE__{} = options) do
-    {[], %{stream_uri: options[:stream_uri], connection_manager: nil}}
+    {[], %{stream_uri: options[:stream_uri], connection_manager: nil, buffered_actions: []}}
   end
 
   @impl true
@@ -34,7 +34,11 @@ defmodule ExNVR.Elements.RTSP.Source do
 
   @impl true
   def handle_playing(_context, state) do
-    {[stream_format: {:output, %RemoteStream{type: :packetized}}], state}
+    actions =
+      [stream_format: {:output, %RemoteStream{type: :packetized}}] ++
+        Enum.reverse(state.buffered_actions)
+
+    {actions, %{state | buffered_actions: []}}
   end
 
   @impl true
@@ -44,15 +48,18 @@ defmodule ExNVR.Elements.RTSP.Source do
 
   @impl true
   def handle_info({:media_packet, packet}, %{playback: :playing}, state) do
-    metadata = %{arrival_ts: Membrane.Time.vm_time()}
-    actions = [buffer: {:output, %Buffer{payload: packet, metadata: metadata}}]
-
-    {actions, state}
+    {[buffer: {:output, packet_to_buffer(packet)}], state}
   end
 
   @impl true
-  def handle_info({:media_packet, _packet}, _ctx, state) do
-    {[], state}
+  def handle_info({:media_packet, packet}, _ctx, state) do
+    {[],
+     %{
+       state
+       | buffered_actions: [
+           {:buffer, {:output, packet_to_buffer(packet)}} | state.buffered_actions
+         ]
+     }}
   end
 
   @impl true
@@ -92,5 +99,9 @@ defmodule ExNVR.Elements.RTSP.Source do
     Process.monitor(connection_manager)
 
     %{state | connection_manager: connection_manager}
+  end
+
+  defp packet_to_buffer(packet) do
+    %Buffer{payload: packet, metadata: %{arrival_ts: Membrane.Time.vm_time()}}
   end
 end

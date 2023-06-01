@@ -3,4 +3,4 @@ Ecto.Adapters.SQL.Sandbox.mode(ExNVR.Repo, :manual)
 
 Faker.start()
 
-File.mkdir_p!(Application.get_env(:ex_nvr, :recording_directory))
+File.mkdir_p!(ExNVR.Utils.recording_dir())

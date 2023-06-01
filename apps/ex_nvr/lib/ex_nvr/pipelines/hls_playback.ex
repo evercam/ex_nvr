@@ -32,7 +32,10 @@ defmodule ExNVR.Pipelines.HlsPlayback do
     end)
 
     spec = [
-      child(:source, %MP4.Depayloader{start_date: options[:start_date]})
+      child(:source, %MP4.Depayloader{
+        device_id: options[:device_id],
+        start_date: options[:start_date]
+      })
       |> child(:realtimer, Membrane.Realtimer)
       |> child(:parser, %Membrane.H264.Parser{framerate: {0, 0}})
       |> child(:decoder, Membrane.H264.FFmpeg.Decoder)

@@ -5,7 +5,7 @@ defmodule ExNVR.Recordings do
 
   alias Ecto.Multi
   alias ExNVR.Model.{Device, Recording, Run}
-  alias ExNVR.Repo
+  alias ExNVR.{Repo, Utils}
 
   @type error :: {:error, Ecto.Changeset.t() | File.posix()}
 
@@ -55,7 +55,6 @@ defmodule ExNVR.Recordings do
   end
 
   defp recording_path(%{device_id: device_id, start_date: start_date}) do
-    directory = Application.get_env(:ex_nvr, :recording_directory)
-    Path.join([directory, device_id, "#{DateTime.to_unix(start_date, :microsecond)}.mp4"])
+    Path.join(Utils.recording_dir(device_id), "#{DateTime.to_unix(start_date, :microsecond)}.mp4")
   end
 end

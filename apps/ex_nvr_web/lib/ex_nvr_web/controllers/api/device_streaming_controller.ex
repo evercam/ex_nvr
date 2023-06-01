@@ -13,7 +13,7 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
 
   def hls_stream(conn, params) do
     with {:ok, params} <- validate_hls_stream_params(params) do
-      path = start_hls_pipeline(params.pos)
+      path = start_hls_pipeline(conn.assigns.device.id, params.pos)
       send_file(conn, 200, Path.join(path, "index.m3u8"))
     end
   end
@@ -39,7 +39,7 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
     |> Changeset.apply_action(:create)
   end
 
-  defp start_hls_pipeline(nil) do
+  defp start_hls_pipeline(_device_id, nil) do
     path = create_hls_directory(@hls_live_streaming_id)
 
     :ok = Pipeline.start_hls_streaming(@hls_live_streaming_id, path)
@@ -49,20 +49,21 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
     path
   end
 
-  defp start_hls_pipeline(pos) do
+  defp start_hls_pipeline(device_id, pos) do
     id = UUID.uuid4()
     path = create_hls_directory(id)
 
     pipeline_options = [
+      device_id: device_id,
       start_date: pos,
       directory: path,
       segment_name_prefix: id
     ]
 
     {:ok, _, pid} = HlsPlayback.start(pipeline_options)
-    :ok = HlsPlayback.start_streaming(pid)
-
     ExNVRWeb.HlsStreamingMonitor.register(id, fn -> HlsPlayback.stop_streaming(pid) end)
+
+    :ok = HlsPlayback.start_streaming(pid)
 
     path
   end

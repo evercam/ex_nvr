@@ -12,7 +12,7 @@ defmodule ExNVRWeb.API.RecordingControllerTest do
     conn = build_conn() |> log_in_user_with_access_token(AccountsFixtures.user_fixture())
     device = create_device!()
 
-    File.mkdir_p!(Path.join(Application.get_env(:ex_nvr, :recording_directory), device.id))
+    File.mkdir_p!(ExNVR.Utils.recording_dir(device.id))
     %{conn: conn, device: device}
   end
 

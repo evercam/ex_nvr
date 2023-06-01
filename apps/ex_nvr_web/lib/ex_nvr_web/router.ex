@@ -35,7 +35,7 @@ defmodule ExNVRWeb.Router do
     post "/users/login", API.UserSessionController, :login
 
     scope "/devices/:device_id" do
-      pipe_through :api_require_authenticated_user
+      pipe_through [:api_require_authenticated_user, ExNVRWeb.Plug.Device]
 
       get "/recordings", API.RecordingController, :index
       get "/recordings/:recording_id/blob", API.RecordingController, :blob

@@ -3,6 +3,8 @@ defmodule ExNVR do
 
   require Logger
 
+  import ExNVR.Utils
+
   alias ExNVR.{Accounts, Devices, Pipelines, Recordings}
   alias ExNVR.Model.Device
 
@@ -19,7 +21,7 @@ defmodule ExNVR do
 
   # create recording & HLS directories
   defp create_directories() do
-    File.mkdir_p!(recording_directory())
+    File.mkdir_p!(recording_dir())
     File.mkdir_p!(Application.get_env(:ex_nvr, :hls_directory))
   end
 
@@ -48,7 +50,7 @@ defmodule ExNVR do
         stream_uri: build_stream_uri(device)
       ]
 
-      File.mkdir_p!(Path.join(recording_directory(), device.id))
+      File.mkdir_p!(recording_dir(device.id))
       # make last active run inactive
       # may happens on application crash
       Recordings.deactivate_runs(device.id)
@@ -68,6 +70,4 @@ defmodule ExNVR do
     |> then(&%URI{&1 | userinfo: userinfo})
     |> URI.to_string()
   end
-
-  defp recording_directory(), do: Application.get_env(:ex_nvr, :recording_directory)
 end

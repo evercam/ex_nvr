@@ -6,8 +6,6 @@ defmodule ExNVRWeb.API.RecordingController do
 
   import ExNVRWeb.Controller.Helpers
 
-  plug ExNVRWeb.Plug.Device
-
   alias Ecto.Changeset
   alias ExNVR.Recordings
 
