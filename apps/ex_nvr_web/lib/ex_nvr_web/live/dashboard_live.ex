@@ -5,31 +5,28 @@ defmodule ExNVRWeb.DashboardLive do
 
   def render(assigns) do
     ~H"""
-    <div class="flex flex-col bg-white dark:bg-gray-800">
-      <div class="my-4 flex">
-        <.simple_form for={@form}>
+    <div class="bg-white dark:bg-gray-800">
+      <.simple_form id="device" class="my-4" for={@form}>
+        <div class="flex items-center justify-between">
           <.input
             field={@form[:id]}
             type="select"
             label="Device"
             options={Enum.map(@devices, &{&1.name, &1.id})}
           />
-        </.simple_form>
-      </div>
+
+          <.input
+            type="datetime-local"
+            field={@form[:start_date]}
+            label="Start date"
+            phx-blur="datetime"
+            max={Calendar.strftime(DateTime.utc_now(), "%Y-%m-%dT%H:%M")}
+          />
+        </div>
+      </.simple_form>
 
       <video id="live-video" class="my-4 w-full h-auto" poster="/spinner.gif" autoplay muted />
     </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/hls.js@1" />
-    <script>
-      var video = document.getElementById('live-video');
-      var videoSrc = '/api/devices/<%= @current_device.id %>/hls/index.m3u8';
-      if (Hls.isSupported()) {
-        var hls = new Hls();
-        hls.loadSource(videoSrc);
-        hls.attachMedia(video);
-      }
-    </script>
     """
   end
 
@@ -38,6 +35,28 @@ defmodule ExNVRWeb.DashboardLive do
     current_device = List.first(devices)
     form = to_form(%{"id" => Map.get(current_device, :id)}, as: "device")
 
-    {:ok, assign(socket, devices: devices, current_device: current_device, form: form)}
+    socket =
+      assign(socket, devices: devices, current_device: current_device, start_date: nil, form: form)
+
+    socket =
+      if connected?(socket),
+        do: stream_event(socket, nil),
+        else: socket
+
+    {:ok, socket}
+  end
+
+  def handle_event("datetime", %{"value" => value}, socket) do
+    %{start_date: date, current_device: device} = socket.assigns
+    datetime = if value == "", do: nil, else: value <> ":00Z"
+
+    socket = if date != datetime, do: stream_event(socket, datetime), else: socket
+    {:noreply, assign(socket, :start_date, datetime)}
+  end
+
+  defp stream_event(socket, datetime) do
+    device = socket.assigns.current_device
+    src = ~p"/api/devices/#{device.id}/hls/index.m3u8?#{%{pos: datetime}}"
+    push_event(socket, "stream", %{src: src})
   end
 end

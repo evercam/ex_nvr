@@ -3,6 +3,7 @@ defmodule ExNVRWeb.UserLoginLive do
 
   def render(assigns) do
     ~H"""
+    <.flash_group flash={@flash} />
     <div class="flex flex-col items-center justify-center h-screen bg-white dark:bg-gray-800">
       <.header class="text-center">
         <span class="text-gray-900 dark:text-white">Sign in to account</span>

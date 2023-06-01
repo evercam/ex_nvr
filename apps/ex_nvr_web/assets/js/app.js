@@ -22,6 +22,7 @@ import {Socket} from "phoenix"
 import {LiveSocket} from "phoenix_live_view"
 import topbar from "../vendor/topbar"
 import "flowbite/dist/flowbite.phoenix"
+import Hls from "hls.js"
 
 
 let csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
@@ -44,5 +45,23 @@ window.liveSocket = liveSocket
 function initDarkMode() {
     document.documentElement.classList.add('dark');
 }
+
+startStreaming = (src) => {
+    var video = document.getElementById("live-video");
+    if (video != null && Hls.isSupported()) {
+        console.log(window.hls);
+        if (window.hls) {
+            window.hls.destroy();
+        }
+            
+        window.hls = new Hls();
+        window.hls.loadSource(src);
+        window.hls.attachMedia(video);
+    }
+}
+
+window.addEventListener("phx:stream", e => {
+    startStreaming(e.detail.src);    
+});
 
 initDarkMode();
