@@ -109,7 +109,7 @@ defmodule ExNVR.Elements.MP4.Depayloader do
   defp open_file(state) do
     Membrane.Logger.debug("Open current file: #{hd(state.recordings).filename}")
 
-    filename = Path.join(Utils.recording_dir(state.device.id), hd(state.recordings).filename)
+    filename = Path.join(Utils.recording_dir(state.device_id), hd(state.recordings).filename)
     {depayloader, frame_rate} = Native.open_file!(filename)
 
     %{state | depayloader: depayloader, frame_rate: frame_rate}

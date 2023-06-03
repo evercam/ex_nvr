@@ -4,6 +4,7 @@ FROM hexpm/elixir:1.14.3-erlang-25.2.3-alpine-3.16.3 AS build
 RUN \
   apk add --no-cache \
   build-base \
+  npm \
   git \
   make \
   cmake \
@@ -33,6 +34,7 @@ COPY apps apps
 RUN mix deps.get
 RUN mix deps.compile
 
+RUN cd apps/ex_nvr_web/assets && npm install
 RUN cd apps/ex_nvr_web && mix assets.deploy
 
 # compile and build release

@@ -222,10 +222,8 @@ defmodule ExNVR.Elements.RTSP.ConnectionManager do
     end
   end
 
-  defp start_rtsp_session(%ConnectionStatus{rtsp_session: rtsp_session} = connection_status) do
-    IO.inspect("Stop rtsp session")
-    RTSP.close(rtsp_session)
-    start_rtsp_session(%ConnectionStatus{connection_status | rtsp_session: nil})
+  defp start_rtsp_session(%ConnectionStatus{rtsp_session: rtsp_session}) do
+    rtsp_session
   end
 
   defp get_rtsp_description(%ConnectionStatus{rtsp_session: rtsp_session} = connection_status) do

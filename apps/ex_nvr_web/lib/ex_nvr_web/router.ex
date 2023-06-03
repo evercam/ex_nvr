@@ -23,12 +23,6 @@ defmodule ExNVRWeb.Router do
     plug :require_authenticated_user, api: true
   end
 
-  scope "/", ExNVRWeb do
-    pipe_through :browser
-
-    get "/", PageController, :home
-  end
-
   scope "/api", ExNVRWeb do
     pipe_through :api
 
@@ -72,11 +66,15 @@ defmodule ExNVRWeb.Router do
   scope "/", ExNVRWeb do
     pipe_through [:browser, :require_authenticated_user]
 
+    get "/", PageController, :home
+
     import Phoenix.LiveDashboard.Router
-    live_dashboard "/metrics/dashboard", metrics: ExNVRWeb.Telemetry
+    live_dashboard "/live-dashboard", metrics: ExNVRWeb.Telemetry
 
     live_session :require_authenticated_user,
       on_mount: [{ExNVRWeb.UserAuth, :ensure_authenticated}] do
+      live "/dashboard", DashboardLive, :new
+
       live "/users/settings", UserSettingsLive, :edit
       live "/users/settings/confirm-email/:token", UserSettingsLive, :confirm_email
     end
