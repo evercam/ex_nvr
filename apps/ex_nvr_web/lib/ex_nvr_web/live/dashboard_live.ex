@@ -31,23 +31,28 @@ defmodule ExNVRWeb.DashboardLive do
   end
 
   def mount(_params, _session, socket) do
-    devices = Devices.list()
-    current_device = List.first(devices)
-    form = to_form(%{"id" => Map.get(current_device, :id)}, as: "device")
-
     socket =
-      assign(socket, devices: devices, current_device: current_device, start_date: nil, form: form)
+      case Devices.list() do
+        [] ->
+          assign(socket, devices: [], current_device: nil, form: to_form(%{}, as: "device"))
 
-    socket =
-      if connected?(socket),
-        do: stream_event(socket, nil),
-        else: socket
+        devices ->
+          current_device = List.first(devices)
+          form = to_form(%{"id" => Map.get(current_device, :id)}, as: "device")
+
+          socket =
+            assign(socket, devices: devices, current_device: current_device, start_date: nil, form: form)
+
+          if connected?(socket),
+            do: stream_event(socket, nil),
+            else: socket
+      end
 
     {:ok, socket}
   end
 
   def handle_event("datetime", %{"value" => value}, socket) do
-    %{start_date: date, current_device: device} = socket.assigns
+    date = socket.assigns.start_date
     datetime = if value == "", do: nil, else: value <> ":00Z"
 
     socket = if date != datetime, do: stream_event(socket, datetime), else: socket

@@ -45,13 +45,13 @@ defmodule ExNVRWeb.UserConfirmationLive do
         # a warning message.
         case socket.assigns do
           %{current_user: %{confirmed_at: confirmed_at}} when not is_nil(confirmed_at) ->
-            {:noreply, redirect(socket, to: ~p"/")}
+            {:noreply, redirect(socket, to: ~p"/dashboard")}
 
           %{} ->
             {:noreply,
              socket
              |> put_flash(:error, "User confirmation link is invalid or it has expired.")
-             |> redirect(to: ~p"/")}
+             |> redirect(to: ~p"/users/login")}
         end
     end
   end

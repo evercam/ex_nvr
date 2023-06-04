@@ -8,7 +8,7 @@ defmodule ExNVRWeb.UserLoginLiveTest do
     test "renders log in page", %{conn: conn} do
       {:ok, _lv, html} = live(conn, ~p"/users/login")
 
-      assert html =~ "Log in"
+      assert html =~ "Sign in"
       assert html =~ "Forgot your password?"
     end
 
@@ -17,7 +17,7 @@ defmodule ExNVRWeb.UserLoginLiveTest do
         conn
         |> log_in_user(user_fixture())
         |> live(~p"/users/login")
-        |> follow_redirect(conn, "/")
+        |> follow_redirect(conn, "/dashboard")
 
       assert {:ok, _conn} = result
     end
@@ -35,7 +35,7 @@ defmodule ExNVRWeb.UserLoginLiveTest do
 
       conn = submit_form(form, conn)
 
-      assert redirected_to(conn) == ~p"/"
+      assert redirected_to(conn) == ~p"/dashboard"
     end
 
     test "redirects to login page with a flash error if there are no valid credentials", %{
@@ -64,7 +64,7 @@ defmodule ExNVRWeb.UserLoginLiveTest do
 
       {:ok, conn} =
         lv
-        |> element(~s|main a:fl-contains("Forgot your password?")|)
+        |> element(~s|a:fl-contains("Forgot your password?")|)
         |> render_click()
         |> follow_redirect(conn, ~p"/users/reset-password")
 

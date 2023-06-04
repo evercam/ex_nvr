@@ -20,7 +20,7 @@ defmodule ExNVRWeb.UserForgotPasswordLiveTest do
         conn
         |> log_in_user(user_fixture())
         |> live(~p"/users/reset-password")
-        |> follow_redirect(conn, ~p"/")
+        |> follow_redirect(conn, ~p"/dashboard")
 
       assert {:ok, _conn} = result
     end
@@ -38,7 +38,7 @@ defmodule ExNVRWeb.UserForgotPasswordLiveTest do
         lv
         |> form("#reset_password_form", user: %{"email" => user.email})
         |> render_submit()
-        |> follow_redirect(conn, "/")
+        |> follow_redirect(conn, "/dashboard")
 
       assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "If your email is in our system"
 
@@ -53,7 +53,7 @@ defmodule ExNVRWeb.UserForgotPasswordLiveTest do
         lv
         |> form("#reset_password_form", user: %{"email" => "unknown@example.com"})
         |> render_submit()
-        |> follow_redirect(conn, "/")
+        |> follow_redirect(conn, "/dashboard")
 
       assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "If your email is in our system"
       assert Repo.all(Accounts.UserToken) == []

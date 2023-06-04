@@ -47,24 +47,23 @@ defmodule ExNVRWeb.UserConfirmationLiveTest do
         lv
         |> form("#confirmation_form")
         |> render_submit()
-        |> follow_redirect(conn, "/")
+        |> follow_redirect(conn, "/users/login")
 
       assert {:ok, conn} = result
 
       assert Phoenix.Flash.get(conn.assigns.flash, :error) =~
                "User confirmation link is invalid or it has expired"
 
+
       # when logged in
-      {:ok, lv, _html} =
-        build_conn()
-        |> log_in_user(user)
-        |> live(~p"/users/confirm/#{token}")
+      conn = build_conn() |> log_in_user(user)
+      {:ok, lv, _html} = live(conn, ~p"/users/confirm/#{token}")
 
       result =
         lv
         |> form("#confirmation_form")
         |> render_submit()
-        |> follow_redirect(conn, "/")
+        |> follow_redirect(conn, "/dashboard")
 
       assert {:ok, conn} = result
       refute Phoenix.Flash.get(conn.assigns.flash, :error)
@@ -77,7 +76,7 @@ defmodule ExNVRWeb.UserConfirmationLiveTest do
         lv
         |> form("#confirmation_form")
         |> render_submit()
-        |> follow_redirect(conn, ~p"/")
+        |> follow_redirect(conn, ~p"/users/login")
 
       assert Phoenix.Flash.get(conn.assigns.flash, :error) =~
                "User confirmation link is invalid or it has expired"
