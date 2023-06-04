@@ -28,12 +28,14 @@ defmodule ExNVRWeb.ConnCase do
       import Plug.Conn
       import Phoenix.ConnTest
       import ExNVRWeb.ConnCase
-
-      import ExNVRWeb.Testing.Utils
     end
   end
 
   setup tags do
+    if Map.has_key?(tags, :tmp_dir) do
+      Application.put_env(:ex_nvr, :recording_directory, tags.tmp_dir)
+    end
+
     ExNVR.DataCase.setup_sandbox(tags)
     {:ok, conn: Phoenix.ConnTest.build_conn()}
   end

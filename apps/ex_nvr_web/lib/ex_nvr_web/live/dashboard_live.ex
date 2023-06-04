@@ -41,7 +41,12 @@ defmodule ExNVRWeb.DashboardLive do
           form = to_form(%{"id" => Map.get(current_device, :id)}, as: "device")
 
           socket =
-            assign(socket, devices: devices, current_device: current_device, start_date: nil, form: form)
+            assign(socket,
+              devices: devices,
+              current_device: current_device,
+              start_date: nil,
+              form: form
+            )
 
           if connected?(socket),
             do: stream_event(socket, nil),

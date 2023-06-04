@@ -102,14 +102,13 @@ defmodule ExNVR.Elements.Segmenter do
   end
 
   @impl true
-  def handle_event(:input, %Event.Discontinuity{}, _ctx, %{start_time: nil} = state) do
-    {[], state}
+  def handle_end_of_stream(:input, _ctx, state) do
+    do_handle_end_of_stream(state)
   end
 
   @impl true
   def handle_event(:input, %Event.Discontinuity{}, _ctx, state) do
-    {[end_of_stream: Pad.ref(:output, state.start_time)] ++ completed_segment_action(state, true),
-     Map.merge(state, init_state())}
+    do_handle_end_of_stream(state)
   end
 
   defp handle_buffer(%{buffer?: true} = state, buffer) do
@@ -137,6 +136,15 @@ defmodule ExNVR.Elements.Segmenter do
 
   defp handle_buffer(state, buffer),
     do: {[buffer: {Pad.ref(:output, state.start_time), buffer}], state}
+
+  defp do_handle_end_of_stream(%{start_time: nil} = state) do
+    {[], state}
+  end
+
+  defp do_handle_end_of_stream(state) do
+    {[end_of_stream: Pad.ref(:output, state.start_time)] ++ completed_segment_action(state, true),
+     Map.merge(state, init_state())}
+  end
 
   defp update_segment_duration(state, %Buffer{pts: pts} = buf) do
     frame_duration = pts - state.last_buffer_pts

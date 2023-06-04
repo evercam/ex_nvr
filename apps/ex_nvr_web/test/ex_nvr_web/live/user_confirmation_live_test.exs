@@ -54,7 +54,6 @@ defmodule ExNVRWeb.UserConfirmationLiveTest do
       assert Phoenix.Flash.get(conn.assigns.flash, :error) =~
                "User confirmation link is invalid or it has expired"
 
-
       # when logged in
       conn = build_conn() |> log_in_user(user)
       {:ok, lv, _html} = live(conn, ~p"/users/confirm/#{token}")
