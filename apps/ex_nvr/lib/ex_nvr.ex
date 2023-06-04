@@ -22,7 +22,7 @@ defmodule ExNVR do
   # create recording & HLS directories
   defp create_directories() do
     File.mkdir_p!(recording_dir())
-    File.mkdir_p!(Application.get_env(:ex_nvr, :hls_directory))
+    File.mkdir_p!(hls_dir())
   end
 
   defp create_admin_user() do
@@ -51,6 +51,8 @@ defmodule ExNVR do
       ]
 
       File.mkdir_p!(recording_dir(device.id))
+      File.mkdir_p!(hls_dir(device.id))
+
       # make last active run inactive
       # may happens on application crash
       Recordings.deactivate_runs(device.id)

@@ -60,7 +60,7 @@ defmodule ExNVR.Model.Device do
 
       cond do
         uri.scheme != "rtsp" ->
-          [stream_uri: "schame should be rtsp"]
+          [stream_uri: "scheme should be rtsp"]
 
         is_nil(uri.host) ->
           [stream_uri: "invalid rtsp uri"]
