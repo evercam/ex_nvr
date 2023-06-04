@@ -1,7 +1,6 @@
 defmodule ExNVRWeb.API.RecordingControllerTest do
   use ExNVRWeb.ConnCase
 
-
   alias ExNVR.{AccountsFixtures, DevicesFixtures, RecordingsFixtures}
   alias Faker.Random
 
@@ -9,7 +8,7 @@ defmodule ExNVRWeb.API.RecordingControllerTest do
 
   setup do
     conn = build_conn() |> log_in_user_with_access_token(AccountsFixtures.user_fixture())
-    device = create_device!()
+    device = DevicesFixtures.device_fixture()
 
     File.mkdir_p!(ExNVR.Utils.recording_dir(device.id))
     %{conn: conn, device: device}

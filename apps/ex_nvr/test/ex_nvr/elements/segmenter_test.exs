@@ -1,4 +1,4 @@
-defmodule ExNVR.Elements.Segmenter.SegmenterTest do
+defmodule ExNVR.Elements.SegmenterTest do
   @moduledoc false
   use ExUnit.Case
 
@@ -11,13 +11,13 @@ defmodule ExNVR.Elements.Segmenter.SegmenterTest do
   @input_stream_format %H264{alignment: :au, width: 1080, height: 720, profile: :baseline}
 
   test "ignore non keyframe buffers when starting" do
-    state = init_pipeline()
+    state = init_element()
     assert {[], ^state} = Segmenter.handle_process(:input, build_buffer(10), %{}, state)
   end
 
   describe "First keyframe encountered" do
     test "is buffered and new segment event is sent" do
-      state = init_pipeline()
+      state = init_element()
       assert {[], ^state} = Segmenter.handle_process(:input, build_buffer(10), %{}, state)
 
       buffer = build_buffer(10, true, 1_000)
@@ -27,7 +27,7 @@ defmodule ExNVR.Elements.Segmenter.SegmenterTest do
     end
 
     test "subsequent buffers are buffered if output pad is not linked" do
-      state = init_pipeline()
+      state = init_element()
 
       buffer1 = build_buffer(10, true, 1_000)
       buffer2 = build_buffer(10, true, 2_000)
@@ -42,7 +42,7 @@ defmodule ExNVR.Elements.Segmenter.SegmenterTest do
 
   describe "output pad is linked" do
     test "buffered events are sent" do
-      state = init_pipeline()
+      state = init_element()
 
       buffer1 = build_buffer(10, true, 1_000)
       buffer2 = build_buffer(10, true, 1_000)
@@ -60,7 +60,7 @@ defmodule ExNVR.Elements.Segmenter.SegmenterTest do
     end
 
     test "new buffers are sent directly" do
-      state = init_pipeline()
+      state = init_element()
       buffer = build_buffer(10, true, 1_000)
 
       assert {[buffer: {Pad.ref(:output, 0), ^buffer}], _state} =
@@ -73,7 +73,7 @@ defmodule ExNVR.Elements.Segmenter.SegmenterTest do
     end
 
     test "new segment is created when target duration is reached" do
-      state = init_pipeline()
+      state = init_element()
 
       state =
         Map.merge(state, %{
@@ -95,13 +95,13 @@ defmodule ExNVR.Elements.Segmenter.SegmenterTest do
       assert {[
                 end_of_stream: ^pad,
                 notify_parent: {:new_media_segment, _},
-                notify_parent: {:completed_segment, {_, %Segment{}}}
+                notify_parent: {:completed_segment, {_, %Segment{}, false}}
               ], %{buffer: [^buffer3]}} = Segmenter.handle_process(:input, buffer3, %{}, state)
     end
   end
 
   test "receive discontinuity event will flush the current segment" do
-    state = init_pipeline()
+    state = init_element()
 
     assert {[], ^state} = Segmenter.handle_event(:input, %Event.Discontinuity{}, %{}, state)
 
@@ -117,13 +117,13 @@ defmodule ExNVR.Elements.Segmenter.SegmenterTest do
 
     assert {[
               end_of_stream: ^pad,
-              notify_parent: {:completed_segment, {_, %Segment{}}}
+              notify_parent: {:completed_segment, {_, %Segment{}, true}}
             ],
             %{buffer: [], current_segment_duration: 0, start_time: nil}} =
              Segmenter.handle_event(:input, %Event.Discontinuity{}, %{}, state)
   end
 
-  defp init_pipeline() do
+  defp init_element() do
     assert {[], state} =
              Segmenter.handle_init(%{}, %Segmenter{
                segment_duration: 2

@@ -24,10 +24,10 @@ defmodule ExNVR.RecordingsFixtures do
   end
 
   def recording_fixture(attrs \\ %{}) do
-    {:ok, recording} =
+    {:ok, recording, _run} =
       attrs
       |> valid_recording_attributes()
-      |> ExNVR.Recordings.create()
+      |> then(&ExNVR.Recordings.create(run_fixture(device_id: &1.device_id), &1))
 
     recording
   end

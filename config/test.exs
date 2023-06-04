@@ -14,7 +14,7 @@ config :ex_nvr, ExNVR.Repo,
   pool: Ecto.Adapters.SQL.Sandbox
 
 config :ex_nvr,
-  :ex_nvr, recording_directory: ".",
+  recording_directory: ".",
   run_pipelines: false
 
 # We don't run a server during test. If one is required,
