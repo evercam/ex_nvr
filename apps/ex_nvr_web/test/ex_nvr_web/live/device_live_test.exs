@@ -2,8 +2,10 @@ defmodule ExNVRWeb.DeviceLiveTest do
   @moduledoc false
   use ExNVRWeb.ConnCase
 
-  import ExNVR.{AccountsFixtures, Devices, DevicesFixtures}
+  import ExNVR.{AccountsFixtures, DevicesFixtures}
   import Phoenix.LiveViewTest
+
+  alias ExNVR.Devices
 
   describe "Devices page" do
     setup do
