@@ -44,6 +44,43 @@ paths:
                     description: An access token to use to authorize subsequent requests
         '400':
           $ref: "#/components/responses/BadArg"
+  /api/devices:
+    post:
+      summary: Create device
+      description: |
+        Create a new device.
+
+        Once the device is created, a pipeline will be started and will attempt to connect and 
+        retrieve a stream from it.
+      operationId: createDevice
+      tags:
+        - Device
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: Device name
+                type:
+                  type: string
+                  enum: [IP]
+                  description: Device type
+                ip_camera_config:
+                  $ref: "#/components/schemas/IPCameraConfig"
+              required: [name, type]
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Device'
+        '400':
+          $ref: "#/components/responses/BadArg"
   /api/devices/{device_id}/recordings:
     get:
       summary: Get recordings
@@ -148,6 +185,37 @@ components:
       scheme: bearer
       bearerFormat: opaque
   schemas:
+    Device:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Device ID
+        name:
+          type: string
+          description: Device name
+        type:
+          type: string
+          enum: [IP]
+          description: Device type
+        ip_camera_config:
+          $ref: "#/components/schemas/IPCameraConfig"
+    IPCameraConfig:
+      type: object
+      description: IP Camera configuration
+      properties:
+        stream_uri:
+          type: string
+          format: uri
+          description: The RTSP URL where to get the video stream
+        username:
+          type: string
+          description: Username to authenticate
+        password:
+          type: string
+          format: password
+          description: Password to authenticate
     Error:
       type: object
       properties:
