@@ -75,6 +75,8 @@ defmodule ExNVRWeb.Router do
       on_mount: [{ExNVRWeb.UserAuth, :ensure_authenticated}] do
       live "/dashboard", DashboardLive, :new
 
+      live "/devices", DeviceLive, :new
+
       live "/users/settings", UserSettingsLive, :edit
       live "/users/settings/confirm-email/:token", UserSettingsLive, :confirm_email
     end

@@ -6,7 +6,6 @@ defmodule ExNVR do
   import ExNVR.Utils
 
   alias ExNVR.{Accounts, Devices, Pipelines, Recordings}
-  alias ExNVR.Model.Device
 
   @doc """
   Start the main pipeline
@@ -45,31 +44,10 @@ defmodule ExNVR do
 
   defp run_pipelines() do
     for device <- Devices.list() do
-      options = [
-        device_id: device.id,
-        stream_uri: build_stream_uri(device)
-      ]
-
-      File.mkdir_p!(recording_dir(device.id))
-      File.mkdir_p!(hls_dir(device.id))
-
       # make last active run inactive
       # may happens on application crash
       Recordings.deactivate_runs(device.id)
-      Pipelines.Supervisor.start_pipeline(options)
+      Pipelines.Supervisor.start_pipeline(device)
     end
-  end
-
-  defp build_stream_uri(%Device{config: config}) do
-    userinfo =
-      if to_string(config["username"]) != "" and to_string(config["password"]) != "" do
-        "#{config["username"]}:#{config["password"]}"
-      end
-
-    config
-    |> Map.fetch!("stream_uri")
-    |> URI.parse()
-    |> then(&%URI{&1 | userinfo: userinfo})
-    |> URI.to_string()
   end
 end

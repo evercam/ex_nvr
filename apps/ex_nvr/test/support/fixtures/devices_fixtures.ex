@@ -9,7 +9,7 @@ defmodule ExNVR.DevicesFixtures do
       id: UUID.uuid4(),
       name: "Device_#{System.unique_integer([:monotonic, :positive])}",
       type: "IP",
-      config: %{
+      ip_camera_config: %{
         stream_uri: "rtsp://localhost:554/my_device_stream",
         username: "user",
         password: "pass"
