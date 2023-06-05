@@ -458,7 +458,7 @@ defmodule ExNVRWeb.CoreComponents do
 
     ~H"""
     <div class="overflow-y-auto px-4 sm:overflow-visible sm:px-0">
-      <table class="w-[40rem] mt-11 text-sm text-left sm:w-full text-gray-500 dark:text-gray-400">
+      <table class="w-[40rem] mt-4 text-sm text-left sm:w-full text-gray-500 dark:text-gray-400">
         <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
           <tr>
             <th :for={col <- @col} class="px-6 py-3"><%= col[:label] %></th>

@@ -18,6 +18,8 @@ defmodule ExNVRWeb.DashboardLive do
               type="select"
               label="Device"
               options={Enum.map(@devices, &{&1.name, &1.id})}
+              value={@current_device.id}
+              phx-change="switch_device"
             />
 
             <.input
@@ -68,6 +70,19 @@ defmodule ExNVRWeb.DashboardLive do
 
     socket = if date != datetime, do: stream_event(socket, datetime), else: socket
     {:noreply, assign(socket, :start_date, datetime)}
+  end
+
+  def handle_event("switch_device", %{"device" => %{"id" => device_id}}, socket) do
+    case Enum.find(socket.assigns.devices, & &1.id == device_id) do
+      nil ->
+        {:noreply, socket}
+
+      device ->
+        socket
+        |> assign(current_device: device)
+        |> stream_event(socket.assigns.start_date)
+        |> then(&{:noreply, &1})
+    end
   end
 
   defp stream_event(socket, datetime) do

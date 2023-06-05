@@ -1,11 +1,11 @@
 <div>
-  <div class="pb-4">
+  <div>
     <.button phx-click={show_modal("device-modal")}>
       Add device
     </.button>
   </div>
 
-  <.table id="devices" rows={@devices}>
+  <.table id="devices" rows={@devices} class="dark:bg-white">
     <:col :let={device} label="Id"><%= device.id %></:col>
     <:col :let={device} label="Name"><%= device.name %></:col>
     <:col label="Status">
