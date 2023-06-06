@@ -17,7 +17,8 @@ defmodule ExNVRWeb do
   those modules here.
   """
 
-  def static_paths, do: ~w(assets fonts images favicon.ico robots.txt spinner.gif)
+  def static_paths,
+    do: ~w(assets fonts images swagger favicon.ico robots.txt openapi.yaml spinner.gif)
 
   def router do
     quote do
