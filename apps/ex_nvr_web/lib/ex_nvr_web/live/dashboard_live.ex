@@ -73,7 +73,7 @@ defmodule ExNVRWeb.DashboardLive do
   end
 
   def handle_event("switch_device", %{"device" => %{"id" => device_id}}, socket) do
-    case Enum.find(socket.assigns.devices, & &1.id == device_id) do
+    case Enum.find(socket.assigns.devices, &(&1.id == device_id)) do
       nil ->
         {:noreply, socket}
 
