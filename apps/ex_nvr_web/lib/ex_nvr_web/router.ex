@@ -27,9 +27,15 @@ defmodule ExNVRWeb.Router do
     pipe_through :api
 
     post "/users/login", API.UserSessionController, :login
+  end
+
+  scope "/api", ExNVRWeb do
+    pipe_through [:api, :api_require_authenticated_user]
+
+    post "/devices", API.DeviceController, :create
 
     scope "/devices/:device_id" do
-      pipe_through [:api_require_authenticated_user, ExNVRWeb.Plug.Device]
+      pipe_through ExNVRWeb.Plug.Device
 
       get "/recordings", API.RecordingController, :index
       get "/recordings/:recording_id/blob", API.RecordingController, :blob
@@ -74,6 +80,8 @@ defmodule ExNVRWeb.Router do
     live_session :require_authenticated_user,
       on_mount: [{ExNVRWeb.UserAuth, :ensure_authenticated}] do
       live "/dashboard", DashboardLive, :new
+
+      live "/devices", DeviceLive, :new
 
       live "/users/settings", UserSettingsLive, :edit
       live "/users/settings/confirm-email/:token", UserSettingsLive, :confirm_email

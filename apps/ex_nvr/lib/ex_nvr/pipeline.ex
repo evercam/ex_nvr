@@ -29,6 +29,8 @@ defmodule ExNVR.Pipeline do
   alias ExNVR.Elements.RTSP.Source
   alias Membrane.RTP.SessionBin
 
+  @call_timeout 90_000
+
   defmodule State do
     @moduledoc false
 
@@ -68,7 +70,7 @@ defmodule ExNVR.Pipeline do
 
   def start_link(options \\ []) do
     Membrane.Logger.info("Starting a new NVR pipeline with options: #{inspect(options)}")
-    Membrane.Pipeline.start_link(__MODULE__, options, name: __MODULE__)
+    Membrane.Pipeline.start_link(__MODULE__, options, name: pipeline_name(options[:device_id]))
   end
 
   @doc """
@@ -76,16 +78,16 @@ defmodule ExNVR.Pipeline do
 
   The `segment_name_prefix` is used for generating segments' names
   """
-  def start_hls_streaming(segment_name_prefix, directory) do
+  def start_hls_streaming(device_id, segment_name_prefix, directory) do
     Pipeline.call(
-      Process.whereis(__MODULE__),
+      pipeline_name(device_id),
       {:start_hls_streaming, {segment_name_prefix, directory}},
-      60_000
+      @call_timeout
     )
   end
 
-  def stop_hls_streaming() do
-    Pipeline.call(Process.whereis(__MODULE__), :stop_hls_streaming)
+  def stop_hls_streaming(device_id) do
+    Pipeline.call(pipeline_name(device_id), :stop_hls_streaming)
   end
 
   @impl true
@@ -215,4 +217,6 @@ defmodule ExNVR.Pipeline do
     {[spec: spec, start_timer: {:playback_timer, Membrane.Time.milliseconds(300)}],
      %State{state | media_options: media_options}}
   end
+
+  defp pipeline_name(device_id), do: :"pipeline_#{device_id}"
 end

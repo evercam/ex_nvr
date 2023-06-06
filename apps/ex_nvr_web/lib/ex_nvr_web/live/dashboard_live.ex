@@ -6,26 +6,34 @@ defmodule ExNVRWeb.DashboardLive do
   def render(assigns) do
     ~H"""
     <div class="bg-white dark:bg-gray-800">
-      <.simple_form id="device" class="my-4" for={@form}>
-        <div class="flex items-center justify-between">
-          <.input
-            field={@form[:id]}
-            type="select"
-            label="Device"
-            options={Enum.map(@devices, &{&1.name, &1.id})}
-          />
+      <div :if={@devices == []} class="grid tracking-wide text-lg text-center dark:text-gray-200">
+        You have no devices, you can create one
+        <span><.link href={~p"/devices"} class="ml-2 dark:text-blue-600">here</.link></span>
+      </div>
+      <div :if={@devices != []}>
+        <.simple_form id="device" class="my-4" for={@form}>
+          <div class="flex items-center justify-between">
+            <.input
+              field={@form[:id]}
+              type="select"
+              label="Device"
+              options={Enum.map(@devices, &{&1.name, &1.id})}
+              value={@current_device.id}
+              phx-change="switch_device"
+            />
 
-          <.input
-            type="datetime-local"
-            field={@form[:start_date]}
-            label="Start date"
-            phx-blur="datetime"
-            max={Calendar.strftime(DateTime.utc_now(), "%Y-%m-%dT%H:%M")}
-          />
-        </div>
-      </.simple_form>
+            <.input
+              type="datetime-local"
+              field={@form[:start_date]}
+              label="Start date"
+              phx-blur="datetime"
+              max={Calendar.strftime(DateTime.utc_now(), "%Y-%m-%dT%H:%M")}
+            />
+          </div>
+        </.simple_form>
 
-      <video id="live-video" class="my-4 w-full h-auto" poster="/spinner.gif" autoplay muted />
+        <video id="live-video" class="my-4 w-full h-auto" poster="/spinner.gif" autoplay muted />
+      </div>
     </div>
     """
   end
@@ -62,6 +70,19 @@ defmodule ExNVRWeb.DashboardLive do
 
     socket = if date != datetime, do: stream_event(socket, datetime), else: socket
     {:noreply, assign(socket, :start_date, datetime)}
+  end
+
+  def handle_event("switch_device", %{"device" => %{"id" => device_id}}, socket) do
+    case Enum.find(socket.assigns.devices, & &1.id == device_id) do
+      nil ->
+        {:noreply, socket}
+
+      device ->
+        socket
+        |> assign(current_device: device)
+        |> stream_event(socket.assigns.start_date)
+        |> then(&{:noreply, &1})
+    end
   end
 
   defp stream_event(socket, datetime) do

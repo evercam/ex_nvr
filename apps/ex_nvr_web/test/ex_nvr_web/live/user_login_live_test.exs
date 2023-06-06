@@ -1,4 +1,6 @@
 defmodule ExNVRWeb.UserLoginLiveTest do
+  @moduledoc false
+
   use ExNVRWeb.ConnCase
 
   import Phoenix.LiveViewTest

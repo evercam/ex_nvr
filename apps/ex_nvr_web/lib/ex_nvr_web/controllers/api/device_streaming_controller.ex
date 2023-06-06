@@ -7,7 +7,7 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
 
   alias Ecto.Changeset
   alias ExNVR.Pipelines.HlsPlayback
-  alias ExNVR.Pipeline
+  alias ExNVR.{Pipeline, Utils}
 
   @hls_live_streaming_id "live"
 
@@ -28,7 +28,7 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
       ExNVRWeb.HlsStreamingMonitor.update_last_access_time(id)
     end
 
-    send_file(conn, 200, Path.join([hls_directory(), id, segment_name]))
+    send_file(conn, 200, Path.join([Utils.hls_dir(conn.assigns.device.id), id, segment_name]))
   end
 
   defp validate_hls_stream_params(params) do
@@ -39,19 +39,21 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
     |> Changeset.apply_action(:create)
   end
 
-  defp start_hls_pipeline(_device_id, nil) do
-    path = create_hls_directory(@hls_live_streaming_id)
+  defp start_hls_pipeline(device_id, nil) do
+    path = create_hls_directory(device_id, @hls_live_streaming_id)
 
-    :ok = Pipeline.start_hls_streaming(@hls_live_streaming_id, path)
+    ExNVRWeb.HlsStreamingMonitor.register(@hls_live_streaming_id, fn ->
+      Pipeline.stop_hls_streaming(device_id)
+    end)
 
-    ExNVRWeb.HlsStreamingMonitor.register(@hls_live_streaming_id, &Pipeline.stop_hls_streaming/0)
+    :ok = Pipeline.start_hls_streaming(device_id, @hls_live_streaming_id, path)
 
     path
   end
 
   defp start_hls_pipeline(device_id, pos) do
     id = UUID.uuid4()
-    path = create_hls_directory(id)
+    path = create_hls_directory(device_id, id)
 
     pipeline_options = [
       device_id: device_id,
@@ -68,12 +70,10 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
     path
   end
 
-  defp create_hls_directory(id) do
-    path = Path.join(hls_directory(), id)
-    File.mkdir_p!(path)
-
-    path
+  defp create_hls_directory(device_id, id) do
+    device_id
+    |> Utils.hls_dir()
+    |> Path.join(id)
+    |> tap(&File.mkdir_p!/1)
   end
-
-  defp hls_directory(), do: Application.get_env(:ex_nvr, :hls_directory)
 end

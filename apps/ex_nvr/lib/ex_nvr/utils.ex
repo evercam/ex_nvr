@@ -6,4 +6,10 @@ defmodule ExNVR.Utils do
     dir = Application.get_env(:ex_nvr, :recording_directory)
     if device_id, do: Path.join(dir, device_id), else: dir
   end
+
+  @spec hls_dir(binary()) :: Path.t()
+  def hls_dir(device_id \\ nil) do
+    dir = Application.get_env(:ex_nvr, :hls_directory)
+    if device_id, do: Path.join(dir, device_id), else: dir
+  end
 end
