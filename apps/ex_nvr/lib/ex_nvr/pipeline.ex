@@ -27,16 +27,13 @@ defmodule ExNVR.Pipeline do
   require Membrane.Logger
 
   alias ExNVR.Elements.RTSP.Source
+  alias ExNVR.Utils
   alias Membrane.RTP.SessionBin
-
-  @call_timeout 90_000
 
   defmodule State do
     @moduledoc false
 
     use Bunch.Access
-
-    @type hls_state :: :stopped | :starting | :started
 
     @typedoc """
     Pipeline state
@@ -45,16 +42,12 @@ defmodule ExNVR.Pipeline do
     `stream_uri` - RTSP stream
     `media_options` - Media description got from calling DESCRIBE method on the RTSP uri
     `segment_duration` - The duration of each video chunk saved by the storage bin.
-    `hls_streaming_state` - The current state of the HLS live streaming
-    `hls_pending_callers` - List of callers (pid) that waits for first hls segment to be available
     """
     @type t :: %__MODULE__{
             device_id: binary(),
             stream_uri: binary(),
             media_options: map(),
-            segment_duration: non_neg_integer(),
-            hls_streaming_state: hls_state(),
-            hls_pending_callers: [GenServer.from()]
+            segment_duration: non_neg_integer()
           }
 
     @enforce_keys [:device_id, :stream_uri]
@@ -73,23 +66,6 @@ defmodule ExNVR.Pipeline do
     Membrane.Pipeline.start_link(__MODULE__, options, name: pipeline_name(options[:device_id]))
   end
 
-  @doc """
-  Start HLS live streaming.
-
-  The `segment_name_prefix` is used for generating segments' names
-  """
-  def start_hls_streaming(device_id, segment_name_prefix, directory) do
-    Pipeline.call(
-      pipeline_name(device_id),
-      {:start_hls_streaming, {segment_name_prefix, directory}},
-      @call_timeout
-    )
-  end
-
-  def stop_hls_streaming(device_id) do
-    Pipeline.call(pipeline_name(device_id), :stop_hls_streaming)
-  end
-
   @impl true
   def handle_init(_ctx, options) do
     state = %State{
@@ -102,17 +78,23 @@ defmodule ExNVR.Pipeline do
       child(:rtsp_source, %Source{stream_uri: state.stream_uri})
     ]
 
-    {[spec: spec], state}
+    {[spec: spec, playback: :playing], state}
   end
 
   @impl true
-  def handle_child_notification(:connection_lost, :rtsp_source, _ctx, state) do
-    {[], state}
+  def handle_child_notification({:connection_lost, ref}, _elem, ctx, state) do
+    ctx.children
+    |> Map.keys()
+    |> Enum.filter(fn
+      {{_, ^ref}, _} -> true
+      _ -> false
+    end)
+    |> then(&{[remove_child: &1], state})
   end
 
   @impl true
   def handle_child_notification(
-        {:rtsp_setup_complete, media_options},
+        {:rtsp_setup_complete, media_options, ref},
         :rtsp_source,
         _ctx,
         %State{} = state
@@ -121,22 +103,34 @@ defmodule ExNVR.Pipeline do
       Membrane.Logger.error("Only H264 streams are supported now")
       {[terminate: :normal], state}
     else
-      handle_rtsp_stream_setup(media_options, state)
+      handle_rtsp_stream_setup(media_options, ref, state)
     end
   end
 
   @impl true
-  def handle_child_notification({:new_rtp_stream, ssrc, _pt, _extensions}, _, _ctx, state) do
+  def handle_child_notification(
+        {:new_rtp_stream, ssrc, _pt, _extensions},
+        {:rtp, ref},
+        _ctx,
+        state
+      ) do
     spec = [
-      get_child(:rtp)
+      {child({:hls_bin, ref}, %ExNVR.Elements.HLSBin{
+         location: Path.join(Utils.hls_dir(state.device_id), "live"),
+         segment_name_prefix: "live"
+       }), crash_group: {"hls", :temporary}},
+      get_child({:rtp, ref})
       |> via_out(Pad.ref(:output, ssrc), options: [depayloader: Membrane.RTP.H264.Depayloader])
-      |> child(:rtp_parser, %Membrane.H264.Parser{framerate: {0, 0}})
-      |> child(:tee, Membrane.Tee.Master)
+      |> child({:rtp_parser, ref}, %Membrane.H264.Parser{framerate: {0, 0}})
+      |> child({:tee, ref}, Membrane.Tee.Master)
       |> via_out(:master)
-      |> child(:storage_bin, %ExNVR.Elements.StorageBin{
+      |> child({:storage_bin, ref}, %ExNVR.Elements.StorageBin{
         device_id: state.device_id,
         target_segment_duration: state.segment_duration
-      })
+      }),
+      get_child({:tee, ref})
+      |> via_out(:copy)
+      |> get_child({:hls_bin, ref})
     ]
 
     {[spec: spec], state}
@@ -155,67 +149,23 @@ defmodule ExNVR.Pipeline do
   end
 
   @impl true
-  def handle_tick(:playback_timer, _ctx, state) do
-    {[stop_timer: :playback_timer, playback: :playing], state}
-  end
-
-  @impl true
-  def handle_call({:start_hls_streaming, _}, _ctx, %{hls_streaming_state: :started} = state) do
-    {[reply: :ok], state}
-  end
-
-  @impl true
-  def handle_call(
-        {:start_hls_streaming, _},
-        %{from: from},
-        %{hls_streaming_state: :starting} = state
-      ) do
-    {[], %{state | hls_pending_callers: [from | state.hls_pending_callers]}}
-  end
-
-  @impl true
-  def handle_call(
-        {:start_hls_streaming, {segment_name_prefix, directory}},
-        %{from: from},
-        %{hls_streaming_state: :stopped} = state
-      ) do
-    spec = [
-      get_child(:tee)
-      |> via_out(:copy)
-      |> child(:hls_bin, %ExNVR.Elements.HLSBin{
-        location: directory,
-        segment_name_prefix: segment_name_prefix
-      })
-    ]
-
-    {[spec: {spec, crash_group: {"hls", :temporary}}],
-     %{state | hls_streaming_state: :starting, hls_pending_callers: [from]}}
-  end
-
-  @impl true
-  def handle_call(:stop_hls_streaming, _ctx, state) do
-    {[reply: :ok, remove_child: :hls_bin],
-     %{state | hls_streaming_state: :stopped, hls_pending_callers: []}}
-  end
-
-  @impl true
   def handle_crash_group_down("hls", _ctx, state) do
     Membrane.Logger.error("Hls group crashed, stop live streaming...")
     {[], %{state | hls_streaming_state: :stopped}}
   end
 
-  defp handle_rtsp_stream_setup(%{rtpmap: rtpmap} = media_options, state) do
+  defp handle_rtsp_stream_setup(%{rtpmap: rtpmap} = media_options, ref, state) do
     fmt_mapping =
       Map.put(%{}, rtpmap.payload_type, {String.to_atom(rtpmap.encoding), rtpmap.clock_rate})
 
     spec = [
       get_child(:rtsp_source)
+      |> via_out(Pad.ref(:output, ref))
       |> via_in(Pad.ref(:rtp_input, make_ref()))
-      |> child(:rtp, %SessionBin{fmt_mapping: fmt_mapping})
+      |> child({:rtp, ref}, %SessionBin{fmt_mapping: fmt_mapping})
     ]
 
-    {[spec: spec, start_timer: {:playback_timer, Membrane.Time.milliseconds(300)}],
-     %State{state | media_options: media_options}}
+    {[spec: spec], %State{state | media_options: media_options}}
   end
 
   defp pipeline_name(device_id), do: :"pipeline_#{device_id}"

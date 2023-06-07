@@ -61,7 +61,7 @@ defmodule ExNVRWeb.HlsStreamingMonitor do
 
       # don't crash the process if there's a problem
       # in clean up function
-      Task.start(clean_up_fn)
+      Task.start(clean_up_fn || fn -> :ok end)
       :ets.delete(__MODULE__, key)
     end)
   end
