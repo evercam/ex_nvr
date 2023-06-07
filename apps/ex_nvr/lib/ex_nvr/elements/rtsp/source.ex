@@ -79,7 +79,7 @@ defmodule ExNVR.Elements.RTSP.Source do
   end
 
   @impl true
-  def handle_info({:DOWN, _ref, :process, pid, reason}, ctx, %{connection_manager: pid} = state) do
+  def handle_info({:DOWN, _ref, :process, pid, reason}, _ctx, %{connection_manager: pid} = state) do
     Membrane.Logger.warn("connection manager exited due to #{inspect(reason)}, reconnect ...")
     {connection_lost_actions(state), do_handle_setup(state)}
   end

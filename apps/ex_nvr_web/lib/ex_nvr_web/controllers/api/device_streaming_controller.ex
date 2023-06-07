@@ -7,9 +7,7 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
 
   alias Ecto.Changeset
   alias ExNVR.Pipelines.HlsPlayback
-  alias ExNVR.{Pipeline, Utils}
-
-  @hls_live_streaming_id "live"
+  alias ExNVR.Utils
 
   def hls_stream(conn, params) do
     with {:ok, params} <- validate_hls_stream_params(params) do
@@ -40,20 +38,16 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
   end
 
   defp start_hls_pipeline(device_id, nil) do
-    path = create_hls_directory(device_id, @hls_live_streaming_id)
-
-    ExNVRWeb.HlsStreamingMonitor.register(@hls_live_streaming_id, fn ->
-      Pipeline.stop_hls_streaming(device_id)
-    end)
-
-    :ok = Pipeline.start_hls_streaming(device_id, @hls_live_streaming_id, path)
-
-    path
+    Path.join(Utils.hls_dir(device_id), "live")
   end
 
   defp start_hls_pipeline(device_id, pos) do
     id = UUID.uuid4()
-    path = create_hls_directory(device_id, id)
+
+    path =
+      device_id
+      |> Utils.hls_dir()
+      |> Path.join(id)
 
     pipeline_options = [
       device_id: device_id,
@@ -68,12 +62,5 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
     :ok = HlsPlayback.start_streaming(pid)
 
     path
-  end
-
-  defp create_hls_directory(device_id, id) do
-    device_id
-    |> Utils.hls_dir()
-    |> Path.join(id)
-    |> tap(&File.mkdir_p!/1)
   end
 end
