@@ -6,6 +6,7 @@ defmodule ExNVR.Pipelines.HlsPlayback do
   use Membrane.Pipeline
 
   alias ExNVR.Elements.MP4
+  alias Membrane.HTTPAdaptiveStream.{Sink, Storages}
 
   @call_timeout 60_000
 
@@ -27,6 +28,8 @@ defmodule ExNVR.Pipelines.HlsPlayback do
 
   @impl true
   def handle_init(ctx, options) do
+    File.mkdir_p!(options[:directory])
+
     Membrane.ResourceGuard.register(ctx.resource_guard, fn ->
       File.rm_rf!(options[:directory])
     end)
@@ -38,29 +41,27 @@ defmodule ExNVR.Pipelines.HlsPlayback do
       })
       |> child(:realtimer, Membrane.Realtimer)
       |> child(:parser, %Membrane.H264.Parser{framerate: {0, 0}})
-      |> child(:decoder, Membrane.H264.FFmpeg.Decoder)
-      |> child(:scaler, %Membrane.FFmpeg.SWScale.Scaler{output_width: 1280, output_height: 720})
-      |> child(:encoder, %Membrane.H264.FFmpeg.Encoder{
-        profile: :baseline,
-        gop_size: 50
-      })
-      |> child(:parser2, %Membrane.H264.FFmpeg.Parser{attach_nalus?: true})
-      |> via_in(Pad.ref(:input, "#{options[:segment_name_prefix]}_720p"),
+      |> child(:hls_payloader, Membrane.MP4.Payloader.H264)
+      |> child(:hls_muxer, Membrane.MP4.Muxer.CMAF)
+      |> via_in(Pad.ref(:input, "playback"),
         options: [
-          encoding: :H264,
+          track_name: "#{options[:segment_name_prefix]}_org",
           segment_duration: Membrane.Time.seconds(5)
         ]
       )
-      |> child(:hls, %Membrane.HTTPAdaptiveStream.SinkBin{
-        manifest_module: Membrane.HTTPAdaptiveStream.HLS,
-        mode: :live,
-        storage: %Membrane.HTTPAdaptiveStream.Storages.FileStorage{
-          directory: options[:directory]
+      |> child(:hls, %Sink{
+        manifest_config: %Sink.ManifestConfig{
+          name: "index",
+          module: Membrane.HTTPAdaptiveStream.HLS
         },
-        target_window_duration: Membrane.Time.seconds(60),
-        segment_naming_fun: fn track ->
-          "#{options[:segment_name_prefix]}_#{track.id}_#{track.next_segment_id}"
-        end
+        track_config: %Sink.TrackConfig{
+          mode: :live,
+          target_window_duration: Membrane.Time.seconds(60),
+          segment_naming_fun: fn track ->
+            "#{options[:segment_name_prefix]}_#{track.id}_#{track.next_segment_id}"
+          end
+        },
+        storage: %Storages.FileStorage{directory: options[:directory]}
       })
     ]
 
