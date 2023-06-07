@@ -106,13 +106,19 @@ defmodule ExNVR.Pipeline do
   end
 
   @impl true
-  def handle_child_notification(:connection_lost, :rtsp_source, _ctx, state) do
-    {[], state}
+  def handle_child_notification({:connection_lost, ref}, _elem, ctx, state) do
+    ctx.children
+    |> Map.keys()
+    |> Enum.filter(fn
+      {{_, ^ref}, _} -> true
+      _ -> false
+    end)
+    |> then(&{[remove_child: &1], state})
   end
 
   @impl true
   def handle_child_notification(
-        {:rtsp_setup_complete, media_options},
+        {:rtsp_setup_complete, media_options, ref},
         :rtsp_source,
         _ctx,
         %State{} = state
@@ -121,19 +127,24 @@ defmodule ExNVR.Pipeline do
       Membrane.Logger.error("Only H264 streams are supported now")
       {[terminate: :normal], state}
     else
-      handle_rtsp_stream_setup(media_options, state)
+      handle_rtsp_stream_setup(media_options, ref, state)
     end
   end
 
   @impl true
-  def handle_child_notification({:new_rtp_stream, ssrc, _pt, _extensions}, _, _ctx, state) do
+  def handle_child_notification(
+        {:new_rtp_stream, ssrc, _pt, _extensions},
+        {:rtp, ref},
+        _ctx,
+        state
+      ) do
     spec = [
-      get_child(:rtp)
+      get_child({:rtp, ref})
       |> via_out(Pad.ref(:output, ssrc), options: [depayloader: Membrane.RTP.H264.Depayloader])
-      |> child(:rtp_parser, %Membrane.H264.Parser{framerate: {0, 0}})
-      |> child(:tee, Membrane.Tee.Master)
+      |> child({:rtp_parser, ref}, %Membrane.H264.Parser{framerate: {0, 0}})
+      |> child({:tee, ref}, Membrane.Tee.Master)
       |> via_out(:master)
-      |> child(:storage_bin, %ExNVR.Elements.StorageBin{
+      |> child({:storage_bin, ref}, %ExNVR.Elements.StorageBin{
         device_id: state.device_id,
         target_segment_duration: state.segment_duration
       })
@@ -152,11 +163,6 @@ defmodule ExNVR.Pipeline do
   @impl true
   def handle_child_notification(_notification, _element, _ctx, state) do
     {[], state}
-  end
-
-  @impl true
-  def handle_tick(:playback_timer, _ctx, state) do
-    {[stop_timer: :playback_timer, playback: :playing], state}
   end
 
   @impl true
@@ -204,18 +210,18 @@ defmodule ExNVR.Pipeline do
     {[], %{state | hls_streaming_state: :stopped}}
   end
 
-  defp handle_rtsp_stream_setup(%{rtpmap: rtpmap} = media_options, state) do
+  defp handle_rtsp_stream_setup(%{rtpmap: rtpmap} = media_options, ref, state) do
     fmt_mapping =
       Map.put(%{}, rtpmap.payload_type, {String.to_atom(rtpmap.encoding), rtpmap.clock_rate})
 
     spec = [
       get_child(:rtsp_source)
+      |> via_out(Pad.ref(:output, ref))
       |> via_in(Pad.ref(:rtp_input, make_ref()))
-      |> child(:rtp, %SessionBin{fmt_mapping: fmt_mapping})
+      |> child({:rtp, ref}, %SessionBin{fmt_mapping: fmt_mapping})
     ]
 
-    {[spec: spec, start_timer: {:playback_timer, Membrane.Time.milliseconds(300)}],
-     %State{state | media_options: media_options}}
+    {[spec: spec], %State{state | media_options: media_options}}
   end
 
   defp pipeline_name(device_id), do: :"pipeline_#{device_id}"
