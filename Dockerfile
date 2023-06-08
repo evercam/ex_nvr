@@ -1,4 +1,4 @@
-FROM hexpm/elixir:1.14.3-erlang-25.2.3-alpine-3.16.3 AS build
+FROM hexpm/elixir:1.14.3-erlang-24.3.1-alpine-3.18.0 AS build
 
 # install build dependencies
 RUN \
@@ -42,7 +42,7 @@ RUN cd apps/ex_nvr_web && mix assets.deploy
 RUN mix do compile, release
 
 # prepare release image
-FROM alpine:3.16.3 AS app
+FROM alpine:3.18.0 AS app
 
 # install runtime dependencies
 RUN \
