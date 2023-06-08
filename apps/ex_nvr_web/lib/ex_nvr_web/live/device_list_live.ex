@@ -25,8 +25,8 @@ defmodule ExNVRWeb.DeviceListLive do
         </:col>
         <:action :let={device}>
           <.button
-            id="dropdownMenuIconButton"
-            data-dropdown-toggle="dropdownDots"
+            id={"dropdownMenuIconButton_#{device.id}"}
+            data-dropdown-toggle={"dropdownDots_#{device.id}"}
             class="text-sm ml-3 hover:bg-gray-100 dark:bg-gray-800"
           >
             <svg
@@ -40,12 +40,12 @@ defmodule ExNVRWeb.DeviceListLive do
             </svg>
           </.button>
           <div
-            id="dropdownDots"
+            id={"dropdownDots_#{device.id}"}
             class="z-10 hidden text-left bg-white divide-y divide-gray-100 rounded-lg shadow w-44 dark:bg-gray-700 dark:divide-gray-600"
           >
             <ul
               class="py-2 text-sm text-gray-700 dark:text-gray-200"
-              aria-labelledby="dropdownMenuIconButton"
+              aria-labelledby={"dropdownMenuIconButton_#{device.id}"}
             >
               <li>
                 <.link

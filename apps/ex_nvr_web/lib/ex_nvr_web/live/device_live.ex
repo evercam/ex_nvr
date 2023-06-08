@@ -36,7 +36,7 @@ defmodule ExNVRWeb.DeviceLive do
 
         socket
         |> put_flash(:info, info)
-        |> push_navigate(to: ~p"/devices")
+        |> redirect(to: ~p"/devices")
         |> then(&{:noreply, &1})
 
       {:error, changeset} ->

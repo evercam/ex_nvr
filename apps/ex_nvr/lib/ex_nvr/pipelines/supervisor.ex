@@ -29,7 +29,7 @@ defmodule ExNVR.Pipelines.Supervisor do
     DynamicSupervisor.start_child(__MODULE__, {Pipeline, options})
   end
 
-  def restart_pipeline(%Device{} = device) do
+  def restart_pipeline(%Device{} = _device) do
     # TODO
     # Think of a way to restart the Pipeline
     # making the Pipeline restart mode to transient
