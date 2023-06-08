@@ -29,6 +29,15 @@ defmodule ExNVR.Pipelines.Supervisor do
     DynamicSupervisor.start_child(__MODULE__, {Pipeline, options})
   end
 
+  def restart_pipeline(%Device{} = device) do
+    # TODO
+    # Think of a way to restart the Pipeline
+    # making the Pipeline restart mode to transient
+    # doesn't work because of a bug in Membrane
+    # https://github.com/membraneframework/membrane_core/issues/566
+    :ok
+  end
+
   defp build_stream_uri(%Device{ip_camera_config: config}) do
     userinfo =
       if to_string(config.username) != "" and to_string(config.password) != "" do

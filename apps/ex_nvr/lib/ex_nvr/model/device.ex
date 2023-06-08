@@ -67,9 +67,28 @@ defmodule ExNVR.Model.Device do
     timestamps(type: :utc_datetime_usec)
   end
 
+  def config_updated(%{type: :IP, ip_camera_config: config}, %{
+        type: :IP,
+        ip_camera_config: config
+      }),
+      do: false
+
+  def config_updated(_device, _updated_device), do: true
+
   def create_changeset(device, params) do
     device
     |> Changeset.cast(params, [:name, :type])
+    |> common_config()
+  end
+
+  def update_changeset(device, params) do
+    device
+    |> Changeset.cast(params, [:name])
+    |> common_config()
+  end
+
+  defp common_config(changeset) do
+    changeset
     |> Changeset.validate_required([:name, :type])
     |> validate_config()
   end

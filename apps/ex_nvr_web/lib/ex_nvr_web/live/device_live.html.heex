@@ -1,82 +1,66 @@
-<div class="grow">
-  <div>
-    <.button phx-click={show_modal("device-modal")}>
-      Add device
-    </.button>
-  </div>
+<div class="grow max-w-2xl">
+  <div class="px-6 lg:px-8 bg-white dark:bg-gray-800">
+    <h3 class="mb-4 text-xl text-center font-medium text-gray-900 dark:text-white">
+      Create a new device
+    </h3>
+    <.simple_form id="device_form" for={@device_form} class="space-y-6" phx-submit="save_device">
+      <.input
+        field={@device_form[:name]}
+        type="text"
+        label="Name"
+        placeholder="Camera Name"
+        required
+      />
+      <.input
+        field={@device_form[:type]}
+        id="device_type"
+        type="select"
+        options={[{"IP Camera", "IP"}]}
+        label="Type"
+        placeholder="Choose your device type"
+        disabled={@device.id != nil}
+      />
 
-  <.table id="devices" rows={@devices}>
-    <:col :let={device} label="Id"><%= device.id %></:col>
-    <:col :let={device} label="Name"><%= device.name %></:col>
-    <:col label="Status">
-      <div class="flex items-center">
-        <div class="h-2.5 w-2.5 rounded-full bg-green-500 mr-2"></div>
-        Recording
-      </div>
-    </:col>
-  </.table>
-</div>
-
-<div id={@device_modal_id} data-hide={hide_modal("device-modal")}>
-  <.modal id="device-modal">
-    <div class="px-6 py-6 lg:px-8 bg-white dark:bg-gray-800">
-      <h3 class="mb-4 text-xl font-medium text-gray-900 dark:text-white">
-        Create a new device
-      </h3>
-      <.simple_form id="device_form" for={@device_form} class="space-y-6" phx-submit="save_device">
-        <.input
-          field={@device_form[:name]}
-          type="text"
-          label="Name"
-          placeholder="Camera Name"
-          required
-        />
-        <.input
-          field={@device_form[:type]}
-          id="device_type"
-          type="select"
-          options={[{"IP Camera", "IP"}]}
-          label="Type"
-          placeholder="Choose your device type"
-        />
-
+      <div class="flex flex-col">
+        <p class="text-xl font-medium mb-4 text-gray-800 dark:text-white">
+          IP Camera Config
+        </p>
         <div class="flex flex-col">
-          <p class="text-l border-b border-white-700 dark:border-gray-700 mb-4 text-gray-800 dark:text-white">
-            IP Camera Config
-          </p>
-          <div class="flex flex-col">
-            <.inputs_for :let={config} field={@device_form[:ip_camera_config]}>
-              <.input
-                field={config[:stream_uri]}
-                id="config_stream_uri"
-                type="text"
-                label="Main Stream"
-                placeholder="rtsp://camera1:554/video/stream1"
-                required
-              />
-              <.input
-                field={config[:sub_stream_uri]}
-                id="config_sub_stream_uri"
-                type="text"
-                label="Sub Stream"
-                placeholder="rtsp://camera1:554/video/stream2"
-              />
-              <.input field={config[:username]} id="config_username" type="text" label="Username" />
-              <.input
-                field={config[:password]}
-                id="config_password"
-                type="password"
-                label="Password"
-              />
-            </.inputs_for>
-          </div>
+          <.inputs_for :let={config} field={@device_form[:ip_camera_config]}>
+            <.input
+              field={config[:stream_uri]}
+              id="config_stream_uri"
+              type="text"
+              label="Main Stream"
+              placeholder="rtsp://camera1:554/video/stream1"
+              required
+            />
+            <.input
+              field={config[:sub_stream_uri]}
+              id="config_sub_stream_uri"
+              type="text"
+              label="Sub Stream"
+              placeholder="rtsp://camera1:554/video/stream2"
+            />
+            <.input field={config[:username]} id="config_username" type="text" label="Username" />
+            <.input
+              field={config[:password]}
+              id="config_password"
+              type="password"
+              label="Password"
+            />
+          </.inputs_for>
         </div>
-        <:actions>
-          <.button class="w-full" phx-disable-with="Creating...">
-            Create
-          </.button>
-        </:actions>
-      </.simple_form>
-    </div>
-  </.modal>
+      </div>
+      <:actions>
+        <.button :if={is_nil(@device.id)} class="w-full" phx-disable-with="Creating...">
+          Create
+        </.button>
+
+        <.button :if={@device.id} class="w-full" phx-disable-with="Updating...">
+          Update
+        </.button>
+      </:actions>
+    </.simple_form>
+  </div>
 </div>
