@@ -38,6 +38,7 @@ defmodule ExNVR.Model.Device do
       |> cast(params, __MODULE__.__schema__(:fields))
       |> validate_required([:stream_uri])
       |> Changeset.validate_change(:stream_uri, &validate_uri/2)
+      |> Changeset.validate_change(:sub_stream_uri, &validate_uri/2)
     end
 
     defp validate_uri(field, rtsp_uri) do
@@ -66,8 +67,8 @@ defmodule ExNVR.Model.Device do
     timestamps(type: :utc_datetime_usec)
   end
 
-  def create_changeset(params) do
-    %__MODULE__{}
+  def create_changeset(device, params) do
+    device
     |> Changeset.cast(params, [:name, :type])
     |> Changeset.validate_required([:name, :type])
     |> validate_config()
