@@ -4,6 +4,8 @@ defmodule ExNVR.DevicesFixtures do
   entities via the `ExNVR.Devices` context.
   """
 
+  def valid_rtsp_url(), do: "rtsp://example#{System.unique_integer()}:8541"
+
   def valid_device_attributes(attrs \\ %{}) do
     Enum.into(attrs, %{
       id: UUID.uuid4(),

@@ -28,6 +28,7 @@ defmodule ExNVR.Model.Device do
     @primary_key false
     embedded_schema do
       field :stream_uri, :string
+      field :sub_stream_uri, :string
       field :username, :string
       field :password, :string
     end
@@ -36,20 +37,23 @@ defmodule ExNVR.Model.Device do
       struct
       |> cast(params, __MODULE__.__schema__(:fields))
       |> validate_required([:stream_uri])
-      |> Changeset.validate_change(:stream_uri, fn :stream_uri, rtsp_uri ->
-        uri = URI.parse(rtsp_uri)
+      |> Changeset.validate_change(:stream_uri, &validate_uri/2)
+      |> Changeset.validate_change(:sub_stream_uri, &validate_uri/2)
+    end
 
-        cond do
-          uri.scheme != "rtsp" ->
-            [stream_uri: "scheme should be rtsp"]
+    defp validate_uri(field, rtsp_uri) do
+      uri = URI.parse(rtsp_uri)
 
-          to_string(uri.host) == "" ->
-            [stream_uri: "invalid rtsp uri"]
+      cond do
+        uri.scheme != "rtsp" ->
+          [{field, "scheme should be rtsp"}]
 
-          true ->
-            []
-        end
-      end)
+        to_string(uri.host) == "" ->
+          [{field, "invalid rtsp uri"}]
+
+        true ->
+          []
+      end
     end
   end
 
@@ -63,8 +67,8 @@ defmodule ExNVR.Model.Device do
     timestamps(type: :utc_datetime_usec)
   end
 
-  def create_changeset(params) do
-    %__MODULE__{}
+  def create_changeset(device, params) do
+    device
     |> Changeset.cast(params, [:name, :type])
     |> Changeset.validate_required([:name, :type])
     |> validate_config()

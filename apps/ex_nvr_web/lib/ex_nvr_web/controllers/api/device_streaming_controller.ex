@@ -20,7 +20,12 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
     # segment names are in the following format <segment_name>_<track_id>_<segment_id>.<extension>
     # this is a temporary measure until Membrane HLS plugin supports query params
     # in segment files
-    id = String.trim_leading(segment_name, "video_header_") |> String.split("_") |> hd()
+    id =
+      segment_name
+      |> Path.basename(".m3u8")
+      |> String.trim_leading("video_header_")
+      |> String.split("_")
+      |> hd()
 
     if not String.ends_with?(segment_name, ".m3u8") do
       ExNVRWeb.HlsStreamingMonitor.update_last_access_time(id)

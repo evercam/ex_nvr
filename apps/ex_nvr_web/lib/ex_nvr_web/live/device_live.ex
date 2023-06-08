@@ -6,13 +6,13 @@ defmodule ExNVRWeb.DeviceLive do
   alias ExNVR.{Devices, Pipelines}
   alias ExNVR.Model.Device
 
-  @device_modal_id "device-modal-container"
+  @device_modal_id "device_modal_container"
 
   def mount(_params, _session, socket) do
     {:ok,
      assign(socket,
        devices: Devices.list(),
-       form: new_device_form(),
+       device_form: new_device_form(),
        device_modal_id: @device_modal_id
      )}
   end
@@ -29,7 +29,7 @@ defmodule ExNVRWeb.DeviceLive do
 
         socket
         |> put_flash(:info, info)
-        |> assign(devices: devices ++ [device], form: new_device_form())
+        |> assign(devices: devices ++ [device], device_form: new_device_form())
         |> push_event("js-exec", %{
           to: "##{@device_modal_id}",
           attr: "data-hide"
@@ -37,9 +37,9 @@ defmodule ExNVRWeb.DeviceLive do
         |> then(&{:noreply, &1})
 
       {:error, changeset} ->
-        {:noreply, assign(socket, form: to_form(changeset))}
+        {:noreply, assign(socket, device_form: to_form(changeset))}
     end
   end
 
-  defp new_device_form(), do: to_form(Device.create_changeset(%{}))
+  defp new_device_form(), do: to_form(Devices.change_device_creation(%Device{}))
 end
