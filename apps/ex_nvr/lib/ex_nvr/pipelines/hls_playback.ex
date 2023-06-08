@@ -6,7 +6,6 @@ defmodule ExNVR.Pipelines.HlsPlayback do
   use Membrane.Pipeline
 
   alias ExNVR.Elements.MP4
-  alias Membrane.HTTPAdaptiveStream.{Sink, Storages}
 
   @call_timeout 60_000
 
@@ -41,27 +40,10 @@ defmodule ExNVR.Pipelines.HlsPlayback do
       })
       |> child(:realtimer, Membrane.Realtimer)
       |> child(:parser, %Membrane.H264.Parser{framerate: {0, 0}})
-      |> child(:hls_payloader, Membrane.MP4.Payloader.H264)
-      |> child(:hls_muxer, Membrane.MP4.Muxer.CMAF)
-      |> via_in(Pad.ref(:input, "playback"),
-        options: [
-          track_name: "#{options[:segment_name_prefix]}_org",
-          segment_duration: Membrane.Time.seconds(5)
-        ]
-      )
-      |> child(:hls, %Sink{
-        manifest_config: %Sink.ManifestConfig{
-          name: "index",
-          module: Membrane.HTTPAdaptiveStream.HLS
-        },
-        track_config: %Sink.TrackConfig{
-          mode: :live,
-          target_window_duration: Membrane.Time.seconds(60),
-          segment_naming_fun: fn track ->
-            "#{options[:segment_name_prefix]}_#{track.id}_#{track.next_segment_id}"
-          end
-        },
-        storage: %Storages.FileStorage{directory: options[:directory]}
+      |> via_in(Pad.ref(:input, :playback))
+      |> child(:sink, %ExNVR.Elements.HLSBin{
+        location: options[:directory],
+        segment_name_prefix: options[:segment_name_prefix]
       })
     ]
 
@@ -69,7 +51,7 @@ defmodule ExNVR.Pipelines.HlsPlayback do
   end
 
   @impl true
-  def handle_child_notification({:track_playable, _track}, :hls, _ctx, state) do
+  def handle_child_notification({:track_playable, _track}, :sink, _ctx, state) do
     {[reply_to: {state.caller, :ok}], %{state | caller: nil}}
   end
 

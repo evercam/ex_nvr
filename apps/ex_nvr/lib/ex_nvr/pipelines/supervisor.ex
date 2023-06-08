@@ -15,9 +15,12 @@ defmodule ExNVR.Pipelines.Supervisor do
   end
 
   def start_pipeline(%Device{} = device) do
+    {main_stream, sub_stream} = build_stream_uri(device)
+
     options = [
       device_id: device.id,
-      stream_uri: build_stream_uri(device)
+      stream_uri: main_stream,
+      sub_stream_uri: sub_stream
     ]
 
     File.mkdir_p!(recording_dir(device.id))
@@ -32,8 +35,13 @@ defmodule ExNVR.Pipelines.Supervisor do
         "#{config.username}:#{config.password}"
       end
 
-    config
-    |> Map.fetch!(:stream_uri)
+    {do_build_uri(config.stream_uri, userinfo), do_build_uri(config.sub_stream_uri, userinfo)}
+  end
+
+  defp do_build_uri(nil, _userinfo), do: nil
+
+  defp do_build_uri(stream_uri, userinfo) do
+    stream_uri
     |> URI.parse()
     |> then(&%URI{&1 | userinfo: userinfo})
     |> URI.to_string()

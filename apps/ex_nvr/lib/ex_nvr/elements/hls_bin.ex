@@ -14,7 +14,7 @@ defmodule ExNVR.Elements.HLSBin do
     demand_unit: :buffers,
     demand_mode: :auto,
     accepted_format: %H264{alignment: :au},
-    availability: :always
+    availability: :on_request
 
   def_options location: [
                 spec: Path.t(),
@@ -43,9 +43,7 @@ defmodule ExNVR.Elements.HLSBin do
     end)
 
     spec = [
-      bin_input(:input)
-      |> child(:hls_tee, Membrane.Tee.Master),
-      child(:hls, %Sink{
+      child(:sink, %Sink{
         manifest_config: %Sink.ManifestConfig{
           name: "index",
           module: Membrane.HTTPAdaptiveStream.HLS
@@ -61,66 +59,34 @@ defmodule ExNVR.Elements.HLSBin do
       })
     ]
 
-    spec = maybe_add_high_quality_elements(spec, segment_prefix)
-    spec = maybe_add_low_quality_elements(spec, segment_prefix)
-
-    {[spec: spec], %{}}
+    {[spec: spec], %{segment_prefix: segment_prefix}}
   end
 
   @impl true
-  def handle_child_notification({:track_playable, _pad_id} = notification, :hls, _ctx, state) do
-    {[notify_parent: notification], state}
+  def handle_pad_added(Pad.ref(:input, ref) = pad, _ctx, state) do
+    spec = [
+      bin_input(pad)
+      |> child({:payloader, ref}, Membrane.MP4.Payloader.H264)
+      |> child({:muxer, ref}, Membrane.MP4.Muxer.CMAF)
+      |> via_in(pad,
+        options: [
+          track_name: "#{state.segment_prefix}",
+          segment_duration: Membrane.Time.seconds(5)
+        ]
+      )
+      |> get_child(:sink)
+    ]
+
+    {[spec: spec], state}
+  end
+
+  @impl true
+  def handle_child_notification({:track_playable, track_id}, :sink, _ctx, state) do
+    {[notify_parent: {:track_playable, track_id}], state}
   end
 
   @impl true
   def handle_child_notification(_notification, _element, _ctx, state) do
     {[], state}
-  end
-
-  defp maybe_add_high_quality_elements(spec, segment_prefix) do
-    spec ++
-      [
-        get_child(:hls_tee)
-        |> via_out(:master)
-        |> child(:hls_payloader_high, Membrane.MP4.Payloader.H264)
-        |> child(:hls_muxer_high, Membrane.MP4.Muxer.CMAF)
-        |> via_in(Pad.ref(:input, "high"),
-          options: [
-            track_name: "#{segment_prefix}_high",
-            segment_duration: Membrane.Time.seconds(5)
-          ]
-        )
-        |> get_child(:hls)
-      ]
-  end
-
-  defp maybe_add_low_quality_elements(spec, segment_prefix) do
-    spec ++
-      [
-        get_child(:hls_tee)
-        |> via_out(:copy)
-        |> child(:hls_decoder, Membrane.H264.FFmpeg.Decoder)
-        |> child(:hls_low_rescaler, %Membrane.FFmpeg.SWScale.Scaler{
-          output_width: 856,
-          output_height: 480
-        })
-        |> child(:hls_low_encoder, %Membrane.H264.FFmpeg.Encoder{
-          profile: :baseline,
-          gop_size: 50
-        })
-        |> child(:hls_low_parser, %Membrane.H264.FFmpeg.Parser{
-          alignment: :au,
-          attach_nalus?: true
-        })
-        |> child(:hls_payloader_low, Membrane.MP4.Payloader.H264)
-        |> child(:hls_muxer_low, Membrane.MP4.Muxer.CMAF)
-        |> via_in(Pad.ref(:input, "low"),
-          options: [
-            track_name: "#{segment_prefix}_low",
-            segment_duration: Membrane.Time.seconds(5)
-          ]
-        )
-        |> get_child(:hls)
-      ]
   end
 end
