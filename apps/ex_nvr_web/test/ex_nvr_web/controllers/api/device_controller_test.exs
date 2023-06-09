@@ -31,4 +31,21 @@ defmodule ExNVRWeb.API.DeviceControllerTest do
       assert response["code"] == "BAD_ARGUMENT"
     end
   end
+
+  describe "PUT/PATCH /api/devices/:id" do
+    setup do
+      %{device: device_fixture()}
+    end
+
+    test "update a device", %{conn: conn, device: device} do
+      conn
+      |> put(~p"/api/devices/#{device.id}", %{
+        name: "Updated Name"
+      })
+      |> json_response(200)
+
+      updated_device = Devices.get!(device.id)
+      assert updated_device.name == "Updated Name"
+    end
+  end
 end

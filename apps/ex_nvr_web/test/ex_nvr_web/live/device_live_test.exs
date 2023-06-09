@@ -85,7 +85,7 @@ defmodule ExNVRWeb.DeviceLiveTest do
           "device" => %{
             "name" => "My Updated Device",
             "ip_camera_config" => %{
-              "stream_uri" => "rtsp://localhost:554",
+              "stream_uri" => "rtsp://localhost:554"
             }
           }
         })

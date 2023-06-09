@@ -32,7 +32,7 @@ defmodule ExNVRWeb.Router do
   scope "/api", ExNVRWeb do
     pipe_through [:api, :api_require_authenticated_user]
 
-    post "/devices", API.DeviceController, :create
+    resources "/devices", API.DeviceController, only: [:create, :update]
 
     scope "/devices/:device_id" do
       pipe_through ExNVRWeb.Plug.Device

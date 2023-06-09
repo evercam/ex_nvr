@@ -1,9 +1,15 @@
 <div class="grow max-w-2xl">
   <div class="px-6 lg:px-8 bg-white dark:bg-gray-800">
-    <h3 :if={@device.id == nil} class="mb-4 text-xl text-center font-medium text-gray-900 dark:text-white">
+    <h3
+      :if={@device.id == nil}
+      class="mb-4 text-xl text-center font-medium text-gray-900 dark:text-white"
+    >
       Create a new device
     </h3>
-    <h3 :if={@device.id != nil} class="mb-4 text-xl text-center font-medium text-gray-900 dark:text-white">
+    <h3
+      :if={@device.id != nil}
+      class="mb-4 text-xl text-center font-medium text-gray-900 dark:text-white"
+    >
       Update a device
     </h3>
     <.simple_form id="device_form" for={@device_form} class="space-y-6" phx-submit="save_device">
