@@ -73,6 +73,38 @@ paths:
                   $ref: "#/components/schemas/IPCameraConfig"
               required: [name, type]
       responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Device'
+        '400':
+          $ref: "#/components/responses/BadArg"
+  /api/devices/{device_id}:
+    put:
+      summary: Update device
+      description: |
+        Update device details.
+
+        If the device config (e.g. `ip_camera_config`) is updated, the pipeline is restarted 
+        to pick up the new configuration.
+      operationId: updateDevice
+      tags:
+        - Device
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: Device name
+                ip_camera_config:
+                  $ref: "#/components/schemas/IPCameraConfig"
+      responses:
         '200':
           description: Success
           content:

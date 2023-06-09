@@ -6,20 +6,27 @@ defmodule ExNVRWeb.DeviceLive do
   alias ExNVR.{Devices, Pipelines}
   alias ExNVR.Model.Device
 
-  @device_modal_id "device_modal_container"
+  def mount(%{"id" => "new"}, _session, socket) do
+    changeset = Devices.change_device_creation(%Device{})
+    {:ok, assign(socket, device: %Device{}, device_form: to_form(changeset))}
+  end
 
-  def mount(_params, _session, socket) do
+  def mount(%{"id" => device_id}, _session, socket) do
+    device = Devices.get!(device_id)
+
     {:ok,
-     assign(socket,
-       devices: Devices.list(),
-       device_form: new_device_form(),
-       device_modal_id: @device_modal_id
-     )}
+     assign(socket, device: device, device_form: to_form(Devices.change_device_update(device)))}
   end
 
   def handle_event("save_device", %{"device" => device_params}, socket) do
-    devices = socket.assigns.devices
+    device = socket.assigns.device
 
+    if device.id,
+      do: do_update_device(socket, device, device_params),
+      else: do_save_device(socket, device_params)
+  end
+
+  defp do_save_device(socket, device_params) do
     case Devices.create(device_params) do
       {:ok, device} ->
         info = "Device created successfully"
@@ -29,11 +36,7 @@ defmodule ExNVRWeb.DeviceLive do
 
         socket
         |> put_flash(:info, info)
-        |> assign(devices: devices ++ [device], device_form: new_device_form())
-        |> push_event("js-exec", %{
-          to: "##{@device_modal_id}",
-          attr: "data-hide"
-        })
+        |> redirect(to: ~p"/devices")
         |> then(&{:noreply, &1})
 
       {:error, changeset} ->
@@ -41,5 +44,26 @@ defmodule ExNVRWeb.DeviceLive do
     end
   end
 
-  defp new_device_form(), do: to_form(Devices.change_device_creation(%Device{}))
+  defp do_update_device(socket, device, device_params) do
+    case Devices.update(device, device_params) do
+      {:ok, updated_device} ->
+        info = "Device updated successfully"
+
+        if Application.get_env(:ex_nvr, :run_pipelines, true) and
+             Device.config_updated(device, updated_device) do
+          Pipelines.Supervisor.restart_pipeline(updated_device)
+        end
+
+        socket
+        |> put_flash(:info, info)
+        |> assign(
+          device: updated_device,
+          device_form: to_form(Devices.change_device_update(updated_device))
+        )
+        |> then(&{:noreply, &1})
+
+      {:error, changeset} ->
+        {:noreply, assign(socket, device_form: to_form(changeset))}
+    end
+  end
 end

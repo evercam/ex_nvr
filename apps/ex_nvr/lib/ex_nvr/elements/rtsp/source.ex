@@ -112,7 +112,7 @@ defmodule ExNVR.Elements.RTSP.Source do
 
     Process.monitor(connection_manager)
 
-    %{state | connection_manager: connection_manager, output_ref: make_ref()}
+    %{state | connection_manager: connection_manager, play?: false, output_ref: make_ref()}
   end
 
   defp packet_to_buffer(packet) do

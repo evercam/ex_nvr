@@ -10,8 +10,9 @@ defmodule ExNVRWeb.Plug.Device do
 
   def init(opts), do: opts
 
-  def call(%Conn{} = conn, _) do
-    device_id = conn.path_params["device_id"]
+  def call(%Conn{} = conn, opts) do
+    field_name = Keyword.get(opts, :field_name, "device_id")
+    device_id = conn.path_params[field_name]
 
     case Devices.get(device_id) do
       %Device{} = device ->

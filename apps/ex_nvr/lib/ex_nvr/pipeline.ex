@@ -44,6 +44,7 @@ defmodule ExNVR.Pipeline do
     `media_options` - Media description got from calling DESCRIBE method on the RTSP uri
     `sub_stream_media_options` - Media description of the sub stream got from calling DESCRIBE method on the RTSP uri
     `segment_duration` - The duration of each video chunk saved by the storage bin.
+    `supervisor_pid` - The supervisor pid of this pipeline (needed to stop a pipeline)
     """
     @type t :: %__MODULE__{
             device_id: binary(),
@@ -51,7 +52,8 @@ defmodule ExNVR.Pipeline do
             sub_stream_uri: binary(),
             media_options: ExSDP.Media.t(),
             sub_stream_media_options: ExSDP.Media.t(),
-            segment_duration: non_neg_integer()
+            segment_duration: non_neg_integer(),
+            supervisor_pid: pid()
           }
 
     @enforce_keys [:device_id, :stream_uri]
@@ -63,13 +65,25 @@ defmodule ExNVR.Pipeline do
                   media_options: nil,
                   sub_stream_media_options: nil,
                   hls_streaming_state: :stopped,
-                  hls_pending_callers: []
+                  hls_pending_callers: [],
+                  supervisor_pid: nil
                 ]
   end
 
   def start_link(options \\ []) do
     Membrane.Logger.info("Starting a new NVR pipeline with options: #{inspect(options)}")
-    Membrane.Pipeline.start_link(__MODULE__, options, name: pipeline_name(options[:device_id]))
+
+    with {:ok, sup_pid, pid} = res <-
+           Membrane.Pipeline.start_link(__MODULE__, options,
+             name: pipeline_name(options[:device_id])
+           ) do
+      send(pid, {:pipeline_supervisor, sup_pid})
+      res
+    end
+  end
+
+  def supervisor(device_id) do
+    Pipeline.call(pipeline_name(device_id), :pipeline_supervisor)
   end
 
   @impl true
@@ -202,6 +216,16 @@ defmodule ExNVR.Pipeline do
   def handle_crash_group_down("hls", _ctx, state) do
     Membrane.Logger.error("Hls group crashed, stop live streaming...")
     {[], %{state | hls_streaming_state: :stopped}}
+  end
+
+  @impl true
+  def handle_info({:pipeline_supervisor, pid}, _ctx, state) do
+    {[], %{state | supervisor_pid: pid}}
+  end
+
+  @impl true
+  def handle_call(:pipeline_supervisor, _ctx, state) do
+    {[reply: state.supervisor_pid], state}
   end
 
   defp handle_rtsp_stream_setup(%{rtpmap: rtpmap} = media_options, ref, state) do
