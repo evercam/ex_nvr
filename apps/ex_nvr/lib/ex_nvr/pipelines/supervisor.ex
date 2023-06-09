@@ -29,13 +29,17 @@ defmodule ExNVR.Pipelines.Supervisor do
     DynamicSupervisor.start_child(__MODULE__, {Pipeline, options})
   end
 
-  def restart_pipeline(%Device{} = _device) do
-    # TODO
-    # Think of a way to restart the Pipeline
-    # making the Pipeline restart mode to transient
+  def stop_pipeline(%Device{} = device) do
+    DynamicSupervisor.terminate_child(__MODULE__, Pipeline.supervisor(device.id))
+  end
+
+  def restart_pipeline(%Device{} = device) do
+    # Making the Pipeline restart mode to transient
     # doesn't work because of a bug in Membrane
     # https://github.com/membraneframework/membrane_core/issues/566
-    :ok
+    # we'll terminate the children with `terminate_child` and then restart
+    stop_pipeline(device)
+    start_pipeline(device)
   end
 
   defp build_stream_uri(%Device{ip_camera_config: config}) do

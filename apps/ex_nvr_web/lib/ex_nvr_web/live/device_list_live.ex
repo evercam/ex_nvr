@@ -38,25 +38,25 @@ defmodule ExNVRWeb.DeviceListLive do
             >
               <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
             </svg>
-          </.button>
-          <div
-            id={"dropdownDots_#{device.id}"}
-            class="z-10 hidden text-left bg-white divide-y divide-gray-100 rounded-lg shadow w-44 dark:bg-gray-700 dark:divide-gray-600"
-          >
-            <ul
-              class="py-2 text-sm text-gray-700 dark:text-gray-200"
-              aria-labelledby={"dropdownMenuIconButton_#{device.id}"}
+            <div
+              id={"dropdownDots_#{device.id}"}
+              class="z-10 hidden text-left bg-white divide-y divide-gray-100 rounded-lg shadow w-44 dark:bg-gray-700 dark:divide-gray-600"
             >
-              <li>
-                <.link
-                  href={~p"/devices/#{device.id}"}
-                  class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white"
-                >
-                  Update
-                </.link>
-              </li>
-            </ul>
-          </div>
+              <ul
+                class="py-2 text-sm text-gray-700 dark:text-gray-200"
+                aria-labelledby={"dropdownMenuIconButton_#{device.id}"}
+              >
+                <li>
+                  <.link
+                    href={~p"/devices/#{device.id}"}
+                    class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white"
+                  >
+                    Update
+                  </.link>
+                </li>
+              </ul>
+            </div>
+          </.button>
         </:action>
       </.table>
     </div>
