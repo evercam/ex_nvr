@@ -70,7 +70,7 @@ defmodule ExNVR.Elements.HLSBin do
       |> child({:muxer, ref}, Membrane.MP4.Muxer.CMAF)
       |> via_in(pad,
         options: [
-          track_name: "#{state.segment_prefix}",
+          track_name: "#{state.segment_prefix}_#{ref}",
           segment_duration: Membrane.Time.seconds(5)
         ]
       )

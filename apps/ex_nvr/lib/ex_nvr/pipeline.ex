@@ -95,9 +95,15 @@ defmodule ExNVR.Pipeline do
       segment_duration: options[:segment_duration] || 60
     }
 
+    hls_sink = %ExNVR.Elements.HLSBin{
+      location: Path.join(Utils.hls_dir(state.device_id), "live"),
+      segment_name_prefix: "live"
+    }
+
     spec =
       [
-        child(:rtsp_source, %Source{stream_uri: state.stream_uri})
+        child(:rtsp_source, %Source{stream_uri: state.stream_uri}),
+        {child(:hls_sink, hls_sink, get_if_exists: true), crash_group: {"hls", :temporary}}
       ] ++
         if state.sub_stream_uri,
           do: [child({:rtsp_source, :sub_stream}, %Source{stream_uri: state.sub_stream_uri})],
@@ -156,10 +162,6 @@ defmodule ExNVR.Pipeline do
         state
       ) do
     spec = [
-      {child({:hls_bin, ref}, %ExNVR.Elements.HLSBin{
-         location: Path.join(Utils.hls_dir(state.device_id), "live"),
-         segment_name_prefix: "live_main_stream"
-       }), crash_group: {"hls", :temporary}},
       get_child({:rtp, ref})
       |> via_out(Pad.ref(:output, ssrc), options: [depayloader: Membrane.RTP.H264.Depayloader])
       |> child({:rtp_parser, ref}, %Membrane.H264.Parser{framerate: {0, 0}})
@@ -172,7 +174,7 @@ defmodule ExNVR.Pipeline do
       get_child({:tee, ref})
       |> via_out(:copy)
       |> via_in(Pad.ref(:input, :main_stream))
-      |> get_child({:hls_bin, ref})
+      |> get_child(:hls_sink)
     ]
 
     {[spec: spec], state}
@@ -186,15 +188,11 @@ defmodule ExNVR.Pipeline do
         state
       ) do
     spec = [
-      {child({:hls_bin, :sub_stream, ref}, %ExNVR.Elements.HLSBin{
-         location: Path.join(Utils.hls_dir(state.device_id), "live"),
-         segment_name_prefix: "live_sub_stream"
-       }), crash_group: {"hls", :temporary}},
       get_child(rtp_child)
       |> via_out(Pad.ref(:output, ssrc), options: [depayloader: Membrane.RTP.H264.Depayloader])
       |> child({:rtp_parser, :sub_stream, ref}, %Membrane.H264.Parser{framerate: {0, 0}})
       |> via_in(Pad.ref(:input, :sub_stream))
-      |> get_child({:hls_bin, :sub_stream, ref})
+      |> get_child(:hls_sink)
     ]
 
     {[spec: spec], state}

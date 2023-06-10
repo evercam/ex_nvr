@@ -75,7 +75,7 @@ defmodule ExNVR.Elements.RTSP.Source do
   @impl true
   def handle_info({:connection_info, {:connection_failed, error}}, _ctx, state) do
     Membrane.Logger.error("could not connect to RTSP server due to #{inspect(error)}")
-    {connection_lost_actions(state), state}
+    {connection_lost_actions(state), %{state | play?: false, output_ref: make_ref()}}
   end
 
   @impl true
