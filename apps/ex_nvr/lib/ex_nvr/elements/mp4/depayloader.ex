@@ -44,8 +44,8 @@ defmodule ExNVR.Elements.MP4.Depayloader do
        recordings: [],
        depayloader: nil,
        frame_rate: nil,
-       current_pts: 0,
-       last_access_unit_pts: nil,
+       current_dts: 0,
+       last_access_unit_dts: nil,
        pending_buffers: [],
        buffer?: true
      }}
@@ -66,16 +66,18 @@ defmodule ExNVR.Elements.MP4.Depayloader do
   @impl true
   def handle_demand(:output, _size, :buffers, _ctx, %{frame_rate: {frames, seconds}} = state) do
     case Native.read_access_unit(state.depayloader) do
-      {:ok, buffers, pts, keyframes} ->
+      {:ok, buffers, dts, pts, keyframes} ->
         buffers =
-          [buffers, pts, keyframes]
+          [buffers, dts, pts, keyframes]
           |> Enum.zip()
-          |> Enum.map(fn {payload, pts, key_frame?} ->
+          |> Enum.map(fn {payload, dts, pts, key_frame?} ->
+            dts = div(dts * seconds * Membrane.Time.second(), frames)
             pts = div(pts * seconds * Membrane.Time.second(), frames)
 
             %Buffer{
               payload: payload,
-              pts: pts + state.current_pts,
+              dts: dts + state.current_dts,
+              pts: pts + state.current_dts,
               metadata: %{key_frame?: key_frame?}
             }
           end)
@@ -99,8 +101,8 @@ defmodule ExNVR.Elements.MP4.Depayloader do
 
     state = %{
       state
-      | current_pts: state.last_access_unit_pts || 0,
-        last_access_unit_pts: nil
+      | current_dts: state.last_access_unit_dts || 0,
+        last_access_unit_dts: nil
     }
 
     {[redemand: :output], open_file(state)}
@@ -119,38 +121,41 @@ defmodule ExNVR.Elements.MP4.Depayloader do
     time_diff =
       DateTime.diff(state.start_date, hd(state.recordings).start_date) |> Membrane.Time.seconds()
 
-    last_pts = List.last(buffers).pts
+    last_dts = List.last(buffers).dts
     pending_buffers = Enum.reverse(buffers) ++ state.pending_buffers
 
-    if last_pts >= time_diff do
+    if last_dts >= time_diff do
       {first, second} = Enum.split_while(pending_buffers, &(not &1.metadata.key_frame?))
 
-      # rewrite the pts of the buffers as the hd(second) will have pts of 0
-      first_pts = hd(second).pts
+      # rewrite the pts of the buffers as the hd(second) will have dts of 0
+      first_dts = hd(second).dts
 
       buffers =
-        Enum.map([hd(second) | Enum.reverse(first)], &%Buffer{&1 | pts: &1.pts - first_pts})
+        Enum.map(
+          [hd(second) | Enum.reverse(first)],
+          &%Buffer{&1 | dts: &1.dts - first_dts, pts: &1.pts - first_dts}
+        )
 
       {[buffer: {:output, buffers}],
        %{
          state
          | buffer?: false,
            pending_buffers: [],
-           last_access_unit_pts: last_pts - first_pts,
-           current_pts: -first_pts
+           last_access_unit_dts: last_dts - first_dts,
+           current_dts: -first_dts
        }}
     else
       {[],
        %{
          state
          | pending_buffers: buffers ++ state.pending_buffers,
-           last_access_unit_pts: last_pts
+           last_access_unit_dts: last_dts
        }}
     end
   end
 
   defp prepare_buffer_actions(state, buffers) do
-    {[buffer: {:output, buffers}], %{state | last_access_unit_pts: List.last(buffers).pts}}
+    {[buffer: {:output, buffers}], %{state | last_access_unit_dts: List.last(buffers).dts}}
   end
 
   defp maybe_read_recordings(%{recordings: []} = state) do
@@ -158,7 +163,7 @@ defmodule ExNVR.Elements.MP4.Depayloader do
       "fetch recordings after date: date=#{inspect(state.last_recording_date)}"
     )
 
-    case Recordings.get_recordings_after(state.last_recording_date) do
+    case Recordings.get_recordings_after(state.device_id, state.last_recording_date) do
       [] ->
         state
 

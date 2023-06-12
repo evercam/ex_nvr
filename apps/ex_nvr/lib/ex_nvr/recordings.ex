@@ -30,10 +30,11 @@ defmodule ExNVR.Recordings do
     end
   end
 
-  @spec get_recordings_after(DateTime.t()) :: [Recording.t()]
-  def get_recordings_after(date, opts \\ []) do
+  @spec get_recordings_after(binary(), DateTime.t()) :: [Recording.t()]
+  def get_recordings_after(device_id, date, opts \\ []) do
     date
     |> Recording.after_date(opts)
+    |> Recording.with_device(device_id)
     |> Repo.all()
   end
 

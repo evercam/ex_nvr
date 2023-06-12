@@ -30,6 +30,10 @@ defmodule ExNVR.Model.Recording do
     |> order_by(asc: :start_date)
   end
 
+  def with_device(query \\ __MODULE__, device_id) do
+    where(query, [r], r.device_id == ^device_id)
+  end
+
   def changeset(params) do
     %__MODULE__{}
     |> Changeset.cast(params, @required_fields)

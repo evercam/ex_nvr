@@ -19,6 +19,7 @@ UNIFEX_TERM open_file(UnifexEnv* env, char* filename) {
 
     State* state = unifex_alloc_state(env);
     state->format_ctx = avformat_alloc_context();
+    state->bsf_ctx = NULL;
 
     if(avformat_open_input(&state->format_ctx, filename, NULL, NULL)) {
         res = open_file_result_error(env, "open_error");
@@ -45,13 +46,14 @@ exit_open_file:
 }
 
 static int get_filtered_packets(UnifexEnv *env, UnifexPayload ***ret_frames, 
-                               int64_t **ret_pts, int **ret_keyframes, int max_au, 
+                               int64_t **ret_dts, int64_t **ret_pts, int **ret_keyframes, int max_au, 
                                int *count, State* state) {
   AVPacket *filtered_packet = av_packet_alloc();
   filtered_packet->size = 0;
   filtered_packet->data = NULL;
 
   UnifexPayload **access_units = unifex_alloc((max_au) * sizeof(*access_units));
+  int64_t *dts = unifex_alloc((max_au) * sizeof(*dts));
   int64_t *pts = unifex_alloc((max_au) * sizeof(*pts));
   int *keyframes = unifex_alloc((max_au) * sizeof(*keyframes));
   
@@ -66,6 +68,7 @@ static int get_filtered_packets(UnifexEnv *env, UnifexPayload ***ret_frames,
     access_units[*count] = unifex_alloc(sizeof(UnifexPayload));
     unifex_payload_alloc(env, UNIFEX_PAYLOAD_BINARY, filtered_packet->size, access_units[*count]);
     memcpy(access_units[*count]->data, filtered_packet->data, filtered_packet->size);
+    dts[*count] = filtered_packet->dts;
     pts[*count] = filtered_packet->pts;
     keyframes[*count] = filtered_packet->flags & AV_PKT_FLAG_KEY;
 
@@ -76,6 +79,7 @@ static int get_filtered_packets(UnifexEnv *env, UnifexPayload ***ret_frames,
 
 exit_get_filtered_packets:
   *ret_frames = access_units;
+  *ret_dts = dts;
   *ret_pts = pts;
   *ret_keyframes = keyframes;
   av_packet_unref(filtered_packet);
@@ -87,6 +91,7 @@ UNIFEX_TERM read_access_unit(UnifexEnv* env, State* state) {
   AVPacket *packet = av_packet_alloc();
 
   UnifexPayload **out_access_units = NULL;
+  int64_t *out_dts = NULL;
   int64_t *out_pts = NULL;
   int *out_keyframes = NULL;
   int count = 0;
@@ -97,14 +102,14 @@ UNIFEX_TERM read_access_unit(UnifexEnv* env, State* state) {
       goto exit_read_access_unit;
     }
 
-    int ret = get_filtered_packets(env, &out_access_units, &out_pts, &out_keyframes, 16, &count, state);
+    int ret = get_filtered_packets(env, &out_access_units, &out_dts, &out_pts, &out_keyframes, 16, &count, state);
 
     if (ret == FILTERED_PACKET_ERROR) {
       res = read_access_unit_result_error(env, "parse_error");
       goto exit_read_access_unit;
     }
 
-    res = read_access_unit_result_ok(env, out_access_units, count, out_pts, count, out_keyframes, count);
+    res = read_access_unit_result_ok(env, out_access_units, count, out_dts, count, out_pts, count, out_keyframes, count);
 
     if (out_access_units != NULL) {
       for (int i = 0; i < count; i++) {
@@ -117,6 +122,7 @@ UNIFEX_TERM read_access_unit(UnifexEnv* env, State* state) {
     }
 
     if (out_pts != NULL) {
+      unifex_free(out_dts);
       unifex_free(out_pts);
       unifex_free(out_keyframes);
     }
