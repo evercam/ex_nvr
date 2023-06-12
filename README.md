@@ -28,6 +28,7 @@ variables needed to configure `ex_nvr` are:
 | EXNVR_ADMIN_PASSWORD | The password of the admin user to create on first startup. Default to: `P@ssw0rd`. |
 | SECRET_KEY_BASE  | A 64 byte key that's used by **Pheonix** to encrypt cookies |
 | EXNVR_URL | The `url` to use for generating URLs and as a default value for `check_origins` of the websocket. Default to: `http://localhost:4000` |
+| EXNVR_CORS_ALLOWED_ORIGINS | A space separated allowed origins for `CORS` requests. defaults to: `*` |
 
 ## Features
 

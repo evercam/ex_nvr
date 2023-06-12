@@ -50,7 +50,8 @@ defmodule ExNVRWeb.MixProject do
       {:gettext, "~> 0.20"},
       {:ex_nvr, in_umbrella: true},
       {:jason, "~> 1.2"},
-      {:plug_cowboy, "~> 2.5"}
+      {:plug_cowboy, "~> 2.5"},
+      {:corsica, "~> 1.0"}
     ]
   end
 
