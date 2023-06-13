@@ -67,7 +67,10 @@ defmodule ExNVR.Elements.HLSBin do
     spec = [
       bin_input(pad)
       |> child({:payloader, ref}, Membrane.MP4.Payloader.H264)
-      |> child({:muxer, ref}, Membrane.MP4.Muxer.CMAF)
+      |> child({:muxer, ref}, %Membrane.MP4.Muxer.CMAF{
+        segment_min_duration: Membrane.Time.seconds(5),
+        chunk_target_duration: Membrane.Time.seconds(5)
+      })
       |> via_in(pad,
         options: [
           track_name: "#{state.segment_prefix}_#{ref}",

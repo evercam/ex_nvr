@@ -185,13 +185,26 @@ paths:
     get:
       summary: Start HLS streaming
       description: | 
-        Start HLS live view streaming.
+        Start HLS live view streaming or playback of recorded videos.
 
-        The manifest will have two playlists, high quality video with resolution `1080x720` and 
-        a low quality video with resolution `856x480`.
+        By default, there'll be no transcoding since we currently only support H264, the stream is 
+        muxed as it is into fMP4 files.
+
+        If the device has sub stream provided, the manifest will also contain the lower resolution.
+
+        For playback, only the high resolution stream can be provided, since we don't support storing
+        sub-streams to file system.
+
+        ## Stream Selection
+
+        if the `stream` query parameter is provided, only the requested stream will be included in the 
+        manifest. 
+        
+        Note that we don't do any checks on the existence of the requested stream (e.g. if you 
+        request the sub stream and the device has no sub stream, then you'll get an empty manifest).
       operationId: startHlsStreaming
       tags:
-        - Streaming
+        - Media Streaming
       parameters:
         - $ref: '#/components/parameters/device_id'
         - name: pos
@@ -203,11 +216,21 @@ paths:
           schema:
             type: string
             format: date-time
+        - name: stream
+          in: query
+          description: |
+            Request the main/sub stream.
+
+            `0` will return only the main stream, `1` will return only the sub-stream
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 1
       responses:
         '200':
           description: Success
           content:
-            text/plain:
+            application/vnd.apple.mpegurl:
               schema:
                 type: string
 components:

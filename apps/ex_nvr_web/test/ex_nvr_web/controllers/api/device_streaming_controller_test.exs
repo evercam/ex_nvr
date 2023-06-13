@@ -46,12 +46,12 @@ defmodule ExNVRWeb.API.DeviceStreamingControllerTest do
     end
 
     test "get manifest file", %{conn: conn, device: device} do
-      response =
-        conn
-        |> get(~p"/api/devices/#{device.id}/hls/index.m3u8")
-        |> response(200)
+      conn = get(conn, ~p"/api/devices/#{device.id}/hls/index.m3u8")
 
-      assert response == @manifest
+      assert ["application/vnd.apple.mpegurl; charset=utf-8"] =
+               get_resp_header(conn, "content-type")
+
+      assert response(conn, 200) == @manifest
     end
 
     test "get manifest file for selected stream", %{conn: conn, device: device} do

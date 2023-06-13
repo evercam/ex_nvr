@@ -16,7 +16,10 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
     with {:ok, params} <- validate_hls_stream_params(params) do
       path = start_hls_pipeline(conn.assigns.device.id, params.pos)
       manifest_file = File.read!(Path.join(path, "index.m3u8"))
-      send_resp(conn, 200, remove_unused_stream(manifest_file, params))
+
+      conn
+      |> put_resp_content_type("application/vnd.apple.mpegurl")
+      |> send_resp(200, remove_unused_stream(manifest_file, params))
     end
   end
 
