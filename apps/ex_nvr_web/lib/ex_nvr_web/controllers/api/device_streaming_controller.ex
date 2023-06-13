@@ -3,19 +3,24 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
 
   use ExNVRWeb, :controller
 
+  action_fallback ExNVRWeb.API.FallbackController
+
   require Logger
 
   alias Ecto.Changeset
   alias ExNVR.Pipelines.HlsPlayback
   alias ExNVR.Utils
 
+  @spec hls_stream(Plug.Conn.t(), map()) :: Plug.Conn.t() | {:error, Changeset.t()}
   def hls_stream(conn, params) do
     with {:ok, params} <- validate_hls_stream_params(params) do
       path = start_hls_pipeline(conn.assigns.device.id, params.pos)
-      send_file(conn, 200, Path.join(path, "index.m3u8"))
+      manifest_file = File.read!(Path.join(path, "index.m3u8"))
+      send_resp(conn, 200, remove_unused_stream(manifest_file, params))
     end
   end
 
+  @spec hls_stream_segment(Plug.Conn.t(), map()) :: Plug.Conn.t() | {:error, Changeset.t()}
   def hls_stream_segment(conn, %{"segment_name" => segment_name}) do
     # segment names are in the following format <segment_name>_<track_id>_<segment_id>.<extension>
     # this is a temporary measure until Membrane HLS plugin supports query params
@@ -35,10 +40,11 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
   end
 
   defp validate_hls_stream_params(params) do
-    types = %{pos: :utc_datetime}
+    types = %{pos: :utc_datetime, stream: :integer}
 
-    {%{pos: nil}, types}
+    {%{pos: nil, stream: nil}, types}
     |> Changeset.cast(params, Map.keys(types))
+    |> Changeset.validate_inclusion(:stream, [0, 1])
     |> Changeset.apply_action(:create)
   end
 
@@ -67,5 +73,28 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
     :ok = HlsPlayback.start_streaming(pid)
 
     path
+  end
+
+  def remove_unused_stream(manifest_file, %{pos: pos}) when not is_nil(pos), do: manifest_file
+  def remove_unused_stream(manifest_file, %{stream: nil}), do: manifest_file
+
+  def remove_unused_stream(manifest_file, %{stream: stream}) do
+    track_to_delete =
+      if stream == 0,
+        do: "live_sub_stream",
+        else: "live_main_stream"
+
+    manifest_file_lines = String.split(manifest_file, "\n")
+
+    case Enum.find_index(manifest_file_lines, &String.starts_with?(&1, track_to_delete)) do
+      nil ->
+        manifest_file
+
+      idx ->
+        manifest_file_lines
+        |> Enum.with_index()
+        |> Enum.reject(fn {_, index} -> index in [idx - 1, idx] end)
+        |> Enum.map_join("\n", fn {line, _} -> line end)
+    end
   end
 end
