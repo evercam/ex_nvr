@@ -50,7 +50,7 @@ defmodule ExNVR.Elements.HLSBin do
         },
         track_config: %Sink.TrackConfig{
           mode: :live,
-          target_window_duration: Membrane.Time.seconds(60),
+          target_window_duration: Membrane.Time.seconds(40),
           segment_naming_fun: fn track ->
             "#{segment_prefix}_#{track.id}_#{track.next_segment_id}"
           end
@@ -68,8 +68,7 @@ defmodule ExNVR.Elements.HLSBin do
       bin_input(pad)
       |> child({:payloader, ref}, Membrane.MP4.Payloader.H264)
       |> child({:muxer, ref}, %Membrane.MP4.Muxer.CMAF{
-        segment_min_duration: Membrane.Time.seconds(5),
-        chunk_target_duration: Membrane.Time.seconds(5)
+        segment_min_duration: Membrane.Time.seconds(5)
       })
       |> via_in(pad,
         options: [
