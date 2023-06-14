@@ -1,4 +1,4 @@
-FROM hexpm/elixir:1.14.3-erlang-24.3.1-alpine-3.18.0 AS build
+FROM hexpm/elixir:1.14.3-erlang-25.2.3-alpine-3.17.0 AS build
 
 # install build dependencies
 RUN \
@@ -14,6 +14,9 @@ RUN \
 
 ARG VERSION
 ENV VERSION=${VERSION}
+
+ARG ERL_FLAGS
+ENV ERL_FLAGS=$ERL_FLAGS
 
 # Create build workdir
 WORKDIR /app
