@@ -19,7 +19,12 @@ defmodule ExNVRWeb.Endpoint do
       origins -> String.split(origins, ~r/\s+/)
     end
 
-  plug Corsica, max_age: 600, origins: origins, allow_credentials: true
+  plug Corsica,
+    max_age: 600,
+    origins: origins,
+    allow_credentials: true,
+    allow_headers: ~w(content-type),
+    expose_headers: ~w(x-request-id)
 
   # Serve at "/" the static files from "priv/static" directory.
   #
