@@ -31,7 +31,7 @@ defmodule ExNVRWeb.DeviceLive do
       {:ok, device} ->
         info = "Device created successfully"
 
-        if Application.get_env(:ex_nvr, :run_pipelines, true),
+        if ExNVR.Utils.run_main_pipeline?(),
           do: Pipelines.Supervisor.start_pipeline(device)
 
         socket
@@ -49,8 +49,7 @@ defmodule ExNVRWeb.DeviceLive do
       {:ok, updated_device} ->
         info = "Device updated successfully"
 
-        if Application.get_env(:ex_nvr, :run_pipelines, true) and
-             Device.config_updated(device, updated_device) do
+        if ExNVR.Utils.run_main_pipeline?() and Device.config_updated(device, updated_device) do
           Pipelines.Supervisor.restart_pipeline(updated_device)
         end
 

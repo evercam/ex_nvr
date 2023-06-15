@@ -11,7 +11,7 @@ defmodule ExNVR do
   Start the main pipeline
   """
   def start() do
-    if Application.get_env(:ex_nvr, :run_pipelines, true) do
+    if run_main_pipeline?() do
       create_directories()
       create_admin_user()
       run_pipelines()

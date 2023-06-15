@@ -13,8 +13,7 @@ defmodule ExNVRWeb.API.DeviceController do
   @spec create(Conn.t(), map()) :: Conn.t() | {:error, Ecto.Changeset.t()}
   def create(%Conn{} = conn, params) do
     with {:ok, device} <- Devices.create(params) do
-      if Application.get_env(:ex_nvr, :run_pipelines, true),
-        do: Pipelines.Supervisor.start_pipeline(device)
+      if ExNVR.Utils.run_main_pipeline?(), do: Pipelines.Supervisor.start_pipeline(device)
 
       conn
       |> put_status(201)
@@ -27,9 +26,7 @@ defmodule ExNVRWeb.API.DeviceController do
     device = conn.assigns.device
 
     with {:ok, device} <- Devices.update(device, params) do
-      if Application.get_env(:ex_nvr, :run_pipelines, true),
-        do: Pipelines.Supervisor.restart_pipeline(device)
-
+      if ExNVR.Utils.run_main_pipeline?(), do: Pipelines.Supervisor.restart_pipeline(device)
       render(conn, :show, device: device)
     end
   end
