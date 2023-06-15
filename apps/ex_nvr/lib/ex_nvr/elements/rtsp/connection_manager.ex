@@ -7,15 +7,20 @@ defmodule ExNVR.Elements.RTSP.ConnectionManager do
 
   alias Membrane.RTSP
 
+  @content_type_header [{"accept", "application/sdp"}]
+  @transport_header [{"Transport", "RTP/AVP/TCP;interleaved=0-1"}]
+
   defmodule ConnectionStatus do
     @moduledoc false
     use Bunch.Access
+
+    alias ExNVR.MediaTrack
 
     @type t :: %__MODULE__{
             stream_uri: binary(),
             rtsp_session: pid(),
             endpoint: pid(),
-            endpoint_options: map(),
+            video_track: MediaTrack.t(),
             reconnect_delay: non_neg_integer(),
             max_reconnect_attempts: non_neg_integer() | :infinity,
             reconnect_attempt: non_neg_integer()
@@ -24,13 +29,12 @@ defmodule ExNVR.Elements.RTSP.ConnectionManager do
     @enforce_keys [
       :stream_uri,
       :endpoint,
-      :endpoint_options,
       :reconnect_delay,
       :max_reconnect_attempts,
       :reconnect_attempt
     ]
 
-    defstruct @enforce_keys ++ [:rtsp_session]
+    defstruct @enforce_keys ++ [:video_track, :rtsp_session]
   end
 
   @spec reconnect(GenServer.server()) :: :ok
@@ -62,11 +66,6 @@ defmodule ExNVR.Elements.RTSP.ConnectionManager do
      %ConnectionStatus{
        stream_uri: opts[:stream_uri],
        endpoint: opts[:endpoint],
-       endpoint_options: %{
-         rtpmap: nil,
-         fmtp: nil,
-         control: nil
-       },
        reconnect_delay: opts[:reconnect_delay],
        max_reconnect_attempts: opts[:max_reconnect_attempts],
        reconnect_attempt: 0
@@ -89,7 +88,7 @@ defmodule ExNVR.Elements.RTSP.ConnectionManager do
              :ok <- play(connection_status) do
           send(
             connection_status.endpoint,
-            {:rtsp_setup_complete, connection_status.endpoint_options}
+            {:rtsp_setup_complete, connection_status.video_track}
           )
 
           {:ok, %{connection_status | reconnect_attempt: 0}}
@@ -229,20 +228,10 @@ defmodule ExNVR.Elements.RTSP.ConnectionManager do
   defp get_rtsp_description(%ConnectionStatus{rtsp_session: rtsp_session} = connection_status) do
     Membrane.Logger.debug("ConnectionManager: Setting up RTSP description")
 
-    case RTSP.describe(rtsp_session) do
+    case RTSP.describe(rtsp_session, @content_type_header) do
       {:ok, %{status: 200} = response} ->
         attributes = get_video_attributes(response)
-
-        connection_status =
-          connection_status
-          |> put_in([:endpoint_options, :control], get_attribute(attributes, "control", ""))
-          |> put_in([:endpoint_options, :fmtp], get_attribute(attributes, ExSDP.Attribute.FMTP))
-          |> put_in(
-            [:endpoint_options, :rtpmap],
-            get_attribute(attributes, ExSDP.Attribute.RTPMapping)
-          )
-
-        {:ok, connection_status}
+        {:ok, %{connection_status | video_track: ExNVR.MediaTrack.from_sdp(attributes)}}
 
       {:ok, %{status: 401}} ->
         {:error, :unauthorized}
@@ -255,14 +244,12 @@ defmodule ExNVR.Elements.RTSP.ConnectionManager do
   defp setup_rtsp_connection(
          %ConnectionStatus{
            rtsp_session: rtsp_session,
-           endpoint_options: endpoint_options
+           video_track: video_track
          } = connection_status
        ) do
     Membrane.Logger.debug("ConnectionManager: Setting up RTSP connection")
 
-    case RTSP.setup(rtsp_session, endpoint_options.control, [
-           {"Transport", "RTP/AVP/TCP;interleaved=0-1"}
-         ]) do
+    case RTSP.setup(rtsp_session, video_track.control, @transport_header) do
       {:ok, %{status: 200}} ->
         {:ok, connection_status}
 
@@ -289,13 +276,5 @@ defmodule ExNVR.Elements.RTSP.ConnectionManager do
 
   defp get_video_attributes(%{body: %ExSDP{media: media_list}}) do
     media_list |> Enum.find(fn elem -> elem.type == :video end)
-  end
-
-  defp get_attribute(video_attributes, attribute, default \\ nil) do
-    case ExSDP.Media.get_attribute(video_attributes, attribute) do
-      {^attribute, value} -> value
-      %^attribute{} = value -> value
-      _other -> default
-    end
   end
 end
