@@ -14,8 +14,8 @@ defmodule ExNVR.DevicesTest do
     end
 
     test "returns all the devices" do
-      [%{id: device_one_id}, %{id: device_two_id}] = [device_fixture(), device_fixture()]
-      assert Enum.sort([device_one_id, device_two_id]) == Devices.list() |> Enum.map(& &1.id)
+      devices = [device_fixture(), device_fixture()]
+      assert devices == Devices.list()
     end
   end
 
@@ -69,7 +69,7 @@ defmodule ExNVR.DevicesTest do
     end
 
     test "create a new device" do
-      {:ok, device} = Devices.create(valid_device_attributes(name: @valid_camera_name))
+      {:ok, device} = Devices.create(valid_device_attributes(%{name: @valid_camera_name}))
       assert device.id
       assert device.name == @valid_camera_name
     end
@@ -114,7 +114,7 @@ defmodule ExNVR.DevicesTest do
                changeset =
                Devices.change_device_creation(
                  %Device{},
-                 valid_device_attributes(name: name, type: "IP")
+                 valid_device_attributes(%{name: name, type: "IP"})
                )
 
       assert changeset.required == [:ip_camera_config, :name, :type]
@@ -131,11 +131,11 @@ defmodule ExNVR.DevicesTest do
                changeset =
                Devices.change_device_creation(
                  %Device{},
-                 valid_device_attributes(
+                 valid_device_attributes(%{
                    name: name,
                    type: "IP",
                    ip_camera_config: ip_camera_config
-                 )
+                 })
                )
 
       assert changeset.valid?

@@ -25,7 +25,7 @@ defmodule ExNVRWeb.API.DeviceControllerTest do
     test "create a new device with invalid params", %{conn: conn} do
       response =
         conn
-        |> post(~p"/api/devices", valid_device_attributes(name: ""))
+        |> post(~p"/api/devices", valid_device_attributes(%{name: ""}))
         |> json_response(400)
 
       assert response["code"] == "BAD_ARGUMENT"

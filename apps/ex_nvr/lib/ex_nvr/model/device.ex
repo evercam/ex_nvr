@@ -75,6 +75,10 @@ defmodule ExNVR.Model.Device do
 
   def config_updated(_device, _updated_device), do: true
 
+  def has_sub_stream(%__MODULE__{ip_camera_config: nil}), do: false
+  def has_sub_stream(%__MODULE__{ip_camera_config: %{sub_stream_uri: nil}}), do: false
+  def has_sub_stream(_), do: true
+
   def create_changeset(device, params) do
     device
     |> Changeset.cast(params, [:name, :type])

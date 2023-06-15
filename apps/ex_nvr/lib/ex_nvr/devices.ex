@@ -23,7 +23,7 @@ defmodule ExNVR.Devices do
   end
 
   @spec list() :: [Device.t()]
-  def list(), do: Repo.all(from(d in Device, order_by: d.id))
+  def list(), do: Repo.all(from(d in Device, order_by: d.inserted_at))
 
   @spec get(binary()) :: Device.t() | nil
   def get(device_id), do: Repo.get(Device, device_id)

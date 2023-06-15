@@ -7,15 +7,20 @@ defmodule ExNVR.DevicesFixtures do
   def valid_rtsp_url(), do: "rtsp://example#{System.unique_integer()}:8541"
 
   def valid_device_attributes(attrs \\ %{}) do
+    {camera_config, attrs} = Map.pop(attrs, :ip_camera_config, %{})
+
+    ip_camera_config =
+      Enum.into(camera_config, %{
+        stream_uri: "rtsp://localhost:554/my_device_stream",
+        username: "user",
+        password: "pass"
+      })
+
     Enum.into(attrs, %{
       id: UUID.uuid4(),
       name: "Device_#{System.unique_integer([:monotonic, :positive])}",
       type: "IP",
-      ip_camera_config: %{
-        stream_uri: "rtsp://localhost:554/my_device_stream",
-        username: "user",
-        password: "pass"
-      }
+      ip_camera_config: ip_camera_config
     })
   end
 

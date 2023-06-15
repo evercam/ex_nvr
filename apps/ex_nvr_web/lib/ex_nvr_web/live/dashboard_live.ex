@@ -2,6 +2,7 @@ defmodule ExNVRWeb.DashboardLive do
   use ExNVRWeb, :live_view
 
   alias ExNVR.Devices
+  alias ExNVR.Model.Device
 
   def render(assigns) do
     ~H"""
@@ -12,15 +13,30 @@ defmodule ExNVRWeb.DashboardLive do
       </div>
       <div :if={@devices != []}>
         <.simple_form id="device" class="my-4" for={@form}>
-          <div class="flex items-center justify-between">
-            <.input
-              field={@form[:id]}
-              type="select"
-              label="Device"
-              options={Enum.map(@devices, &{&1.name, &1.id})}
-              value={@current_device.id}
-              phx-change="switch_device"
-            />
+          <div class="flex items-center justify-between invisible sm:visible">
+            <div class="flex items-center">
+              <div class="mr-4">
+                <.input
+                  field={@form[:id]}
+                  type="select"
+                  label="Device"
+                  options={Enum.map(@devices, &{&1.name, &1.id})}
+                  value={@current_device.id}
+                  phx-change="switch_device"
+                />
+              </div>
+
+              <div class={[@start_date && "hidden"]}>
+                <.input
+                  field={@form[:stream]}
+                  type="select"
+                  label="Stream"
+                  options={@supported_streams}
+                  value={@current_stream}
+                  phx-change="switch_stream"
+                />
+              </div>
+            </div>
 
             <.input
               type="datetime-local"
@@ -28,6 +44,7 @@ defmodule ExNVRWeb.DashboardLive do
               label="Start date"
               phx-blur="datetime"
               max={Calendar.strftime(DateTime.utc_now(), "%Y-%m-%dT%H:%M")}
+              value={@start_date && String.slice(@start_date, 0..-5)}
             />
           </div>
         </.simple_form>
@@ -42,18 +59,22 @@ defmodule ExNVRWeb.DashboardLive do
     socket =
       case Devices.list() do
         [] ->
-          assign(socket, devices: [], current_device: nil, form: to_form(%{}, as: "device"))
+          assign(socket, devices: [], current_device: nil)
 
         devices ->
           current_device = List.first(devices)
           form = to_form(%{"id" => Map.get(current_device, :id)}, as: "device")
+
+          {current_stream, streams} = build_streams(current_device)
 
           socket =
             assign(socket,
               devices: devices,
               current_device: current_device,
               start_date: nil,
-              form: form
+              form: form,
+              supported_streams: streams,
+              current_stream: current_stream
             )
 
           if connected?(socket),
@@ -65,11 +86,13 @@ defmodule ExNVRWeb.DashboardLive do
   end
 
   def handle_event("datetime", %{"value" => value}, socket) do
-    date = socket.assigns.start_date
-    datetime = if value == "", do: nil, else: value <> ":00Z"
+    current_datetime = socket.assigns.start_date
+    new_datetime = if value == "", do: nil, else: value <> ":00Z"
 
-    socket = if date != datetime, do: stream_event(socket, datetime), else: socket
-    {:noreply, assign(socket, :start_date, datetime)}
+    socket =
+      if current_datetime != new_datetime, do: stream_event(socket, new_datetime), else: socket
+
+    {:noreply, assign(socket, :start_date, new_datetime)}
   end
 
   def handle_event("switch_device", %{"device" => %{"id" => device_id}}, socket) do
@@ -78,16 +101,45 @@ defmodule ExNVRWeb.DashboardLive do
         {:noreply, socket}
 
       device ->
+        {current_stream, streams} = build_streams(device)
+
         socket
-        |> assign(current_device: device)
+        |> assign(
+          current_device: device,
+          supported_streams: streams,
+          current_stream: current_stream
+        )
         |> stream_event(socket.assigns.start_date)
         |> then(&{:noreply, &1})
     end
   end
 
+  def handle_event("switch_stream", %{"device" => %{"stream" => selected_stream}}, socket) do
+    current_stream = socket.assigns.current_stream
+
+    if current_stream != selected_stream do
+      socket
+      |> assign(current_stream: selected_stream)
+      |> stream_event(socket.assigns.start_date)
+      |> then(&{:noreply, &1})
+    else
+      {:noreply, socket}
+    end
+  end
+
   defp stream_event(socket, datetime) do
     device = socket.assigns.current_device
-    src = ~p"/api/devices/#{device.id}/hls/index.m3u8?#{%{pos: datetime}}"
+    current_stream = if socket.assigns.current_stream == "main_stream", do: 0, else: 1
+
+    src = ~p"/api/devices/#{device.id}/hls/index.m3u8?#{%{pos: datetime, stream: current_stream}}"
     push_event(socket, "stream", %{src: src})
+  end
+
+  defp build_streams(%Device{} = device) do
+    if Device.has_sub_stream(device) do
+      {"sub_stream", [{"Main Stream", "main_stream"}, {"Sub Stream", "sub_stream"}]}
+    else
+      {"main_stream", [{"Main Stream", "main_stream"}]}
+    end
   end
 end

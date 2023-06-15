@@ -24,6 +24,7 @@ import topbar from "../vendor/topbar"
 import "flowbite/dist/flowbite.phoenix"
 import Hls from "hls.js"
 
+const MANIFEST_LOAD_TIMEOUT = 60_000
 
 let csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 let liveSocket = new LiveSocket("/live", Socket, {params: {_csrf_token: csrfToken}})
@@ -54,7 +55,9 @@ startStreaming = (src) => {
             window.hls.destroy();
         }
             
-        window.hls = new Hls();
+        window.hls = new Hls({
+            manifestLoadingTimeOut: MANIFEST_LOAD_TIMEOUT
+        });
         window.hls.loadSource(src);
         window.hls.attachMedia(video);
     }
