@@ -84,9 +84,12 @@ defmodule ExNVR.Elements.Segmenter do
         _ctx,
         %{start_time: nil} = state
       ) do
+    # we chose the os_time instead of vm_time since the
+    # VM will not adjust the time when the the system is suspended
+    # check https://erlangforums.com/t/why-is-there-a-discrepancy-between-values-returned-by-os-system-time-1-and-erlang-system-time-1/2050/2
     state = %{
       state
-      | start_time: Membrane.Time.vm_time(),
+      | start_time: Membrane.Time.os_time(),
         buffer: [buf],
         last_buffer_pts: buf.pts
     }
@@ -167,12 +170,7 @@ defmodule ExNVR.Elements.Segmenter do
   end
 
   defp completed_segment_action(state, discontinuity \\ false) do
-    segment = %Segment{
-      start_date: Membrane.Time.to_datetime(state.start_time),
-      end_date: Membrane.Time.to_datetime(state.start_time + state.current_segment_duration),
-      duration: Membrane.Time.as_seconds(state.current_segment_duration)
-    }
-
+    segment = Segment.new(state.start_time, state.current_segment_duration)
     [notify_parent: {:completed_segment, {state.start_time, segment, discontinuity}}]
   end
 end
