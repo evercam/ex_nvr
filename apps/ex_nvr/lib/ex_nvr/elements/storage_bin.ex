@@ -30,6 +30,24 @@ defmodule ExNVR.Elements.StorageBin do
                 segment must start from a keyframe. The real segment duration may be
                 slightly bigger
                 """
+              ],
+              sps: [
+                spec: binary(),
+                default: <<>>,
+                description: """
+                Sequence Parameter Set, if not set, maybe provided in the bitstream.
+
+                sps will be appended to the first keyframe of each segment
+                """
+              ],
+              pps: [
+                spec: binary(),
+                default: <<>>,
+                description: """
+                Picture Parameter Set, if not set, maybe provided in the bitstream.
+
+                pps will be appended to the first keyframe of each segment
+                """
               ]
 
   @impl true
@@ -37,7 +55,9 @@ defmodule ExNVR.Elements.StorageBin do
     spec = [
       bin_input(:input)
       |> child(:segmenter, %ExNVR.Elements.Segmenter{
-        segment_duration: opts.target_segment_duration
+        segment_duration: opts.target_segment_duration,
+        sps: opts.sps,
+        pps: opts.pps
       })
     ]
 

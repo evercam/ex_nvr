@@ -41,8 +41,8 @@ defmodule ExNVR.Pipeline do
 
     `device_id` - Id of the device where to pull the media stream
     `stream_uri` - RTSP stream
-    `media_options` - Media description got from calling DESCRIBE method on the RTSP uri
-    `sub_stream_media_options` - Media description of the sub stream got from calling DESCRIBE method on the RTSP uri
+    `video_track` - Media description got from calling DESCRIBE method on the RTSP uri
+    `sub_stream_video_track` - Media description of the sub stream got from calling DESCRIBE method on the RTSP uri
     `segment_duration` - The duration of each video chunk saved by the storage bin.
     `supervisor_pid` - The supervisor pid of this pipeline (needed to stop a pipeline)
     """
@@ -50,8 +50,8 @@ defmodule ExNVR.Pipeline do
             device_id: binary(),
             stream_uri: binary(),
             sub_stream_uri: binary(),
-            media_options: ExSDP.Media.t(),
-            sub_stream_media_options: ExSDP.Media.t(),
+            video_track: ExNVR.MediaTrack.t(),
+            sub_stream_video_track: ExNVR.MediaTrack.t(),
             segment_duration: non_neg_integer(),
             supervisor_pid: pid()
           }
@@ -62,8 +62,8 @@ defmodule ExNVR.Pipeline do
                 [
                   sub_stream_uri: nil,
                   segment_duration: @default_segment_duration,
-                  media_options: nil,
-                  sub_stream_media_options: nil,
+                  video_track: nil,
+                  sub_stream_video_track: nil,
                   hls_streaming_state: :stopped,
                   hls_pending_callers: [],
                   supervisor_pid: nil
@@ -126,31 +126,31 @@ defmodule ExNVR.Pipeline do
 
   @impl true
   def handle_child_notification(
-        {:rtsp_setup_complete, media_options, ref},
+        {:rtsp_setup_complete, video_track, ref},
         :rtsp_source,
         _ctx,
         %State{} = state
       ) do
-    if media_options.rtpmap.encoding != "H264" do
+    if video_track.codec != :H264 do
       Membrane.Logger.error("Only H264 streams are supported now")
       {[terminate: :normal], state}
     else
-      handle_rtsp_stream_setup(media_options, ref, state)
+      handle_rtsp_stream_setup(video_track, ref, state)
     end
   end
 
   @impl true
   def handle_child_notification(
-        {:rtsp_setup_complete, media_options, ref},
+        {:rtsp_setup_complete, video_track, ref},
         {:rtsp_source, :sub_stream},
         _ctx,
         %State{} = state
       ) do
-    if media_options.rtpmap.encoding != "H264" do
+    if video_track.codec != :H264 do
       Membrane.Logger.error("SubStream: only H264 streams are supported now")
       {[remove_child: {:rtsp_source, :sub_stream}], state}
     else
-      handle_rtsp_sub_stream_setup(media_options, ref, state)
+      handle_rtsp_sub_stream_setup(video_track, ref, state)
     end
   end
 
@@ -159,17 +159,23 @@ defmodule ExNVR.Pipeline do
         {:new_rtp_stream, ssrc, _pt, _extensions},
         {:rtp, ref},
         _ctx,
-        state
+        %{video_track: video_track} = state
       ) do
     spec = [
       get_child({:rtp, ref})
       |> via_out(Pad.ref(:output, ssrc), options: [depayloader: Membrane.RTP.H264.Depayloader])
-      |> child({:rtp_parser, ref}, %Membrane.H264.Parser{framerate: {0, 0}})
+      |> child({:rtp_parser, ref}, %Membrane.H264.Parser{
+        sps: <<0, 0, 1>> <> video_track.sps,
+        pps: <<0, 0, 1>> <> video_track.pps,
+        framerate: {0, 0}
+      })
       |> child({:tee, ref}, Membrane.Tee.Master)
       |> via_out(:master)
       |> child({:storage_bin, ref}, %ExNVR.Elements.StorageBin{
         device_id: state.device_id,
-        target_segment_duration: state.segment_duration
+        target_segment_duration: state.segment_duration,
+        sps: video_track.sps,
+        pps: video_track.pps
       }),
       get_child({:tee, ref})
       |> via_out(:copy)
@@ -226,9 +232,9 @@ defmodule ExNVR.Pipeline do
     {[reply: state.supervisor_pid], state}
   end
 
-  defp handle_rtsp_stream_setup(%{rtpmap: rtpmap} = media_options, ref, state) do
+  defp handle_rtsp_stream_setup(%ExNVR.MediaTrack{} = video_track, ref, state) do
     fmt_mapping =
-      Map.put(%{}, rtpmap.payload_type, {String.to_atom(rtpmap.encoding), rtpmap.clock_rate})
+      Map.put(%{}, video_track.payload_type, {video_track.codec, video_track.clock_rate})
 
     spec = [
       get_child(:rtsp_source)
@@ -237,12 +243,12 @@ defmodule ExNVR.Pipeline do
       |> child({:rtp, ref}, %SessionBin{fmt_mapping: fmt_mapping})
     ]
 
-    {[spec: spec], %State{state | media_options: media_options}}
+    {[spec: spec], %State{state | video_track: video_track}}
   end
 
-  defp handle_rtsp_sub_stream_setup(%{rtpmap: rtpmap} = media_options, ref, state) do
+  defp handle_rtsp_sub_stream_setup(%ExNVR.MediaTrack{} = video_track, ref, state) do
     fmt_mapping =
-      Map.put(%{}, rtpmap.payload_type, {String.to_atom(rtpmap.encoding), rtpmap.clock_rate})
+      Map.put(%{}, video_track.payload_type, {video_track.codec, video_track.clock_rate})
 
     spec = [
       get_child({:rtsp_source, :sub_stream})
@@ -251,7 +257,7 @@ defmodule ExNVR.Pipeline do
       |> child({:rtp, :sub_stream, ref}, %SessionBin{fmt_mapping: fmt_mapping})
     ]
 
-    {[spec: spec], %State{state | sub_stream_media_options: media_options}}
+    {[spec: spec], %State{state | sub_stream_video_track: video_track}}
   end
 
   defp pipeline_name(device_id), do: :"pipeline_#{device_id}"

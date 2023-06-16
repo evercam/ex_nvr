@@ -116,6 +116,6 @@ defmodule ExNVR.Elements.RTSP.Source do
   end
 
   defp packet_to_buffer(packet) do
-    %Buffer{payload: packet, metadata: %{arrival_ts: Membrane.Time.vm_time()}}
+    %Buffer{payload: packet, metadata: %{arrival_ts: Membrane.Time.os_time()}}
   end
 end
