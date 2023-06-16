@@ -26,6 +26,24 @@ defmodule ExNVR.Elements.Segmenter do
                 segment must start from a keyframe. The real segment duration may be
                 slightly bigger
                 """
+              ],
+              sps: [
+                spec: binary(),
+                default: <<>>,
+                description: """
+                Sequence Parameter Set, if not set, maybe provided in the bitstream.
+
+                sps will be appended to the first keyframe of each segment
+                """
+              ],
+              pps: [
+                spec: binary(),
+                default: <<>>,
+                description: """
+                Picture Parameter Set, if not set, maybe provided in the bitstream.
+
+                pps will be appended to the first keyframe of each segment
+                """
               ]
 
   def_input_pad :input,
@@ -44,7 +62,9 @@ defmodule ExNVR.Elements.Segmenter do
     state =
       Map.merge(init_state(), %{
         stream_format: nil,
-        target_segment_duration: Membrane.Time.seconds(options.segment_duration)
+        target_segment_duration: Membrane.Time.seconds(options.segment_duration),
+        sps: options.sps,
+        pps: options.pps
       })
 
     {[], state}
@@ -90,7 +110,7 @@ defmodule ExNVR.Elements.Segmenter do
     state = %{
       state
       | start_time: Membrane.Time.os_time(),
-        buffer: [buf],
+        buffer: [prepend_sps_and_pps(state, buf)],
         last_buffer_pts: buf.pts
     }
 
@@ -128,7 +148,7 @@ defmodule ExNVR.Elements.Segmenter do
       | start_time: state.start_time + state.current_segment_duration,
         current_segment_duration: 0,
         buffer?: true,
-        buffer: [buffer]
+        buffer: [prepend_sps_and_pps(state, buffer)]
     }
 
     {[
@@ -165,12 +185,93 @@ defmodule ExNVR.Elements.Segmenter do
       last_buffer_pts: nil,
       buffer: [],
       buffer?: true,
-      start_time: nil
+      start_time: nil,
+      parameter_sets: []
     }
   end
 
   defp completed_segment_action(state, discontinuity \\ false) do
     segment = Segment.new(state.start_time, state.current_segment_duration)
     [notify_parent: {:completed_segment, {state.start_time, segment, discontinuity}}]
+  end
+
+  # Prepend SPS and PPS is useful in case this parameter sets
+  # are not sent frequently on the bytestream.
+  # The MP4 payloader needs this parameters sets
+  # This needs to be done by the Parser.
+  defp prepend_sps_and_pps(%{sps: <<>>, pps: <<>>}, %Buffer{} = access_unit), do: access_unit
+
+  defp prepend_sps_and_pps(%{sps: sps, pps: pps}, %Buffer{} = access_unit) do
+    nalus_type = Enum.map(access_unit.metadata.h264.nalus, & &1.metadata.h264.type)
+    has_parameter_sets? = [:sps, :pps] in nalus_type
+
+    if has_parameter_sets?, do: access_unit, else: do_prepend_sps_and_pps(access_unit, sps, pps)
+  end
+
+  defp do_prepend_sps_and_pps(access_unit, sps, pps) do
+    sps = maybe_add_prefix(sps)
+    pps = maybe_add_prefix(pps)
+
+    parameter_set_nalus =
+      Enum.map([{:sps, sps}, {:pps, pps}], fn {type, parameter_set} ->
+        %{type: type, payload: parameter_set, prefix_length: 4}
+      end)
+
+    parameter_set_total_length = byte_size(sps) + byte_size(pps)
+
+    access_unit_nalus =
+      Enum.map(access_unit.metadata.h264.nalus, fn nalu_metadata ->
+        {_, nalu_metadata} = pop_in(nalu_metadata, [:metadata, :h264, :new_access_unit])
+
+        nalu_metadata
+        |> Map.update!(:prefixed_poslen, fn {start, length} ->
+          {parameter_set_total_length + start, length}
+        end)
+        |> Map.update!(:unprefixed_poslen, fn {start, length} ->
+          {parameter_set_total_length + start, length}
+        end)
+      end)
+
+    parameter_set_nalus =
+      parameter_set_nalus
+      |> Enum.with_index()
+      |> Enum.map_reduce(0, fn {nalu, i}, nalu_start ->
+        metadata = %{
+          metadata: %{
+            h264: %{
+              type: nalu.type
+            }
+          },
+          prefixed_poslen: {nalu_start, byte_size(nalu.payload)},
+          unprefixed_poslen:
+            {nalu_start + nalu.prefix_length, byte_size(nalu.payload) - nalu.prefix_length}
+        }
+
+        metadata =
+          if i == 0 do
+            put_in(metadata, [:metadata, :h264, :new_access_unit], %{key_frame?: true})
+          else
+            metadata
+          end
+
+        {metadata, nalu_start + byte_size(nalu.payload)}
+      end)
+      |> elem(0)
+
+    %Buffer{
+      access_unit
+      | payload: sps <> pps <> access_unit.payload,
+        metadata:
+          put_in(access_unit.metadata, [:h264, :nalus], parameter_set_nalus ++ access_unit_nalus)
+    }
+  end
+
+  defp maybe_add_prefix(parameter_set) do
+    case parameter_set do
+      <<>> -> <<>>
+      <<0, 0, 1, _rest::binary>> -> parameter_set
+      <<0, 0, 0, 1, _rest::binary>> -> parameter_set
+      parameter_set -> <<0, 0, 0, 1>> <> parameter_set
+    end
   end
 end

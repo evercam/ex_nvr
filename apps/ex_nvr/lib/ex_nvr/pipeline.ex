@@ -159,17 +159,23 @@ defmodule ExNVR.Pipeline do
         {:new_rtp_stream, ssrc, _pt, _extensions},
         {:rtp, ref},
         _ctx,
-        state
+        %{video_track: video_track} = state
       ) do
     spec = [
       get_child({:rtp, ref})
       |> via_out(Pad.ref(:output, ssrc), options: [depayloader: Membrane.RTP.H264.Depayloader])
-      |> child({:rtp_parser, ref}, %Membrane.H264.Parser{framerate: {0, 0}})
+      |> child({:rtp_parser, ref}, %Membrane.H264.Parser{
+        sps: <<0, 0, 1>> <> video_track.sps,
+        pps: <<0, 0, 1>> <> video_track.pps,
+        framerate: {0, 0}
+      })
       |> child({:tee, ref}, Membrane.Tee.Master)
       |> via_out(:master)
       |> child({:storage_bin, ref}, %ExNVR.Elements.StorageBin{
         device_id: state.device_id,
-        target_segment_duration: state.segment_duration
+        target_segment_duration: state.segment_duration,
+        sps: video_track.sps,
+        pps: video_track.pps
       }),
       get_child({:tee, ref})
       |> via_out(:copy)
