@@ -20,6 +20,8 @@ defmodule ExNVR.DevicesFixtures do
       id: UUID.uuid4(),
       name: "Device_#{System.unique_integer([:monotonic, :positive])}",
       type: "IP",
+      timezone: "UTC",
+      state: :recording,
       ip_camera_config: ip_camera_config
     })
   end

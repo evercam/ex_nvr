@@ -5,10 +5,14 @@ defmodule ExNVR.Model.Device do
 
   alias Ecto.Changeset
 
+  @states [:stopped, :recording, :failed]
+
   @type t :: %__MODULE__{
           id: binary(),
           name: binary(),
           type: binary(),
+          timezone: binary(),
+          state: :stopped | :recording | :failed,
           ip_camera_config: IPCameraConfig.t(),
           inserted_at: DateTime.t(),
           updated_at: DateTime.t()
@@ -61,6 +65,8 @@ defmodule ExNVR.Model.Device do
   schema "devices" do
     field :name, :string
     field :type, Ecto.Enum, values: [:IP]
+    field :timezone, :string, default: "UTC"
+    field :state, Ecto.Enum, values: @states, default: :recording
 
     embeds_one :ip_camera_config, IPCameraConfig, source: :config, on_replace: :update
 
@@ -81,19 +87,20 @@ defmodule ExNVR.Model.Device do
 
   def create_changeset(device, params) do
     device
-    |> Changeset.cast(params, [:name, :type])
+    |> Changeset.cast(params, [:name, :type, :timezone, :state])
     |> common_config()
   end
 
   def update_changeset(device, params) do
     device
-    |> Changeset.cast(params, [:name])
+    |> Changeset.cast(params, [:name, :timezone, :state])
     |> common_config()
   end
 
   defp common_config(changeset) do
     changeset
     |> Changeset.validate_required([:name, :type])
+    |> Changeset.validate_inclusion(:timezone, Tzdata.zone_list())
     |> validate_config()
   end
 

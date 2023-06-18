@@ -9,6 +9,8 @@
 # move said applications out of the umbrella.
 import Config
 
+config :elixir, :time_zone_database, Tzdata.TimeZoneDatabase
+
 # Configure Mix tasks and generators
 config :ex_nvr,
   namespace: ExNVR,

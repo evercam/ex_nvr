@@ -36,12 +36,12 @@ defmodule ExNVR.Devices do
     end
   end
 
-  @spec change_device_creation(Device.t()) :: Ecto.Changeset.t()
+  @spec change_device_creation(Device.t(), map()) :: Ecto.Changeset.t()
   def change_device_creation(%Device{} = device, attrs \\ %{}) do
     Device.create_changeset(device, attrs)
   end
 
-  @spec change_device_update(Device.t()) :: Ecto.Changeset.t()
+  @spec change_device_update(Device.t(), map()) :: Ecto.Changeset.t()
   def change_device_update(%Device{} = device, attrs \\ %{}) do
     Device.update_changeset(device, attrs)
   end

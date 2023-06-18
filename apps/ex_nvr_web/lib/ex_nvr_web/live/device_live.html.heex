@@ -20,15 +20,24 @@
         placeholder="Camera Name"
         required
       />
-      <.input
-        field={@device_form[:type]}
-        id="device_type"
-        type="select"
-        options={[{"IP Camera", "IP"}]}
-        label="Type"
-        placeholder="Choose your device type"
-        disabled={@device.id != nil}
-      />
+      <div class="flex justify-between">
+        <.input
+          field={@device_form[:type]}
+          id="device_type"
+          type="select"
+          options={[{"IP Camera", "IP"}]}
+          label="Type"
+          placeholder="Choose your device type"
+          disabled={@device.id != nil}
+        />
+
+        <.input
+          field={@device_form[:timezone]}
+          type="select"
+          options={Tzdata.zone_list() ++ [nil]}
+          label="Timezone"
+        />
+      </div>
 
       <div class="flex flex-col">
         <p class="text-xl font-medium mb-4 text-gray-800 dark:text-white">

@@ -44,7 +44,7 @@ defmodule ExNVRWeb.DashboardLive do
               label="Start date"
               phx-blur="datetime"
               max={Calendar.strftime(DateTime.utc_now(), "%Y-%m-%dT%H:%M")}
-              value={@start_date && String.slice(@start_date, 0..-5)}
+              value={@start_date && Calendar.strftime(@start_date, "%Y-%m-%dT%H:%M")}
             />
           </div>
         </.simple_form>
@@ -87,7 +87,9 @@ defmodule ExNVRWeb.DashboardLive do
 
   def handle_event("datetime", %{"value" => value}, socket) do
     current_datetime = socket.assigns.start_date
-    new_datetime = if value == "", do: nil, else: value <> ":00Z"
+    device = socket.assigns.current_device
+
+    new_datetime = parse_datetime(value, device.timezone)
 
     socket =
       if current_datetime != new_datetime, do: stream_event(socket, new_datetime), else: socket
@@ -131,7 +133,9 @@ defmodule ExNVRWeb.DashboardLive do
     device = socket.assigns.current_device
     current_stream = if socket.assigns.current_stream == "main_stream", do: 0, else: 1
 
-    src = ~p"/api/devices/#{device.id}/hls/index.m3u8?#{%{pos: datetime, stream: current_stream}}"
+    src =
+      ~p"/api/devices/#{device.id}/hls/index.m3u8?#{%{pos: format_date(datetime), stream: current_stream}}"
+
     push_event(socket, "stream", %{src: src})
   end
 
@@ -142,4 +146,14 @@ defmodule ExNVRWeb.DashboardLive do
       {"main_stream", [{"Main Stream", "main_stream"}]}
     end
   end
+
+  defp parse_datetime(datetime, timezone) do
+    case NaiveDateTime.from_iso8601(datetime <> ":00") do
+      {:ok, date} -> DateTime.from_naive!(date, timezone)
+      _ -> nil
+    end
+  end
+
+  defp format_date(nil), do: nil
+  defp format_date(datetime), do: DateTime.to_iso8601(datetime)
 end
