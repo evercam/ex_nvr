@@ -34,7 +34,6 @@ variables needed to configure `ex_nvr` are:
 | EXNVR_HTTPS_PORT | Https `port`, defaults to: `443` |
 | EXNVR_SSL_KEY_PATH | The path to the SSL key. |
 | EXNVR_SSL_CERT_PATH | The path to the SSL certificate. |
-| EXNVR_FORCE_SSL | Force https, all requests to `http` will be redirect to `https`. Defaults to: `false` | 
 
 ## Features
 

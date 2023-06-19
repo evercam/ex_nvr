@@ -50,8 +50,7 @@ if config_env() == :prod do
         port: String.to_integer(System.get_env("EXNVR_HTTPS_PORT") || "443"),
         cipher_suite: :compatible,
         keyfile: System.get_env("EXNVR_SSL_KEY_PATH"),
-        certfile: System.get_env("EXNVR_SSL_CERT_PATH"),
-        force_ssl: [hsts: String.to_existing_atom(System.get_env("EXNVR_FORCE_SSL", "false"))]
+        certfile: System.get_env("EXNVR_SSL_CERT_PATH")
       ]
   end
 
