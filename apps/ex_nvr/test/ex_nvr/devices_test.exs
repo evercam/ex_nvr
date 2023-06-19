@@ -101,6 +101,21 @@ defmodule ExNVR.DevicesTest do
     end
   end
 
+  describe "update_state/2" do
+    setup do
+      %{device: device_fixture()}
+    end
+
+    test "device state updated", %{device: device} do
+      {:ok, device} = Devices.update_state(device, :failed)
+      assert device.state == :failed
+    end
+
+    test "cannot update device state", %{device: device} do
+      assert {:error, _changeset} = Devices.update_state(device, :unknown)
+    end
+  end
+
   describe "change_user_creation/1" do
     test "returns changeset" do
       assert %Ecto.Changeset{} = changeset = Devices.change_device_creation(%Device{})

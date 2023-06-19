@@ -15,22 +15,14 @@ defmodule ExNVR.Pipelines.Supervisor do
   end
 
   def start_pipeline(%Device{} = device) do
-    {main_stream, sub_stream} = build_stream_uri(device)
-
-    options = [
-      device_id: device.id,
-      stream_uri: main_stream,
-      sub_stream_uri: sub_stream
-    ]
-
     File.mkdir_p!(recording_dir(device.id))
     File.mkdir_p!(hls_dir(device.id))
 
-    DynamicSupervisor.start_child(__MODULE__, {Pipeline, options})
+    DynamicSupervisor.start_child(__MODULE__, {Pipeline, [device: device]})
   end
 
   def stop_pipeline(%Device{} = device) do
-    DynamicSupervisor.terminate_child(__MODULE__, Pipeline.supervisor(device.id))
+    DynamicSupervisor.terminate_child(__MODULE__, Pipeline.supervisor(device))
   end
 
   def restart_pipeline(%Device{} = device) do
@@ -40,23 +32,5 @@ defmodule ExNVR.Pipelines.Supervisor do
     # we'll terminate the children with `terminate_child` and then restart
     stop_pipeline(device)
     start_pipeline(device)
-  end
-
-  defp build_stream_uri(%Device{ip_camera_config: config}) do
-    userinfo =
-      if to_string(config.username) != "" and to_string(config.password) != "" do
-        "#{config.username}:#{config.password}"
-      end
-
-    {do_build_uri(config.stream_uri, userinfo), do_build_uri(config.sub_stream_uri, userinfo)}
-  end
-
-  defp do_build_uri(nil, _userinfo), do: nil
-
-  defp do_build_uri(stream_uri, userinfo) do
-    stream_uri
-    |> URI.parse()
-    |> then(&%URI{&1 | userinfo: userinfo})
-    |> URI.to_string()
   end
 end

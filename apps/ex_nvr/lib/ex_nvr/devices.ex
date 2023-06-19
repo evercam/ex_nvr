@@ -22,6 +22,10 @@ defmodule ExNVR.Devices do
     |> Repo.update()
   end
 
+  @spec update_state(Device.t(), Device.state()) ::
+          {:ok, Device.t()} | {:error, Ecto.Changeset.t()}
+  def update_state(%Device{} = device, state), do: __MODULE__.update(device, %{state: state})
+
   @spec list() :: [Device.t()]
   def list(), do: Repo.all(from(d in Device, order_by: d.inserted_at))
 

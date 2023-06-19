@@ -8,17 +8,27 @@ defmodule ExNVR.Pipeline do
     streaming the media packets.
     * Once the pipeline receives a notification about an established session with RTSP server, the `RTP` session bin is
     linked to the output of the RTSP source
-    * The new RTP stream is linked to a segmenter, which is responsible for chunking the video footage, it emits a new
-    notifcation to the parent each time a new segment starts
-    * The pipeline links the output of the `Segmenter` element with an MP4 payloader and muxer and save it to a temporary
-    folder
-    * Once the video chunk is flused to disk, the Pipeline call `ExNVR.Recordings.save/1` to store the record.
+    * The new RTP stream is linked to a storage bin, which is responsible for chunking and storing the video footage, it emits a new
+    notifcation to the parent each time a new segment starts/ends.
 
   ## Limitations
 
   There's some limitation on the pipeline working, the pipeline supports:
     * Only video streams
     * Only H264 encoded streams
+
+  ## Telemetry
+
+  The pipeline emits the following `:telemetry` events:
+    * `[:ex_nvr, :main_pipeline, :state]` - event emitted when the state of the device is updated.
+    The event has no measurements and has the following metadata:
+      * `device_id` - The id of the device to which this pipeline is attached
+      * `old_state` - The old state of the device, (see `ExNVR.Model.Device.state()`)
+      * `new_state` - The new state of the device, (see `ExNVR.Model.Device.state()`)
+
+    * `[:ex_nvr, :main_pipeline, :terminate]` - event emitted when the pipeline is about to be terminated.
+    The event has `system_time` as the measurement and has the following metadata:
+      * `device_id` - The id of the device to which this pipeline is attached
   """
 
   use Membrane.Pipeline
@@ -26,46 +36,45 @@ defmodule ExNVR.Pipeline do
   require Membrane.Logger
 
   alias ExNVR.Elements.RTSP.Source
-  alias ExNVR.Utils
+  alias ExNVR.{Devices, Utils}
+  alias ExNVR.Model.Device
   alias Membrane.RTP.SessionBin
+
+  @event_prefix [:ex_nvr, :main_pipeline]
 
   defmodule State do
     @moduledoc false
 
     use Bunch.Access
 
+    alias ExNVR.Model.Device
+
     @default_segment_duration 60
 
     @typedoc """
     Pipeline state
 
-    `device_id` - Id of the device where to pull the media stream
-    `stream_uri` - RTSP stream
+    `device` - The device from where to pull the media streams
     `video_track` - Media description got from calling DESCRIBE method on the RTSP uri
     `sub_stream_video_track` - Media description of the sub stream got from calling DESCRIBE method on the RTSP uri
     `segment_duration` - The duration of each video chunk saved by the storage bin.
     `supervisor_pid` - The supervisor pid of this pipeline (needed to stop a pipeline)
     """
     @type t :: %__MODULE__{
-            device_id: binary(),
-            stream_uri: binary(),
-            sub_stream_uri: binary(),
+            device: Device.t(),
             video_track: ExNVR.MediaTrack.t(),
             sub_stream_video_track: ExNVR.MediaTrack.t(),
             segment_duration: non_neg_integer(),
             supervisor_pid: pid()
           }
 
-    @enforce_keys [:device_id, :stream_uri]
+    @enforce_keys [:device]
 
     defstruct @enforce_keys ++
                 [
-                  sub_stream_uri: nil,
                   segment_duration: @default_segment_duration,
                   video_track: nil,
                   sub_stream_video_track: nil,
-                  hls_streaming_state: :stopped,
-                  hls_pending_callers: [],
                   supervisor_pid: nil
                 ]
   end
@@ -74,39 +83,39 @@ defmodule ExNVR.Pipeline do
     Membrane.Logger.info("Starting a new NVR pipeline with options: #{inspect(options)}")
 
     with {:ok, sup_pid, pid} = res <-
-           Membrane.Pipeline.start_link(__MODULE__, options,
-             name: pipeline_name(options[:device_id])
-           ) do
+           Membrane.Pipeline.start_link(__MODULE__, options, name: pipeline_name(options[:device])) do
       send(pid, {:pipeline_supervisor, sup_pid})
       res
     end
   end
 
-  def supervisor(device_id) do
-    Pipeline.call(pipeline_name(device_id), :pipeline_supervisor)
+  def supervisor(device) do
+    Pipeline.call(pipeline_name(device), :pipeline_supervisor)
   end
 
   @impl true
   def handle_init(_ctx, options) do
+    device = options[:device]
+
+    {stream_uri, sub_stream_uri} = Device.streams(device)
+
     state = %State{
-      device_id: options[:device_id],
-      stream_uri: options[:stream_uri],
-      sub_stream_uri: options[:sub_stream_uri],
+      device: device,
       segment_duration: options[:segment_duration] || 60
     }
 
     hls_sink = %ExNVR.Elements.HLSBin{
-      location: Path.join(Utils.hls_dir(state.device_id), "live"),
+      location: Path.join(Utils.hls_dir(device.id), "live"),
       segment_name_prefix: "live"
     }
 
     spec =
       [
-        child(:rtsp_source, %Source{stream_uri: state.stream_uri}),
+        child(:rtsp_source, %Source{stream_uri: stream_uri}),
         {child(:hls_sink, hls_sink, get_if_exists: true), crash_group: {"hls", :temporary}}
       ] ++
-        if state.sub_stream_uri,
-          do: [child({:rtsp_source, :sub_stream}, %Source{stream_uri: state.sub_stream_uri})],
+        if sub_stream_uri,
+          do: [child({:rtsp_source, :sub_stream}, %Source{stream_uri: sub_stream_uri})],
           else: []
 
     {[spec: spec, playback: :playing], state}
@@ -114,6 +123,8 @@ defmodule ExNVR.Pipeline do
 
   @impl true
   def handle_child_notification({:connection_lost, ref}, _elem, ctx, state) do
+    state = maybe_update_device_and_report(state, :failed)
+
     ctx.children
     |> Map.keys()
     |> Enum.filter(fn
@@ -135,6 +146,7 @@ defmodule ExNVR.Pipeline do
       Membrane.Logger.error("Only H264 streams are supported now")
       {[terminate: :normal], state}
     else
+      state = maybe_update_device_and_report(state, :recording)
       handle_rtsp_stream_setup(video_track, ref, state)
     end
   end
@@ -168,8 +180,8 @@ defmodule ExNVR.Pipeline do
       |> child({:tee, ref}, Membrane.Tee.Master)
       |> via_out(:master)
       |> child({:storage_bin, ref}, %ExNVR.Elements.StorageBin{
-        device_id: state.device_id,
-        target_segment_duration: state.segment_duration,
+        device_id: state.device.id,
+        target_segment_duration: state.segment_duration
       }),
       get_child({:tee, ref})
       |> via_out(:copy)
@@ -199,13 +211,6 @@ defmodule ExNVR.Pipeline do
   end
 
   @impl true
-  def handle_child_notification({:track_playable, _}, _, _ctx, state) do
-    replies = Enum.map(state.hls_pending_callers, &{:reply_to, {&1, :ok}})
-
-    {replies, %{state | hls_streaming_state: :started, hls_pending_callers: []}}
-  end
-
-  @impl true
   def handle_child_notification(_notification, _element, _ctx, state) do
     {[], state}
   end
@@ -213,7 +218,7 @@ defmodule ExNVR.Pipeline do
   @impl true
   def handle_crash_group_down("hls", _ctx, state) do
     Membrane.Logger.error("Hls group crashed, stop live streaming...")
-    {[], %{state | hls_streaming_state: :stopped}}
+    {[], state}
   end
 
   @impl true
@@ -224,6 +229,14 @@ defmodule ExNVR.Pipeline do
   @impl true
   def handle_call(:pipeline_supervisor, _ctx, state) do
     {[reply: state.supervisor_pid], state}
+  end
+
+  def handle_terminate_request(_ctx, state) do
+    :telemetry.execute(@event_prefix ++ [:terminate], %{system_time: System.system_time()}, %{
+      device_id: state.device.id
+    })
+
+    {[], state}
   end
 
   defp handle_rtsp_stream_setup(%ExNVR.MediaTrack{} = video_track, ref, state) do
@@ -254,5 +267,20 @@ defmodule ExNVR.Pipeline do
     {[spec: spec], %State{state | sub_stream_video_track: video_track}}
   end
 
-  defp pipeline_name(device_id), do: :"pipeline_#{device_id}"
+  defp pipeline_name(%{id: device_id}), do: :"pipeline_#{device_id}"
+
+  defp maybe_update_device_and_report(%{device: %{state: device_state}} = state, device_state),
+    do: state
+
+  defp maybe_update_device_and_report(%{device: device} = state, new_state) do
+    {:ok, updated_device} = Devices.update_state(device, new_state)
+
+    :telemetry.execute(@event_prefix ++ [:state], %{}, %{
+      device_id: device.id,
+      old_state: device.state,
+      new_state: updated_device.state
+    })
+
+    %{state | device: device}
+  end
 end

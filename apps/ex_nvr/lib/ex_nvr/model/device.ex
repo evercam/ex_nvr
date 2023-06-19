@@ -7,6 +7,8 @@ defmodule ExNVR.Model.Device do
 
   @states [:stopped, :recording, :failed]
 
+  @type state :: :stopped | :recording | :failed
+
   @type t :: %__MODULE__{
           id: binary(),
           name: binary(),
@@ -73,6 +75,8 @@ defmodule ExNVR.Model.Device do
     timestamps(type: :utc_datetime_usec)
   end
 
+  def streams(%__MODULE__{} = device), do: build_stream_uri(device)
+
   def config_updated(%{type: :IP, ip_camera_config: config}, %{
         type: :IP,
         ip_camera_config: config
@@ -114,5 +118,25 @@ defmodule ExNVR.Model.Device do
       _ ->
         changeset
     end
+  end
+
+  defp build_stream_uri(%__MODULE__{ip_camera_config: config}) do
+    userinfo =
+      if to_string(config.username) != "" and to_string(config.password) != "" do
+        "#{config.username}:#{config.password}"
+      end
+
+    {do_build_uri(config.stream_uri, userinfo), do_build_uri(config.sub_stream_uri, userinfo)}
+  end
+
+  defp build_stream_uri(_), do: nil
+
+  defp do_build_uri(nil, _userinfo), do: nil
+
+  defp do_build_uri(stream_uri, userinfo) do
+    stream_uri
+    |> URI.parse()
+    |> then(&%URI{&1 | userinfo: userinfo})
+    |> URI.to_string()
   end
 end
