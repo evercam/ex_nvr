@@ -51,7 +51,7 @@ if config_env() == :prod do
         cipher_suite: :compatible,
         keyfile: System.get_env("EXNVR_SSL_KEY_PATH"),
         certfile: System.get_env("EXNVR_SSL_CERT_PATH"),
-        force_ssl: [hsts: System.get_env("EXNVR_FORCE_SSL", false)]
+        force_ssl: [hsts: String.to_existing_atom(System.get_env("EXNVR_FORCE_SSL", "false"))]
       ]
   end
 
