@@ -41,7 +41,9 @@ if config_env() == :prod do
     url: [scheme: url.scheme, host: url.host, port: url.port]
 
   ## SSL Support
-  if System.get_env("EXNVR_ENABLE_HTTPS", false) do
+  enable_ssl = String.to_existing_atom(System.get_env("EXNVR_ENABLE_HTTPS", "false"))
+
+  if enable_ssl do
     config :ex_nvr_web, ExNVRWeb.Endpoint,
       https: [
         ip: {0, 0, 0, 0, 0, 0, 0, 0},
