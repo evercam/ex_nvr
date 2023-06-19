@@ -203,7 +203,7 @@ defmodule ExNVR.Elements.Segmenter do
 
   defp prepend_sps_and_pps(%{sps: sps, pps: pps}, %Buffer{} = access_unit) do
     nalus_type = Enum.map(access_unit.metadata.h264.nalus, & &1.metadata.h264.type)
-    has_parameter_sets? = [:sps, :pps] in nalus_type
+    has_parameter_sets? = :sps in nalus_type and :pps in nalus_type
 
     if has_parameter_sets?, do: access_unit, else: do_prepend_sps_and_pps(access_unit, sps, pps)
   end
