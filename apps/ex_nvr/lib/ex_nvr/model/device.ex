@@ -3,6 +3,8 @@ defmodule ExNVR.Model.Device do
 
   use Ecto.Schema
 
+  import Ecto.Query
+
   alias Ecto.Changeset
 
   @states [:stopped, :recording, :failed]
@@ -88,6 +90,14 @@ defmodule ExNVR.Model.Device do
   def has_sub_stream(%__MODULE__{ip_camera_config: nil}), do: false
   def has_sub_stream(%__MODULE__{ip_camera_config: %{sub_stream_uri: nil}}), do: false
   def has_sub_stream(_), do: true
+
+  def filter(query \\ __MODULE__, params) do
+    Enum.reduce(params, query, fn
+      {:state, value}, q when is_atom(value) -> where(q, [d], d.state == ^value)
+      {:state, values}, q when is_list(values) -> where(q, [d], d.state in ^values)
+      _, q -> q
+    end)
+  end
 
   def create_changeset(device, params) do
     device

@@ -43,7 +43,7 @@ defmodule ExNVR do
   end
 
   defp run_pipelines() do
-    for device <- Devices.list() do
+    for device <- Devices.list(%{state: [:recording, :failed]}) do
       # make last active run inactive
       # may happens on application crash
       Recordings.deactivate_runs(device.id)
