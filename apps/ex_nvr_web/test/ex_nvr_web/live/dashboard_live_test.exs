@@ -47,8 +47,8 @@ defmodule ExNVRWeb.DashboardTest do
 
       html =
         lv
-        |> element("#device_id")
-        |> render_change(%{"device_id" => device_2.id})
+        |> form("#device_form")
+        |> render_change(%{"device" => device_2.id, "stream" => "sub_stream"})
 
       assert html =~ "main_stream"
       assert html =~ "sub_stream"

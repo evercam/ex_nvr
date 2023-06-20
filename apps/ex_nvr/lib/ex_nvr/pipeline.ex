@@ -122,8 +122,13 @@ defmodule ExNVR.Pipeline do
   end
 
   @impl true
-  def handle_child_notification({:connection_lost, ref}, _elem, ctx, state) do
-    state = maybe_update_device_and_report(state, :failed)
+  def handle_child_notification({:connection_lost, ref}, elem, ctx, state) do
+    state =
+      if elem == :rtsp_source do
+        maybe_update_device_and_report(state, :failed)
+      else
+        state
+      end
 
     ctx.children
     |> Map.keys()

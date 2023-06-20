@@ -12,33 +12,30 @@ defmodule ExNVRWeb.DashboardLive do
         <span><.link href={~p"/devices"} class="ml-2 dark:text-blue-600">here</.link></span>
       </div>
       <div :if={@devices != []}>
-          <div class="flex items-center justify-between invisible sm:visible">
+        <div class="flex items-center justify-between invisible sm:visible">
+          <.simple_form for={@form} id="device_form" phx-change="device_change">
             <div class="flex items-center">
               <div class="mr-4">
                 <.input
-                  name="device_id"
-                  id="device_id"
+                  field={@form[:device]}
                   type="select"
                   label="Device"
                   options={Enum.map(@devices, &{&1.name, &1.id})}
-                  value={@current_device.id}
-                  phx-change="switch_device"
                 />
               </div>
 
               <div class={[@start_date && "hidden"]}>
                 <.input
-                  name="device_stream"
-                  id="device_stream"
+                  field={@form[:stream]}
                   type="select"
                   label="Stream"
                   options={@supported_streams}
-                  value={@current_stream}
-                  phx-change="switch_stream"
                 />
               </div>
             </div>
+          </.simple_form>
 
+          <div class="mt-5">
             <.input
               type="datetime-local"
               name="device_start_date"
@@ -49,11 +46,9 @@ defmodule ExNVRWeb.DashboardLive do
               value={@start_date && Calendar.strftime(@start_date, "%Y-%m-%dT%H:%M")}
             />
           </div>
+        </div>
 
-        <div
-          :if={not @live_view_enabled?}
-          class="mt-10 text-lg text-center dark:text-gray-200"
-        >
+        <div :if={not @live_view_enabled?} class="mt-10 text-lg text-center dark:text-gray-200">
           Device is not recording, live view is not available
         </div>
 
@@ -76,11 +71,26 @@ defmodule ExNVRWeb.DashboardLive do
       |> assign_devices()
       |> assign_current_device()
       |> assign_streams()
+      |> assign_form(nil)
       |> assign_start_date(nil)
       |> live_view_enabled?()
       |> maybe_push_stream_event(nil)
 
     {:ok, assign(socket, start_date: nil)}
+  end
+
+  def handle_event("device_change", params, socket) do
+    device = Enum.find(socket.assigns.devices, &(&1.id == params["device"]))
+
+    socket =
+      socket
+      |> assign_current_device(device)
+      |> assign_streams()
+      |> assign_form(params)
+      |> live_view_enabled?()
+      |> maybe_push_stream_event(socket.assigns.start_date)
+
+    {:noreply, socket}
   end
 
   def handle_event("datetime", %{"value" => value}, socket) do
@@ -101,34 +111,6 @@ defmodule ExNVRWeb.DashboardLive do
     {:noreply, socket}
   end
 
-  def handle_event("switch_device", %{"device_id" => device_id}, socket) do
-    case Enum.find(socket.assigns.devices, &(&1.id == device_id)) do
-      nil ->
-        {:noreply, socket}
-
-      device ->
-        socket
-        |> assign_current_device(device)
-        |> assign_streams()
-        |> live_view_enabled?()
-        |> maybe_push_stream_event(socket.assigns.start_date)
-        |> then(&{:noreply, &1})
-    end
-  end
-
-  def handle_event("switch_stream", %{"device_stream" => selected_stream}, socket) do
-    current_stream = socket.assigns.current_stream
-
-    if current_stream != selected_stream do
-      socket
-      |> assign(current_stream: selected_stream)
-      |> maybe_push_stream_event(socket.assigns.start_date)
-      |> then(&{:noreply, &1})
-    else
-      {:noreply, socket}
-    end
-  end
-
   defp assign_devices(socket) do
     assign(socket, devices: Devices.list())
   end
@@ -145,14 +127,26 @@ defmodule ExNVRWeb.DashboardLive do
   defp assign_streams(socket) do
     device = socket.assigns.current_device
 
-    {stream, supported_streams} =
+    supported_streams =
       if Device.has_sub_stream(device) do
-        {"sub_stream", [{"Main Stream", "main_stream"}, {"Sub Stream", "sub_stream"}]}
+        [{"Main Stream", "main_stream"}, {"Sub Stream", "sub_stream"}]
       else
-        {"main_stream", [{"Main Stream", "main_stream"}]}
+        [{"Main Stream", "main_stream"}]
       end
 
-    assign(socket, supported_streams: supported_streams, current_stream: stream)
+    assign(socket, supported_streams: supported_streams)
+  end
+
+  defp assign_form(%{assigns: %{current_device: nil}} = socket, _params), do: socket
+
+  defp assign_form(socket, nil) do
+    device = socket.assigns.current_device
+    stream = if Device.has_sub_stream(device), do: "sub_stream", else: "main_stream"
+    assign(socket, form: to_form(%{"device" => device.id, "stream" => stream}))
+  end
+
+  defp assign_form(socket, params) do
+    assign(socket, form: to_form(params))
   end
 
   defp maybe_push_stream_event(socket, datetime) do
@@ -165,7 +159,7 @@ defmodule ExNVRWeb.DashboardLive do
 
       true ->
         device = socket.assigns.current_device
-        current_stream = if socket.assigns.current_stream == "main_stream", do: 0, else: 1
+        current_stream = if socket.assigns.form.params["stream"] == "main_stream", do: 0, else: 1
 
         src =
           ~p"/api/devices/#{device.id}/hls/index.m3u8?#{%{pos: format_date(datetime), stream: current_stream}}"
