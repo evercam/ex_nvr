@@ -14,7 +14,7 @@ defmodule ExNVRWeb.API.DeviceController do
   @spec create(Conn.t(), map()) :: Conn.t() | {:error, Ecto.Changeset.t()}
   def create(%Conn{} = conn, params) do
     with {:ok, device} <- Devices.create(params) do
-      if device.state == :recording do
+      if Device.recording?(device) do
         Pipelines.Supervisor.start_pipeline(device)
       end
 

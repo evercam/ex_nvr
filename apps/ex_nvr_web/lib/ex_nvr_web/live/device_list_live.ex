@@ -18,6 +18,7 @@ defmodule ExNVRWeb.DeviceListLive do
       <.table id="devices" rows={@devices}>
         <:col :let={device} label="Id"><%= device.id %></:col>
         <:col :let={device} label="Name"><%= device.name %></:col>
+        <:col :let={device} label="Timezone"><%= device.timezone %></:col>
         <:col :let={device} label="State">
           <div class="flex items-center">
             <div class={

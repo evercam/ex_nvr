@@ -29,7 +29,7 @@ defmodule ExNVRWeb.DashboardTest do
       assert html =~ "Device"
       assert html =~ "Stream"
       assert html =~ "Start date"
-      assert has_element?(lv, "#live-video")
+      refute has_element?(lv, "#live-video")
     end
   end
 
@@ -48,7 +48,7 @@ defmodule ExNVRWeb.DashboardTest do
       html =
         lv
         |> element("#device_id")
-        |> render_change(%{device: %{id: device_2.id}})
+        |> render_change(%{"device_id" => device_2.id})
 
       assert html =~ "main_stream"
       assert html =~ "sub_stream"
