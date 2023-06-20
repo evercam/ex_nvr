@@ -65,7 +65,7 @@ defmodule ExNVRWeb.DeviceListLive do
                 </li>
                 <li>
                   <.link
-                    :if={device.state == :stopped}
+                    :if={not Device.recording?(device)}
                     phx-click="start-recording"
                     phx-value-device={device.id}
                     class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white"
@@ -75,7 +75,7 @@ defmodule ExNVRWeb.DeviceListLive do
                 </li>
                 <li>
                   <.link
-                    :if={device.state != :stopped}
+                    :if={Device.recording?(device)}
                     phx-click="stop-recording"
                     phx-value-device={device.id}
                     class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white"

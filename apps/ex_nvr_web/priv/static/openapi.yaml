@@ -69,6 +69,21 @@ paths:
                   type: string
                   enum: [IP]
                   description: Device type
+                timezone:
+                  type: string
+                  description: Device timezoned
+                  default: UTC
+                state:
+                  type: string
+                  enum: ["recording", "stopped"]
+                  default: recording
+                  description: |
+                    Initial state of the device.
+
+                    * `recording` - The device will attempt connecting and recording videos
+                    on creation
+                    * `stopped` - The device will be created and will not try to connect or record
+                    videos.
                 ip_camera_config:
                   $ref: "#/components/schemas/IPCameraConfig"
               required: [name, type]
@@ -102,6 +117,21 @@ paths:
                 name:
                   type: string
                   description: Device name
+                timezone:
+                  type: string
+                  description: Device timezoned
+                  default: UTC
+                state:
+                  type: string
+                  enum: ["recording", "stopped"]
+                  default: recording
+                  description: |
+                    Initial state of the device.
+
+                    * `recording` - The device will attempt connecting and recording videos
+                    on creation
+                    * `stopped` - The device will be created and will not try to connect or record
+                    videos.
                 ip_camera_config:
                   $ref: "#/components/schemas/IPCameraConfig"
       responses:
@@ -136,20 +166,22 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  start_date:
-                    type: string
-                    format: date-time
-                    description: The start date of the run
-                  end_date:
-                    type: string
-                    format: date-time
-                    description: The end date of the run
-                  active:
-                    type: boolean
-                    description: |
-                      `true` if this an active run (still recording), `false` otherwise
+                type: array
+                items:
+                  type: object
+                  properties:
+                    start_date:
+                      type: string
+                      format: date-time
+                      description: The start date of the run
+                    end_date:
+                      type: string
+                      format: date-time
+                      description: The end date of the run
+                    active:
+                      type: boolean
+                      description: |
+                        `true` if this an active run (still recording), `false` otherwise
         '400':
           $ref: "#/components/responses/BadArg"
   /api/devices/{device_id}/recordings/{recording_id}/blob:
@@ -254,6 +286,12 @@ components:
           type: string
           enum: [IP]
           description: Device type
+        timezone:
+          type: string
+        state:
+          type: string
+          enum: [recording, failed, stopped]
+          description: Device state
         ip_camera_config:
           $ref: "#/components/schemas/IPCameraConfig"
     IPCameraConfig:

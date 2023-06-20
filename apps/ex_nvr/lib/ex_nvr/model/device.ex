@@ -91,6 +91,9 @@ defmodule ExNVR.Model.Device do
   def has_sub_stream(%__MODULE__{ip_camera_config: %{sub_stream_uri: nil}}), do: false
   def has_sub_stream(_), do: true
 
+  def recording?(%__MODULE__{state: :stopped}), do: false
+  def recording?(_), do: true
+
   def filter(query \\ __MODULE__, params) do
     Enum.reduce(params, query, fn
       {:state, value}, q when is_atom(value) -> where(q, [d], d.state == ^value)
