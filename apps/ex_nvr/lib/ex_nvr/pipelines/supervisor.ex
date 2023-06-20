@@ -15,14 +15,18 @@ defmodule ExNVR.Pipelines.Supervisor do
   end
 
   def start_pipeline(%Device{} = device) do
-    File.mkdir_p!(recording_dir(device.id))
-    File.mkdir_p!(hls_dir(device.id))
+    if ExNVR.Utils.run_main_pipeline?() do
+      File.mkdir_p!(recording_dir(device.id))
+      File.mkdir_p!(hls_dir(device.id))
 
-    DynamicSupervisor.start_child(__MODULE__, {Pipeline, [device: device]})
+      DynamicSupervisor.start_child(__MODULE__, {Pipeline, [device: device]})
+    end
   end
 
   def stop_pipeline(%Device{} = device) do
-    DynamicSupervisor.terminate_child(__MODULE__, Pipeline.supervisor(device))
+    if ExNVR.Utils.run_main_pipeline?() do
+      DynamicSupervisor.terminate_child(__MODULE__, Pipeline.supervisor(device))
+    end
   end
 
   def restart_pipeline(%Device{} = device) do

@@ -44,4 +44,42 @@ defmodule ExNVRWeb.DeviceListLiveTest do
       assert path == ~p"/devices/new"
     end
   end
+
+  describe "Start/Stop device recording" do
+    setup %{conn: conn} do
+      %{conn: log_in_user(conn, user_fixture())}
+    end
+
+    test "Stop recording", %{conn: conn} do
+      device = device_fixture(%{state: :recording})
+
+      {:ok, lv, html} = live(conn, ~p"/devices")
+
+      assert html =~ "Stop recording"
+
+      html =
+        lv
+        |> element(~s|a|, "Stop recording")
+        |> render_click()
+
+      assert html =~ "Start recording"
+      assert ExNVR.Devices.get!(device.id).state == :stopped
+    end
+
+    test "Start recording", %{conn: conn} do
+      device = device_fixture(%{state: :stopped})
+
+      {:ok, lv, html} = live(conn, ~p"/devices")
+
+      assert html =~ "Start recording"
+
+      html =
+        lv
+        |> element(~s|a|, "Start recording")
+        |> render_click()
+
+      assert html =~ "Stop recording"
+      assert ExNVR.Devices.get!(device.id).state == :recording
+    end
+  end
 end

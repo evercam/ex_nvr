@@ -17,6 +17,15 @@ defmodule ExNVR.DevicesTest do
       devices = [device_fixture(), device_fixture()]
       assert devices == Devices.list()
     end
+
+    test "filter devices by state" do
+      device_1 = device_fixture(%{state: :recording})
+      device_2 = device_fixture(%{state: :failed})
+      device_3 = device_fixture(%{state: :stopped})
+
+      assert [device_1] == Devices.list(%{state: :recording})
+      assert [device_2, device_3] == Devices.list(%{state: [:failed, :stopped]})
+    end
   end
 
   describe "create/1" do
