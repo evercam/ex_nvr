@@ -13,14 +13,16 @@ defmodule ExNVRWeb.DashboardLive do
       </div>
       <div :if={@devices != []}>
         <div class="flex items-center justify-between invisible sm:visible">
-          <.simple_form for={@form} id="device_form" phx-change="device_change">
+          <.simple_form for={@form} id="device_form">
             <div class="flex items-center">
               <div class="mr-4">
                 <.input
                   field={@form[:device]}
+                  id="device_form_id"
                   type="select"
                   label="Device"
                   options={Enum.map(@devices, &{&1.name, &1.id})}
+                  phx-change="switch_device"
                 />
               </div>
 
@@ -30,6 +32,7 @@ defmodule ExNVRWeb.DashboardLive do
                   type="select"
                   label="Stream"
                   options={@supported_streams}
+                  phx-change="switch_stream"
                 />
               </div>
             </div>
@@ -79,14 +82,24 @@ defmodule ExNVRWeb.DashboardLive do
     {:ok, assign(socket, start_date: nil)}
   end
 
-  def handle_event("device_change", params, socket) do
-    device = Enum.find(socket.assigns.devices, &(&1.id == params["device"]))
+  def handle_event("switch_device", %{"device" => device_id}, socket) do
+    device = Enum.find(socket.assigns.devices, &(&1.id == device_id))
 
     socket =
       socket
       |> assign_current_device(device)
       |> assign_streams()
-      |> assign_form(params)
+      |> assign_form(nil)
+      |> live_view_enabled?()
+      |> maybe_push_stream_event(socket.assigns.start_date)
+
+    {:noreply, socket}
+  end
+
+  def handle_event("switch_stream", %{"stream" => stream}, socket) do
+    socket =
+      socket
+      |> assign_form(%{"stream" => stream, "device" => socket.assigns.current_device.id})
       |> live_view_enabled?()
       |> maybe_push_stream_event(socket.assigns.start_date)
 

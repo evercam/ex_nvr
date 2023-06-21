@@ -1,9 +1,7 @@
 defmodule ExNVRWeb.API.DeviceJSON do
   @moduledoc false
 
-  alias ExNVR.Model.Device
-
-  @spec show(Device.t()) :: map()
+  @spec show(map()) :: map()
   def show(%{device: device}) do
     device
     |> Map.take([:id, :name, :type, :state, :timezone, :inserted_at, :updated_at])

@@ -59,6 +59,7 @@ defmodule ExNVR.Pipeline do
     `sub_stream_video_track` - Media description of the sub stream got from calling DESCRIBE method on the RTSP uri
     `segment_duration` - The duration of each video chunk saved by the storage bin.
     `supervisor_pid` - The supervisor pid of this pipeline (needed to stop a pipeline)
+
     """
     @type t :: %__MODULE__{
             device: Device.t(),
@@ -286,6 +287,6 @@ defmodule ExNVR.Pipeline do
       new_state: updated_device.state
     })
 
-    %{state | device: device}
+    %{state | device: updated_device}
   end
 end
