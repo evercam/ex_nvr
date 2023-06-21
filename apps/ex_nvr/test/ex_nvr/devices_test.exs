@@ -17,6 +17,15 @@ defmodule ExNVR.DevicesTest do
       devices = [device_fixture(), device_fixture()]
       assert devices == Devices.list()
     end
+
+    test "filter devices by state" do
+      device_1 = device_fixture(%{state: :recording})
+      device_2 = device_fixture(%{state: :failed})
+      device_3 = device_fixture(%{state: :stopped})
+
+      assert [device_1] == Devices.list(%{state: :recording})
+      assert [device_2, device_3] == Devices.list(%{state: [:failed, :stopped]})
+    end
   end
 
   describe "create/1" do
@@ -98,6 +107,21 @@ defmodule ExNVR.DevicesTest do
 
       assert device.name == @valid_camera_name
       assert device.ip_camera_config.sub_stream_uri == stream_uri
+    end
+  end
+
+  describe "update_state/2" do
+    setup do
+      %{device: device_fixture()}
+    end
+
+    test "device state updated", %{device: device} do
+      {:ok, device} = Devices.update_state(device, :failed)
+      assert device.state == :failed
+    end
+
+    test "cannot update device state", %{device: device} do
+      assert {:error, _changeset} = Devices.update_state(device, :unknown)
     end
   end
 

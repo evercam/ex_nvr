@@ -22,8 +22,12 @@ defmodule ExNVR.Devices do
     |> Repo.update()
   end
 
-  @spec list() :: [Device.t()]
-  def list(), do: Repo.all(from(d in Device, order_by: d.inserted_at))
+  @spec update_state(Device.t(), Device.state()) ::
+          {:ok, Device.t()} | {:error, Ecto.Changeset.t()}
+  def update_state(%Device{} = device, state), do: __MODULE__.update(device, %{state: state})
+
+  @spec list(map()) :: [Device.t()]
+  def list(params \\ %{}), do: Repo.all(Device.filter(params) |> order_by([d], d.inserted_at))
 
   @spec get(binary()) :: Device.t() | nil
   def get(device_id), do: Repo.get(Device, device_id)
@@ -36,12 +40,12 @@ defmodule ExNVR.Devices do
     end
   end
 
-  @spec change_device_creation(Device.t()) :: Ecto.Changeset.t()
+  @spec change_device_creation(Device.t(), map()) :: Ecto.Changeset.t()
   def change_device_creation(%Device{} = device, attrs \\ %{}) do
     Device.create_changeset(device, attrs)
   end
 
-  @spec change_device_update(Device.t()) :: Ecto.Changeset.t()
+  @spec change_device_update(Device.t(), map()) :: Ecto.Changeset.t()
   def change_device_update(%Device{} = device, attrs \\ %{}) do
     Device.update_changeset(device, attrs)
   end
