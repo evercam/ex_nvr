@@ -4,9 +4,12 @@ NVR (Network Video Recorder) for Elixir using [Membrane Framework](https://githu
 
 ## Installation
 
-To get started with `ex_nvr` it's preferrable and easy to create a docker image (we don't have built images available right now, but we'll do soon).
+To get started with `ex_nvr` it's preferrable and easy to run a docker image:
+```bash
+docker run --rm -it -p 4000:4000 --env-file .env ghcr.io/evercam/ex_nvr:latest
+```
 
-Run the following command from the root folder of the project
+Or create a new image using the Dockerfile. Run the following command from the root folder of the project
 ```bash
 docker build -t ex_nvr:0.1.0 .
 ```
@@ -67,10 +70,10 @@ The main feature of this project is to store video streams retrieved from `devic
    - [ ] Get snapshot from live/recorded stream
    - [ ] Download videos of arbitrary durations
    - [ ] Add stats/info about streams (for devs)
-   - [X] API / API documentation
+   - [x] API / API documentation
    - [ ] Gather metrics
    - [ ] Run machine learning models on video streams (live video / stored footages)
    - [ ] Sync recorded videos to cloud storage
    - [ ] Notify external services of new recorded videos
    - [ ] Application for management of multiple NVRs
-   - [X] Support HTTPS
+   - [x] Support HTTPS
