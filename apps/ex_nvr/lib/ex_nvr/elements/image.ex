@@ -65,7 +65,7 @@ defmodule ExNVR.Elements.Image do
 
     case state.destination do
       {module, fun, args} ->
-        apply(module, fun, [Image.write!(image, :memory, suffix: "#{state.format}")] ++ args)
+        apply(module, fun, [Image.write!(image, :memory, suffix: ".#{state.format}")] ++ args)
         {[], state}
 
       _ ->

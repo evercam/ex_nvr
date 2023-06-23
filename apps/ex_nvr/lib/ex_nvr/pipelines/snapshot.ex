@@ -10,11 +10,15 @@ defmodule ExNVR.Pipelines.Snapshot do
   alias ExNVR.Elements.MP4
 
   def start_link(options) do
-    Pipeline.start_link(__MODULE__, options)
+    Pipeline.start_link(__MODULE__, add_caller_pid(options))
   end
 
   def start(options) do
-    Pipeline.start_link(__MODULE__, options)
+    Pipeline.start(__MODULE__, add_caller_pid(options))
+  end
+
+  defp add_caller_pid(options) do
+    Keyword.put(options, :caller, self())
   end
 
   @impl true
@@ -35,7 +39,7 @@ defmodule ExNVR.Pipelines.Snapshot do
       |> child(:decoder, H264.FFmpeg.Decoder)
       |> child(:scissor, %Elements.FirstOrLast{allow: allow_option})
       |> child(:sink, %Elements.Image{
-        destination: options[:destination],
+        destination: {__MODULE__, :receive_picture, [options[:caller]]},
         format: options[:format] || :jpeg
       })
     ]
@@ -45,11 +49,15 @@ defmodule ExNVR.Pipelines.Snapshot do
 
   @impl true
   def handle_element_end_of_stream(:sink, _pad, _ctx, state) do
-    {[terminate: true], state}
+    {[terminate: :normal], state}
   end
 
   @impl true
   def handle_element_end_of_stream(_element, _pad, _ctx, state) do
     {[], state}
+  end
+
+  def receive_picture(picture, caller) do
+    send(caller, {:picture, picture})
   end
 end

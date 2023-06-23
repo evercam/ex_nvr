@@ -46,11 +46,17 @@ defmodule ExNVR.Elements.FirstOrLast do
     {[demand: :input], %{state | last_buffer: buffer}}
   end
 
+  def handle_end_of_stream(:input, _ctx, %{allow: :first} = state) do
+    {[], state}
+  end
+
   @impl true
   def handle_end_of_stream(:input, _ctx, state) do
     buffer_action =
       if state.last_buffer do
         [buffer: {:output, state.last_buffer}]
+      else
+        []
       end
 
     {buffer_action ++ [end_of_stream: :output], state}

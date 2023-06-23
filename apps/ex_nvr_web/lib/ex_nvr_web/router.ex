@@ -42,6 +42,8 @@ defmodule ExNVRWeb.Router do
 
       get "/hls/index.m3u8", API.DeviceStreamingController, :hls_stream
       get "/hls/:segment_name", API.DeviceStreamingController, :hls_stream_segment
+
+      get "/picture", API.DeviceStreamingController, :picture
     end
   end
 
