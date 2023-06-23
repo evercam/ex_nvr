@@ -11,8 +11,6 @@ defmodule ExNVR.Pipelines.SnapshotTest do
 
   @moduletag :tmp_dir
 
-  @file_src "../../fixtures/big_buck.mp4" |> Path.expand(__DIR__)
-
   setup do
     device = device_fixture()
 
@@ -21,8 +19,7 @@ defmodule ExNVR.Pipelines.SnapshotTest do
     recording =
       recording_fixture(device,
         start_date: ~U(2023-06-23 10:00:00Z),
-        end_date: ~U(2023-06-23 10:00:05Z),
-        path: @file_src
+        end_date: ~U(2023-06-23 10:00:05Z)
       )
 
     %{device: device, recording: recording}

@@ -11,7 +11,8 @@ defmodule ExNVR.RecordingsFixtures do
 
     Enum.into(attrs, %{
       start_date: start_date,
-      end_date: DateTime.add(start_date, :rand.uniform(10) + 60)
+      end_date: DateTime.add(start_date, :rand.uniform(10) + 60),
+      path: "../../fixtures/big_buck.mp4" |> Path.expand(__DIR__)
     })
   end
 

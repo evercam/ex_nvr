@@ -32,13 +32,14 @@ defmodule ExNVRWeb.ConnCase do
   end
 
   setup tags do
-    if Map.has_key?(tags, :tmp_dir) do
-      Application.put_env(:ex_nvr, :recording_directory, tags.tmp_dir)
-      Application.put_env(:ex_nvr, :hls_directory, tags.tmp_dir)
-    end
-
     ExNVR.DataCase.setup_sandbox(tags)
-    {:ok, conn: Phoenix.ConnTest.build_conn()}
+    maybe_set_application_env(tags)
+
+    Map.put(
+      maybe_create_device(tags),
+      :conn,
+      Phoenix.ConnTest.build_conn()
+    )
   end
 
   @doc """
@@ -73,5 +74,22 @@ defmodule ExNVRWeb.ConnCase do
     conn
     |> Phoenix.ConnTest.init_test_session(%{})
     |> Plug.Conn.put_req_header("authorization", "Bearer #{token}")
+  end
+
+  defp maybe_set_application_env(tags) do
+    if Map.has_key?(tags, :tmp_dir) do
+      Application.put_env(:ex_nvr, :recording_directory, tags.tmp_dir)
+      Application.put_env(:ex_nvr, :hls_directory, tags.tmp_dir)
+    end
+  end
+
+  defp maybe_create_device(tags) do
+    if Map.has_key?(tags, :device) do
+      device = ExNVR.DevicesFixtures.device_fixture()
+      File.mkdir!(ExNVR.Utils.recording_dir(device.id))
+      %{device: device}
+    else
+      %{}
+    end
   end
 end

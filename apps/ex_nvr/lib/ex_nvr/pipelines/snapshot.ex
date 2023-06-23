@@ -29,6 +29,8 @@ defmodule ExNVR.Pipelines.Snapshot do
         _ -> :first
       end
 
+    default_dest = {__MODULE__, :receive_picture, [options[:caller]]}
+
     spec = [
       child(:source, %MP4.Depayloader{
         device_id: options[:device_id],
@@ -39,7 +41,7 @@ defmodule ExNVR.Pipelines.Snapshot do
       |> child(:decoder, H264.FFmpeg.Decoder)
       |> child(:scissor, %Elements.FirstOrLast{allow: allow_option})
       |> child(:sink, %Elements.Image{
-        destination: {__MODULE__, :receive_picture, [options[:caller]]},
+        destination: options[:destination] || default_dest,
         format: options[:format] || :jpeg
       })
     ]

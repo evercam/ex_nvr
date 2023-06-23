@@ -3,9 +3,10 @@ defmodule ExNVRWeb.API.DeviceStreamingControllerTest do
 
   use ExNVRWeb.ConnCase
 
-  import ExNVR.{AccountsFixtures, DevicesFixtures}
+  import ExNVR.{AccountsFixtures, RecordingsFixtures}
 
   @moduletag :tmp_dir
+  @moduletag :device
 
   @manifest """
   #EXTM3U
@@ -33,16 +34,18 @@ defmodule ExNVRWeb.API.DeviceStreamingControllerTest do
   live_sub_stream.m3u8
   """
 
-  describe "GET /api/devices/:device_id/hls/index.m3u8" do
-    setup %{conn: conn} do
-      device = device_fixture()
+  setup %{conn: conn} do
+    %{conn: log_in_user_with_access_token(conn, user_fixture())}
+  end
 
+  describe "GET /api/devices/:device_id/hls/index.m3u8" do
+    setup %{device: device} do
       Path.join(ExNVR.Utils.hls_dir(device.id), "live")
       |> tap(&File.mkdir_p!/1)
       |> Path.join("index.m3u8")
       |> File.write!(@manifest)
 
-      %{device: device, conn: log_in_user_with_access_token(conn, user_fixture())}
+      :ok
     end
 
     test "get manifest file", %{conn: conn, device: device} do
@@ -77,6 +80,31 @@ defmodule ExNVRWeb.API.DeviceStreamingControllerTest do
         |> json_response(400)
 
       assert response["code"] == "BAD_ARGUMENT"
+    end
+  end
+
+  describe "GET /api/devices/:device_id/picture" do
+    setup %{device: device} do
+      recording =
+        recording_fixture(device, %{
+          start_date: ~U(2023-06-23 20:00:00Z),
+          end_date: ~U(2023-06-23 20:00:05Z)
+        })
+
+      %{recording: recording}
+    end
+
+    test "Get picture", %{conn: conn, device: device, recording: recording} do
+      conn = get(conn, "/api/devices/#{device.id}/picture?time=#{recording.start_date}")
+
+      assert conn.status == 200
+      assert get_resp_header(conn, "content-type") == ["image/jpeg; charset=utf-8"]
+    end
+
+    test "Returns 404 if there's no recording", %{conn: conn, device: device} do
+      conn
+      |> get("/api/devices/#{device.id}/picture?time=#{DateTime.utc_now()}")
+      |> response(404)
     end
   end
 end
