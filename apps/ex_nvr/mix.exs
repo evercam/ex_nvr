@@ -54,6 +54,7 @@ defmodule ExNVR.MixProject do
       {:membrane_realtimer_plugin, "~> 0.6.1"},
       {:connection, "~> 1.1.0"},
       {:tzdata, "~> 1.1"},
+      {:image, "~> 0.33"},
       {:faker, "~> 0.17", only: :test}
     ]
   end

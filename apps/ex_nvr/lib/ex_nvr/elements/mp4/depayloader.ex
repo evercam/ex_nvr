@@ -30,6 +30,11 @@ defmodule ExNVR.Elements.MP4.Depayloader do
                 It'll start from the nearest keyframe before the specified date time to
                 avoid decoding the video stream.
                 """
+              ],
+              end_date: [
+                spec: DateTime.t(),
+                default: ~U(2099-01-01 00:00:00Z),
+                description: "The end date of the last access unit to get."
               ]
 
   @impl true
@@ -40,6 +45,7 @@ defmodule ExNVR.Elements.MP4.Depayloader do
      %{
        device_id: options.device_id,
        start_date: options.start_date,
+       end_date: options.end_date,
        last_recording_date: options.start_date,
        recordings: [],
        depayloader: nil,
@@ -64,31 +70,33 @@ defmodule ExNVR.Elements.MP4.Depayloader do
   end
 
   @impl true
-  def handle_demand(:output, _size, :buffers, _ctx, %{frame_rate: {frames, seconds}} = state) do
+  def handle_demand(:output, _size, :buffers, _ctx, state) do
     case Native.read_access_unit(state.depayloader) do
       {:ok, buffers, dts, pts, keyframes} ->
-        buffers =
-          [buffers, dts, pts, keyframes]
-          |> Enum.zip()
-          |> Enum.map(fn {payload, dts, pts, key_frame?} ->
-            dts = div(dts * seconds * Membrane.Time.second(), frames)
-            pts = div(pts * seconds * Membrane.Time.second(), frames)
-
-            %Buffer{
-              payload: payload,
-              dts: dts + state.current_dts,
-              pts: pts + state.current_dts,
-              metadata: %{key_frame?: key_frame?}
-            }
-          end)
-
-        {actions, state} = prepare_buffer_actions(state, buffers)
-        {actions ++ [redemand: :output], state}
+        map_buffers(state, buffers, dts, pts, keyframes)
+        |> prepare_buffer_actions(state)
+        |> maybe_redemand()
 
       {:error, _reason} ->
         state = maybe_read_recordings(%{state | recordings: tl(state.recordings)})
         maybe_read_next_file(state)
     end
+  end
+
+  defp map_buffers(%{frame_rate: {frames, seconds}} = state, buffers, dts, pts, keyframes) do
+    [buffers, dts, pts, keyframes]
+    |> Enum.zip()
+    |> Enum.map(fn {payload, dts, pts, key_frame?} ->
+      dts = div(dts * seconds * Membrane.Time.second(), frames)
+      pts = div(pts * seconds * Membrane.Time.second(), frames)
+
+      %Buffer{
+        payload: payload,
+        dts: dts + state.current_dts,
+        pts: pts + state.current_dts,
+        metadata: %{key_frame?: key_frame?}
+      }
+    end)
   end
 
   defp maybe_read_next_file(%{recordings: []} = state) do
@@ -117,7 +125,7 @@ defmodule ExNVR.Elements.MP4.Depayloader do
     %{state | depayloader: depayloader, frame_rate: frame_rate}
   end
 
-  defp prepare_buffer_actions(%{buffer?: true} = state, buffers) do
+  defp prepare_buffer_actions(buffers, %{buffer?: true} = state) do
     time_diff =
       DateTime.diff(state.start_date, hd(state.recordings).start_date) |> Membrane.Time.seconds()
 
@@ -154,8 +162,30 @@ defmodule ExNVR.Elements.MP4.Depayloader do
     end
   end
 
-  defp prepare_buffer_actions(state, buffers) do
-    {[buffer: {:output, buffers}], %{state | last_access_unit_dts: List.last(buffers).dts}}
+  defp prepare_buffer_actions(buffers, state) do
+    last_access_unit_dts = List.last(buffers).dts
+
+    {[buffer: {:output, buffers}] ++ maybe_end_stream(state, last_access_unit_dts),
+     %{state | last_access_unit_dts: last_access_unit_dts}}
+  end
+
+  defp maybe_end_stream(state, last_access_unit_dts) do
+    start_date_ns = Membrane.Time.from_datetime(state.start_date)
+    end_date_ns = Membrane.Time.from_datetime(state.end_date)
+
+    if start_date_ns + last_access_unit_dts >= end_date_ns do
+      [end_of_stream: :output]
+    else
+      []
+    end
+  end
+
+  defp maybe_redemand({actions, state}) do
+    if Keyword.has_key?(actions, :end_of_stream) do
+      {actions, state}
+    else
+      {actions ++ [redemand: :output], state}
+    end
   end
 
   defp maybe_read_recordings(%{recordings: []} = state) do
@@ -163,7 +193,11 @@ defmodule ExNVR.Elements.MP4.Depayloader do
       "fetch recordings after date: date=#{inspect(state.last_recording_date)}"
     )
 
-    case Recordings.get_recordings_after(state.device_id, state.last_recording_date) do
+    case Recordings.get_recordings_between(
+           state.device_id,
+           state.last_recording_date,
+           state.end_date
+         ) do
       [] ->
         state
 

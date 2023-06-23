@@ -30,10 +30,12 @@ defmodule ExNVR.Recordings do
     end
   end
 
-  @spec get_recordings_after(binary(), DateTime.t()) :: [Recording.t()]
-  def get_recordings_after(device_id, date, opts \\ []) do
-    date
-    |> Recording.after_date(opts)
+  @spec get_recordings_between(binary(), DateTime.t(), DateTime.t(), Keyword.t()) :: [
+          Recording.t()
+        ]
+  def get_recordings_between(device_id, start_date, end_date, opts \\ []) do
+    start_date
+    |> Recording.between_dates(end_date, opts)
     |> Recording.with_device(device_id)
     |> Repo.all()
   end

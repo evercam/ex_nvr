@@ -23,18 +23,20 @@ defmodule ExNVR.RecordingsFixtures do
     })
   end
 
-  def recording_fixture(attrs \\ %{}) do
+  def recording_fixture(device, attrs \\ %{}) do
     {:ok, recording, _run} =
       attrs
+      |> Enum.into(%{device_id: device.id})
       |> valid_recording_attributes()
-      |> then(&ExNVR.Recordings.create(run_fixture(device_id: &1.device_id), &1))
+      |> then(&ExNVR.Recordings.create(run_fixture(device), &1))
 
     recording
   end
 
-  def run_fixture(attrs \\ %{}) do
+  def run_fixture(device, attrs \\ %{}) do
     {:ok, run} =
       attrs
+      |> Enum.into(%{device_id: device.id})
       |> valid_run_attributes()
       |> then(&struct(ExNVR.Model.Run, &1))
       |> Repo.insert()
