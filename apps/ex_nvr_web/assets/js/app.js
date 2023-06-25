@@ -47,12 +47,15 @@ function initDarkMode() {
     document.documentElement.classList.add('dark');
 }
 
-startStreaming = (src) => {
+startStreaming = (src, poster_url) => {
     var video = document.getElementById("live-video");
     if (video != null && Hls.isSupported()) {
-        console.log(window.hls);
         if (window.hls) {
             window.hls.destroy();
+        }
+
+        if (poster_url != null) {
+            video.poster = poster_url;
         }
             
         window.hls = new Hls({
@@ -60,11 +63,16 @@ startStreaming = (src) => {
         });
         window.hls.loadSource(src);
         window.hls.attachMedia(video);
+
+        window.hls.on(Hls.Events.BUFFER_CREATED, (_) => {
+            let loader = document.getElementById("loader")
+            loader.classList.add("invisible")
+        });
     }
 }
 
 window.addEventListener("phx:stream", e => {
-    startStreaming(e.detail.src);    
+    startStreaming(e.detail.src, e.detail.poster);    
 });
 
 window.addEventListener("phx:js-exec", ({detail}) => {
