@@ -265,6 +265,56 @@ paths:
             application/vnd.apple.mpegurl:
               schema:
                 type: string
+  /api/devices/{device_id}/picture:
+    get:
+      summary: Get picture
+      description: |
+        Get a snapshot from the recorded video
+      operationId: getPicture
+      tags:
+        - Media Streaming
+      parameters:
+        - $ref: '#/components/parameters/device_id'
+        - name: time
+          required: true
+          description: Timestamp of the requested snapshot
+          schema:
+            type: string
+            format: date-time
+        - name: method
+          required: false
+          default: before
+          description: |
+            Getting a snapshot at the exact timestamp is costly, so, it can be rounded 
+            to the nearest keyframe, thus, the default value is "before".
+
+            Possible values are:
+              * `before` - Get the snapshot from the nearest keyframe before the requested timestamp.
+              * `precise` - Get the snapshot as near as possible from the requested timestamp.
+          schema:
+            type: string
+            enum: [before, precise]
+        - name: format
+          required: false
+          default: jpeg
+          description: Image format
+          schema:
+            type: string
+            enum: [jpeg, png]
+      responses:
+        '200':
+          description: success
+          content:
+            image/jpeg:
+              schema:
+                type: string
+                format: byte
+            image/png:
+              schema:
+                type: string
+                format: byte
+        '400':
+          $ref: '#/components/responses/NotFound'
 components:
   securitySchemes:
     bearerAuth:
@@ -346,5 +396,14 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/Error"
+    NotFound:
+        description: Not Found
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
 security:
   - bearerAuth: []

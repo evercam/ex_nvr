@@ -5,6 +5,12 @@ defmodule ExNVRWeb.API.FallbackController do
 
   alias Ecto.Changeset
 
+  def call(conn, {:error, :not_found}) do
+    conn
+    |> put_status(404)
+    |> json(%{message: "Resource doesn't exists"})
+  end
+
   def call(conn, {:error, %Changeset{} = changeset}) do
     conn
     |> put_status(400)

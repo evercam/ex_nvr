@@ -11,7 +11,9 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
   alias ExNVR.Pipelines.HlsPlayback
   alias ExNVR.Utils
 
-  @spec hls_stream(Plug.Conn.t(), map()) :: Plug.Conn.t() | {:error, Changeset.t()}
+  @type return_t :: Plug.Conn.t() | {:error, Changeset.t()}
+
+  @spec hls_stream(Plug.Conn.t(), map()) :: return_t()
   def hls_stream(conn, params) do
     with {:ok, params} <- validate_hls_stream_params(params) do
       path = start_hls_pipeline(conn.assigns.device.id, params.pos)
@@ -23,7 +25,7 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
     end
   end
 
-  @spec hls_stream_segment(Plug.Conn.t(), map()) :: Plug.Conn.t() | {:error, Changeset.t()}
+  @spec hls_stream_segment(Plug.Conn.t(), map()) :: return_t()
   def hls_stream_segment(conn, %{"segment_name" => segment_name}) do
     # segment names are in the following format <segment_name>_<track_id>_<segment_id>.<extension>
     # this is a temporary measure until Membrane HLS plugin supports query params
@@ -42,12 +44,54 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
     send_file(conn, 200, Path.join([Utils.hls_dir(conn.assigns.device.id), id, segment_name]))
   end
 
+  @spec picture(Plug.Conn.t(), map()) :: return_t()
+  def picture(conn, params) do
+    device = conn.assigns.device
+
+    with {:ok, params} <- validate_picture_req_params(params),
+         {:empty, false} <-
+           {:empty,
+            ExNVR.Recordings.get_recordings_between(device.id, params.time, params.time) == []} do
+      ExNVR.Pipelines.Snapshot.start(
+        device_id: device.id,
+        date: params.time,
+        format: params.format,
+        method: params.method
+      )
+
+      receive do
+        {:picture, picture} ->
+          conn
+          |> put_resp_content_type("image/#{params.format}")
+          |> send_resp(:ok, picture)
+      after
+        5_000 -> {:error, :not_found}
+      end
+    else
+      {:error, changeset} -> {:error, changeset}
+      {:empty, true} -> {:error, :not_found}
+    end
+  end
+
   defp validate_hls_stream_params(params) do
     types = %{pos: :utc_datetime, stream: :integer}
 
     {%{pos: nil, stream: nil}, types}
     |> Changeset.cast(params, Map.keys(types))
     |> Changeset.validate_inclusion(:stream, [0, 1])
+    |> Changeset.apply_action(:create)
+  end
+
+  defp validate_picture_req_params(params) do
+    types = %{
+      time: :utc_datetime,
+      method: {:parameterized, Ecto.Enum, Ecto.Enum.init(values: ~w(before precise)a)},
+      format: {:parameterized, Ecto.Enum, Ecto.Enum.init(values: ~w(jpeg png)a)}
+    }
+
+    {%{method: :before, format: :jpeg}, types}
+    |> Changeset.cast(params, Map.keys(types))
+    |> Changeset.validate_required([:time])
     |> Changeset.apply_action(:create)
   end
 

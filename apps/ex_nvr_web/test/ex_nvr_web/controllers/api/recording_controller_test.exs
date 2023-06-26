@@ -16,20 +16,17 @@ defmodule ExNVRWeb.API.RecordingControllerTest do
 
   describe "GET /api/devices/:device_id/recordings" do
     setup %{device: device} do
-      RecordingsFixtures.run_fixture(
-        device_id: device.id,
+      RecordingsFixtures.run_fixture(device,
         start_date: ~U(2023-05-01 01:52:00.000000Z),
         end_date: ~U(2023-05-02 10:15:30.000000Z)
       )
 
-      RecordingsFixtures.run_fixture(
-        device_id: device.id,
+      RecordingsFixtures.run_fixture(device,
         start_date: ~U(2023-05-03 20:12:00.000000Z),
         end_date: ~U(2023-05-03 21:10:30.000000Z)
       )
 
-      RecordingsFixtures.run_fixture(
-        device_id: device.id,
+      RecordingsFixtures.run_fixture(device,
         start_date: ~U(2023-05-10 08:52:00.000000Z),
         end_date: ~U(2023-05-15 12:45:30.000000Z),
         active: true
@@ -76,7 +73,7 @@ defmodule ExNVRWeb.API.RecordingControllerTest do
       content = Random.Elixir.random_bytes(20)
       File.write!(file_path, content)
 
-      recording = RecordingsFixtures.recording_fixture(device_id: device.id, path: file_path)
+      recording = RecordingsFixtures.recording_fixture(device, path: file_path)
 
       response =
         conn
