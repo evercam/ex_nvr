@@ -45,7 +45,7 @@ RUN cd apps/ex_nvr_web && mix assets.deploy
 RUN mix do compile, release
 
 # prepare release image
-FROM alpine:3.18.0 AS app
+FROM alpine:3.17.0 AS app
 
 # install runtime dependencies
 RUN \
