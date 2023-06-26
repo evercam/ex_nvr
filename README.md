@@ -11,12 +11,12 @@ docker run --rm -it -p 4000:4000 --env-file .env ghcr.io/evercam/ex_nvr:latest
 
 Or create a new image using the Dockerfile. Run the following command from the root folder of the project
 ```bash
-docker build -t ex_nvr:0.1.0 .
+docker build -t ex_nvr:custom .
 ```
 
-This will create an image `ex_nvr` with `0.1.0` tag. To run it, issue this command:
+This will create an image `ex_nvr` with `custom` tag. To run it, issue this command:
 ```bash
-docker run --rm -it -p 4000:4000 --env-file .env ex_nvr:0.1.0
+docker run --rm -it -p 4000:4000 --env-file .env ex_nvr:custom
 ```
 
 Note that this command needs some environment variables defined in the `.env` file. The list of environment 
