@@ -25,48 +25,36 @@ defmodule ExNVR.Pipelines.SnapshotTest do
     %{device: device, recording: recording}
   end
 
-  test "Snapshot is created from the video", %{
-    device: device,
-    recording: recording,
-    tmp_dir: tmp_dir
-  } do
-    image_dest = Path.join(tmp_dir, "image")
-    pid = prepare_pipeline(device, recording, image_dest)
+  test "Snapshot is created from the video", %{device: device, recording: recording} do
+    pid = prepare_pipeline(device, recording)
 
-    assert_end_of_stream(pid, :sink, :input, 5_000)
-
-    assert File.exists?(image_dest <> "_0.jpeg")
-
+    assert_pipeline_notified(pid, :sink, {:snapshot, snapshot})
     Testing.Pipeline.terminate(pid, blocking: true)
+
+    assert_receive {:snapshot, ^snapshot}, 1_000, "No snapshot received"
   end
 
-  test "PNG Snapshot is created from the video", %{
-    device: device,
-    recording: recording,
-    tmp_dir: tmp_dir
-  } do
-    image_dest = Path.join(tmp_dir, "image")
-    pid = prepare_pipeline(device, recording, image_dest, format: :png)
+  test "PNG Snapshot is created from the video", %{device: device, recording: recording} do
+    pid = prepare_pipeline(device, recording, format: :png)
 
-    assert_end_of_stream(pid, :sink, :input, 5_000)
+    assert_pipeline_notified(pid, :sink, {:snapshot, snapshot})
+    Testing.Pipeline.terminate(pid)
 
-    assert File.exists?(image_dest <> "_0.png")
-
-    Testing.Pipeline.terminate(pid, blocking: true)
+    assert_receive {:snapshot, ^snapshot}, 1_000, "No snapshot received"
   end
 
-  defp prepare_pipeline(device, recording, image_destination, options \\ []) do
+  defp prepare_pipeline(device, recording, options \\ []) do
     options = [
       module: ExNVR.Pipelines.Snapshot,
       custom_args:
         [
           device_id: device.id,
           date: DateTime.add(recording.start_date, 3),
-          destination: image_destination
+          caller: self()
         ]
         |> Keyword.merge(options)
     ]
 
-    Testing.Pipeline.start_link_supervised!(options)
+    Testing.Pipeline.start_supervised!(options)
   end
 end
