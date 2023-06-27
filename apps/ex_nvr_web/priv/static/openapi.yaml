@@ -265,19 +265,22 @@ paths:
             application/vnd.apple.mpegurl:
               schema:
                 type: string
-  /api/devices/{device_id}/picture:
+  /api/devices/{device_id}/snapshot:
     get:
-      summary: Get picture
+      summary: Get snapshot
       description: |
-        Get a snapshot from the recorded video
-      operationId: getPicture
+        Get a snapshot from live feed or the recorded videos
+      operationId: getSnapshot
       tags:
         - Media Streaming
       parameters:
         - $ref: '#/components/parameters/device_id'
         - name: time
-          required: true
-          description: Timestamp of the requested snapshot
+          required: false
+          description: |
+            Timestamp of the requested snapshot.
+
+            A missing or `null` value means `now`, the latest snapshot from the live feed. 
           schema:
             type: string
             format: date-time

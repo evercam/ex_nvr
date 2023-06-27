@@ -8,7 +8,7 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
   require Logger
 
   alias Ecto.Changeset
-  alias ExNVR.Pipelines.HlsPlayback
+  alias ExNVR.Pipelines.{HlsPlayback, Snapshot}
   alias ExNVR.Utils
 
   @type return_t :: Plug.Conn.t() | {:error, Changeset.t()}
@@ -44,32 +44,58 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
     send_file(conn, 200, Path.join([Utils.hls_dir(conn.assigns.device.id), id, segment_name]))
   end
 
-  @spec picture(Plug.Conn.t(), map()) :: return_t()
-  def picture(conn, params) do
+  @spec snapshot(Plug.Conn.t(), map()) :: return_t()
+  def snapshot(conn, params) do
+    with {:ok, params} <- validate_snapshot_req_params(params) do
+      if params.time do
+        serve_snapshot_from_recorded_videos(conn, params)
+      else
+        serve_live_snapshot(conn, params)
+      end
+    end
+  end
+
+  defp serve_live_snapshot(conn, params) do
     device = conn.assigns.device
 
-    with {:ok, params} <- validate_picture_req_params(params),
-         {:empty, false} <-
-           {:empty,
-            ExNVR.Recordings.get_recordings_between(device.id, params.time, params.time) == []} do
-      ExNVR.Pipelines.Snapshot.start(
-        device_id: device.id,
-        date: params.time,
-        format: params.format,
-        method: params.method
-      )
+    case device.state do
+      :recording ->
+        {:ok, snapshot} = ExNVR.Pipeline.live_snapshot(device, params.format)
 
-      receive do
-        {:picture, picture} ->
-          conn
-          |> put_resp_content_type("image/#{params.format}")
-          |> send_resp(:ok, picture)
-      after
-        5_000 -> {:error, :not_found}
-      end
-    else
-      {:error, changeset} -> {:error, changeset}
-      {:empty, true} -> {:error, :not_found}
+        conn
+        |> put_resp_content_type("image/#{params.format}")
+        |> send_resp(:ok, snapshot)
+
+      _ ->
+        {:error, :not_found}
+    end
+  end
+
+  defp serve_snapshot_from_recorded_videos(conn, params) do
+    device = conn.assigns.device
+
+    case ExNVR.Recordings.get_recordings_between(device.id, params.time, params.time) do
+      [] ->
+        {:error, :not_found}
+
+      _ ->
+        options = [
+          device_id: device.id,
+          date: params.time,
+          method: params.method,
+          format: params.format
+        ]
+
+        Snapshot.start_link(options)
+
+        receive do
+          {:snapshot, snapshot} ->
+            conn
+            |> put_resp_content_type("image/#{params.format}")
+            |> send_resp(:ok, snapshot)
+        after
+          10_000 -> {:error, :not_found}
+        end
     end
   end
 
@@ -82,16 +108,15 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
     |> Changeset.apply_action(:create)
   end
 
-  defp validate_picture_req_params(params) do
+  defp validate_snapshot_req_params(params) do
     types = %{
       time: :utc_datetime,
       method: {:parameterized, Ecto.Enum, Ecto.Enum.init(values: ~w(before precise)a)},
       format: {:parameterized, Ecto.Enum, Ecto.Enum.init(values: ~w(jpeg png)a)}
     }
 
-    {%{method: :before, format: :jpeg}, types}
+    {%{method: :before, format: :jpeg, time: nil}, types}
     |> Changeset.cast(params, Map.keys(types))
-    |> Changeset.validate_required([:time])
     |> Changeset.apply_action(:create)
   end
 

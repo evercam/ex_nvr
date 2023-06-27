@@ -3,7 +3,7 @@ defmodule ExNVRWeb.API.DeviceStreamingControllerTest do
 
   use ExNVRWeb.ConnCase
 
-  import ExNVR.{AccountsFixtures, RecordingsFixtures}
+  import ExNVR.{AccountsFixtures, DevicesFixtures, RecordingsFixtures}
 
   @moduletag :tmp_dir
   @moduletag :device
@@ -83,7 +83,7 @@ defmodule ExNVRWeb.API.DeviceStreamingControllerTest do
     end
   end
 
-  describe "GET /api/devices/:device_id/picture" do
+  describe "GET /api/devices/:device_id/snapshot" do
     setup %{device: device} do
       recording =
         recording_fixture(device, %{
@@ -94,8 +94,8 @@ defmodule ExNVRWeb.API.DeviceStreamingControllerTest do
       %{recording: recording}
     end
 
-    test "Get picture", %{conn: conn, device: device, recording: recording} do
-      conn = get(conn, "/api/devices/#{device.id}/picture?time=#{recording.start_date}")
+    test "Get snapshot from recorded videos", %{conn: conn, device: device, recording: recording} do
+      conn = get(conn, "/api/devices/#{device.id}/snapshot?time=#{recording.start_date}")
 
       assert conn.status == 200
       assert get_resp_header(conn, "content-type") == ["image/jpeg; charset=utf-8"]
@@ -103,7 +103,15 @@ defmodule ExNVRWeb.API.DeviceStreamingControllerTest do
 
     test "Returns 404 if there's no recording", %{conn: conn, device: device} do
       conn
-      |> get("/api/devices/#{device.id}/picture?time=#{DateTime.utc_now()}")
+      |> get("/api/devices/#{device.id}/snapshot?time=#{DateTime.utc_now()}")
+      |> response(404)
+    end
+
+    test "Returns 404 if the device is not recording when requesting live snapshot", %{conn: conn} do
+      device = device_fixture(%{state: :failed})
+
+      conn
+      |> get("/api/devices/#{device.id}/snapshot")
       |> response(404)
     end
   end
