@@ -39,7 +39,7 @@ defmodule ExNVR.Elements.SnapshotBin do
     spec = [
       bin_input(pad)
       |> child({:decoder, ref}, Membrane.H264.FFmpeg.Decoder)
-      |> child({:filter, ref}, %ExNVR.Elements.FirstOrLast{allow: pad.options[:rank]})
+      |> child({:filter, ref}, %ExNVR.Elements.FirstOrLast{allow: ctx.options[:rank]})
       |> child({:sink, ref}, %ExNVR.Elements.Image{
         destination: self(),
         format: ctx.options[:format]
