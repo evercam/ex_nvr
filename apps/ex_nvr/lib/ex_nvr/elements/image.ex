@@ -17,9 +17,9 @@ defmodule ExNVR.Elements.Image do
     availability: :always
 
   def_options destination: [
-                spec: binary() | {module(), atom(), list()},
+                spec: binary() | {module(), atom(), list()} | pid(),
                 description: """
-                The destination of the image, may be a file name or
+                The destination of the image, may be a file name, a pid or
                 a {module, fun, args} tuple.
 
                 If the value is a binary (filename), the files are generated using
@@ -66,6 +66,10 @@ defmodule ExNVR.Elements.Image do
     case state.destination do
       {module, fun, args} ->
         apply(module, fun, [Image.write!(image, :memory, suffix: ".#{state.format}")] ++ args)
+        {[], state}
+
+      pid when is_pid(pid) ->
+        send(pid, {:snapshot, Image.write!(image, :memory, suffix: ".#{state.format}")})
         {[], state}
 
       _ ->
