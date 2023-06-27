@@ -56,12 +56,7 @@ defmodule ExNVRWeb.DashboardLive do
         </div>
 
         <div :if={@live_view_enabled?} class="relative">
-          <video
-            id="live-video"
-            class="my-4 w-full h-auto dark:bg-gray-500"
-            autoplay
-            muted
-          />
+          <video id="live-video" class="my-4 w-full h-auto dark:bg-gray-500" autoplay muted />
 
           <div id="loader" role="status" class="absolute top-2/4 left-1/2">
             <svg
@@ -227,7 +222,7 @@ defmodule ExNVRWeb.DashboardLive do
       ~p"/api/devices/#{device.id}/hls/index.m3u8?#{%{pos: format_date(datetime), stream: current_stream}}"
 
     if datetime do
-      poster_url = ~p"/api/devices/#{device.id}/picture?#{%{time: format_date(datetime)}}"
+      poster_url = ~p"/api/devices/#{device.id}/snapshot?#{%{time: format_date(datetime)}}"
       {stream_url, poster_url}
     else
       {stream_url, nil}

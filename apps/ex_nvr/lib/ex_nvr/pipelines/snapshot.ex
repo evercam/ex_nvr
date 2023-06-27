@@ -10,26 +10,12 @@ defmodule ExNVR.Pipelines.Snapshot do
   alias ExNVR.Elements.MP4
 
   def start_link(options) do
-    Pipeline.start_link(__MODULE__, add_caller_pid(options))
-  end
-
-  def start(options) do
-    Pipeline.start(__MODULE__, add_caller_pid(options))
-  end
-
-  defp add_caller_pid(options) do
-    Keyword.put(options, :caller, self())
+    Pipeline.start_link(__MODULE__, Keyword.put(options, :caller, self()))
   end
 
   @impl true
   def handle_init(_ctx, options) do
-    allow_option =
-      case options[:method] do
-        :precise -> :last
-        _ -> :first
-      end
-
-    default_dest = {__MODULE__, :receive_picture, [options[:caller]]}
+    rank = if options[:method] == :precise, do: :last, else: :first
 
     spec = [
       child(:source, %MP4.Depayloader{
@@ -38,28 +24,18 @@ defmodule ExNVR.Pipelines.Snapshot do
         end_date: options[:date]
       })
       |> child(:parser, H264.Parser)
-      |> child(:decoder, H264.FFmpeg.Decoder)
-      |> child(:scissor, %Elements.FirstOrLast{allow: allow_option})
-      |> child(:sink, %Elements.Image{
-        destination: options[:destination] || default_dest,
-        format: options[:format] || :jpeg
-      })
+      |> via_in(Pad.ref(:input, make_ref()),
+        options: [format: options[:format] || :jpeg, rank: rank]
+      )
+      |> child(:sink, Elements.SnapshotBin)
     ]
 
-    {[spec: spec, playback: :playing], %{}}
+    {[spec: spec, playback: :playing], %{caller: options[:caller]}}
   end
 
   @impl true
-  def handle_element_end_of_stream(:sink, _pad, _ctx, state) do
-    {[terminate: :normal], state}
-  end
-
-  @impl true
-  def handle_element_end_of_stream(_element, _pad, _ctx, state) do
-    {[], state}
-  end
-
-  def receive_picture(picture, caller) do
-    send(caller, {:picture, picture})
+  def handle_child_notification({:snapshot, snapshot}, :sink, _ctx, state) do
+    send(state.caller, {:snapshot, snapshot})
+    {[terminate: :shutdown], %{state | caller: nil}}
   end
 end

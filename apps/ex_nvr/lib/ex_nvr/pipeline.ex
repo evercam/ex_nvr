@@ -11,6 +11,10 @@ defmodule ExNVR.Pipeline do
     * The new RTP stream is linked to a storage bin, which is responsible for chunking and storing the video footage, it emits a new
     notifcation to the parent each time a new segment starts/ends.
 
+  In addition to the storage, this pipeline does additional tasks:
+    * Creating HLS playlists from the main/sub stream
+    * Capture live snapshots on request
+
   ## Limitations
 
   There's some limitation on the pipeline working, the pipeline supports:
@@ -59,6 +63,7 @@ defmodule ExNVR.Pipeline do
     `sub_stream_video_track` - Media description of the sub stream got from calling DESCRIBE method on the RTSP uri
     `segment_duration` - The duration of each video chunk saved by the storage bin.
     `supervisor_pid` - The supervisor pid of this pipeline (needed to stop a pipeline)
+    `live_snapshot_waiting_pids` - List of pid waiting for live snapshot request to be completed
 
     """
     @type t :: %__MODULE__{
@@ -66,7 +71,8 @@ defmodule ExNVR.Pipeline do
             video_track: ExNVR.MediaTrack.t(),
             sub_stream_video_track: ExNVR.MediaTrack.t(),
             segment_duration: non_neg_integer(),
-            supervisor_pid: pid()
+            supervisor_pid: pid(),
+            live_snapshot_waiting_pids: list()
           }
 
     @enforce_keys [:device]
@@ -76,7 +82,8 @@ defmodule ExNVR.Pipeline do
                   segment_duration: @default_segment_duration,
                   video_track: nil,
                   sub_stream_video_track: nil,
-                  supervisor_pid: nil
+                  supervisor_pid: nil,
+                  live_snapshot_waiting_pids: []
                 ]
   end
 
@@ -92,6 +99,13 @@ defmodule ExNVR.Pipeline do
 
   def supervisor(device) do
     Pipeline.call(pipeline_name(device), :pipeline_supervisor)
+  end
+
+  @doc """
+  Get a live snapshot
+  """
+  def live_snapshot(device, image_format) do
+    Pipeline.call(pipeline_name(device), {:live_snapshot, image_format})
   end
 
   @impl true
@@ -113,7 +127,8 @@ defmodule ExNVR.Pipeline do
     spec =
       [
         child(:rtsp_source, %Source{stream_uri: stream_uri}),
-        {child(:hls_sink, hls_sink, get_if_exists: true), crash_group: {"hls", :temporary}}
+        {child(:hls_sink, hls_sink, get_if_exists: true), crash_group: {"hls", :temporary}},
+        child(:snapshooter, ExNVR.Elements.SnapshotBin)
       ] ++
         if sub_stream_uri,
           do: [child({:rtsp_source, :sub_stream}, %Source{stream_uri: sub_stream_uri})],
@@ -192,7 +207,10 @@ defmodule ExNVR.Pipeline do
       get_child({:tee, ref})
       |> via_out(:copy)
       |> via_in(Pad.ref(:input, :main_stream))
-      |> get_child(:hls_sink)
+      |> get_child(:hls_sink),
+      get_child({:tee, ref})
+      |> via_out(:copy)
+      |> child({:cvs_bufferer, ref}, ExNVR.Elements.CVSBufferer)
     ]
 
     {[spec: spec], state}
@@ -217,6 +235,13 @@ defmodule ExNVR.Pipeline do
   end
 
   @impl true
+  def handle_child_notification({:snapshot, snapshot}, _element, _ctx, state) do
+    state.live_snapshot_waiting_pids
+    |> Enum.map(&{:reply_to, {&1, {:ok, snapshot}}})
+    |> then(&{&1, %{state | live_snapshot_waiting_pids: []}})
+  end
+
+  @impl true
   def handle_child_notification(_notification, _element, _ctx, state) do
     {[], state}
   end
@@ -235,6 +260,18 @@ defmodule ExNVR.Pipeline do
   @impl true
   def handle_call(:pipeline_supervisor, _ctx, state) do
     {[reply: state.supervisor_pid], state}
+  end
+
+  @impl true
+  def handle_call({:live_snapshot, image_format}, ctx, state) do
+    case state.live_snapshot_waiting_pids do
+      [] ->
+        {[spec: link_live_snapshot_elements(ctx, image_format)],
+         %{state | live_snapshot_waiting_pids: [ctx.from]}}
+
+      pids ->
+        {[], %{state | live_snapshot_waiting_pids: [ctx.from | pids]}}
+    end
   end
 
   def handle_terminate_request(_ctx, state) do
@@ -271,6 +308,22 @@ defmodule ExNVR.Pipeline do
     ]
 
     {[spec: spec], %State{state | sub_stream_video_track: video_track}}
+  end
+
+  defp link_live_snapshot_elements(ctx, image_format) do
+    ref = make_ref()
+
+    cvs_bufferer =
+      ctx.children
+      |> Map.keys()
+      |> Enum.find(&(is_tuple(&1) and elem(&1, 0) == :cvs_bufferer))
+
+    [
+      get_child(cvs_bufferer)
+      |> via_out(Pad.ref(:output, ref))
+      |> via_in(Pad.ref(:input, ref), options: [format: image_format])
+      |> get_child(:snapshooter)
+    ]
   end
 
   defp pipeline_name(%{id: device_id}), do: :"pipeline_#{device_id}"
