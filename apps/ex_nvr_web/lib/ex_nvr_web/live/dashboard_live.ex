@@ -1,8 +1,11 @@
 defmodule ExNVRWeb.DashboardLive do
   use ExNVRWeb, :live_view
+  import ExNVRWeb.TimelineComponent
 
   alias ExNVR.Devices
+  alias ExNVR.Recordings
   alias ExNVR.Model.Device
+  alias ExNVR.Repo
 
   def render(assigns) do
     ~H"""
@@ -51,31 +54,37 @@ defmodule ExNVRWeb.DashboardLive do
           </div>
         </div>
 
-        <div :if={not @live_view_enabled?} class="mt-10 text-lg text-center dark:text-gray-200">
-          Device is not recording, live view is not available
-        </div>
-
-        <div :if={@live_view_enabled?} class="relative">
-          <video id="live-video" class="my-4 w-full h-auto dark:bg-gray-500" autoplay muted />
-
-          <div id="loader" role="status" class="absolute top-2/4 left-1/2">
-            <svg
-              aria-hidden="true"
-              class="w-8 h-8 mr-2 text-gray-200 animate-spin dark:text-gray-600 fill-blue-600"
-              viewBox="0 0 100 101"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M100 50.5908C100 78.2051 77.6142 100.591 50 100.591C22.3858 100.591 0 78.2051 0 50.5908C0 22.9766 22.3858 0.59082 50 0.59082C77.6142 0.59082 100 22.9766 100 50.5908ZM9.08144 50.5908C9.08144 73.1895 27.4013 91.5094 50 91.5094C72.5987 91.5094 90.9186 73.1895 90.9186 50.5908C90.9186 27.9921 72.5987 9.67226 50 9.67226C27.4013 9.67226 9.08144 27.9921 9.08144 50.5908Z"
-                fill="currentColor"
-              /><path
-                d="M93.9676 39.0409C96.393 38.4038 97.8624 35.9116 97.0079 33.5539C95.2932 28.8227 92.871 24.3692 89.8167 20.348C85.8452 15.1192 80.8826 10.7238 75.2124 7.41289C69.5422 4.10194 63.2754 1.94025 56.7698 1.05124C51.7666 0.367541 46.6976 0.446843 41.7345 1.27873C39.2613 1.69328 37.813 4.19778 38.4501 6.62326C39.0873 9.04874 41.5694 10.4717 44.0505 10.1071C47.8511 9.54855 51.7191 9.52689 55.5402 10.0491C60.8642 10.7766 65.9928 12.5457 70.6331 15.2552C75.2735 17.9648 79.3347 21.5619 82.5849 25.841C84.9175 28.9121 86.7997 32.2913 88.1811 35.8758C89.083 38.2158 91.5421 39.6781 93.9676 39.0409Z"
-                fill="currentFill"
-              />
-            </svg>
-            <span class="sr-only">Loading...</span>
+        <div class="relative mt-4">
+          <div :if={@live_view_enabled?} class="relative">
+            <video
+              id="live-video"
+              class="w-full h-auto dark:bg-gray-500 rounded-tr rounded-tl"
+              autoplay
+              muted
+            />
+            <div id="loader" role="status" class="absolute top-2/4 left-1/2">
+              <svg
+                aria-hidden="true"
+                class="w-8 h-8 mr-2 text-gray-200 animate-spin dark:text-gray-600 fill-blue-600"
+                viewBox="0 0 100 101"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M100 50.5908C100 78.2051 77.6142 100.591 50 100.591C22.3858 100.591 0 78.2051 0 50.5908C0 22.9766 22.3858 0.59082 50 0.59082C77.6142 0.59082 100 22.9766 100 50.5908ZM9.08144 50.5908C9.08144 73.1895 27.4013 91.5094 50 91.5094C72.5987 91.5094 90.9186 73.1895 90.9186 50.5908C90.9186 27.9921 72.5987 9.67226 50 9.67226C27.4013 9.67226 9.08144 27.9921 9.08144 50.5908Z"
+                  fill="currentColor"
+                /><path
+                  d="M93.9676 39.0409C96.393 38.4038 97.8624 35.9116 97.0079 33.5539C95.2932 28.8227 92.871 24.3692 89.8167 20.348C85.8452 15.1192 80.8826 10.7238 75.2124 7.41289C69.5422 4.10194 63.2754 1.94025 56.7698 1.05124C51.7666 0.367541 46.6976 0.446843 41.7345 1.27873C39.2613 1.69328 37.813 4.19778 38.4501 6.62326C39.0873 9.04874 41.5694 10.4717 44.0505 10.1071C47.8511 9.54855 51.7191 9.52689 55.5402 10.0491C60.8642 10.7766 65.9928 12.5457 70.6331 15.2552C75.2735 17.9648 79.3347 21.5619 82.5849 25.841C84.9175 28.9121 86.7997 32.2913 88.1811 35.8758C89.083 38.2158 91.5421 39.6781 93.9676 39.0409Z"
+                  fill="currentFill"
+                />
+              </svg>
+              <span class="sr-only">Loading...</span>
+            </div>
           </div>
+          <div :if={not @live_view_enabled?}  class="relative text-lg rounded-tr rounded-tl text-center dark:text-gray-200 mt-4 w-full h-auto dark:bg-gray-500 h-96 flex justify-center items-center d-flex">
+            Device is not recording, live view is not available
+          </div>
+          <.timeline segments={@segments} />
         </div>
       </div>
     </div>
@@ -91,6 +100,7 @@ defmodule ExNVRWeb.DashboardLive do
       |> assign_form(nil)
       |> assign_start_date(nil)
       |> live_view_enabled?()
+      |> assign_recordings()
       |> maybe_push_stream_event(nil)
 
     {:ok, assign(socket, start_date: nil)}
@@ -105,6 +115,7 @@ defmodule ExNVRWeb.DashboardLive do
       |> assign_streams()
       |> assign_form(nil)
       |> live_view_enabled?()
+      |> assign_recordings()
       |> maybe_push_stream_event(socket.assigns.start_date)
 
     {:noreply, socket}
@@ -162,6 +173,17 @@ defmodule ExNVRWeb.DashboardLive do
       end
 
     assign(socket, supported_streams: supported_streams)
+  end
+
+  defp assign_recordings(%{assigns: %{current_device: nil}} = socket), do: socket
+
+  defp assign_recordings(socket) do
+    device = socket.assigns.current_device
+    segments = Recordings.index(device.id)
+    |> Enum.map(&Map.take(&1, [:start_date, :end_date]))
+    |> Jason.encode!()
+
+    assign(socket, segments: segments)
   end
 
   defp assign_form(%{assigns: %{current_device: nil}} = socket, _params), do: socket

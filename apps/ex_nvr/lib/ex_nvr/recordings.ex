@@ -30,6 +30,14 @@ defmodule ExNVR.Recordings do
     end
   end
 
+  @spec index(binary()) :: [
+          Recording.t()
+        ]
+  def index(device_id) do
+    Recording.with_device(device_id)
+    |> Repo.all()
+  end
+
   @spec get_recordings_between(binary(), DateTime.t(), DateTime.t(), Keyword.t()) :: [
           Recording.t()
         ]
