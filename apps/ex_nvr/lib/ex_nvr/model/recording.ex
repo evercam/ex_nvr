@@ -25,7 +25,7 @@ defmodule ExNVR.Model.Recording do
   end
 
   def between_dates(query \\ __MODULE__, start_date, end_date, opts) do
-    where(query, [r], r.start_date <= ^end_date and r.end_date >= ^start_date)
+    where(query, [r], r.start_date <= ^end_date and r.end_date > ^start_date)
     |> limit(^(opts[:limit] || 50))
     |> order_by(asc: :start_date)
   end
