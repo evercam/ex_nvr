@@ -19,7 +19,7 @@ defmodule ExNVR.Pipelines.VideoAssembler do
     spec = [
       child(:source, struct(Elements.MP4.Depayloader, options))
       |> child(:parser, %Membrane.H264.Parser{framerate: {0, 0}})
-      |> child(:paylaoder, Membrane.MP4.Payloader.H264)
+      |> child(:paylaoder, %Membrane.MP4.Payloader.H264{parameters_in_band?: true})
       |> via_in(Pad.ref(:input, :video_track))
       |> child(:muxer, Membrane.MP4.Muxer.ISOM)
       |> child(:sink, %Membrane.File.Sink{
