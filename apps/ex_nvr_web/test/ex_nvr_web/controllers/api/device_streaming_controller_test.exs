@@ -145,7 +145,7 @@ defmodule ExNVRWeb.API.DeviceStreamingControllerTest do
       conn = get(conn, "/api/devices/#{device.id}/footage", params)
 
       assert conn.status == 200
-      assert get_resp_header(conn, "content-type") == ["video/mp4; charset=utf-8"]
+      assert get_resp_header(conn, "content-type") == ["video/mp4"]
     end
 
     test "Bad request: duration or end date should be provided", %{conn: conn, device: device} do

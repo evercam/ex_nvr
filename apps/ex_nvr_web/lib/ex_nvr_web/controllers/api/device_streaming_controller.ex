@@ -72,10 +72,10 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
 
       receive do
         {:DOWN, _ref, :process, ^pipeline_sup, _reason} ->
-          conn
-          |> put_resp_content_type("video/mp4")
-          |> put_resp_header("content-disposition", "attachment; filename=#{device.id}.mp4")
-          |> send_file(:ok, destination)
+          send_download(conn, {:file, destination},
+            content_type: "video/mp4",
+            filename: "#{device.id}.mp4"
+          )
       after
         30_000 -> {:error, :not_found}
       end
