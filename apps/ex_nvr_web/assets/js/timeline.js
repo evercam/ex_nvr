@@ -1,6 +1,33 @@
 import * as d3 from "d3"
 
 const DAY = 86_400_000
+let timelineState = {}
+
+function drawSegments(svg, segments, x) {
+    svg.selectAll("rect").remove();
+    segments.forEach(({ start_date, end_date }) => {
+        svg
+            .append("rect")
+            .datum({ start_date, end_date })
+            .attr("x", x(start_date))
+            .attr("y", 0)
+            .attr("width", x(end_date) - x(start_date))
+            .attr("height", 45)
+            .style("fill", "#53d700")
+    });
+}
+
+export function updateTimelineSegments(element) {
+    const timeline = element.querySelector("#timeline");
+    const segments = JSON.parse(timeline.dataset.segments).map(
+        ({ start_date, end_date }) => ({
+            start_date: new Date(start_date),
+            end_date: new Date(end_date),
+        })
+    )
+
+    drawSegments(timelineState.svg, segments, timelineState.x);
+}
 
 export default function createTimeline(element) {
     let isMouseDown = false
@@ -29,6 +56,7 @@ export default function createTimeline(element) {
             d3.max([...segments, {end_date: defaultMaxDate}], (d) => d.end_date),
         ])
         .range([0, width])
+    timelineState.x = x
     const x2 = x.copy()
 
     const xAxis = d3
@@ -55,18 +83,9 @@ export default function createTimeline(element) {
         .attr("width", width)
         .attr("height", 100)
         .call(d3.zoom().on("zoom", handleZoom).scaleExtent([1, 50]))
+    timelineState.svg = svg
 
-
-    segments.forEach(({ start_date, end_date }) => {
-        svg
-            .append("rect")
-            .datum({ start_date, end_date })
-            .attr("x", x(start_date))
-            .attr("y", 0)
-            .attr("width", x(end_date) - x(start_date))
-            .attr("height", 45)
-            .style("fill", "#53d700")
-    })
+    updateTimelineSegments(element)
 
     svg
         .append("g")
@@ -100,7 +119,15 @@ export default function createTimeline(element) {
     svg.on("click", function (event) {
         const [mouseX, _] = d3.pointer(event, this)
         const date = x.invert(mouseX)
-        window.TimelineHook.pushEvent("datetime", {value: date})
+        const datePart = new Intl.DateTimeFormat("en-CA").format(date);
+        const timePart = new Intl.DateTimeFormat('en', {
+            hour: '2-digit',
+            minute: '2-digit',
+            timeZone: timeline.dataset.timezone || "Europe/Dublin",
+            hour12: false
+        }).format(date)
+
+        window.TimelineHook.pushEvent("datetime", {value: `${datePart}T${timePart}`})
     })
 
     svg.on("mouseleave", () => {

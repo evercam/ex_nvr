@@ -21,7 +21,7 @@ import "phoenix_html"
 import {Socket} from "phoenix"
 import {LiveSocket} from "phoenix_live_view"
 import topbar from "../vendor/topbar"
-import createTimeline from "./timeline"
+import createTimeline, {updateTimelineSegments} from "./timeline"
 import "flowbite/dist/flowbite.phoenix"
 import Hls from "hls.js"
 
@@ -35,7 +35,7 @@ let Hooks = {
             window.TimelineHook = this
         },
         updated() {
-            createTimeline(this.el)
+            updateTimelineSegments(this.el)
         }
     }
 }

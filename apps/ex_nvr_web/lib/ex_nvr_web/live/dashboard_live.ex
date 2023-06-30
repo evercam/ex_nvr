@@ -1,6 +1,6 @@
 defmodule ExNVRWeb.DashboardLive do
   use ExNVRWeb, :live_view
-  import ExNVRWeb.TimelineComponent
+  alias ExNVRWeb.TimelineComponent
 
   alias ExNVR.Devices
   alias ExNVR.Recordings
@@ -81,10 +81,10 @@ defmodule ExNVRWeb.DashboardLive do
               <span class="sr-only">Loading...</span>
             </div>
           </div>
-          <div :if={not @live_view_enabled?}  class="relative text-lg rounded-tr rounded-tl text-center dark:text-gray-200 mt-4 w-full h-auto dark:bg-gray-500 h-96 flex justify-center items-center d-flex">
+          <div :if={not @live_view_enabled?}  class="relative text-lg rounded-tr rounded-tl text-center dark:text-gray-200 mt-4 w-full dark:bg-gray-500 h-96 flex justify-center items-center d-flex">
             Device is not recording, live view is not available
           </div>
-          <.timeline segments={@segments} />
+          <.live_component module={TimelineComponent} id="tl" segments={@segments} timezone={@timezone} />
         </div>
       </div>
     </div>
@@ -101,6 +101,7 @@ defmodule ExNVRWeb.DashboardLive do
       |> assign_start_date(nil)
       |> live_view_enabled?()
       |> assign_recordings()
+      |> assign_timezone()
       |> maybe_push_stream_event(nil)
 
     {:ok, assign(socket, start_date: nil)}
@@ -116,6 +117,7 @@ defmodule ExNVRWeb.DashboardLive do
       |> assign_form(nil)
       |> live_view_enabled?()
       |> assign_recordings()
+      |> assign_timezone()
       |> maybe_push_stream_event(socket.assigns.start_date)
 
     {:noreply, socket}
@@ -184,6 +186,12 @@ defmodule ExNVRWeb.DashboardLive do
     |> Jason.encode!()
 
     assign(socket, segments: segments)
+  end
+
+  defp assign_timezone(%{assigns: %{current_device: nil}} = socket), do: socket
+
+  defp assign_timezone(socket) do
+    assign(socket, timezone: socket.assigns.current_device.timezone)
   end
 
   defp assign_form(%{assigns: %{current_device: nil}} = socket, _params), do: socket
