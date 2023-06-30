@@ -5,7 +5,6 @@ defmodule ExNVRWeb.DashboardLive do
   alias ExNVR.Devices
   alias ExNVR.Recordings
   alias ExNVR.Model.Device
-  alias ExNVR.Repo
 
   def render(assigns) do
     ~H"""
