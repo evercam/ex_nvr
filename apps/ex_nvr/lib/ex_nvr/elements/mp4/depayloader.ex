@@ -167,9 +167,10 @@ defmodule ExNVR.Elements.MP4.Depayloader do
           &%Buffer{&1 | dts: &1.dts - first_dts, pts: &1.pts - first_dts}
         )
 
-      # we add the time diff to the duration since that diff are included
-      # just because we need to start from a keyframe
-      duration = if state.duration > 0, do: state.duration + time_diff, else: 0
+      # Since we start from the nearest keyframe before the provided start date
+      # we'll add the duration offset between the provided start date and the real start date
+      duration_offset = last_dts - first_dts
+      duration = if state.duration > 0, do: state.duration + duration_offset, else: 0
 
       {[buffer: {:output, buffers}],
        %{
