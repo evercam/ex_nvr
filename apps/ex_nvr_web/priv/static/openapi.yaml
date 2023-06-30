@@ -318,6 +318,81 @@ paths:
                 format: byte
         '400':
           $ref: '#/components/responses/NotFound'
+  /api/devices/{device_id}/footage:
+    get:
+      summary: Download video footage
+      description: |
+        Download footages in the `mp4` format up to a maximum of 2 hours.
+
+        ### Duration and End date
+        
+        In addition to the query parameter `start_date` which is required, either `end_date` 
+        or `duration` should be provided.
+
+        If the `end_date` is provided, the total time between `start_date` and `end_date` should be within 
+        2 hours.
+
+        ### Downloaded Footage Start Date
+        
+        Note that for this endpoint to be efficient, there's no transcoding done 
+        to the recorded footage. So the start date of the downloaded video may not
+        be the same as the requested one through `start_date` since we need to 
+        start the footage from the nearest keyframe before the provided start date.
+
+        ### Recording Discontinuity
+
+        A discontinuity in the recorded videos may be present due to several reasons (e.g. lost 
+        connection to the camera, NVR reboot, ...etc.). In this case the video duration may not be 
+        the one expected.
+
+        In the case `end_date` is provided, the interval between `start_date` and `end_date` will be greater
+        or equal to the duration of the downloaded video
+
+        In the case `duration` is provided, the end date reported in the downloaded video may be far from 
+        the `start_date + duration`.
+      operationId: downloadFootage
+      tags:
+        - Media Streaming
+      parameters:
+        - $ref: '#/components/parameters/device_id'
+        - name: start_date
+          required: true
+          description: |
+            Start date of the footage.
+          schema:
+            type: string
+            format: date-time
+        - name: end_date
+          required: false
+          description: |
+            The end date of the footage.
+
+            If `end_date` and `duration` is provided, the first condition
+            that's met will end the video footage.
+          schema:
+            type: string
+            format: date-time
+        - name: duration
+          required: false
+          description: | 
+            The duration of the footage in seconds.
+
+            If `end_date` and `duration` is provided, the first condition
+            that's met will end the video footage.
+          schema:
+            type: integer
+            minimum: 5
+            maximum: 7200
+      responses:
+        '200':
+          description: success
+          content:
+            video/mp4:
+              schema:
+                type: string
+                format: byte
+        '400':
+          $ref: '#/components/responses/BadArg'
 components:
   securitySchemes:
     bearerAuth:

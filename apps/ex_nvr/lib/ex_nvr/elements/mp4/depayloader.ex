@@ -34,27 +34,47 @@ defmodule ExNVR.Elements.MP4.Depayloader do
               end_date: [
                 spec: DateTime.t(),
                 default: ~U(2099-01-01 00:00:00Z),
-                description: "The end date of the last access unit to get."
+                description: """
+                The end date of the last access unit to get.
+
+                Note that if this option and `duration` are provided,
+                the first condition that's reached will cause the end
+                of the stream
+                """
+              ],
+              duration: [
+                spec: Membrane.Time.t(),
+                default: 0,
+                description: """
+                The total duration of the recordings to read.
+
+                Once this duration is reached, an end of stream is sent
+                by this element.
+
+                Note that if this option and `end_date` are provided,
+                the first condition that's reached will cause the end
+                of the stream
+                """
               ]
 
   @impl true
   def handle_init(_ctx, options) do
     Membrane.Logger.debug("Initialize the element")
 
-    {[],
-     %{
-       device_id: options.device_id,
-       start_date: options.start_date,
-       end_date: options.end_date,
-       last_recording_date: options.start_date,
-       recordings: [],
-       depayloader: nil,
-       frame_rate: nil,
-       current_dts: 0,
-       last_access_unit_dts: nil,
-       pending_buffers: [],
-       buffer?: true
-     }}
+    state =
+      Map.from_struct(options)
+      |> Map.merge(%{
+        last_recording_date: options.start_date,
+        depayloader: nil,
+        recordings: [],
+        time_base: nil,
+        current_dts: 0,
+        last_access_unit_dts: nil,
+        pending_buffers: [],
+        buffer?: true
+      })
+
+    {[], state}
   end
 
   @impl true
@@ -83,12 +103,12 @@ defmodule ExNVR.Elements.MP4.Depayloader do
     end
   end
 
-  defp map_buffers(%{frame_rate: {frames, seconds}} = state, buffers, dts, pts, keyframes) do
+  defp map_buffers(%{time_base: {ticks, base}} = state, buffers, dts, pts, keyframes) do
     [buffers, dts, pts, keyframes]
     |> Enum.zip()
     |> Enum.map(fn {payload, dts, pts, key_frame?} ->
-      dts = div(dts * seconds * Membrane.Time.second(), frames)
-      pts = div(pts * seconds * Membrane.Time.second(), frames)
+      dts = div(dts * base * Membrane.Time.second(), ticks)
+      pts = div(pts * base * Membrane.Time.second(), ticks)
 
       %Buffer{
         payload: payload,
@@ -120,14 +140,17 @@ defmodule ExNVR.Elements.MP4.Depayloader do
     Membrane.Logger.debug("Open current file: #{hd(state.recordings).filename}")
 
     filename = Path.join(Utils.recording_dir(state.device_id), hd(state.recordings).filename)
-    {depayloader, frame_rate} = Native.open_file!(filename)
+    {depayloader, time_base} = Native.open_file!(filename)
 
-    %{state | depayloader: depayloader, frame_rate: frame_rate}
+    %{state | depayloader: depayloader, time_base: time_base}
   end
 
   defp prepare_buffer_actions(buffers, %{buffer?: true} = state) do
     time_diff =
-      DateTime.diff(state.start_date, hd(state.recordings).start_date) |> Membrane.Time.seconds()
+      state.start_date
+      |> DateTime.diff(hd(state.recordings).start_date)
+      |> Membrane.Time.seconds()
+      |> max(0)
 
     last_dts = List.last(buffers).dts
     pending_buffers = Enum.reverse(buffers) ++ state.pending_buffers
@@ -135,7 +158,7 @@ defmodule ExNVR.Elements.MP4.Depayloader do
     if last_dts >= time_diff do
       {first, second} = Enum.split_while(pending_buffers, &(not &1.metadata.key_frame?))
 
-      # rewrite the pts of the buffers as the hd(second) will have dts of 0
+      # rewrite the dts/pts of the buffers so the hd(second) will have dts/pts of 0
       first_dts = hd(second).dts
 
       buffers =
@@ -144,39 +167,48 @@ defmodule ExNVR.Elements.MP4.Depayloader do
           &%Buffer{&1 | dts: &1.dts - first_dts, pts: &1.pts - first_dts}
         )
 
+      # we add the time diff to the duration since that diff are included
+      # just because we need to start from a keyframe
+      duration = if state.duration > 0, do: state.duration + time_diff, else: 0
+
       {[buffer: {:output, buffers}],
        %{
          state
          | buffer?: false,
            pending_buffers: [],
            last_access_unit_dts: last_dts - first_dts,
-           current_dts: -first_dts
+           current_dts: -first_dts,
+           duration: duration
        }}
     else
       {[],
        %{
          state
-         | pending_buffers: buffers ++ state.pending_buffers,
+         | pending_buffers: pending_buffers,
            last_access_unit_dts: last_dts
        }}
     end
   end
 
   defp prepare_buffer_actions(buffers, state) do
-    last_access_unit_dts = List.last(buffers).dts
-
-    {[buffer: {:output, buffers}] ++ maybe_end_stream(state, last_access_unit_dts),
-     %{state | last_access_unit_dts: last_access_unit_dts}}
+    state = %{state | last_access_unit_dts: List.last(buffers).dts}
+    {[buffer: {:output, buffers}] ++ maybe_end_stream(state), state}
   end
 
-  defp maybe_end_stream(state, last_access_unit_dts) do
-    start_date_ns = Membrane.Time.from_datetime(state.start_date)
+  defp maybe_end_stream(state) do
+    start_date_ns = Membrane.Time.from_datetime(hd(state.recordings).start_date)
     end_date_ns = Membrane.Time.from_datetime(state.end_date)
+    recording_duration = state.last_access_unit_dts - state.current_dts
 
-    if start_date_ns + last_access_unit_dts >= end_date_ns do
-      [end_of_stream: :output]
-    else
-      []
+    cond do
+      state.duration > 0 and state.last_access_unit_dts >= state.duration ->
+        [end_of_stream: :output]
+
+      start_date_ns + recording_duration >= end_date_ns ->
+        [end_of_stream: :output]
+
+      true ->
+        []
     end
   end
 
@@ -190,7 +222,7 @@ defmodule ExNVR.Elements.MP4.Depayloader do
 
   defp maybe_read_recordings(%{recordings: []} = state) do
     Membrane.Logger.debug(
-      "fetch recordings after date: date=#{inspect(state.last_recording_date)}"
+      "fetch recordings between dates: #{inspect(state.last_recording_date)} - #{inspect(state.end_date)}"
     )
 
     case Recordings.get_recordings_between(

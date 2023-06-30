@@ -115,4 +115,92 @@ defmodule ExNVRWeb.API.DeviceStreamingControllerTest do
       |> response(404)
     end
   end
+
+  describe "GET /api/devices/:device_id/footage" do
+    setup %{device: device} do
+      recording_fixture(device, %{
+        start_date: ~U(2023-06-23 20:00:00Z),
+        end_date: ~U(2023-06-23 20:00:05Z)
+      })
+
+      recording_fixture(device, %{
+        start_date: ~U(2023-06-23 20:00:05Z),
+        end_date: ~U(2023-06-23 20:00:10Z)
+      })
+
+      recording_fixture(device, %{
+        start_date: ~U(2023-06-23 20:00:13Z),
+        end_date: ~U(2023-06-23 20:00:18Z)
+      })
+
+      :ok
+    end
+
+    test "Get footage", %{conn: conn, device: device} do
+      params = %{
+        start_date: ~U(2023-06-23 20:00:03Z),
+        end_date: ~U(2023-06-23 20:00:14Z)
+      }
+
+      conn = get(conn, "/api/devices/#{device.id}/footage", params)
+
+      assert conn.status == 200
+      assert get_resp_header(conn, "content-type") == ["video/mp4"]
+    end
+
+    test "Bad request: duration or end date should be provided", %{conn: conn, device: device} do
+      params = %{start_date: ~U(2023-06-23 20:00:03Z)}
+
+      response =
+        conn
+        |> get("/api/devices/#{device.id}/footage", params)
+        |> json_response(400)
+
+      assert List.first(response["details"])["message"] =~ "one field should be provided"
+    end
+
+    test "Bad request: duration should be between 5 seconds and 2 hours", %{
+      conn: conn,
+      device: device
+    } do
+      params = %{start_date: ~U(2023-06-23 20:00:03Z), duration: 3}
+
+      response =
+        conn
+        |> get("/api/devices/#{device.id}/footage", params)
+        |> json_response(400)
+
+      assert List.first(response["details"])["message"] =~ "must be greater than 5"
+
+      response =
+        conn
+        |> get("/api/devices/#{device.id}/footage", %{params | duration: 7230})
+        |> json_response(400)
+
+      assert List.first(response["details"])["message"] =~ "must be less than or equal to 7200"
+    end
+
+    test "Bad request: start date to end date should be between 5 seconds and 2 hours", %{
+      conn: conn,
+      device: device
+    } do
+      params = %{start_date: ~U(2023-06-23 20:00:03Z), end_date: ~U(2023-06-23 20:00:05Z)}
+
+      response =
+        conn
+        |> get("/api/devices/#{device.id}/footage", params)
+        |> json_response(400)
+
+      assert List.first(response["details"])["message"] =~
+               "The duration should be at least 5 seconds and at most 2 hours"
+
+      response =
+        conn
+        |> get("/api/devices/#{device.id}/footage", %{params | end_date: ~U(2023-06-23 22:00:05Z)})
+        |> json_response(400)
+
+      assert List.first(response["details"])["message"] =~
+               "The duration should be at least 5 seconds and at most 2 hours"
+    end
+  end
 end

@@ -8,7 +8,7 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
   require Logger
 
   alias Ecto.Changeset
-  alias ExNVR.Pipelines.{HlsPlayback, Snapshot}
+  alias ExNVR.Pipelines.{HlsPlayback, Snapshot, VideoAssembler}
   alias ExNVR.Utils
 
   @type return_t :: Plug.Conn.t() | {:error, Changeset.t()}
@@ -51,6 +51,33 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
         serve_snapshot_from_recorded_videos(conn, params)
       else
         serve_live_snapshot(conn, params)
+      end
+    end
+  end
+
+  @spec footage(Plug.Conn.t(), map()) :: return_t()
+  def footage(conn, params) do
+    device = conn.assigns.device
+    destination = Path.join(System.tmp_dir!(), UUID.uuid4() <> ".mp4")
+
+    with {:ok, params} <- validate_footage_req_params(params) do
+      {:ok, pipeline_sup, _pipeline_pid} =
+        params
+        |> Map.merge(%{device_id: device.id, destination: destination})
+        |> Map.update(:duration, 0, &Membrane.Time.seconds/1)
+        |> Keyword.new()
+        |> VideoAssembler.start()
+
+      Process.monitor(pipeline_sup)
+
+      receive do
+        {:DOWN, _ref, :process, ^pipeline_sup, _reason} ->
+          send_download(conn, {:file, destination},
+            content_type: "video/mp4",
+            filename: "#{device.id}.mp4"
+          )
+      after
+        30_000 -> {:error, :not_found}
       end
     end
   end
@@ -118,6 +145,51 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
     {%{method: :before, format: :jpeg, time: nil}, types}
     |> Changeset.cast(params, Map.keys(types))
     |> Changeset.apply_action(:create)
+  end
+
+  defp validate_footage_req_params(params) do
+    types = %{
+      start_date: :utc_datetime,
+      end_date: :utc_datetime,
+      duration: :integer
+    }
+
+    {%{}, types}
+    |> Changeset.cast(params, Map.keys(types))
+    |> Changeset.validate_required([:start_date])
+    |> Changeset.validate_number(:duration, greater_than: 5, less_than_or_equal_to: 7200)
+    |> validate_end_date_or_duration()
+    |> Changeset.apply_action(:create)
+  end
+
+  defp validate_end_date_or_duration(%{valid?: false} = changeset), do: changeset
+
+  defp validate_end_date_or_duration(changeset) do
+    start_date = Changeset.get_change(changeset, :start_date)
+    end_date = Changeset.get_change(changeset, :end_date)
+    duration = Changeset.get_change(changeset, :duration)
+
+    cond do
+      is_nil(end_date) and is_nil(duration) ->
+        Changeset.add_error(
+          changeset,
+          :end_date,
+          "At least one field should be provided: end_date or duration",
+          validation: :required
+        )
+
+      not is_nil(end_date) and
+          (DateTime.diff(end_date, start_date) < 5 or DateTime.diff(end_date, start_date) > 7200) ->
+        Changeset.add_error(
+          changeset,
+          :end_date,
+          "The duration should be at least 5 seconds and at most 2 hours",
+          validation: :format
+        )
+
+      true ->
+        changeset
+    end
   end
 
   defp start_hls_pipeline(device_id, nil) do
