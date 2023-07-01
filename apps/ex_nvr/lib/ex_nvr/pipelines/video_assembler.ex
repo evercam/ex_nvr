@@ -27,7 +27,7 @@ defmodule ExNVR.Pipelines.VideoAssembler do
       })
     ]
 
-    {[spec: spec, playback: :playing], %{device_id: options[:device_id]}}
+    {[spec: spec], %{device_id: options[:device_id]}}
   end
 
   @impl true

@@ -30,7 +30,7 @@ defmodule ExNVR.Pipelines.Snapshot do
       |> child(:sink, Elements.SnapshotBin)
     ]
 
-    {[spec: spec, playback: :playing], %{caller: options[:caller]}}
+    {[spec: spec], %{caller: options[:caller]}}
   end
 
   @impl true

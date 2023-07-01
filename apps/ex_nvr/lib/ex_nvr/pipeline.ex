@@ -134,7 +134,7 @@ defmodule ExNVR.Pipeline do
           do: [child({:rtsp_source, :sub_stream}, %Source{stream_uri: sub_stream_uri})],
           else: []
 
-    {[spec: spec, playback: :playing], state}
+    {[spec: spec], state}
   end
 
   @impl true
