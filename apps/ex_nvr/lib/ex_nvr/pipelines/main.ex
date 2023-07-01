@@ -1,4 +1,4 @@
-defmodule ExNVR.Pipeline do
+defmodule ExNVR.Pipelines.Main do
   @moduledoc """
   Main pipeline that stream video footages and store them as chunks of configurable duration.
 
