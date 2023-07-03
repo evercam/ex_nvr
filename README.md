@@ -11,8 +11,10 @@ docker run --rm -it -p 4000:4000 --env-file .env ghcr.io/evercam/ex_nvr:latest
 
 Or create a new image using the Dockerfile. Run the following command from the root folder of the project
 ```bash
-docker build -t ex_nvr:custom .
+docker build --build-arg BASE_IMAGE="base_image" -t ex_nvr:custom .
 ```
+on jetson replace base_image with "hexpm/elixir:1.14.3-erlang-25.2.3-alpine-3.17.0"
+on raspberry pi replace the base_image with "arm32v7/elixir:1.14-otp-25-alpine as build"
 
 This will create an image `ex_nvr` with `custom` tag. To run it, issue this command:
 ```bash

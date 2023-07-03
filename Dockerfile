@@ -1,4 +1,6 @@
-FROM hexpm/elixir:1.14.3-erlang-25.2.3-alpine-3.17.0 AS build
+ARG BASE_IMAGE
+# Use a conditional statement to select the base image
+FROM ${BASE_IMAGE} AS build
 
 # install build dependencies
 RUN \
