@@ -21,13 +21,27 @@ import "phoenix_html"
 import {Socket} from "phoenix"
 import {LiveSocket} from "phoenix_live_view"
 import topbar from "../vendor/topbar"
+import createTimeline, {updateTimelineSegments} from "./timeline"
 import "flowbite/dist/flowbite.phoenix"
 import Hls from "hls.js"
 
 const MANIFEST_LOAD_TIMEOUT = 60_000
 
+
+let Hooks = {
+    Timeline: {
+        mounted() {
+            createTimeline(this.el)
+            window.TimelineHook = this
+        },
+        updated() {
+            updateTimelineSegments(this.el)
+        }
+    }
+}
+
 let csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
-let liveSocket = new LiveSocket("/live", Socket, {params: {_csrf_token: csrfToken}})
+let liveSocket = new LiveSocket("/live", Socket, {params: {_csrf_token: csrfToken}, hooks: Hooks})
 
 // Show progress bar on live navigation and form submits
 topbar.config({barColors: {0: "#29d"}, shadowColor: "rgba(0, 0, 0, .3)"})
@@ -57,9 +71,9 @@ startStreaming = (src, poster_url) => {
         if (poster_url != null) {
             video.poster = poster_url;
         }
-            
+
         window.hls = new Hls({
-            manifestLoadingTimeOut: MANIFEST_LOAD_TIMEOUT
+            manifestLoadingTimeOut: MANIFEST_LOAD_TIMEOUT,
         });
         window.hls.loadSource(src);
         window.hls.attachMedia(video);
@@ -72,7 +86,7 @@ startStreaming = (src, poster_url) => {
 }
 
 window.addEventListener("phx:stream", e => {
-    startStreaming(e.detail.src, e.detail.poster);    
+    startStreaming(e.detail.src, e.detail.poster);
 });
 
 window.addEventListener("phx:js-exec", ({detail}) => {

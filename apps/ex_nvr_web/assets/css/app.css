@@ -3,3 +3,14 @@
 @import "tailwindcss/utilities";
 
 /* This file is for your main application CSS */
+svg .x-axis g {
+    color: white;
+    fill: white;
+}
+svg .x-axis text {
+    font-size: 12px;
+    font-weight: 600;
+    paint-order: stroke;
+    stroke: #000000aa;
+    stroke-width: 1px;
+}
