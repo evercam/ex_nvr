@@ -39,18 +39,6 @@ defmodule ExNVRWeb.DashboardLive do
               </div>
             </div>
           </.simple_form>
-
-          <div class="mt-5">
-            <.input
-              type="datetime-local"
-              name="device_start_date"
-              id="device_start_time"
-              label="Start date"
-              phx-blur="datetime"
-              max={Calendar.strftime(DateTime.utc_now(), "%Y-%m-%dT%H:%M")}
-              value={@start_date && Calendar.strftime(@start_date, "%Y-%m-%dT%H:%M")}
-            />
-          </div>
         </div>
 
         <div class="relative mt-4">
@@ -80,10 +68,18 @@ defmodule ExNVRWeb.DashboardLive do
               <span class="sr-only">Loading...</span>
             </div>
           </div>
-          <div :if={not @live_view_enabled?}  class="relative text-lg rounded-tr rounded-tl text-center dark:text-gray-200 mt-4 w-full dark:bg-gray-500 h-96 flex justify-center items-center d-flex">
+          <div
+            :if={not @live_view_enabled?}
+            class="relative text-lg rounded-tr rounded-tl text-center dark:text-gray-200 mt-4 w-full dark:bg-gray-500 h-96 flex justify-center items-center d-flex"
+          >
             Device is not recording, live view is not available
           </div>
-          <.live_component module={TimelineComponent} id="tl" segments={@segments} timezone={@timezone} />
+          <.live_component
+            module={TimelineComponent}
+            id="tl"
+            segments={@segments}
+            timezone={@timezone}
+          />
         </div>
       </div>
     </div>
@@ -99,7 +95,7 @@ defmodule ExNVRWeb.DashboardLive do
       |> assign_form(nil)
       |> assign_start_date(nil)
       |> live_view_enabled?()
-      |> assign_recordings()
+      |> assign_runs()
       |> assign_timezone()
       |> maybe_push_stream_event(nil)
 
@@ -115,7 +111,7 @@ defmodule ExNVRWeb.DashboardLive do
       |> assign_streams()
       |> assign_form(nil)
       |> live_view_enabled?()
-      |> assign_recordings()
+      |> assign_runs()
       |> assign_timezone()
       |> maybe_push_stream_event(socket.assigns.start_date)
 
@@ -176,13 +172,15 @@ defmodule ExNVRWeb.DashboardLive do
     assign(socket, supported_streams: supported_streams)
   end
 
-  defp assign_recordings(%{assigns: %{current_device: nil}} = socket), do: socket
+  defp assign_runs(%{assigns: %{current_device: nil}} = socket), do: socket
 
-  defp assign_recordings(socket) do
+  defp assign_runs(socket) do
     device = socket.assigns.current_device
-    segments = Recordings.index(device.id)
-    |> Enum.map(&Map.take(&1, [:start_date, :end_date]))
-    |> Jason.encode!()
+
+    segments =
+      Recordings.list_runs([{:device_id, device.id}])
+      |> Enum.map(&Map.take(&1, [:start_date, :end_date]))
+      |> Jason.encode!()
 
     assign(socket, segments: segments)
   end

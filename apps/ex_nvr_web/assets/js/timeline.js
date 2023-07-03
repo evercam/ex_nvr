@@ -123,7 +123,7 @@ export default function createTimeline(element) {
         const timePart = new Intl.DateTimeFormat('en', {
             hour: '2-digit',
             minute: '2-digit',
-            timeZone: timeline.dataset.timezone || "Europe/Dublin",
+            timeZone: timeline.dataset.timezone || "UTC",
             hour12: false
         }).format(date)
 
