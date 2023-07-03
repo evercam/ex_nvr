@@ -178,7 +178,7 @@ defmodule ExNVRWeb.DashboardLive do
     device = socket.assigns.current_device
 
     segments =
-      Recordings.list_runs([{:device_id, device.id}])
+      Recordings.list_runs(%{device_id: device.id})
       |> Enum.map(&Map.take(&1, [:start_date, :end_date]))
       |> Jason.encode!()
 
