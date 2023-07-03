@@ -8,7 +8,7 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
   require Logger
 
   alias Ecto.Changeset
-  alias ExNVR.Pipelines.{HlsPlayback, Snapshot, VideoAssembler}
+  alias ExNVR.Pipelines.{HlsPlayback, Main, Snapshot, VideoAssembler}
   alias ExNVR.Utils
 
   @type return_t :: Plug.Conn.t() | {:error, Changeset.t()}
@@ -87,7 +87,7 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
 
     case device.state do
       :recording ->
-        {:ok, snapshot} = ExNVR.Pipeline.live_snapshot(device, params.format)
+        {:ok, snapshot} = Main.live_snapshot(device, params.format)
 
         conn
         |> put_resp_content_type("image/#{params.format}")

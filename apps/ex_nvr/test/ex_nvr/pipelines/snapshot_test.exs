@@ -29,7 +29,7 @@ defmodule ExNVR.Pipelines.SnapshotTest do
     pid = prepare_pipeline(device, recording)
 
     assert_pipeline_notified(pid, :sink, {:snapshot, snapshot})
-    Testing.Pipeline.terminate(pid, blocking: true)
+    Testing.Pipeline.terminate(pid)
 
     assert_receive {:snapshot, ^snapshot}, 1_000, "No snapshot received"
   end

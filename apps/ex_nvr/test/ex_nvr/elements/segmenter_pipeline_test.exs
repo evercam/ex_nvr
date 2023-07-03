@@ -44,7 +44,7 @@ defmodule ExNvr.Elements.SegmenterPipelineTest do
       assert_end_of_stream(pid, {:sink, ^ref})
     end)
 
-    Pipeline.terminate(pid, blocking: true)
+    Pipeline.terminate(pid)
   end
 
   defp create_buffer(pts, key_frame?) do

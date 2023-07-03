@@ -83,6 +83,11 @@ defmodule ExNVR.Elements.HLSBin do
   end
 
   @impl true
+  def handle_pad_removed(Pad.ref(:input, ref), _ctx, state) do
+    {[remove_children: [{:payloader, ref}, {:muxer, ref}]], state}
+  end
+
+  @impl true
   def handle_child_notification({:track_playable, track_id}, :sink, _ctx, state) do
     {[notify_parent: {:track_playable, track_id}], state}
   end

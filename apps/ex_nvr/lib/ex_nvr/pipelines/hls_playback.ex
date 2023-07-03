@@ -51,6 +51,11 @@ defmodule ExNVR.Pipelines.HlsPlayback do
   end
 
   @impl true
+  def handle_setup(_ctx, state) do
+    {[setup: :incomplete], state}
+  end
+
+  @impl true
   def handle_child_notification({:track_playable, _track}, :sink, _ctx, state) do
     {[reply_to: {state.caller, :ok}], %{state | caller: nil}}
   end
@@ -62,7 +67,7 @@ defmodule ExNVR.Pipelines.HlsPlayback do
 
   @impl true
   def handle_call(:start_streaming, %{from: from}, state) do
-    {[playback: :playing], %{state | caller: from}}
+    {[setup: :complete], %{state | caller: from}}
   end
 
   @impl true
