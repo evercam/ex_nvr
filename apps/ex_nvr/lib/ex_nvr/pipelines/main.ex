@@ -138,22 +138,14 @@ defmodule ExNVR.Pipelines.Main do
   end
 
   @impl true
-  def handle_child_notification({:connection_lost, ref}, elem, ctx, state) do
-    state =
-      if elem == :rtsp_source do
-        maybe_update_device_and_report(state, :failed)
-      else
-        state
-      end
+  def handle_child_notification({:connection_lost, _ref}, :rtsp_source, _ctx, state) do
+    maybe_update_device_and_report(state, :failed)
+    {[remove_child: :main_stream, remove_link: {:hls_sink, Pad.ref(:input, :main_stream)}], state}
+  end
 
-    ctx.children
-    |> Map.keys()
-    |> Enum.filter(fn
-      {{_, ^ref}, _} -> true
-      {{_, :sub_stream, ^ref}, _} -> true
-      _ -> false
-    end)
-    |> then(&{[remove_child: &1], state})
+  @impl true
+  def handle_child_notification({:connection_lost, _ref}, _elem, _ctx, state) do
+    {[remove_child: :sub_stream, remove_link: {:hls_sink, Pad.ref(:input, :sub_stream)}], state}
   end
 
   @impl true
@@ -213,7 +205,7 @@ defmodule ExNVR.Pipelines.Main do
       |> child({:cvs_bufferer, ref}, ExNVR.Elements.CVSBufferer)
     ]
 
-    {[spec: spec], state}
+    {[spec: {spec, group: :main_stream}], state}
   end
 
   @impl true
@@ -231,7 +223,7 @@ defmodule ExNVR.Pipelines.Main do
       |> get_child(:hls_sink)
     ]
 
-    {[spec: spec], state}
+    {[spec: {spec, group: :sub_stream}], state}
   end
 
   @impl true

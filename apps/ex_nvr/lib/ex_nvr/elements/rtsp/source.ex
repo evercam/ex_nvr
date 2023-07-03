@@ -97,9 +97,7 @@ defmodule ExNVR.Elements.RTSP.Source do
     ]
   end
 
-  defp connection_lost_actions(%{output_ref: ref}) do
-    [notify_parent: {:connection_lost, ref}]
-  end
+  defp connection_lost_actions(_state), do: []
 
   defp do_handle_setup(state) do
     {:ok, connection_manager} =
