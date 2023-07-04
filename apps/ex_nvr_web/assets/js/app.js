@@ -18,15 +18,14 @@
 // Include phoenix_html to handle method=PUT/DELETE in forms and buttons.
 import "phoenix_html"
 // Establish Phoenix Socket and LiveView configuration.
-import {Socket} from "phoenix"
-import {LiveSocket} from "phoenix_live_view"
+import { Socket } from "phoenix"
+import { LiveSocket } from "phoenix_live_view"
 import topbar from "../vendor/topbar"
-import createTimeline, {updateTimelineSegments} from "./timeline"
+import createTimeline, { updateTimelineSegments } from "./timeline"
 import "flowbite/dist/flowbite.phoenix"
 import Hls from "hls.js"
 
 const MANIFEST_LOAD_TIMEOUT = 60_000
-
 
 let Hooks = {
     Timeline: {
@@ -36,17 +35,22 @@ let Hooks = {
         },
         updated() {
             updateTimelineSegments(this.el)
-        }
-    }
+        },
+    },
 }
 
-let csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
-let liveSocket = new LiveSocket("/live", Socket, {params: {_csrf_token: csrfToken}, hooks: Hooks})
+let csrfToken = document
+    .querySelector("meta[name='csrf-token']")
+    .getAttribute("content")
+let liveSocket = new LiveSocket("/live", Socket, {
+    params: { _csrf_token: csrfToken },
+    hooks: Hooks,
+})
 
 // Show progress bar on live navigation and form submits
-topbar.config({barColors: {0: "#29d"}, shadowColor: "rgba(0, 0, 0, .3)"})
-window.addEventListener("phx:page-loading-start", _info => topbar.show(300))
-window.addEventListener("phx:page-loading-stop", _info => topbar.hide())
+topbar.config({ barColors: { 0: "#29d" }, shadowColor: "rgba(0, 0, 0, .3)" })
+window.addEventListener("phx:page-loading-start", (_info) => topbar.show(300))
+window.addEventListener("phx:page-loading-stop", (_info) => topbar.hide())
 
 // connect if there are any LiveViews on the page
 liveSocket.connect()
@@ -58,41 +62,41 @@ liveSocket.connect()
 window.liveSocket = liveSocket
 
 function initDarkMode() {
-    document.documentElement.classList.add('dark');
+    document.documentElement.classList.add("dark")
 }
 
 startStreaming = (src, poster_url) => {
-    var video = document.getElementById("live-video");
+    var video = document.getElementById("live-video")
     if (video != null && Hls.isSupported()) {
         if (window.hls) {
-            window.hls.destroy();
+            window.hls.destroy()
         }
 
         if (poster_url != null) {
-            video.poster = poster_url;
+            video.poster = poster_url
         }
 
         window.hls = new Hls({
             manifestLoadingTimeOut: MANIFEST_LOAD_TIMEOUT,
-        });
-        window.hls.loadSource(src);
-        window.hls.attachMedia(video);
+        })
+        window.hls.loadSource(src)
+        window.hls.attachMedia(video)
 
         window.hls.on(Hls.Events.BUFFER_CREATED, (_) => {
             let loader = document.getElementById("loader")
             loader.classList.add("invisible")
-        });
+        })
     }
 }
 
-window.addEventListener("phx:stream", e => {
-    startStreaming(e.detail.src, e.detail.poster);
-});
+window.addEventListener("phx:stream", (e) => {
+    startStreaming(e.detail.src, e.detail.poster)
+})
 
-window.addEventListener("phx:js-exec", ({detail}) => {
-    document.querySelectorAll(detail.to).forEach(el => {
+window.addEventListener("phx:js-exec", ({ detail }) => {
+    document.querySelectorAll(detail.to).forEach((el) => {
         liveSocket.execJS(el, el.getAttribute(detail.attr))
     })
 })
 
-initDarkMode();
+initDarkMode()

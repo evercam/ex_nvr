@@ -12,8 +12,13 @@ defmodule ExNVRWeb.TimelineComponent do
   @impl true
   def render(assigns) do
     ~H"""
-    <div id="timeline-wrapper" phx-hook="Timeline" class="relative" data-segments={@segments}
-        data-timezone={@timezone}>
+    <div
+      id="timeline-wrapper"
+      phx-hook="Timeline"
+      class="relative"
+      data-segments="{@segments}"
+      data-timezone="{@timezone}"
+    >
       <div id="background" class="bg-gray-900 w-full h-7 absolute top-0"></div>
       <div
         id="timeline"
