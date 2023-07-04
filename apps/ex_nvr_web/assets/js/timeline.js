@@ -12,14 +12,13 @@ function drawSegments(svg, segments, x) {
             .attr("x", x(start_date))
             .attr("y", 0)
             .attr("width", x(end_date) - x(start_date))
-            .attr("height", 45)
-            .style("fill", "#53d700")
+            .attr("height", 27.5)
+            .style("fill", "#4dc007")
     });
 }
 
 export function updateTimelineSegments(element) {
-    const timeline = element.querySelector("#timeline");
-    const segments = JSON.parse(timeline.dataset.segments).map(
+    const segments = JSON.parse(element.dataset.segments).map(
         ({ start_date, end_date }) => ({
             start_date: new Date(start_date),
             end_date: new Date(end_date),
@@ -35,7 +34,7 @@ export default function createTimeline(element) {
     const tooltip = element.querySelector("#tooltip")
     const cursor = element.querySelector("#cursor")
     const width = timeline.offsetWidth
-    const segments = JSON.parse(timeline.dataset.segments).map(
+    const segments = JSON.parse(element.dataset.segments).map(
         ({ start_date, end_date }) => ({
             start_date: new Date(start_date),
             end_date: new Date(end_date),
@@ -90,7 +89,7 @@ export default function createTimeline(element) {
     svg
         .append("g")
         .attr("class", "x-axis")
-        .attr("transform", "translate(0,0)")
+        .attr("transform", "translate(0,27.5)")
         .call(xAxis)
 
     svg.on("mousedown", function () {
