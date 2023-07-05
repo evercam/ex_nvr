@@ -32,6 +32,8 @@ defmodule ExNVRWeb.Router do
   scope "/api", ExNVRWeb do
     pipe_through [:api, :api_require_authenticated_user]
 
+    post "/test-stream", API.RtspTesterController, :test
+
     resources "/devices", API.DeviceController, only: [:create, :update]
 
     scope "/devices/:device_id" do

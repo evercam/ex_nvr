@@ -393,6 +393,53 @@ paths:
                 format: byte
         '400':
           $ref: '#/components/responses/BadArg'
+  /api/test-stream:
+    get:
+      summary: Test RTSP Stream
+      description: |
+        Test RTSP stream for connectivity.
+
+        A `DESCRIBE` request is sent to the rtsp server and a video media track is fetched
+        from the response.
+      operationId: testRtspStream
+      tags:
+        - Media Streaming
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                stream_url:
+                  type: string
+                  format: uri
+                  description: RTSP stream to check
+                sub_stream_uri:
+                  type: string
+                  format: uri
+                  description: RTSP sub-stream to check
+                username:
+                  type: string
+                  description: Username to use for authentication
+                password:
+                  type: string
+                  format: password
+                  description: Password to use for authentication
+              required: [stream_url]
+      responses:
+        '200':
+          description: success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  stream_url:
+                    $ref: '#/components/schemas/MediaTrackTestResponse'
+                  sub_stream_url:
+                    $ref: '#/components/schemas/MediaTrackTestResponse'
+        '400':
+          $ref: '#/components/responses/BadArg'
 components:
   securitySchemes:
     bearerAuth:
@@ -422,6 +469,18 @@ components:
           description: Device state
         ip_camera_config:
           $ref: "#/components/schemas/IPCameraConfig"
+    Error:
+      type: object
+      properties:
+        code:
+          type: string
+          description: A unique error code
+        description:
+          type: string
+          description: The description of the error
+        details:
+          type: object
+          description: Other details related to the error.
     IPCameraConfig:
       type: object
       description: IP Camera configuration
@@ -437,18 +496,28 @@ components:
           type: string
           format: password
           description: Password to authenticate
-    Error:
+    MediaTrackTestResponse:
       type: object
       properties:
-        code:
+        status:
           type: string
-          description: A unique error code
-        description:
+          enum: [ok, error]
+        message:
           type: string
-          description: The description of the error
-        details:
-          type: object
-          description: Other details related to the error.
+          description: Error message, only available in case status is `error`
+        type:
+          type: string
+          enum: [video]
+          description: The type of the media track (it's always `video`)
+        codec:
+          type: string
+          description: The codec of the media track
+        clock_rate:
+          type: integer
+          description: The clock rate of the media track
+        payload_type:
+          type: integer
+          description: The RTP payload type used for this media track
   parameters:
     device_id:
       name: device_id
