@@ -30,24 +30,6 @@ defmodule ExNVR.Elements.StorageBin do
                 segment must start from a keyframe. The real segment duration may be
                 slightly bigger
                 """
-              ],
-              sps: [
-                spec: binary(),
-                default: <<>>,
-                description: """
-                Sequence Parameter Set, if not set, maybe provided in the bitstream.
-
-                sps will be appended to the first keyframe of each segment
-                """
-              ],
-              pps: [
-                spec: binary(),
-                default: <<>>,
-                description: """
-                Picture Parameter Set, if not set, maybe provided in the bitstream.
-
-                pps will be appended to the first keyframe of each segment
-                """
               ]
 
   @impl true
@@ -55,9 +37,7 @@ defmodule ExNVR.Elements.StorageBin do
     spec = [
       bin_input(:input)
       |> child(:segmenter, %ExNVR.Elements.Segmenter{
-        segment_duration: opts.target_segment_duration,
-        sps: opts.sps,
-        pps: opts.pps
+        target_duration: opts.target_segment_duration
       })
     ]
 
@@ -91,7 +71,7 @@ defmodule ExNVR.Elements.StorageBin do
       })
     ]
 
-    {[spec: spec], state}
+    {[spec: {spec, group: segment_ref}], state}
   end
 
   @impl true
@@ -101,14 +81,8 @@ defmodule ExNVR.Elements.StorageBin do
         _ctx,
         state
       ) do
-    segment = %Segment{
-      segment
-      | path: Path.join(state.recordings_temp_dir, "#{pad_ref}#{state.segment_extension}"),
-        device_id: state.device_id
-    }
-
+    IO.inspect(segment)
     state = run_from_segment(state, segment, end_run?)
-
     {[], put_in(state, [:pending_segments, pad_ref], segment)}
   end
 
@@ -116,15 +90,8 @@ defmodule ExNVR.Elements.StorageBin do
   # we can delete the childs
   @impl true
   def handle_element_end_of_stream({:sink, seg_ref}, _pad, _ctx, state) do
-    children = [
-      {:h264_mp4_payloader, seg_ref},
-      {:mp4_muxer, seg_ref},
-      {:sink, seg_ref}
-    ]
-
     {state, segment} = do_save_recording(state, seg_ref)
-
-    {[remove_child: children, notify_parent: {:segment_stored, segment}], state}
+    {[remove_children: seg_ref, notify_parent: {:segment_stored, segment}], state}
   end
 
   @impl true
@@ -133,7 +100,14 @@ defmodule ExNVR.Elements.StorageBin do
   end
 
   defp do_save_recording(state, recording_ref) do
-    {recording, state} = pop_in(state, [:pending_segments, recording_ref])
+    {segment, state} = pop_in(state, [:pending_segments, recording_ref])
+
+    recording = %{
+      start_date: Membrane.Time.to_datetime(segment.start_date),
+      end_date: Membrane.Time.to_datetime(segment.end_date),
+      path: Path.join(state.recordings_temp_dir, "#{recording_ref}#{state.segment_extension}"),
+      device_id: state.device_id
+    }
 
     case ExNVR.Recordings.create(state.run, recording) do
       {:ok, _, run} ->
@@ -153,14 +127,23 @@ defmodule ExNVR.Elements.StorageBin do
 
   defp run_from_segment(state, segment, end_run?) do
     if is_nil(state.run) do
-      run =
-        Map.take(segment, [:start_date, :end_date, :device_id])
-        |> Map.put(:active, not end_run?)
-        |> then(&struct(Run, &1))
+      run = %Run{
+        start_date: Membrane.Time.to_datetime(segment.start_date),
+        end_date: Membrane.Time.to_datetime(segment.end_date),
+        device_id: state.device_id,
+        active: !end_run?
+      }
 
       %{state | run: run}
     else
-      %{state | run: %Run{state.run | end_date: segment.end_date, active: not end_run?}}
+      %{
+        state
+        | run: %Run{
+            state.run
+            | end_date: Membrane.Time.to_datetime(segment.end_date),
+              active: not end_run?
+          }
+      }
     end
   end
 

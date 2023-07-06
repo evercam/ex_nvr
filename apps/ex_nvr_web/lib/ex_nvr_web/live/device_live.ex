@@ -26,6 +26,11 @@ defmodule ExNVRWeb.DeviceLive do
       else: do_save_device(socket, device_params)
   end
 
+  def handle_event("test", _params, socket) do
+    IO.inspect(socket.assigns.device_form)
+    {:noreply, socket}
+  end
+
   defp do_save_device(socket, device_params) do
     case Devices.create(device_params) do
       {:ok, device} ->
