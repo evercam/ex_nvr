@@ -40,7 +40,7 @@ defmodule ExNVR.Pipelines.Main do
   require Membrane.Logger
 
   alias ExNVR.Elements.RTSP.Source
-  alias ExNVR.{Devices, Utils}
+  alias ExNVR.{Devices, Recordings, Utils}
   alias ExNVR.Model.Device
   alias Membrane.RTP.SessionBin
 
@@ -97,15 +97,17 @@ defmodule ExNVR.Pipelines.Main do
     end
   end
 
+  @spec supervisor(Device.t()) :: term()
   def supervisor(device) do
-    Pipeline.call(pipeline_name(device), :pipeline_supervisor)
+    Pipeline.call(pipeline_pid(device), :pipeline_supervisor)
   end
 
   @doc """
   Get a live snapshot
   """
+  @spec live_snapshot(Device.t(), :jpeg | :png) :: term()
   def live_snapshot(device, image_format) do
-    Pipeline.call(pipeline_name(device), {:live_snapshot, image_format})
+    Pipeline.call(pipeline_pid(device), {:live_snapshot, image_format})
   end
 
   @impl true
@@ -135,6 +137,14 @@ defmodule ExNVR.Pipelines.Main do
           else: []
 
     {[spec: spec], state}
+  end
+
+  @impl true
+  def handle_setup(_ctx, state) do
+    # Sset the device to failed state and make last active run inactive
+    # may happens on application crash
+    Recordings.deactivate_runs(state.device)
+    {[], maybe_update_device_and_report(state, :failed)}
   end
 
   @impl true
@@ -319,6 +329,8 @@ defmodule ExNVR.Pipelines.Main do
   end
 
   defp pipeline_name(%{id: device_id}), do: :"pipeline_#{device_id}"
+
+  defp pipeline_pid(device), do: Process.whereis(pipeline_name(device))
 
   defp maybe_update_device_and_report(%{device: %{state: device_state}} = state, device_state),
     do: state
