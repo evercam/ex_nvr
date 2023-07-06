@@ -5,7 +5,7 @@ defmodule ExNVR do
 
   import ExNVR.Utils
 
-  alias ExNVR.{Accounts, Devices, Pipelines, Recordings}
+  alias ExNVR.{Accounts, Devices, Pipelines}
 
   @doc """
   Start the main pipeline
@@ -44,9 +44,6 @@ defmodule ExNVR do
 
   defp run_pipelines() do
     for device <- Devices.list(%{state: [:recording, :failed]}) do
-      # make last active run inactive
-      # may happens on application crash
-      Recordings.deactivate_runs(device.id)
       Pipelines.Supervisor.start_pipeline(device)
     end
   end

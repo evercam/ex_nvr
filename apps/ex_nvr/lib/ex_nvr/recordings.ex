@@ -61,7 +61,7 @@ defmodule ExNVR.Recordings do
     Repo.all(Run.filter(params))
   end
 
-  def deactivate_runs(device_id) do
+  def deactivate_runs(%Device{id: device_id}) do
     Repo.update_all(Run.deactivate_query(device_id), set: [active: false])
   end
 

@@ -3,29 +3,26 @@ defmodule ExNVR.Pipelines.Supervisor do
   A dynamic supervisor for all the pipelines
   """
 
-  use DynamicSupervisor
-
   import ExNVR.Utils
 
   alias ExNVR.Model.Device
   alias ExNVR.Pipelines
-
-  def start_link(_opts) do
-    DynamicSupervisor.start_link(strategy: :one_for_one, name: __MODULE__)
-  end
 
   def start_pipeline(%Device{} = device) do
     if ExNVR.Utils.run_main_pipeline?() do
       File.mkdir_p!(recording_dir(device.id))
       File.mkdir_p!(hls_dir(device.id))
 
-      DynamicSupervisor.start_child(__MODULE__, {Pipelines.Main, [device: device]})
+      DynamicSupervisor.start_child(ExNVR.PipelineSupervisor, {Pipelines.Main, [device: device]})
     end
   end
 
   def stop_pipeline(%Device{} = device) do
     if ExNVR.Utils.run_main_pipeline?() do
-      DynamicSupervisor.terminate_child(__MODULE__, Pipelines.Main.supervisor(device))
+      DynamicSupervisor.terminate_child(
+        ExNVR.PipelineSupervisor,
+        Pipelines.Main.supervisor(device)
+      )
     end
   end
 

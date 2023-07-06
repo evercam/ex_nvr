@@ -195,8 +195,7 @@ defmodule ExNVRWeb.DashboardLive do
 
   defp assign_form(socket, nil) do
     device = socket.assigns.current_device
-    stream = if Device.has_sub_stream(device), do: "sub_stream", else: "main_stream"
-    assign(socket, form: to_form(%{"device" => device.id, "stream" => stream}))
+    assign(socket, form: to_form(%{"device" => device.id, "stream" => "main_stream"}))
   end
 
   defp assign_form(socket, params) do

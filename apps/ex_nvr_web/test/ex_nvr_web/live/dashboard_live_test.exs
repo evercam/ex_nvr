@@ -28,7 +28,7 @@ defmodule ExNVRWeb.DashboardTest do
 
       assert html =~ "Device"
       assert html =~ "Stream"
-      assert html =~ "Start date"
+      assert has_element?(lv, "#timeline")
       refute has_element?(lv, "#live-video")
     end
   end
