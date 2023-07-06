@@ -4,7 +4,7 @@ const DAY = 86_400_000
 let timelineState = {}
 
 function drawSegments(svg, segments, x) {
-    svg.selectAll("rect").remove();
+    svg.selectAll("rect").remove()
     segments.forEach(({ start_date, end_date }) => {
         svg
             .append("rect")
@@ -12,21 +12,20 @@ function drawSegments(svg, segments, x) {
             .attr("x", x(start_date))
             .attr("y", 0)
             .attr("width", x(end_date) - x(start_date))
-            .attr("height", 45)
-            .style("fill", "#53d700")
-    });
+            .attr("height", 27.5)
+            .style("fill", "#4dc007")
+    })
 }
 
 export function updateTimelineSegments(element) {
-    const timeline = element.querySelector("#timeline");
-    const segments = JSON.parse(timeline.dataset.segments).map(
+    const segments = JSON.parse(element.dataset.segments).map(
         ({ start_date, end_date }) => ({
             start_date: new Date(start_date),
             end_date: new Date(end_date),
         })
     )
 
-    drawSegments(timelineState.svg, segments, timelineState.x);
+    drawSegments(timelineState.svg, segments, timelineState.x)
 }
 
 export default function createTimeline(element) {
@@ -35,25 +34,25 @@ export default function createTimeline(element) {
     const tooltip = element.querySelector("#tooltip")
     const cursor = element.querySelector("#cursor")
     const width = timeline.offsetWidth
-    const segments = JSON.parse(timeline.dataset.segments).map(
+    const segments = JSON.parse(element.dataset.segments).map(
         ({ start_date, end_date }) => ({
             start_date: new Date(start_date),
             end_date: new Date(end_date),
         })
     )
 
-    const [
-        defaultMinDate,
-        defaultMaxDate
-    ] = [
+    const [defaultMinDate, defaultMaxDate] = [
         new Date(new Date().getTime() - DAY),
-        new Date()
+        new Date(),
     ]
     const x = d3
         .scaleTime()
         .domain([
-            d3.min([...segments, {start_date: defaultMinDate}], (d) => d.start_date),
-            d3.max([...segments, {end_date: defaultMaxDate}], (d) => d.end_date),
+            d3.min(
+                [...segments, { start_date: defaultMinDate }],
+                (d) => d.start_date
+            ),
+            d3.max([...segments, { end_date: defaultMaxDate }], (d) => d.end_date),
         ])
         .range([0, width])
     timelineState.x = x
@@ -70,11 +69,12 @@ export default function createTimeline(element) {
         const rescaledX = event.transform.rescaleX(x2)
         x.domain(rescaledX.domain())
         svg.select(".x-axis").call(xAxis.scale(rescaledX))
-        svg.selectAll("rect")
+        svg
+            .selectAll("rect")
             .attr("x", (d) => x(d.start_date))
             .attr("width", (d) => x(d.end_date) - x(d.start_date))
 
-        svg.select(".x-axis").call(d3.axisBottom(x).ticks(10));
+        svg.select(".x-axis").call(d3.axisBottom(x).ticks(10))
     }
 
     const svg = d3
@@ -90,7 +90,7 @@ export default function createTimeline(element) {
     svg
         .append("g")
         .attr("class", "x-axis")
-        .attr("transform", "translate(0,0)")
+        .attr("transform", "translate(0,27.5)")
         .call(xAxis)
 
     svg.on("mousedown", function () {
@@ -110,24 +110,26 @@ export default function createTimeline(element) {
         const [mouseX, mouseY] = d3.pointer(event, this)
         const date = x.invert(mouseX)
         tooltip.textContent = d3.timeFormat("%Y-%m-%d %H:%M")(date)
-        tooltip.style.left = (mouseX - tooltip.getBoundingClientRect().width / 2) + "px"
+        tooltip.style.left =
+            mouseX - tooltip.getBoundingClientRect().width / 2 + "px"
         tooltip.style.top = 50 + "px"
         cursor.style.left = mouseX + "px"
-
     })
 
     svg.on("click", function (event) {
         const [mouseX, _] = d3.pointer(event, this)
         const date = x.invert(mouseX)
-        const datePart = new Intl.DateTimeFormat("en-CA").format(date);
-        const timePart = new Intl.DateTimeFormat('en', {
-            hour: '2-digit',
-            minute: '2-digit',
+        const datePart = new Intl.DateTimeFormat("en-CA").format(date)
+        const timePart = new Intl.DateTimeFormat("en", {
+            hour: "2-digit",
+            minute: "2-digit",
             timeZone: timeline.dataset.timezone || "UTC",
-            hour12: false
+            hour12: false,
         }).format(date)
 
-        window.TimelineHook.pushEvent("datetime", {value: `${datePart}T${timePart}`})
+        window.TimelineHook.pushEvent("datetime", {
+            value: `${datePart}T${timePart}`,
+        })
     })
 
     svg.on("mouseleave", () => {
