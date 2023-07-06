@@ -16,8 +16,8 @@ defmodule ExNVRWeb.TimelineComponent do
       id="timeline-wrapper"
       phx-hook="Timeline"
       class="relative"
-      data-segments="{@segments}"
-      data-timezone="{@timezone}"
+      data-segments={@segments}
+      data-timezone={@timezone}
     >
       <div id="background" class="bg-gray-900 w-full h-7 absolute top-0"></div>
       <div
