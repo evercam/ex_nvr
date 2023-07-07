@@ -81,7 +81,6 @@ defmodule ExNVR.Elements.StorageBin do
         _ctx,
         state
       ) do
-    IO.inspect(segment)
     state = run_from_segment(state, segment, end_run?)
     {[], put_in(state, [:pending_segments, pad_ref], segment)}
   end
@@ -111,7 +110,14 @@ defmodule ExNVR.Elements.StorageBin do
 
     case ExNVR.Recordings.create(state.run, recording) do
       {:ok, _, run} ->
-        Membrane.Logger.info("Segment saved successfully")
+        Membrane.Logger.info("""
+        Segment saved successfully
+          Media duration: #{Membrane.Time.round_to_milliseconds(Segment.duration(segment))} ms
+          Realtime (monotonic) duration: #{Membrane.Time.round_to_milliseconds(Segment.realtime_duration(segment))} ms
+          Wallclock duration: #{Membrane.Time.round_to_milliseconds(Segment.wall_clock_duration(segment))} ms
+          Size: #{div(Segment.size(segment), 1024)} KiB
+        """)
+
         File.rm(recording.path)
         {maybe_new_run(state, run), recording}
 

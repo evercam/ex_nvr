@@ -33,6 +33,18 @@ defmodule ExNVR.Elements.Segmenter.Segment do
     }
   end
 
+  @spec duration(t()) :: Membrane.Time.t()
+  def duration(segment), do: segment.duration
+
+  @spec wall_clock_duration(t()) :: Membrane.Time.t()
+  def wall_clock_duration(segment), do: segment.metadata.wall_clock_duration
+
+  @spec realtime_duration(t()) :: Membrane.Time.t()
+  def realtime_duration(segment), do: segment.metadata.realtime_duration
+
+  @spec size(t()) :: non_neg_integer()
+  def size(segment), do: segment.metadata.size
+
   @spec add_duration(t(), Membrane.Time.t()) :: t()
   def add_duration(segment, duration) do
     current_duration = segment.duration + duration
@@ -44,9 +56,6 @@ defmodule ExNVR.Elements.Segmenter.Segment do
         metadata: %SegmentMetadata{segment.metadata | media_duration: current_duration}
     }
   end
-
-  @spec duration(t()) :: Membrane.Time.t()
-  def duration(segment), do: segment.duration
 
   @spec with_wall_clock_duration(t(), Membrane.Time.t()) :: t()
   def with_wall_clock_duration(segment, wall_clock_duration) do

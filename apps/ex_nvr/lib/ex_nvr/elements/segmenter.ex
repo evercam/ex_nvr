@@ -96,7 +96,8 @@ defmodule ExNVR.Elements.Segmenter do
         | start_time: start_time,
           segment: Segment.new(start_time),
           buffer: [buffer],
-          last_buffer_dts: Buffer.get_dts_or_pts(buffer)
+          last_buffer_dts: Buffer.get_dts_or_pts(buffer),
+          monotonic_start_time: System.monotonic_time()
       }
       |> update_segment_size(buffer)
 
@@ -140,7 +141,8 @@ defmodule ExNVR.Elements.Segmenter do
           | start_time: start_time,
             segment: Segment.new(start_time),
             buffer?: true,
-            buffer: [buffer]
+            buffer: [buffer],
+            monotonic_start_time: System.monotonic_time()
         }
         |> update_segment_size(buffer)
 
@@ -182,11 +184,19 @@ defmodule ExNVR.Elements.Segmenter do
       buffer: [],
       buffer?: true,
       start_time: nil,
-      parameter_sets: []
+      monotonic_start_time: 0
     }
   end
 
   defp completed_segment_action(state, discontinuity \\ false) do
-    [notify_parent: {:completed_segment, {state.start_time, state.segment, discontinuity}}]
+    monotonic_duration = System.monotonic_time() - state.monotonic_start_time
+    wall_clock_duration = Membrane.Time.os_time() - state.start_time
+
+    segment =
+      state.segment
+      |> Segment.with_realtime_duration(Membrane.Time.native_units(monotonic_duration))
+      |> Segment.with_wall_clock_duration(wall_clock_duration)
+
+    [notify_parent: {:completed_segment, {state.start_time, segment, discontinuity}}]
   end
 end
