@@ -47,10 +47,10 @@ defmodule ExNvr.Elements.SegmenterPipelineTest do
     Pipeline.terminate(pid)
   end
 
-  defp create_buffer(pts, key_frame?) do
+  defp create_buffer(dts, key_frame?) do
     %Buffer{
       payload: @buffer_payload,
-      pts: Membrane.Time.milliseconds(pts),
+      dts: Membrane.Time.milliseconds(dts),
       metadata: %{h264: %{key_frame?: key_frame?}}
     }
   end
@@ -72,7 +72,7 @@ defmodule ExNvr.Elements.SegmenterPipelineTest do
       # and send them all once the output pad of segmenter is linked
       # This will make the tests slower, a new approach is needed
       |> child(:realtimer, Realtimer)
-      |> child(:segmenter, %Segmenter{segment_duration: 1})
+      |> child(:segmenter, %Segmenter{target_duration: 1})
     ]
 
     Pipeline.start_link_supervised!(structure: structure)

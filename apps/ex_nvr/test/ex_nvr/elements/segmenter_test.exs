@@ -30,7 +30,7 @@ defmodule ExNVR.Elements.SegmenterTest do
       state = init_element()
 
       buffer1 = build_buffer(10, true, 1_000)
-      buffer2 = build_buffer(10, true, 2_000)
+      buffer2 = build_buffer(10, false, 2_000)
 
       assert {[notify_parent: {:new_media_segment, _}], %{buffer: [^buffer1]} = state} =
                Segmenter.handle_process(:input, buffer1, %{}, state)
@@ -68,33 +68,32 @@ defmodule ExNVR.Elements.SegmenterTest do
                  state
                  | buffer?: false,
                    start_time: 0,
-                   last_buffer_pts: 0
+                   last_buffer_dts: 0,
+                   segment: Segment.new(0)
                })
     end
 
     test "new segment is created when target duration is reached" do
       state = init_element()
-
-      state =
-        Map.merge(state, %{
-          start_time: Membrane.Time.vm_time(),
-          buffer?: false,
-          buffer: [build_buffer(10, true, 0)],
-          last_buffer_pts: 0
-        })
+      {_, state} = Segmenter.handle_process(:input, build_buffer(10, true, 0), %{}, state)
 
       pad = Pad.ref(:output, state.start_time)
+
+      {_, state} = Segmenter.handle_pad_added(pad, %{}, state)
 
       buffer1 = build_buffer(10, false, Membrane.Time.milliseconds(1500))
       buffer2 = build_buffer(10, false, Membrane.Time.milliseconds(2300))
       buffer3 = build_buffer(10, true, Membrane.Time.milliseconds(2800))
 
-      assert {_, state} = Segmenter.handle_process(:input, buffer1, %{}, state)
-      assert {_, state} = Segmenter.handle_process(:input, buffer2, %{}, state)
+      assert {[buffer: {^pad, ^buffer1}], state} =
+               Segmenter.handle_process(:input, buffer1, %{}, state)
+
+      assert {[buffer: {^pad, ^buffer2}], state} =
+               Segmenter.handle_process(:input, buffer2, %{}, state)
 
       assert {[
-                end_of_stream: ^pad,
                 notify_parent: {:new_media_segment, _},
+                end_of_stream: ^pad,
                 notify_parent: {:completed_segment, {_, %Segment{}, false}}
               ], %{buffer: [^buffer3]}} = Segmenter.handle_process(:input, buffer3, %{}, state)
     end
@@ -102,32 +101,24 @@ defmodule ExNVR.Elements.SegmenterTest do
 
   test "receive discontinuity event will flush the current segment" do
     state = init_element()
-
     assert {[], ^state} = Segmenter.handle_event(:input, %Event.Discontinuity{}, %{}, state)
 
-    state =
-      Map.merge(state, %{
-        start_time: Membrane.Time.vm_time(),
-        buffer?: false,
-        buffer: [build_buffer(10, true, 0), build_buffer(10, false, 1000)],
-        last_buffer_pts: 1000
-      })
+    {_, state} = Segmenter.handle_process(:input, build_buffer(10, true, 0), %{}, state)
+    {_, state} = Segmenter.handle_process(:input, build_buffer(10, false, 1000), %{}, state)
 
     pad = Pad.ref(:output, state.start_time)
+    {_, state} = Segmenter.handle_pad_added(pad, %{}, state)
 
     assert {[
               end_of_stream: ^pad,
               notify_parent: {:completed_segment, {_, %Segment{}, true}}
             ],
-            %{buffer: [], current_segment_duration: 0, start_time: nil}} =
+            %{buffer: [], segment: nil, start_time: nil}} =
              Segmenter.handle_event(:input, %Event.Discontinuity{}, %{}, state)
   end
 
   defp init_element() do
-    assert {[], state} =
-             Segmenter.handle_init(%{}, %Segmenter{
-               segment_duration: 2
-             })
+    assert {[], state} = Segmenter.handle_init(%{}, %Segmenter{target_duration: 2})
 
     assert {[], %{stream_format: @input_stream_format} = state} =
              Segmenter.handle_stream_format(:input, @input_stream_format, %{}, state)
@@ -135,11 +126,11 @@ defmodule ExNVR.Elements.SegmenterTest do
     state
   end
 
-  defp build_buffer(payload_size, keyframe? \\ false, pts \\ nil) do
+  defp build_buffer(payload_size, keyframe? \\ false, dts \\ nil) do
     %Buffer{
       payload: :binary.copy(<<1>>, payload_size),
       metadata: %{h264: %{key_frame?: keyframe?}},
-      pts: pts
+      dts: dts
     }
   end
 end

@@ -2,8 +2,8 @@ defmodule ExNVR.Elements.Segmenter do
   @moduledoc """
   Element responsible for splitting the stream into segments of fixed duration.
 
-  Once the duration of a segment reach the `segment_duration` specified, a new notification is
-  sent to the parent to inform it of the start of a new segment.
+  Once the duration of a segment reach the provided `target_duration`, a new notification is
+  emitted to the parent to inform it of the start of a new segment.
 
   The parent should link the `Pad.ref(:output, segment_ref)` to start receiving the data of the new segment.
 
@@ -17,32 +17,15 @@ defmodule ExNVR.Elements.Segmenter do
   alias ExNVR.Elements.Segmenter.Segment
   alias Membrane.{Buffer, Event, H264}
 
-  def_options segment_duration: [
+  def_options target_duration: [
                 spec: non_neg_integer(),
                 default: 60,
                 description: """
-                The duration of each segment in seconds.
-                A segment may not have the exact duration specified here, since each
+                The target duration of each segment in seconds.
+
+                A segment may not have the exact duration provided here, since each
                 segment must start from a keyframe. The real segment duration may be
                 slightly bigger
-                """
-              ],
-              sps: [
-                spec: binary(),
-                default: <<>>,
-                description: """
-                Sequence Parameter Set, if not set, maybe provided in the bitstream.
-
-                sps will be appended to the first keyframe of each segment
-                """
-              ],
-              pps: [
-                spec: binary(),
-                default: <<>>,
-                description: """
-                Picture Parameter Set, if not set, maybe provided in the bitstream.
-
-                pps will be appended to the first keyframe of each segment
                 """
               ]
 
@@ -62,9 +45,7 @@ defmodule ExNVR.Elements.Segmenter do
     state =
       Map.merge(init_state(), %{
         stream_format: nil,
-        target_segment_duration: Membrane.Time.seconds(options.segment_duration),
-        sps: options.sps,
-        pps: options.pps
+        target_duration: Membrane.Time.seconds(options.target_duration)
       })
 
     {[], state}
@@ -100,19 +81,25 @@ defmodule ExNVR.Elements.Segmenter do
   @impl true
   def handle_process(
         :input,
-        %Buffer{metadata: %{h264: %{key_frame?: true}}} = buf,
+        %Buffer{metadata: %{h264: %{key_frame?: true}}} = buffer,
         _ctx,
         %{start_time: nil} = state
       ) do
     # we chose the os_time instead of vm_time since the
     # VM will not adjust the time when the the system is suspended
     # check https://erlangforums.com/t/why-is-there-a-discrepancy-between-values-returned-by-os-system-time-1-and-erlang-system-time-1/2050/2
-    state = %{
-      state
-      | start_time: Membrane.Time.os_time(),
-        buffer: [prepend_sps_and_pps(state, buf)],
-        last_buffer_pts: buf.pts
-    }
+    start_time = Membrane.Time.os_time()
+
+    state =
+      %{
+        state
+        | start_time: start_time,
+          segment: Segment.new(start_time),
+          buffer: [buffer],
+          last_buffer_dts: Buffer.get_dts_or_pts(buffer),
+          monotonic_start_time: System.monotonic_time()
+      }
+      |> update_segment_size(buffer)
 
     {[notify_parent: {:new_media_segment, state.start_time}], state}
   end
@@ -135,30 +122,36 @@ defmodule ExNVR.Elements.Segmenter do
   end
 
   defp handle_buffer(%{buffer?: true} = state, buffer) do
+    state = update_segment_size(state, buffer)
     {[], %{state | buffer: [buffer | state.buffer]}}
   end
 
-  defp handle_buffer(state, %Buffer{metadata: %{h264: %{key_frame?: true}}} = buffer)
-       when state.current_segment_duration >= state.target_segment_duration do
-    completed_segment_action = completed_segment_action(state)
-    pad_ref = state.start_time
+  defp handle_buffer(state, %Buffer{} = buffer) do
+    key_frame? = buffer.metadata.h264.key_frame?
 
-    state = %{
-      state
-      | start_time: state.start_time + state.current_segment_duration,
-        current_segment_duration: 0,
-        buffer?: true,
-        buffer: [prepend_sps_and_pps(state, buffer)]
-    }
+    if key_frame? and Segment.duration(state.segment) >= state.target_duration do
+      actions =
+        [end_of_stream: Pad.ref(:output, state.start_time)] ++ completed_segment_action(state)
 
-    {[
-       end_of_stream: Pad.ref(:output, pad_ref),
-       notify_parent: {:new_media_segment, state.start_time}
-     ] ++ completed_segment_action, state}
+      start_time = state.start_time + Segment.duration(state.segment)
+
+      state =
+        %{
+          state
+          | start_time: start_time,
+            segment: Segment.new(start_time),
+            buffer?: true,
+            buffer: [buffer],
+            monotonic_start_time: System.monotonic_time()
+        }
+        |> update_segment_size(buffer)
+
+      {[notify_parent: {:new_media_segment, start_time}] ++ actions, state}
+    else
+      state = update_segment_size(state, buffer)
+      {[buffer: {Pad.ref(:output, state.start_time), buffer}], state}
+    end
   end
-
-  defp handle_buffer(state, buffer),
-    do: {[buffer: {Pad.ref(:output, state.start_time), buffer}], state}
 
   defp do_handle_end_of_stream(%{start_time: nil} = state) do
     {[], state}
@@ -169,109 +162,41 @@ defmodule ExNVR.Elements.Segmenter do
      Map.merge(state, init_state())}
   end
 
-  defp update_segment_duration(state, %Buffer{pts: pts} = buf) do
-    frame_duration = pts - state.last_buffer_pts
+  defp update_segment_duration(state, %Buffer{} = buf) do
+    dts = Buffer.get_dts_or_pts(buf)
+    frame_duration = dts - state.last_buffer_dts
 
     %{
       state
-      | current_segment_duration: state.current_segment_duration + frame_duration,
-        last_buffer_pts: buf.pts
+      | segment: Segment.add_duration(state.segment, frame_duration),
+        last_buffer_dts: dts
     }
+  end
+
+  defp update_segment_size(state, %Buffer{} = buf) do
+    %{state | segment: Segment.add_size(state.segment, byte_size(buf.payload))}
   end
 
   defp init_state() do
     %{
-      current_segment_duration: 0,
-      last_buffer_pts: nil,
+      segment: nil,
+      last_buffer_dts: nil,
       buffer: [],
       buffer?: true,
       start_time: nil,
-      parameter_sets: []
+      monotonic_start_time: 0
     }
   end
 
   defp completed_segment_action(state, discontinuity \\ false) do
-    segment = Segment.new(state.start_time, state.current_segment_duration)
+    monotonic_duration = System.monotonic_time() - state.monotonic_start_time
+    wall_clock_duration = Membrane.Time.os_time() - state.start_time
+
+    segment =
+      state.segment
+      |> Segment.with_realtime_duration(Membrane.Time.native_units(monotonic_duration))
+      |> Segment.with_wall_clock_duration(wall_clock_duration)
+
     [notify_parent: {:completed_segment, {state.start_time, segment, discontinuity}}]
-  end
-
-  # Prepend SPS and PPS is useful in case this parameter sets
-  # are not sent frequently on the bytestream.
-  # The MP4 payloader needs this parameters sets
-  # This needs to be done by the Parser.
-  defp prepend_sps_and_pps(%{sps: <<>>, pps: <<>>}, %Buffer{} = access_unit), do: access_unit
-
-  defp prepend_sps_and_pps(%{sps: sps, pps: pps}, %Buffer{} = access_unit) do
-    nalus_type = Enum.map(access_unit.metadata.h264.nalus, & &1.metadata.h264.type)
-    has_parameter_sets? = :sps in nalus_type and :pps in nalus_type
-
-    if has_parameter_sets?, do: access_unit, else: do_prepend_sps_and_pps(access_unit, sps, pps)
-  end
-
-  defp do_prepend_sps_and_pps(access_unit, sps, pps) do
-    sps = maybe_add_prefix(sps)
-    pps = maybe_add_prefix(pps)
-
-    parameter_set_nalus =
-      Enum.map([{:sps, sps}, {:pps, pps}], fn {type, parameter_set} ->
-        %{type: type, payload: parameter_set, prefix_length: 4}
-      end)
-
-    parameter_set_total_length = byte_size(sps) + byte_size(pps)
-
-    access_unit_nalus =
-      Enum.map(access_unit.metadata.h264.nalus, fn nalu_metadata ->
-        {_, nalu_metadata} = pop_in(nalu_metadata, [:metadata, :h264, :new_access_unit])
-
-        nalu_metadata
-        |> Map.update!(:prefixed_poslen, fn {start, length} ->
-          {parameter_set_total_length + start, length}
-        end)
-        |> Map.update!(:unprefixed_poslen, fn {start, length} ->
-          {parameter_set_total_length + start, length}
-        end)
-      end)
-
-    parameter_set_nalus =
-      parameter_set_nalus
-      |> Enum.with_index()
-      |> Enum.map_reduce(0, fn {nalu, i}, nalu_start ->
-        metadata = %{
-          metadata: %{
-            h264: %{
-              type: nalu.type
-            }
-          },
-          prefixed_poslen: {nalu_start, byte_size(nalu.payload)},
-          unprefixed_poslen:
-            {nalu_start + nalu.prefix_length, byte_size(nalu.payload) - nalu.prefix_length}
-        }
-
-        metadata =
-          if i == 0 do
-            put_in(metadata, [:metadata, :h264, :new_access_unit], %{key_frame?: true})
-          else
-            metadata
-          end
-
-        {metadata, nalu_start + byte_size(nalu.payload)}
-      end)
-      |> elem(0)
-
-    %Buffer{
-      access_unit
-      | payload: sps <> pps <> access_unit.payload,
-        metadata:
-          put_in(access_unit.metadata, [:h264, :nalus], parameter_set_nalus ++ access_unit_nalus)
-    }
-  end
-
-  defp maybe_add_prefix(parameter_set) do
-    case parameter_set do
-      <<>> -> <<>>
-      <<0, 0, 1, _rest::binary>> -> parameter_set
-      <<0, 0, 0, 1, _rest::binary>> -> parameter_set
-      parameter_set -> <<0, 0, 0, 1>> <> parameter_set
-    end
   end
 end
