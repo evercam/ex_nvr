@@ -166,7 +166,12 @@ defmodule ExNVR.Pipelines.Main do
         %State{} = state
       ) do
     if video_track.codec != :H264 do
-      Membrane.Logger.error("Only H264 streams are supported now")
+      Membrane.Logger.error("""
+      Video codec #{video_track.codec} is not supported
+      Supported codecs are: H264
+      """)
+
+      state = maybe_update_device_and_report(state, :stopped)
       {[terminate: :normal], state}
     else
       state = maybe_update_device_and_report(state, :recording)
@@ -345,5 +350,14 @@ defmodule ExNVR.Pipelines.Main do
     })
 
     %{state | device: updated_device}
+  end
+
+  def child_spec(arg) do
+    %{
+      id: __MODULE__,
+      start: {__MODULE__, :start_link, [arg]},
+      restart: :transient,
+      type: :supervisor
+    }
   end
 end
