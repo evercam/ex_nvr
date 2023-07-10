@@ -40,12 +40,17 @@ defmodule ExNVR.Devices.Room do
     {:ok, rtc_engine} = Engine.start_link([id: device.id], [])
     Engine.register(rtc_engine, self())
 
+    stream_endpoint = %ExNVR.Devices.Room.StreamEndpoint{device: opts[:device]}
+    stream_endpoint_id = UUID.uuid4()
+    Engine.add_endpoint(rtc_engine, stream_endpoint, id: stream_endpoint_id)
+
     {:ok,
      %{
        rtc_engine: rtc_engine,
        device: device,
        network_options: network_options,
-       peer_channels: %{}
+       peer_channels: %{},
+       stream_endpoint_id: stream_endpoint_id
      }}
   end
 
@@ -70,6 +75,7 @@ defmodule ExNVR.Devices.Room do
 
     webrtc_endpoint = %WebRTC{
       rtc_engine: engine,
+      direction: :recv,
       ice_name: peer_id,
       owner: self(),
       integrated_turn_options: state.network_options[:integrated_turn_options],
@@ -98,6 +104,18 @@ defmodule ExNVR.Devices.Room do
       ) do
     channel_pid = state.peer_channels[endpoint_id]
     send(channel_pid, {:media_event, media_event})
+    {:noreply, state}
+  end
+
+  @impl true
+  def handle_info({:video_track, _video_track} = message, state) do
+    Engine.message_endpoint(state.rtc_engine, state.stream_endpoint_id, message)
+    {:noreply, state}
+  end
+
+  @impl true
+  def handle_info(:connection_lost, state) do
+    Engine.message_endpoint(state.rtc_engine, state.stream_endpoint_id, :connection_lost)
     {:noreply, state}
   end
 

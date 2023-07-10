@@ -6,14 +6,27 @@ defmodule ExNVR.Pipelines.Supervisor do
   import ExNVR.Utils
 
   alias ExNVR.Model.Device
-  alias ExNVR.Pipelines
+  alias ExNVR.{Devices, Pipelines}
 
   def start_pipeline(%Device{} = device) do
     if ExNVR.Utils.run_main_pipeline?() do
       File.mkdir_p!(recording_dir(device.id))
       File.mkdir_p!(hls_dir(device.id))
 
-      DynamicSupervisor.start_child(ExNVR.PipelineSupervisor, {Pipelines.Main, [device: device]})
+      children = [
+        {Devices.Room, [device: device, name: room_name(device)]},
+        {Pipelines.Main, [device: device, rtc_engine: room_name(device)]}
+      ]
+
+      options = [strategy: :one_for_one, name: supervisor_name(device)]
+
+      DynamicSupervisor.start_child(
+        ExNVR.PipelineSupervisor,
+        %{
+          id: Supervisor,
+          start: {Supervisor, :start_link, [children, options]}
+        }
+      )
     end
   end
 
@@ -21,7 +34,7 @@ defmodule ExNVR.Pipelines.Supervisor do
     if ExNVR.Utils.run_main_pipeline?() do
       DynamicSupervisor.terminate_child(
         ExNVR.PipelineSupervisor,
-        Pipelines.Main.supervisor(device)
+        supervisor_name(device)
       )
     end
   end
@@ -34,4 +47,10 @@ defmodule ExNVR.Pipelines.Supervisor do
     stop_pipeline(device)
     start_pipeline(device)
   end
+
+  def room_pid(%Device{} = device), do: Process.whereis(room_name(device))
+
+  defp supervisor_name(%Device{id: id}), do: :"supervisor_#{id}"
+
+  defp room_name(%Device{id: id}), do: :"room_#{id}"
 end
