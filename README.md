@@ -19,7 +19,15 @@ This will create an image `ex_nvr` with `custom` tag. To run it, issue this comm
 docker run --rm -it -p 4000:4000 --env-file .env ex_nvr:custom
 ```
 
-Note that this command needs some environment variables defined in the `.env` file. The list of environment 
+### Arm/v7
+There's currently no automated docker build for `arm/v7` since building the image using `buildx` and `Qemu` take ages to complete,
+the workaroud is to build the image on the target host itself
+
+```bash
+docker build -t ex_nvr:0.1.1 -f Dockerfile-armv7 .
+```
+
+Note that running the docker cotainer needs some environment variables defined in the `.env` file. The list of environment 
 variables needed to configure `ex_nvr` are:
 
 | **Env variable** | **descritpion** |
@@ -63,6 +71,8 @@ The main feature of this project is to store video streams retrieved from `devic
    - [x] HLS
    - [ ] WebRTC
    - [ ] Webm
+   - [ ] RTSP
+   - [ ] RTMP
 
 * **Other**: other interesting features
    - [ ] Support audio
