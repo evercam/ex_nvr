@@ -41,6 +41,7 @@ jobs:
       uses: docker/build-push-action@v4
       with:
         context: .
+        file: Dockerfile-armv7
         platforms: linux/arm/v7
         push: true
         tags: ${{ steps.meta.outputs.tags }}
