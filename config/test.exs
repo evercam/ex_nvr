@@ -17,6 +17,15 @@ config :ex_nvr,
   recording_directory: ".",
   run_pipelines: false
 
+# integrated turn variables
+config :ex_nvr,
+  integrated_turn_ip: {127, 0, 0, 1},
+  integrated_turn_domain: "localhost",
+  integrated_turn_port_range: {30_000, 30_100},
+  integrated_turn_tcp_port: 20_000,
+  integrated_turn_pkey: nil,
+  integrated_turn_cert: nil
+
 # We don't run a server during test. If one is required,
 # you can enable the server option below.
 config :ex_nvr_web, ExNVRWeb.Endpoint,
