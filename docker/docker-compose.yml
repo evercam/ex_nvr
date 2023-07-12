@@ -1,0 +1,16 @@
+version: '3'
+services:
+  ex_nvr:
+    container_name: ex_nvr
+    image: ghcr.io/evercam/ex_nvr:v0.1.1
+    restart: always
+    env_file:
+      - .env
+    ports:
+      - 4000:4000
+      - 4443:4443
+      - 20000:20000
+    volumes:
+      - "/data/ex_nvr/database:./data/database"
+      - "/data/ex_nvr/recordings:./data/recordings"
+      - "/data/ex_nvr/cert:./data/cert"
