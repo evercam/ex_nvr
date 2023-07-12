@@ -12,6 +12,8 @@ Make sure that `docker` and `docker compose plugin` are installed on your target
 
 The docker images are saved in Github container registry `ghcr.io`. To pull this images you need a personal access token (`PAT`) with `read:packages` scope. Check [this](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#creating-a-personal-access-token-classic) for details on how to create one.
 
+We provide a `PAT` to use in `zoho vault`.
+
 Once you get your `PAT`, you can login to `ghcr.io`
 ```bash
 docker login ghcr.io
@@ -24,6 +26,12 @@ Provide your github username and the `PAT` to login. Once this step is finished 
 Currently there's two different tags available for `ex_nvr` images, `v*` and `v*-armv7` where `*` represent a version number (e.g. `0.1.1`), the first is for `arm64/v8` and `amd64` machines and the latter for `arm/v7`.
 
 Update `docker-compose.yml` file to use the appropriate image.
+
+## HTTPS
+
+If `https` is enabled and it should be, we'll need a private key and a certificate. Generating this files is out of the scope of this guide. However, there's many ways to generate this certificates, like self signed certificates (not recommended for production) or using a tool like [`let's encrypt`](https://letsencrypt.org/).
+
+In this guide, we assume the files are called `certificate.key` for the key, and `certficate.crt` for the certificate.
 
 ## Prepare volumes
 
