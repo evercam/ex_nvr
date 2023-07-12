@@ -10,6 +10,7 @@ config :ex_nvr, ExNVR.Repo,
 config :ex_nvr,
   recording_directory: Path.expand("../data/recordings", Path.dirname(__ENV__.file)),
   hls_directory: Path.expand("../data/hls", Path.dirname(__ENV__.file)),
+  run_pipelines: false
 
 config :ex_nvr,
   integrated_turn_ip: {127, 0, 0, 1},
@@ -75,7 +76,7 @@ config :ex_nvr_web, ExNVRWeb.Endpoint,
 config :ex_nvr_web, dev_routes: true
 
 # Do not include metadata nor timestamps in development logs
-config :logger, :console, format: "[$level] $message\n"
+config :logger, :console, format: "[$level] $message\n", level: :info
 
 # Initialize plugs at runtime for faster development compilation
 config :phoenix, :plug_init_mode, :runtime
