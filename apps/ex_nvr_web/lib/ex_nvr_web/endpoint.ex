@@ -12,8 +12,8 @@ defmodule ExNVRWeb.Endpoint do
   ]
 
   socket "/socket", ExNVRWeb.UserSocket,
-    websocket: true,
-    longpoll: true
+    websocket: [check_origin: false],
+    longpoll: [check_origin: false]
 
   socket "/live", Phoenix.LiveView.Socket, websocket: [connect_info: [session: @session_options]]
 
