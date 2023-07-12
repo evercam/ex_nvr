@@ -51,7 +51,7 @@ defmodule ExNVR.Elements.Segmenter.Segment do
 
     %__MODULE__{
       segment
-      | end_date: segment.start_date + duration,
+      | end_date: segment.end_date + duration,
         duration: current_duration,
         metadata: %SegmentMetadata{segment.metadata | media_duration: current_duration}
     }
