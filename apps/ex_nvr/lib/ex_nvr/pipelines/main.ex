@@ -326,7 +326,13 @@ defmodule ExNVR.Pipelines.Main do
 
   @impl true
   def handle_call({:add_peer, _peer} = message, ctx, state) do
-    {[reply: {ctx.from, :ok}, notify_child: {:webrtc, message}], state}
+    case state.device.state do
+      :recording ->
+        {[reply: {ctx.from, :ok}, notify_child: {:webrtc, message}], state}
+
+      _ ->
+        {[reply: {ctx.from, {:error, :offline}}], state}
+    end
   end
 
   @impl true

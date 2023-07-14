@@ -5,14 +5,20 @@ defmodule ExNVRWeb.DeviceRoomChannel do
 
   require Logger
 
+  alias ExNVR.Model.Device
+
   @impl true
   def join("device:" <> device_id, _params, socket) do
     device = ExNVR.Devices.get!(device_id)
     peer_id = UUID.uuid4()
 
-    ExNVR.Pipelines.Main.add_webrtc_peer(device, peer_id, self())
-
-    {:ok, assign(socket, device: device, peer_id: peer_id)}
+    with true <- Device.recording?(device),
+         :ok <- ExNVR.Pipelines.Main.add_webrtc_peer(device, peer_id, self()) do
+      {:ok, assign(socket, device: device, peer_id: peer_id)}
+    else
+      _ ->
+        {:error, :offline}
+    end
   end
 
   @impl true
