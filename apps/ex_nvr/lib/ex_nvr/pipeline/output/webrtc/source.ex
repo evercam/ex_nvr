@@ -1,4 +1,4 @@
-defmodule ExNVR.Elements.Process.Source do
+defmodule ExNVR.Pipeline.Output.WebRTC.Source do
   @moduledoc false
 
   use Membrane.Source

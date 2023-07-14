@@ -1,4 +1,4 @@
-defmodule ExNVR.Elements.Process.Sink do
+defmodule ExNVR.Pipeline.Output.WebRTC.Sink do
   @moduledoc false
 
   use Membrane.Sink
@@ -10,14 +10,9 @@ defmodule ExNVR.Elements.Process.Sink do
     flow_control: :auto,
     accepted_format: _any
 
-  def_options pid: [
-                spec: pid(),
-                description: "The process' pid where to send buffers"
-              ]
-
   @impl true
-  def handle_init(_ctx, opts) do
-    {[], %{pid: opts.pid, stream_format: nil}}
+  def handle_init(_ctx, _opts) do
+    {[], %{pid: nil, stream_format: nil}}
   end
 
   @impl true

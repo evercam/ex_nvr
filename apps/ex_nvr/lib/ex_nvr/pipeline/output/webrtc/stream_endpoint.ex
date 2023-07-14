@@ -8,7 +8,7 @@ defmodule ExNVR.Pipeline.Output.WebRTC.StreamEndpoint do
 
   require Membrane.Logger
 
-  alias ExNVR.Elements.Process
+  alias ExNVR.Pipeline.Output
   alias Membrane.RTC.Engine.Endpoint.WebRTC.TrackSender
   alias Membrane.RTC.Engine.Track
   alias Membrane.RTP
@@ -71,7 +71,7 @@ defmodule ExNVR.Pipeline.Output.WebRTC.StreamEndpoint do
   def handle_pad_added(Pad.ref(:output, {track_id, :high}) = pad, _ctx, state)
       when track_id == state.track.id do
     spec = [
-      child(:source, Process.Source)
+      child(:source, Output.WebRTC.Source)
       |> child(:parser, %Membrane.H264.FFmpeg.Parser{alignment: :nal})
       |> child(:rtp_payloader, %Membrane.RTP.PayloaderBin{
         payloader: Membrane.RTP.H264.Payloader,

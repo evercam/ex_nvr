@@ -83,10 +83,7 @@ defmodule ExNVR.Pipeline.Output.WebRTC do
       {:media_track, media_track}
     )
 
-    spec = [
-      bin_input(pad)
-      |> child(:sink, %ExNVR.Elements.Process.Sink{pid: nil})
-    ]
+    spec = [bin_input(pad) |> child(:sink, Output.WebRTC.Sink)]
 
     {[spec: spec], state}
   end

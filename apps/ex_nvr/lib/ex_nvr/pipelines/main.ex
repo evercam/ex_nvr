@@ -315,23 +315,23 @@ defmodule ExNVR.Pipelines.Main do
   end
 
   @impl true
-  def handle_call({:media_track, :main_stream}, %{from: from}, state) do
-    {[reply: {from, state.video_track}], state}
+  def handle_call({:media_track, :main_stream}, _ctx, state) do
+    {[reply: state.video_track], state}
   end
 
   @impl true
-  def handle_call({:media_track, :sub_stream}, %{from: from}, state) do
-    {[reply: {from, state.sub_stream_video_track}], state}
+  def handle_call({:media_track, :sub_stream}, _ctx, state) do
+    {[reply: state.sub_stream_video_track], state}
   end
 
   @impl true
-  def handle_call({:add_peer, _peer} = message, ctx, state) do
+  def handle_call({:add_peer, _peer} = message, _ctx, state) do
     case state.device.state do
       :recording ->
-        {[reply: {ctx.from, :ok}, notify_child: {:webrtc, message}], state}
+        {[reply: :ok, notify_child: {:webrtc, message}], state}
 
       _ ->
-        {[reply: {ctx.from, {:error, :offline}}], state}
+        {[reply: {:error, :offline}], state}
     end
   end
 
