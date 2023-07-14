@@ -76,7 +76,7 @@ config :ex_nvr_web, ExNVRWeb.Endpoint,
 config :ex_nvr_web, dev_routes: true
 
 # Do not include metadata nor timestamps in development logs
-config :logger, :console, format: "[$level] $message\n", level: :info
+config :logger, :console, format: "[$level] $message\n"
 
 # Initialize plugs at runtime for faster development compilation
 config :phoenix, :plug_init_mode, :runtime
