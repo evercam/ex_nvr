@@ -20,6 +20,21 @@ defmodule ExNVR.Elements.Process.Source do
   end
 
   @impl true
+  def handle_parent_notification({:stream_format, stream_format}, _ctx, state) do
+    {[stream_format: {:output, stream_format}], state}
+  end
+
+  @impl true
+  def handle_parent_notification({:buffer, buffer}, _ctx, state) do
+    {[buffer: {:output, buffer}], state}
+  end
+
+  @impl true
+  def handle_parent_notification(_notification, _ctx, state) do
+    {[], state}
+  end
+
+  @impl true
   def handle_info({:stream_format, stream_format}, _ctx, state) do
     {[stream_format: {:output, stream_format}], state}
   end

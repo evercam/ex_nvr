@@ -116,21 +116,20 @@ defmodule ExNVR.Pipelines.Main do
     Pipeline.call(pipeline_pid(device), {:live_snapshot, image_format})
   end
 
-  @doc """
-  Subscribe the provided element to the video feed.
-
-  The element is any element that has an input pad `:input` which
-  will receive video NAL units
-  """
-  @spec subscribe(Device.t(), term(), struct() | module()) :: term()
-  def subscribe(device, id, element) do
-    Pipeline.call(pipeline_pid(device), {:subscribe, {id, element}})
-  end
-
   @spec media_track(Device.t(), :main_stream | :sub_stream) :: term()
   def media_track(device, stream \\ :main_stream) do
     Pipeline.call(pipeline_pid(device), {:media_track, stream})
   end
+
+  def add_webrtc_peer(device, peer_id, channel_pid) do
+    Pipeline.call(pipeline_pid(device), {:add_peer, {peer_id, channel_pid}})
+  end
+
+  def add_webrtc_media_event(device, peer_id, media_event) do
+    Pipeline.call(pipeline_pid(device), {:media_event, peer_id, media_event})
+  end
+
+  # Pipeline callbacks
 
   @impl true
   def handle_init(_ctx, options) do
@@ -153,7 +152,8 @@ defmodule ExNVR.Pipelines.Main do
       [
         child(:rtsp_source, %Source{stream_uri: stream_uri}),
         {child(:hls_sink, hls_sink, get_if_exists: true), crash_group: {"hls", :temporary}},
-        child(:snapshooter, ExNVR.Elements.SnapshotBin)
+        child(:snapshooter, ExNVR.Elements.SnapshotBin),
+        child(:webrtc, %ExNVR.Pipeline.Output.WebRTC{stream_id: device.id})
       ] ++
         if sub_stream_uri,
           do: [child({:rtsp_source, :sub_stream}, %Source{stream_uri: sub_stream_uri})],
@@ -164,7 +164,7 @@ defmodule ExNVR.Pipelines.Main do
 
   @impl true
   def handle_setup(_ctx, state) do
-    # Sset the device to failed state and make last active run inactive
+    # Set the device to failed state and make last active run inactive
     # may happens on application crash
     Recordings.deactivate_runs(state.device)
     {[], maybe_update_device_and_report(state, :failed)}
@@ -173,10 +173,13 @@ defmodule ExNVR.Pipelines.Main do
   @impl true
   def handle_child_notification({:connection_lost, _ref}, :rtsp_source, _ctx, state) do
     maybe_update_device_and_report(state, :failed)
-    notify_rtc_engine(state, :connection_lost)
 
-    {[remove_children: :main_stream, remove_link: {:hls_sink, Pad.ref(:input, :main_stream)}],
-     %{state | subscriptions: %{}}}
+    unlink_actions = [
+      remove_link: {:webrtc, Pad.ref(:input, :main_stream)},
+      remove_link: {:hls_sink, Pad.ref(:input, :main_stream)}
+    ]
+
+    {[remove_children: :main_stream] ++ unlink_actions, %{state | subscriptions: %{}}}
   end
 
   @impl true
@@ -243,12 +246,14 @@ defmodule ExNVR.Pipelines.Main do
       |> get_child(:hls_sink),
       get_child(:video_tee)
       |> via_out(:copy)
-      |> child({:cvs_bufferer, ref}, ExNVR.Elements.CVSBufferer)
+      |> child({:cvs_bufferer, ref}, ExNVR.Elements.CVSBufferer),
+      get_child(:video_tee)
+      |> via_out(:copy)
+      |> via_in(Pad.ref(:input, :main_stream), options: [media_track: state.video_track])
+      |> get_child(:webrtc)
     ]
 
-    {actions, state} = fullfill_subscriptions(state)
-
-    {[spec: {spec, group: :main_stream}] ++ actions, state}
+    {[spec: {spec, group: :main_stream}], state}
   end
 
   @impl true
@@ -310,18 +315,6 @@ defmodule ExNVR.Pipelines.Main do
   end
 
   @impl true
-  def handle_call({:subscribe, {id, element}}, ctx, state) do
-    state = put_in(state, [:pending_subscriptions, id], element)
-
-    if Map.has_key?(ctx.children, :video_tee) do
-      {actions, state} = fullfill_subscriptions(state)
-      {[reply: {ctx.from, :ok}] ++ actions, state}
-    else
-      {[reply: {ctx.from, :ok}], state}
-    end
-  end
-
-  @impl true
   def handle_call({:media_track, :main_stream}, %{from: from}, state) do
     {[reply: {from, state.video_track}], state}
   end
@@ -329,6 +322,16 @@ defmodule ExNVR.Pipelines.Main do
   @impl true
   def handle_call({:media_track, :sub_stream}, %{from: from}, state) do
     {[reply: {from, state.sub_stream_video_track}], state}
+  end
+
+  @impl true
+  def handle_call({:add_peer, _peer} = message, ctx, state) do
+    {[reply: {ctx.from, :ok}, notify_child: {:webrtc, message}], state}
+  end
+
+  @impl true
+  def handle_call({:media_event, _peer_id, _media_event} = message, ctx, state) do
+    {[reply: {ctx.from, :ok}, notify_child: {:webrtc, message}], state}
   end
 
   def handle_terminate_request(_ctx, state) do
@@ -349,8 +352,6 @@ defmodule ExNVR.Pipelines.Main do
       |> via_in(Pad.ref(:rtp_input, make_ref()))
       |> child({:rtp, ref}, %SessionBin{fmt_mapping: fmt_mapping})
     ]
-
-    notify_rtc_engine(state, {:video_track, video_track})
 
     {[spec: spec], %State{state | video_track: video_track}}
   end
@@ -384,26 +385,6 @@ defmodule ExNVR.Pipelines.Main do
       |> get_child(:snapshooter)
     ]
   end
-
-  defp fullfill_subscriptions(state) do
-    actions =
-      Enum.map(state.pending_subscriptions, fn {id, element} ->
-        spec = [
-          get_child(:video_tee)
-          |> via_out(:copy)
-          |> child({:video, id}, element)
-        ]
-
-        [spec: {spec, group: :main_stream, crash_group: {"subscriptions", :temporary}}]
-      end)
-      |> List.flatten()
-
-    subscriptions = Map.merge(state.subscriptions, state.pending_subscriptions)
-    {actions, %{state | subscriptions: subscriptions, pending_subscriptions: %{}}}
-  end
-
-  defp notify_rtc_engine(%{rtc_engine: nil}, _message), do: :ok
-  defp notify_rtc_engine(%{rtc_engine: engine}, message), do: send(engine, message)
 
   defp maybe_update_device_and_report(%{device: %{state: device_state}} = state, device_state),
     do: state

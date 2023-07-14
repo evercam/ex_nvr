@@ -5,23 +5,21 @@ defmodule ExNVRWeb.DeviceRoomChannel do
 
   require Logger
 
-  alias ExNVR.Devices.Room
-
   @impl true
   def join("device:" <> device_id, _params, socket) do
     device = ExNVR.Devices.get!(device_id)
     peer_id = UUID.uuid4()
-    room_pid = ExNVR.Pipelines.Supervisor.room_pid(device)
 
-    Room.add_peer(room_pid, self(), peer_id)
+    ExNVR.Pipelines.Main.add_webrtc_peer(device, peer_id, self())
 
-    {:ok, assign(socket, room: room_pid, peer_id: peer_id)}
+    {:ok, assign(socket, device: device, peer_id: peer_id)}
   end
 
   @impl true
   def handle_in("media_event", media_event, socket) do
-    room = socket.assigns.room
-    send(room, {:media_event, socket.assigns.peer_id, media_event})
+    %{device: device, peer_id: peer_id} = socket.assigns
+    ExNVR.Pipelines.Main.add_webrtc_media_event(device, peer_id, media_event)
+
     {:noreply, socket}
   end
 
