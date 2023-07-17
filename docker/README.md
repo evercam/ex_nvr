@@ -4,22 +4,33 @@ In this guide, we'll deploy `ex_nvr` using `docker compose`. We provide a `docke
 
 Copy the two provided files to your target host and update the files to fit your needs.
 
+## Quick deploy
+
+We provide a script to quickly deploy `ex_nvr` using `docker compose`. It'll try to install `docker` if it's not installed on the target machine.
+
+Before running the script, make sure that a `cert` folder with `certificate.key` and `certificate.crt` files exists in the folder where you'll run the following command
+
+```bash
+bash <(wget -qO- https://evercam-public-assets.s3.eu-west-1.amazonaws.com/ex_nvr/docker-deploy.sh)
+```
+
+The script will prompt you for some configuration with default values.
+
+In the following steps, we'll explain in details what the script does
+
 ## Dependencies
 
 Make sure that `docker` and `docker compose plugin` are installed on your target machine.
 
+See how to install docker [here](https://docs.docker.com/engine/install/)
+
 ## Pulling docker image
 
-The docker images are saved in Github container registry `ghcr.io`. To pull this images you need a personal access token (`PAT`) with `read:packages` scope. Check [this](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#creating-a-personal-access-token-classic) for details on how to create one.
+The docker images are saved in Github container registry `ghcr.io` and publicly available.
 
-We provide a `PAT` to use in `zoho vault`.
-
-Once you get your `PAT`, you can login to `ghcr.io`
 ```bash
-docker login ghcr.io
+docker pull ghcr.io/evercam/ex_nvr:latest
 ```
-
-Provide your github username and the `PAT` to login. Once this step is finished the host will be able to pull docker images from `ghcr.io`.
 
 ## Which image to use
 
