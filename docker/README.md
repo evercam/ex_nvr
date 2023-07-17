@@ -6,9 +6,9 @@ Copy the two provided files to your target host and update the files to fit your
 
 ## Quick deploy
 
-We provide a script to quickly deploy `ex_nvr` using `docker compose`. It'll try to install `docker` if it's not installed on the target machine.
+We provide a script to quickly deploy `ex_nvr` using `docker compose`. It'll try to install `docker` if it's not installed on the target machine (currently only `ubuntu` is supported).
 
-Before running the script, make sure that a `cert` folder with `certificate.key` and `certificate.crt` files exists in the folder where you'll run the following command
+Before running the script, make sure that a `cert` folder with `certificate.key` and `certificate.crt` files exists in the folder where you'll run the following command (For `Evercam` we already have certificates on `zoho vault`).
 
 ```bash
 bash <(wget -qO- https://evercam-public-assets.s3.eu-west-1.amazonaws.com/ex_nvr/docker-deploy.sh)
