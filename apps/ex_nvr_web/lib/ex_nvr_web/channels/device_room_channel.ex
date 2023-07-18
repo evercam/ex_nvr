@@ -36,6 +36,15 @@ defmodule ExNVRWeb.DeviceRoomChannel do
   end
 
   @impl true
+  def handle_info(:endpoint_crashed, socket) do
+    push(socket, "error", %{
+      message: "WebRTC Endpoint has crashed. Please refresh the page to reconnect"
+    })
+
+    {:stop, :normal, socket}
+  end
+
+  @impl true
   def handle_info(message, socket) do
     Logger.warn("""
     Received unexpected message

@@ -17,14 +17,13 @@ defmodule ExNVR.Pipeline.Output.WebRTC.Sink do
 
   @impl true
   def handle_parent_notification({:source_pid, pid}, _ctx, state) do
-    actions =
-      if state.stream_format do
-        [stream_format: {:output, state.stream_format}]
-      else
-        []
-      end
+    Process.monitor(pid)
 
-    {actions, %{state | pid: pid}}
+    if state.stream_format do
+      send(pid, {:stream_format, state.stream_format})
+    end
+
+    {[], %{state | pid: pid}}
   end
 
   @impl true
@@ -51,6 +50,16 @@ defmodule ExNVR.Pipeline.Output.WebRTC.Sink do
   @impl true
   def handle_write(:input, %Buffer{} = buffer, _ctx, state) do
     send(state.pid, {:buffer, buffer})
+    {[], state}
+  end
+
+  @impl true
+  def handle_info({:DOWN, _ref, :process, pid, _reason}, _ctx, %{pid: pid} = state) do
+    {[], %{state | pid: nil}}
+  end
+
+  @impl true
+  def handle_info(_message, _ctx, state) do
     {[], state}
   end
 end

@@ -40,10 +40,17 @@ defmodule ExNVR.Pipeline.Output.WebRTC.Source do
   end
 
   @impl true
-  def handle_info({:buffer, buffer}, _ctx, state) do
-    {[buffer: {:output, buffer}], state}
+  def handle_info({:buffer, buffer}, ctx, state) do
+    if stream_format_sent?(ctx) do
+      {[buffer: {:output, buffer}], state}
+    else
+      {[], state}
+    end
   end
 
   @impl true
   def handle_info(_message, _ctx, state), do: {[], state}
+
+  defp stream_format_sent?(%{pads: %{output: %{stream_format: nil}}}), do: false
+  defp stream_format_sent?(_ctx), do: true
 end

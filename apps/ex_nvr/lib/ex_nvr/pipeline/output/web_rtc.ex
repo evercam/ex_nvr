@@ -69,7 +69,8 @@ defmodule ExNVR.Pipeline.Output.WebRTC do
        rtc_engine: rtc_engine,
        network_options: network_options,
        peer_channels: %{},
-       stream_endpoint_id: stream_endpoint_id
+       stream_endpoint_id: stream_endpoint_id,
+       media_track: nil
      }}
   end
 
@@ -85,7 +86,7 @@ defmodule ExNVR.Pipeline.Output.WebRTC do
 
     spec = [bin_input(pad) |> child(:sink, Output.WebRTC.Sink)]
 
-    {[spec: spec], state}
+    {[spec: spec], %{state | media_track: media_track}}
   end
 
   @impl true
@@ -96,7 +97,7 @@ defmodule ExNVR.Pipeline.Output.WebRTC do
   @impl true
   def handle_pad_removed(Pad.ref(:input, :main_stream), _ctx, state) do
     Engine.message_endpoint(state.rtc_engine, state.stream_endpoint_id, :remove_track)
-    {[remove_child: :sink], state}
+    {[remove_child: :sink], %{state | media_track: nil}}
   end
 
   @impl true
@@ -174,6 +175,44 @@ defmodule ExNVR.Pipeline.Output.WebRTC do
         state
       ) do
     {[notify_child: {:sink, {:source_pid, source_pid}}], state}
+  end
+
+  @impl true
+  def handle_info(
+        %Engine.Message.EndpointCrashed{endpoint_id: endpoint_id},
+        _ctx,
+        %{stream_endpoint_id: endpoint_id} = state
+      ) do
+    Membrane.Logger.error("Stream endpoint #{endpoint_id} crashed")
+    Engine.add_endpoint(state.rtc_engine, %Output.WebRTC.StreamEndpoint{}, id: endpoint_id)
+
+    if state.media_track do
+      Engine.message_endpoint(
+        state.rtc_engine,
+        endpoint_id,
+        {:media_track, state.media_track}
+      )
+    end
+
+    {[], state}
+  end
+
+  @impl true
+  def handle_info(%Engine.Message.EndpointCrashed{endpoint_id: peer_id}, _ctx, state) do
+    Membrane.Logger.error("Peer endpoint crashed #{peer_id}")
+    peer_channel = state.peer_channels[peer_id]
+
+    if peer_channel do
+      send(peer_channel, :endpoint_crashed)
+    else
+      Membrane.Logger.warn("""
+      No peer corresponding to endpoint: #{peer_id}.
+      It might have left just before the crash happend or the
+      crash happend because of the peer leaving
+      """)
+    end
+
+    {[], state}
   end
 
   @impl true
