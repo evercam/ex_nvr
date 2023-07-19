@@ -77,8 +77,8 @@ The main feature of this project is to store video streams retrieved from `devic
 * **Other**: other interesting features
    - [ ] Support audio
    - [x] Support multiple devices in same instance
-   - [ ] Get snapshot from live/recorded stream
-   - [ ] Download videos of arbitrary durations
+   - [x] Get snapshot from live/recorded stream
+   - [x] Download videos of arbitrary durations
    - [ ] Add stats/info about streams (for devs)
    - [x] API / API documentation
    - [ ] Gather metrics

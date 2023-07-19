@@ -2,7 +2,7 @@ version: '3'
 services:
   ex_nvr:
     container_name: ex_nvr
-    image: ghcr.io/evercam/ex_nvr:v0.1.1
+    image: ghcr.io/evercam/ex_nvr:v0.2.0
     restart: always
     env_file:
       - .env
