@@ -46,6 +46,21 @@ variables needed to configure `ex_nvr` are:
 | EXNVR_SSL_KEY_PATH | The path to the SSL key. |
 | EXNVR_SSL_CERT_PATH | The path to the SSL certificate. |
 
+* **WebRTC Configuration**
+
+| **Env variable** | **descritpion** |
+|------------------|-----------------|
+| EXTERNAL_IP | The external IP address to which attach the turn server. Defaults to: `127.0.0.1` |
+| VIRTUAL_HOST | The TURN server domain name. Defaults to: `localhost` |
+| INTEGRATED_TURN_PORT_RANGE | UDP port range to use for WebRTC communication. The number of ports in the range decides the total number of users that can stream at the same time. Defaults to: `30000-30100` |
+| INTEGRATED_TURN_TCP_PORT | TCP port of TURN server. Defaults to: `20000` |
+| INTEGRATED_TURN_PKEY | Private key to use for TURN server. If not provided, TURN will not handle TLS connections. Defaults to: `nil` |
+| INTEGRATED_TURN_CERT | Certificate to use for TURN server. If not provided, TURN will not handle TLS connections. Defaults to: `nil` |
+
+> *Note*
+> 
+> Actually even if private and certificate files are provided, TURN server will not handle TLS connections. We'll support this in the near future.
+
 ## Features
 
 The main feature of this project is to store video streams retrieved from `devices` to local file system and allow users to stream back those recorded videos.  
