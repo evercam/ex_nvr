@@ -130,8 +130,7 @@ defmodule ExNVRWeb.DashboardLive do
 
   def handle_event("datetime", %{"value" => value}, socket) do
     current_datetime = socket.assigns.start_date
-    device = socket.assigns.current_device
-    new_datetime = parse_datetime(value, device.timezone)
+    new_datetime = parse_datetime(value)
 
     socket =
       if current_datetime != new_datetime do
@@ -236,9 +235,9 @@ defmodule ExNVRWeb.DashboardLive do
     assign(socket, live_view_enabled?: enabled?)
   end
 
-  defp parse_datetime(datetime, timezone) do
-    case NaiveDateTime.from_iso8601(datetime <> ":00") do
-      {:ok, date} -> DateTime.from_naive!(date, timezone)
+  defp parse_datetime(datetime) do
+    case DateTime.from_iso8601(datetime <> ":00Z") do
+      {:ok, date, _} -> date
       _ -> nil
     end
   end
