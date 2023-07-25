@@ -10,7 +10,8 @@ RUN \
   cmake \
   openssl-dev \ 
   ffmpeg-dev \
-  clang-dev
+  clang-dev \
+  libsrtp-dev
 
 ARG VERSION
 ENV VERSION=${VERSION}
@@ -54,7 +55,8 @@ RUN \
   ncurses-libs \
   ffmpeg \
   clang \ 
-  curl
+  curl \
+  libsrtp
 
 WORKDIR /app
 
