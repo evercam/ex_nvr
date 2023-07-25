@@ -76,20 +76,20 @@ defmodule ExNVRWeb.ConnCase do
     |> Plug.Conn.put_req_header("authorization", "Bearer #{token}")
   end
 
-  defp maybe_set_application_env(tags) do
-    if Map.has_key?(tags, :tmp_dir) do
-      Application.put_env(:ex_nvr, :recording_directory, tags.tmp_dir)
-      Application.put_env(:ex_nvr, :hls_directory, tags.tmp_dir)
-    end
-  end
-
-  defp maybe_create_device(tags) do
+  def maybe_create_device(tags) do
     if Map.has_key?(tags, :device) do
       device = ExNVR.DevicesFixtures.device_fixture()
       File.mkdir!(ExNVR.Utils.recording_dir(device.id))
       %{device: device}
     else
       %{}
+    end
+  end
+
+  defp maybe_set_application_env(tags) do
+    if Map.has_key?(tags, :tmp_dir) do
+      Application.put_env(:ex_nvr, :recording_directory, tags.tmp_dir)
+      Application.put_env(:ex_nvr, :hls_directory, tags.tmp_dir)
     end
   end
 end

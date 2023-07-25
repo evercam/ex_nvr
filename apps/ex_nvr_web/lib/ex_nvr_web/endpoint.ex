@@ -11,6 +11,10 @@ defmodule ExNVRWeb.Endpoint do
     same_site: "Lax"
   ]
 
+  socket "/socket", ExNVRWeb.UserSocket,
+    websocket: [check_origin: false],
+    longpoll: [check_origin: false]
+
   socket "/live", Phoenix.LiveView.Socket, websocket: [connect_info: [session: @session_options]]
 
   origins =

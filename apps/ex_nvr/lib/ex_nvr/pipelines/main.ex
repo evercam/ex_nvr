@@ -72,7 +72,10 @@ defmodule ExNVR.Pipelines.Main do
             sub_stream_video_track: ExNVR.MediaTrack.t(),
             segment_duration: non_neg_integer(),
             supervisor_pid: pid(),
-            live_snapshot_waiting_pids: list()
+            live_snapshot_waiting_pids: list(),
+            subscriptions: map(),
+            pending_subscriptions: map(),
+            rtc_engine: pid() | atom()
           }
 
     @enforce_keys [:device]
@@ -83,7 +86,10 @@ defmodule ExNVR.Pipelines.Main do
                   video_track: nil,
                   sub_stream_video_track: nil,
                   supervisor_pid: nil,
-                  live_snapshot_waiting_pids: []
+                  live_snapshot_waiting_pids: [],
+                  subscriptions: %{},
+                  pending_subscriptions: %{},
+                  rtc_engine: nil
                 ]
   end
 
@@ -110,6 +116,21 @@ defmodule ExNVR.Pipelines.Main do
     Pipeline.call(pipeline_pid(device), {:live_snapshot, image_format})
   end
 
+  @spec media_track(Device.t(), :main_stream | :sub_stream) :: term()
+  def media_track(device, stream \\ :main_stream) do
+    Pipeline.call(pipeline_pid(device), {:media_track, stream})
+  end
+
+  def add_webrtc_peer(device, peer_id, channel_pid) do
+    Pipeline.call(pipeline_pid(device), {:add_peer, {peer_id, channel_pid}})
+  end
+
+  def add_webrtc_media_event(device, peer_id, media_event) do
+    Pipeline.call(pipeline_pid(device), {:media_event, peer_id, media_event})
+  end
+
+  # Pipeline callbacks
+
   @impl true
   def handle_init(_ctx, options) do
     device = options[:device]
@@ -118,7 +139,8 @@ defmodule ExNVR.Pipelines.Main do
 
     state = %State{
       device: device,
-      segment_duration: options[:segment_duration] || 60
+      segment_duration: options[:segment_duration] || 60,
+      rtc_engine: options[:rtc_engine]
     }
 
     hls_sink = %ExNVR.Elements.HLSBin{
@@ -130,7 +152,8 @@ defmodule ExNVR.Pipelines.Main do
       [
         child(:rtsp_source, %Source{stream_uri: stream_uri}),
         {child(:hls_sink, hls_sink, get_if_exists: true), crash_group: {"hls", :temporary}},
-        child(:snapshooter, ExNVR.Elements.SnapshotBin)
+        child(:snapshooter, ExNVR.Elements.SnapshotBin),
+        child(:webrtc, %ExNVR.Pipeline.Output.WebRTC{stream_id: device.id})
       ] ++
         if sub_stream_uri,
           do: [child({:rtsp_source, :sub_stream}, %Source{stream_uri: sub_stream_uri})],
@@ -141,7 +164,7 @@ defmodule ExNVR.Pipelines.Main do
 
   @impl true
   def handle_setup(_ctx, state) do
-    # Sset the device to failed state and make last active run inactive
+    # Set the device to failed state and make last active run inactive
     # may happens on application crash
     Recordings.deactivate_runs(state.device)
     {[], maybe_update_device_and_report(state, :failed)}
@@ -150,7 +173,13 @@ defmodule ExNVR.Pipelines.Main do
   @impl true
   def handle_child_notification({:connection_lost, _ref}, :rtsp_source, _ctx, state) do
     maybe_update_device_and_report(state, :failed)
-    {[remove_child: :main_stream, remove_link: {:hls_sink, Pad.ref(:input, :main_stream)}], state}
+
+    unlink_actions = [
+      remove_link: {:webrtc, Pad.ref(:input, :main_stream)},
+      remove_link: {:hls_sink, Pad.ref(:input, :main_stream)}
+    ]
+
+    {[remove_children: :main_stream] ++ unlink_actions, %{state | subscriptions: %{}}}
   end
 
   @impl true
@@ -205,19 +234,23 @@ defmodule ExNVR.Pipelines.Main do
       get_child({:rtp, ref})
       |> via_out(Pad.ref(:output, ssrc), options: [depayloader: Membrane.RTP.H264.Depayloader])
       |> child({:rtp_parser, ref}, %Membrane.H264.Parser{framerate: {0, 0}})
-      |> child({:tee, ref}, Membrane.Tee.Master)
+      |> child(:video_tee, Membrane.Tee.Master)
       |> via_out(:master)
       |> child({:storage_bin, ref}, %ExNVR.Elements.StorageBin{
         device_id: state.device.id,
         target_segment_duration: state.segment_duration
       }),
-      get_child({:tee, ref})
+      get_child(:video_tee)
       |> via_out(:copy)
       |> via_in(Pad.ref(:input, :main_stream))
       |> get_child(:hls_sink),
-      get_child({:tee, ref})
+      get_child(:video_tee)
       |> via_out(:copy)
-      |> child({:cvs_bufferer, ref}, ExNVR.Elements.CVSBufferer)
+      |> child({:cvs_bufferer, ref}, ExNVR.Elements.CVSBufferer),
+      get_child(:video_tee)
+      |> via_out(:copy)
+      |> via_in(Pad.ref(:input, :main_stream), options: [media_track: state.video_track])
+      |> get_child(:webrtc)
     ]
 
     {[spec: {spec, group: :main_stream}], state}
@@ -254,9 +287,9 @@ defmodule ExNVR.Pipelines.Main do
   end
 
   @impl true
-  def handle_crash_group_down("hls", _ctx, state) do
-    Membrane.Logger.error("Hls group crashed, stop live streaming...")
-    {[], state}
+  def handle_crash_group_down(group, ctx, state) do
+    Membrane.Logger.error("Group '#{group}' crashed")
+    {[remove_children: ctx.members], state}
   end
 
   @impl true
@@ -279,6 +312,32 @@ defmodule ExNVR.Pipelines.Main do
       pids ->
         {[], %{state | live_snapshot_waiting_pids: [ctx.from | pids]}}
     end
+  end
+
+  @impl true
+  def handle_call({:media_track, :main_stream}, _ctx, state) do
+    {[reply: state.video_track], state}
+  end
+
+  @impl true
+  def handle_call({:media_track, :sub_stream}, _ctx, state) do
+    {[reply: state.sub_stream_video_track], state}
+  end
+
+  @impl true
+  def handle_call({:add_peer, _peer} = message, _ctx, state) do
+    case state.device.state do
+      :recording ->
+        {[reply: :ok, notify_child: {:webrtc, message}], state}
+
+      _ ->
+        {[reply: {:error, :offline}], state}
+    end
+  end
+
+  @impl true
+  def handle_call({:media_event, _peer_id, _media_event} = message, ctx, state) do
+    {[reply: {ctx.from, :ok}, notify_child: {:webrtc, message}], state}
   end
 
   def handle_terminate_request(_ctx, state) do
@@ -333,10 +392,6 @@ defmodule ExNVR.Pipelines.Main do
     ]
   end
 
-  defp pipeline_name(%{id: device_id}), do: :"pipeline_#{device_id}"
-
-  defp pipeline_pid(device), do: Process.whereis(pipeline_name(device))
-
   defp maybe_update_device_and_report(%{device: %{state: device_state}} = state, device_state),
     do: state
 
@@ -351,6 +406,12 @@ defmodule ExNVR.Pipelines.Main do
 
     %{state | device: updated_device}
   end
+
+  # Pipeline process details
+
+  defp pipeline_name(%{id: device_id}), do: :"pipeline_#{device_id}"
+
+  defp pipeline_pid(device), do: Process.whereis(pipeline_name(device))
 
   def child_spec(arg) do
     %{
