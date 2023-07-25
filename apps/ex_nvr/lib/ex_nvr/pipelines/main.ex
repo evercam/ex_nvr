@@ -340,6 +340,12 @@ defmodule ExNVR.Pipelines.Main do
     {[reply: {ctx.from, :ok}, notify_child: {:webrtc, message}], state}
   end
 
+  @impl true
+  def handle_child_pad_removed(_child, _pad, _ctx, state) do
+    {[], state}
+  end
+
+  @impl true
   def handle_terminate_request(_ctx, state) do
     :telemetry.execute(@event_prefix ++ [:terminate], %{system_time: System.system_time()}, %{
       device_id: state.device.id
