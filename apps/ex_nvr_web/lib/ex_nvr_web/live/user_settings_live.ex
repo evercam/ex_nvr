@@ -12,6 +12,30 @@ defmodule ExNVRWeb.UserSettingsLive do
       </.header>
 
       <div class="space-y-12 divide-y">
+      <div>
+          <.simple_form
+            for={@info_form}
+            id="info_form"
+            phx-submit="update_personal_info"
+            phx-change="validate_personal_info"
+          >
+            <.input field={@info_form[:first_name]} type="text" label="First Name" required />
+            <.input field={@info_form[:last_name]} type="text" label="Last Name" required />
+            <.input field={@info_form[:username]} type="text" label="Username" required />
+            <.input
+              field={@info_form[:current_password]}
+              name="current_password"
+              id="current_password_for_personal_info"
+              type="password"
+              label="Current password"
+              value={@info_form_current_password}
+              required
+            />
+            <:actions>
+              <.button phx-disable-with="Changing...">Change</.button>
+            </:actions>
+          </.simple_form>
+        </div>
         <div>
           <.simple_form
             for={@email_form}
@@ -92,9 +116,12 @@ defmodule ExNVRWeb.UserSettingsLive do
     user = socket.assigns.current_user
     email_changeset = Accounts.change_user_email(user)
     password_changeset = Accounts.change_user_password(user)
+    user_info_changeset = Accounts.change_user_info(user)
 
     socket =
       socket
+      |> assign(:info_form, to_form(user_info_changeset))
+      |> assign(:info_form_current_password, nil)
       |> assign(:current_password, nil)
       |> assign(:email_form_current_password, nil)
       |> assign(:current_email, user.email)
@@ -103,6 +130,36 @@ defmodule ExNVRWeb.UserSettingsLive do
       |> assign(:trigger_submit, false)
 
     {:ok, socket}
+  end
+
+  def handle_event("validate_personal_info", params, socket) do
+    %{"current_password" => password, "user" => user_params} = params
+
+    info_form =
+      socket.assigns.current_user
+      |> Accounts.change_user_info(user_params)
+      |> Map.put(:action, :validate)
+      |> to_form()
+
+    {:noreply, assign(socket, info_form: info_form, info_form_current_password: password)}
+  end
+
+  def handle_event("update_personal_info", params, socket) do
+    %{"current_password" => password, "user" => user_params} = params
+    user = socket.assigns.current_user
+    case Accounts.update_user_info(user, password, user_params) do
+      {:ok, user} ->
+        info_form =
+          user
+          |> Accounts.change_user_info(user_params)
+          |> to_form()
+
+        {:noreply, assign(socket, trigger_submit: true, info_form: info_form)}
+
+      {:error, changeset} ->
+        {:noreply, assign(socket, info_form: to_form(changeset))}
+    end
+
   end
 
   def handle_event("validate_email", params, socket) do
