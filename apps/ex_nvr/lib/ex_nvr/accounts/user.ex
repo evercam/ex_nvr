@@ -5,11 +5,15 @@ defmodule ExNVR.Accounts.User do
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
   schema "users" do
+    field :first_name, :string
+    field :last_name, :string
+    field :username, :string
     field :email, :string
     field :password, :string, virtual: true, redact: true
     field :hashed_password, :string, redact: true
     field :confirmed_at, :naive_datetime
     field :role, Ecto.Enum, values: [:admin, :user], default: :user
+    field :language, Ecto.Enum, values: [:en, :fr], default: :en
 
     timestamps()
   end
@@ -39,8 +43,10 @@ defmodule ExNVR.Accounts.User do
   """
   def registration_changeset(user, attrs, opts \\ []) do
     user
-    |> cast(attrs, [:email, :password, :role])
+    |> cast(attrs, [:email, :password, :first_name, :last_name, :username, :language, :role])
+    |> validate_user_full_name(opts)
     |> validate_email(opts)
+    |> validate_username(opts)
     |> validate_password(opts)
   end
 
@@ -62,6 +68,45 @@ defmodule ExNVR.Accounts.User do
       message: "at least one digit or punctuation character"
     )
     |> maybe_hash_password(opts)
+  end
+
+  defp validate_user_full_name(changeset, _opts) do
+    changeset
+    |> validate_required([:first_name, :last_name], message: "Field required")
+    |> validate_length(:first_name, min: 4, max: 72)
+    |> validate_length(:last_name, min: 4, max: 72)
+    |> validate_format(:first_name, ~r/^[A-Za-z]+[A-Za-z0-9_]*$/, message: "Invalid first name format(only [A-Z][a-z][0-9] and underscores are accepted)")
+    |> validate_format(:last_name, ~r/^[A-Za-z]+[A-Za-z0-9_]*$/, message: "Invalid last name format(only [A-Z][a-z][0-9] and underscores are accepted)")
+  end
+
+  defp validate_username(changeset, opts) do
+    changeset
+    |> validate_length(:username, max: 72)
+    |> maybe_set_default_username(opts)
+    |> validate_format(:username, ~r/^[A-Za-z]+[A-Za-z0-9_]*$/, message: "Invalid username format(only [A-Z][a-z][0-9] and underscores are accepted)")
+    |> maybe_validate_unique_username(opts)
+    |> validate_length(:username, min: 4, max: 72)
+  end
+
+  defp maybe_set_default_username(changeset, opts) do
+    if Keyword.get(opts, :set_default_username, true) do
+      username = get_change(changeset, :username, nil)
+      email = get_change(changeset, :email, nil)
+
+      with nil <- username,
+          0 <- byte_size(to_string(username)) do
+        generated_username = email
+                            |> to_string
+                            |> String.split("@")
+                            |> hd
+                            |> String.replace("-", "_")
+        put_change(changeset, :username, generated_username)
+      else
+        _error -> changeset
+      end
+    else
+      changeset
+    end
   end
 
   defp maybe_hash_password(changeset, opts) do
@@ -91,6 +136,16 @@ defmodule ExNVR.Accounts.User do
     end
   end
 
+  defp maybe_validate_unique_username(changeset, opts) do
+    if Keyword.get(opts, :validate_username, true) do
+      changeset
+      |> unsafe_validate_unique(:username, ExNVR.Repo)
+      |> unique_constraint(:username)
+    else
+      changeset
+    end
+  end
+
   @doc """
   A user changeset for changing the email.
 
@@ -104,6 +159,18 @@ defmodule ExNVR.Accounts.User do
       %{changes: %{email: _}} = changeset -> changeset
       %{} = changeset -> add_error(changeset, :email, "did not change")
     end
+  end
+
+  @doc """
+  A user changeset for changing the personal information.
+
+  It changes the personal user info like username, first name and last name.
+  """
+  def user_info_changeset(user, attrs, opts \\ []) do
+    user
+    |> cast(attrs, [:username, :first_name, :last_name])
+    |> validate_user_full_name(opts)
+    |> validate_username(opts)
   end
 
   @doc """
