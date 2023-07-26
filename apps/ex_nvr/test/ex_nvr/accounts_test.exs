@@ -51,39 +51,77 @@ defmodule ExNVR.AccountsTest do
   end
 
   describe "register_user/1" do
-    test "requires email and password to be set" do
+    test "requires firstname, lastname, email, password to be set" do
       {:error, changeset} = Accounts.register_user(%{})
 
       assert %{
                password: ["can't be blank"],
-               email: ["can't be blank"]
+               email: ["can't be blank"],
+               first_name: ["Field required"],
+               last_name: ["Field required"]
              } = errors_on(changeset)
     end
 
-    test "validates email and password when given" do
-      {:error, changeset} = Accounts.register_user(%{email: "invalid", password: "invalid"})
+    test "validates firstname, lastname, username format (must start with alphabetic char and only [A-Z][a-z][0-9] and underscores allowed)." do
+      {:error, changeset} = Accounts.register_user(%{username: "^&*£(<>", first_name: "_?$@(*)", last_name: "2abe", email: unique_user_email(), password: valid_user_password()})
+      errors = errors_on(changeset)
+
+      assert "Invalid first name format(only [A-Z][a-z][0-9] and underscores are accepted)" in errors.first_name
+      assert "Invalid last name format(only [A-Z][a-z][0-9] and underscores are accepted)" in errors.last_name
+      assert "Invalid username format(only [A-Z][a-z][0-9] and underscores are accepted)" in errors.username
+    end
+
+    test "validates email and password when given, and minimum length of " do
+      {:error, changeset} = Accounts.register_user(%{email: "invalid", password: "invalid", first_name: "fi", last_name: "las"})
 
       errors = errors_on(changeset)
 
       assert ["must have the @ sign and no spaces"] = errors.email
       assert "should be at least 8 character(s)" in errors.password
+      assert "should be at least 4 character(s)" in errors.first_name
+      assert "should be at least 4 character(s)" in errors.last_name
     end
 
-    test "validates maximum values for email and password for security" do
+    test "validates maximum values for first & last names, username(auto-generated), email and password for security" do
       too_long = String.duplicate("db", 100)
-      {:error, changeset} = Accounts.register_user(%{email: too_long, password: too_long})
+      {:error, changeset} = Accounts.register_user(%{email: too_long, password: too_long, first_name: too_long, last_name: too_long})
       assert "should be at most 160 character(s)" in errors_on(changeset).email
       assert "should be at most 72 character(s)" in errors_on(changeset).password
+      assert "should be at most 72 character(s)" in errors_on(changeset).first_name
+      assert "should be at most 72 character(s)" in errors_on(changeset).last_name
+      assert "should be at most 72 character(s)" in errors_on(changeset).username
+    end
+
+    test "validates username auto-generation when not provided(first part before @ from email)" do
+      %{email: email, first_name: first_name, last_name: last_name} = valid_user_attributes()
+      expected_username = email
+                          |> to_string
+                          |> String.split("@")
+                          |> hd
+                          |> String.replace("-", "_")
+
+      {:ok, user} = Accounts.register_user(valid_user_attributes(email: email, first_name: first_name, last_name: last_name))
+      assert user.username == expected_username
     end
 
     test "validates email uniqueness" do
       %{email: email} = user_fixture()
-      {:error, changeset} = Accounts.register_user(%{email: email})
+      {:error, changeset} = Accounts.register_user(valid_user_attributes(email: email))
       assert "has already been taken" in errors_on(changeset).email
 
       # Now try with the upper cased email too, to check that email case is ignored.
-      {:error, changeset} = Accounts.register_user(%{email: String.upcase(email)})
+      {:error, changeset} = Accounts.register_user(valid_user_attributes(email: String.upcase(email)))
       assert "has already been taken" in errors_on(changeset).email
+    end
+
+    test "validates username uniqueness" do
+      %{username: username} = user_fixture()
+      {:error, changeset} = Accounts.register_user(valid_user_attributes(username: username))
+      assert "has already been taken" in errors_on(changeset).username
+
+      # Now try with the upper cased username too, to check that username case is ignored.
+      {:error, changeset} = Accounts.register_user(valid_user_attributes(username: String.upcase(username)))
+      assert "has already been taken" in errors_on(changeset).username
     end
 
     test "registers users with a hashed password" do
@@ -99,7 +137,7 @@ defmodule ExNVR.AccountsTest do
   describe "change_user_registration/2" do
     test "returns a changeset" do
       assert %Ecto.Changeset{} = changeset = Accounts.change_user_registration(%User{})
-      assert changeset.required == [:password, :email]
+      assert changeset.required == [:password, :email, :first_name, :last_name]
     end
 
     test "allows fields to be set" do
