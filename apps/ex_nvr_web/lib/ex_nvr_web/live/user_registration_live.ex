@@ -6,7 +6,7 @@ defmodule ExNVRWeb.UserRegistrationLive do
 
   def render(assigns) do
     ~H"""
-    <div class="mx-auto max-w-sm">
+    <div class="items-center justify-center mx-auto max-w-sm">
       <.header class="text-center">
         Register for an account
         <:subtitle>
@@ -30,8 +30,16 @@ defmodule ExNVRWeb.UserRegistrationLive do
         <.error :if={@check_errors}>
           Oops, something went wrong! Please check the errors below.
         </.error>
+        <.input field={@form[:first_name]} type="text" label="First Name" required />
+        <.input field={@form[:last_name]} type="text" label="Last Name" required />
+        <.input
+          field={@form[:language]}
+          type="select"
+          label="Language"
+          options={["English": :en, "French": :fr]} />
 
         <.input field={@form[:email]} type="email" label="Email" required />
+        <.input field={@form[:username]} type="text" label="Username" />
         <.input field={@form[:password]} type="password" label="Password" required />
 
         <:actions>
