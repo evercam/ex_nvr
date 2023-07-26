@@ -34,6 +34,7 @@
             />
           </a>
         </div>
+        <%= if @current_user do %>
         <div class="flex items-center">
           <div class="flex items-center ml-3">
             <div>
@@ -57,7 +58,7 @@
             >
               <div class="px-4 py-3" role="none">
                 <p class="text-sm text-gray-900 dark:text-white" role="none">
-                  Itachi Uchiha
+                  <%= if @current_user, do: @current_user.first_name <>" "<> @current_user.last_name %>
                 </p>
                 <p
                   class="text-sm font-medium text-gray-900 truncate dark:text-gray-300 mr-4"
@@ -90,10 +91,12 @@
             </div>
           </div>
         </div>
+        <% end %>
       </div>
     </div>
   </nav>
 
+  <%= if @current_user do %>
   <aside
     id="logo-sidebar"
     class="fixed top-0 left-0 z-40 w-64 h-screen pt-20 transition-transform -translate-x-full bg-white border-r border-gray-200 sm:translate-x-0 dark:bg-gray-800 dark:border-gray-700"
@@ -209,6 +212,7 @@
       </ul>
     </div>
   </aside>
+  <% end %>
 </header>
 <main class="px-4 py-20 sm:px-6 lg:px-8">
   <div class="flex justify-center mx-auto sm:ml-64">
