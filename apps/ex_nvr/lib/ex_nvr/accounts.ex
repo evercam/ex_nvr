@@ -27,12 +27,31 @@ defmodule ExNVR.Accounts do
   end
 
   def change_user_registration(%User{} = user, attrs \\ %{}) do
-    User.registration_changeset(user, attrs, hash_password: false, validate_email: false)
+    User.registration_changeset(user, attrs, hash_password: false, validate_email: false, validate_username: false)
   end
 
   def count_users(), do: Repo.aggregate(User, :count)
 
   ## Settings
+  def change_user_info(user, attrs \\ %{}) do
+    User.user_info_changeset(user, attrs, set_default_username: false)
+  end
+
+  def apply_user_info(user, password, attrs) do
+    user
+    |> User.user_info_changeset(attrs)
+    |> User.validate_current_password(password)
+    |> Ecto.Changeset.apply_action(:update)
+  end
+
+  def update_user_info(user, password, attrs) do
+      user
+      |> User.user_info_changeset(attrs)
+      |> User.validate_current_password(password)
+      |> Repo.update
+  end
+
+
   def change_user_email(user, attrs \\ %{}) do
     User.email_changeset(user, attrs, validate_email: false)
   end
