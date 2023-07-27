@@ -34,20 +34,12 @@ defmodule ExNVR.Accounts do
 
   ## Settings
   def change_user_info(user, attrs \\ %{}) do
-    User.user_info_changeset(user, attrs, set_default_username: false)
+    User.user_info_changeset(user, attrs)
   end
 
-  def apply_user_info(user, password, attrs) do
-    user
-    |> User.user_info_changeset(attrs)
-    |> User.validate_current_password(password)
-    |> Ecto.Changeset.apply_action(:update)
-  end
-
-  def update_user_info(user, password, attrs) do
+  def update_user_info(user, attrs) do
       user
       |> User.user_info_changeset(attrs)
-      |> User.validate_current_password(password)
       |> Repo.update
   end
 
