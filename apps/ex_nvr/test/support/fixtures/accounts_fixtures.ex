@@ -9,6 +9,7 @@ defmodule ExNVR.AccountsFixtures do
   def valid_first_name, do: "test_first_name#{:rand.uniform(999999)}"
   def valid_last_name, do: "test_last_name#{:rand.uniform(999999)}"
   def valid_username, do: "test_username#{:rand.uniform(999999)}"
+  def valid_language, do: Enum.random([:en, :fr])
 
   def valid_user_attributes(attrs \\ %{}) do
     Enum.into(attrs, %{

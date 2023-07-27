@@ -72,14 +72,14 @@ defmodule ExNVR.AccountsTest do
     end
 
     test "validates email and password when given, and minimum length of " do
-      {:error, changeset} = Accounts.register_user(%{email: "invalid", password: "invalid", first_name: "fi", last_name: "las"})
+      {:error, changeset} = Accounts.register_user(%{email: "invalid", password: "invalid", first_name: "f", last_name: "l"})
 
       errors = errors_on(changeset)
 
       assert ["must have the @ sign and no spaces"] = errors.email
       assert "should be at least 8 character(s)" in errors.password
-      assert "should be at least 4 character(s)" in errors.first_name
-      assert "should be at least 4 character(s)" in errors.last_name
+      assert "should be at least 2 character(s)" in errors.first_name
+      assert "should be at least 2 character(s)" in errors.last_name
     end
 
     test "validates maximum values for first & last names, username(auto-generated), email and password for security" do
@@ -143,17 +143,110 @@ defmodule ExNVR.AccountsTest do
     test "allows fields to be set" do
       email = unique_user_email()
       password = valid_user_password()
+      username = valid_username()
+      first_name = valid_first_name()
+      last_name = valid_last_name()
+      language = valid_language()
 
       changeset =
         Accounts.change_user_registration(
           %User{},
-          valid_user_attributes(email: email, password: password)
+          valid_user_attributes(
+                email: email,
+                password: password,
+                first_name: first_name,
+                last_name: last_name,
+                language: language,
+                username: username
+                )
         )
 
       assert changeset.valid?
+      assert get_change(changeset, :first_name) == first_name
+      assert get_change(changeset, :last_name) == last_name
+      assert get_change(changeset, :language) == language
       assert get_change(changeset, :email) == email
       assert get_change(changeset, :password) == password
+      assert get_change(changeset, :username) == username
       assert is_nil(get_change(changeset, :hashed_password))
+    end
+  end
+
+  describe "change_user_information" do
+    test "returns a user info changeset" do
+      assert %Ecto.Changeset{} = changeset = Accounts.change_user_info(%User{})
+      assert changeset.required == [:first_name, :last_name]
+    end
+
+    test "allows user info to be set except username." do
+      new_username = "test_user"
+      changeset =
+        Accounts.change_user_info(%User{}, %{
+          "first_name" => "Firstname",
+          "last_name" => "Lastname",
+          "username" => new_username,
+          "language" => :fr
+        })
+
+      assert changeset.valid?
+      assert get_change(changeset, :first_name) == "Firstname"
+      assert get_change(changeset, :last_name) == "Lastname"
+      assert get_change(changeset, :language) == :fr
+      assert get_change(changeset, :username) != new_username
+    end
+  end
+
+  describe "update_user_information" do
+    setup do
+      %{user: user_fixture()}
+    end
+
+    test "validates user info", %{user: user} do
+      {:error, changeset} =
+        Accounts.update_user_info(user, %{
+          first_name: "@£$?±",
+          last_name: "i",
+          username: "username",
+          language: :wrong,
+        })
+
+      errors = errors_on(changeset)
+
+      assert "Invalid first name format(only [A-Z][a-z][0-9] and underscores are accepted)" in errors.first_name
+      assert "should be at least 2 character(s)" in errors.last_name
+      assert "is invalid" in errors.language
+
+      assert get_change(changeset, :username) == nil
+    end
+
+    test "validates maximum values for first_name and last_name for security", %{user: user} do
+      too_long = String.duplicate("name", 100)
+
+      {:error, changeset} =
+        Accounts.update_user_info(user, %{first_name: too_long, last_name: too_long})
+
+      assert "should be at most 72 character(s)" in errors_on(changeset).first_name
+      assert "should be at most 72 character(s)" in errors_on(changeset).last_name
+    end
+
+    test "updates the user info", %{user: user} do
+      new_firstn = "first_name_success"
+      new_lastn = "last_name_success"
+      language = :fr
+      {:ok, user} =
+        Accounts.update_user_info(user, %{
+          first_name: new_firstn,
+          last_name: new_lastn,
+          language: language,
+          username: "wrong"
+        })
+
+      changed_user = Repo.get!(User, user.id)
+
+      assert changed_user.first_name == new_firstn
+      assert changed_user.last_name == new_lastn
+      assert changed_user.language == language
+      assert changed_user.username != "wrong"
     end
   end
 
