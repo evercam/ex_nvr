@@ -101,9 +101,9 @@ defmodule ExNVR.Accounts.User do
       with nil <- username,
           0 <- byte_size(to_string(username)) do
         generated_username = email
-                            |> to_string
+                            |> to_string()
                             |> String.split("@")
-                            |> hd
+                            |> hd()
                             |> String.replace("-", "_")
         put_change(changeset, :username, generated_username)
       else

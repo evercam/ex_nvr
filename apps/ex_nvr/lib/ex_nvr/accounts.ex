@@ -40,7 +40,7 @@ defmodule ExNVR.Accounts do
   def update_user_info(user, attrs) do
       user
       |> User.user_info_changeset(attrs)
-      |> Repo.update
+      |> Repo.update()
   end
 
 
