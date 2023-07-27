@@ -21,15 +21,12 @@ defmodule ExNVRWeb.UserSettingsLive do
           >
             <.input field={@info_form[:first_name]} type="text" label="First Name" required />
             <.input field={@info_form[:last_name]} type="text" label="Last Name" required />
-            <.input field={@info_form[:username]} type="text" label="Username" required />
+            <.input field={@info_form[:username]} type="text" label="Username" disabled />
             <.input
-              field={@info_form[:current_password]}
-              name="current_password"
-              id="current_password_for_personal_info"
-              type="password"
-              label="Current password"
-              value={@info_form_current_password}
-              required
+              field={@info_form[:language]}
+              type="select"
+              label="Language"
+              options={["English": :en, "French": :fr]}
             />
             <:actions>
               <.button phx-disable-with="Changing...">Change</.button>
@@ -121,7 +118,7 @@ defmodule ExNVRWeb.UserSettingsLive do
     socket =
       socket
       |> assign(:info_form, to_form(user_info_changeset))
-      |> assign(:info_form_current_password, nil)
+      |> assign(:username, user.username)
       |> assign(:current_password, nil)
       |> assign(:email_form_current_password, nil)
       |> assign(:current_email, user.email)
@@ -133,7 +130,7 @@ defmodule ExNVRWeb.UserSettingsLive do
   end
 
   def handle_event("validate_personal_info", params, socket) do
-    %{"current_password" => password, "user" => user_params} = params
+    %{"user" => user_params} = params
 
     info_form =
       socket.assigns.current_user
@@ -141,13 +138,13 @@ defmodule ExNVRWeb.UserSettingsLive do
       |> Map.put(:action, :validate)
       |> to_form()
 
-    {:noreply, assign(socket, info_form: info_form, info_form_current_password: password)}
+    {:noreply, assign(socket, info_form: info_form)}
   end
 
   def handle_event("update_personal_info", params, socket) do
-    %{"current_password" => password, "user" => user_params} = params
+    %{"user" => user_params} = params
     user = socket.assigns.current_user
-    case Accounts.update_user_info(user, password, user_params) do
+    case Accounts.update_user_info(user, user_params) do
       {:ok, user} ->
         info_form =
           user

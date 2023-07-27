@@ -73,8 +73,8 @@ defmodule ExNVR.Accounts.User do
   defp validate_user_full_name(changeset, _opts) do
     changeset
     |> validate_required([:first_name, :last_name], message: "Field required")
-    |> validate_length(:first_name, min: 4, max: 72)
-    |> validate_length(:last_name, min: 4, max: 72)
+    |> validate_length(:first_name, min: 2, max: 72)
+    |> validate_length(:last_name, min: 2, max: 72)
     |> validate_format(:first_name, ~r/^[A-Za-z]+[A-Za-z0-9_]*$/, message: "Invalid first name format(only [A-Z][a-z][0-9] and underscores are accepted)")
     |> validate_format(:last_name, ~r/^[A-Za-z]+[A-Za-z0-9_]*$/, message: "Invalid last name format(only [A-Z][a-z][0-9] and underscores are accepted)")
   end
@@ -86,6 +86,11 @@ defmodule ExNVR.Accounts.User do
     |> validate_format(:username, ~r/^[A-Za-z]+[A-Za-z0-9_]*$/, message: "Invalid username format(only [A-Z][a-z][0-9] and underscores are accepted)")
     |> maybe_validate_unique_username(opts)
     |> validate_length(:username, min: 4, max: 72)
+  end
+
+  defp validate_user_language(changeset, _opts) do
+    changeset
+    |> validate_inclusion(:language, [:en, :fr], message: "Invalid language.")
   end
 
   defp maybe_set_default_username(changeset, opts) do
@@ -168,9 +173,10 @@ defmodule ExNVR.Accounts.User do
   """
   def user_info_changeset(user, attrs, opts \\ []) do
     user
-    |> cast(attrs, [:username, :first_name, :last_name])
+    |> cast(attrs, [:language, :first_name, :last_name])
+    |> validate_user_language(opts)
     |> validate_user_full_name(opts)
-    |> validate_username(opts)
+    |> validate_user_language(opts)
   end
 
   @doc """
