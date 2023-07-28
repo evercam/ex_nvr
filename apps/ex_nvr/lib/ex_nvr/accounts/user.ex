@@ -44,9 +44,12 @@ defmodule ExNVR.Accounts.User do
   def registration_changeset(user, attrs, opts \\ []) do
     user
     |> cast(attrs, [:email, :password, :first_name, :last_name, :username, :language, :role])
+    |> maybe_cast_only_email_password(attrs, opts)
     |> validate_user_full_name(opts)
     |> validate_email(opts)
-    |> validate_username(opts)
+    |> generate_username(opts)
+    |> unique_constraint(:username)
+    |> validate_user_language(opts)
     |> validate_password(opts)
   end
 
@@ -70,22 +73,27 @@ defmodule ExNVR.Accounts.User do
     |> maybe_hash_password(opts)
   end
 
-  defp validate_user_full_name(changeset, _opts) do
+  defp validate_user_full_name(changeset, opts) do
     changeset
-    |> validate_required([:first_name, :last_name], message: "Field required")
+    |> maybe_validate_required_full_name(opts)
     |> validate_length(:first_name, min: 2, max: 72)
     |> validate_length(:last_name, min: 2, max: 72)
-    |> validate_format(:first_name, ~r/^[A-Za-z]+[A-Za-z0-9_]*$/, message: "Invalid first name format(only [A-Z][a-z][0-9] and underscores are accepted)")
-    |> validate_format(:last_name, ~r/^[A-Za-z]+[A-Za-z0-9_]*$/, message: "Invalid last name format(only [A-Z][a-z][0-9] and underscores are accepted)")
   end
 
-  defp validate_username(changeset, opts) do
-    changeset
-    |> validate_length(:username, max: 72)
-    |> maybe_set_default_username(opts)
-    |> validate_format(:username, ~r/^[A-Za-z]+[A-Za-z0-9_]*$/, message: "Invalid username format(only [A-Z][a-z][0-9] and underscores are accepted)")
-    |> maybe_validate_unique_username(opts)
-    |> validate_length(:username, min: 4, max: 72)
+  defp maybe_cast_only_email_password(user, attrs, opts) do
+    if Keyword.get(opts, :cast_user_info, false) do
+      cast(user, attrs, [:email, :password, :role])
+    else
+      user
+    end
+  end
+
+  defp maybe_validate_required_full_name(changeset, opts) do
+    if Keyword.get(opts, :validate_full_name, false) do
+      validate_required(changeset, [:first_name, :last_name], message: "Field required")
+    else
+      changeset
+    end
   end
 
   defp validate_user_language(changeset, _opts) do
@@ -93,7 +101,7 @@ defmodule ExNVR.Accounts.User do
     |> validate_inclusion(:language, [:en, :fr], message: "Invalid language.")
   end
 
-  defp maybe_set_default_username(changeset, opts) do
+  defp generate_username(changeset, opts) do
     if Keyword.get(opts, :set_default_username, true) do
       username = get_change(changeset, :username, nil)
       email = get_change(changeset, :email, nil)
@@ -136,16 +144,6 @@ defmodule ExNVR.Accounts.User do
       changeset
       |> unsafe_validate_unique(:email, ExNVR.Repo)
       |> unique_constraint(:email)
-    else
-      changeset
-    end
-  end
-
-  defp maybe_validate_unique_username(changeset, opts) do
-    if Keyword.get(opts, :validate_username, true) do
-      changeset
-      |> unsafe_validate_unique(:username, ExNVR.Repo)
-      |> unique_constraint(:username)
     else
       changeset
     end
