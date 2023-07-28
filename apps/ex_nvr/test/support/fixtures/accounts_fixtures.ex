@@ -6,18 +6,27 @@ defmodule ExNVR.AccountsFixtures do
 
   def unique_user_email, do: "user#{System.unique_integer()}@example.com"
   def valid_user_password, do: "Hello world!"
-  def valid_first_name, do: "test_first_name#{:rand.uniform(999999)}"
-  def valid_last_name, do: "test_last_name#{:rand.uniform(999999)}"
-  def valid_username, do: "test_username#{:rand.uniform(999999)}"
-  def valid_language, do: Enum.random([:en, :fr])
+  def valid_first_name, do: "John"
+  def valid_last_name, do: "Smith"
+  def valid_language, do: :en
 
-  def valid_user_attributes(attrs \\ %{}) do
-    Enum.into(attrs, %{
-      email: unique_user_email(),
-      password: valid_user_password(),
-      first_name: valid_first_name(),
-      last_name: valid_last_name()
-    })
+  def valid_user_attributes(attrs \\ %{}, opts \\ []) do
+    if Keyword.get(opts, :include_user_info, true) do
+      user_attrs = %{
+        email: unique_user_email(),
+        password: valid_user_password(),
+        first_name: valid_first_name(),
+        last_name: valid_last_name(),
+        language: valid_language()
+      }
+      Enum.into(attrs, user_attrs)
+    else
+      user_attrs = %{
+        email: unique_user_email(),
+        password: valid_user_password()
+      }
+      Enum.into(attrs, user_attrs)
+    end
   end
 
   def user_fixture(attrs \\ %{}) do
