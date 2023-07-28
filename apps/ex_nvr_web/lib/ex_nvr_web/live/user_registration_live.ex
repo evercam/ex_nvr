@@ -30,18 +30,9 @@ defmodule ExNVRWeb.UserRegistrationLive do
         <.error :if={@check_errors}>
           Oops, something went wrong! Please check the errors below.
         </.error>
-        <.input field={@form[:first_name]} type="text" label="First Name" required />
-        <.input field={@form[:last_name]} type="text" label="Last Name" required />
-        <.input
-          field={@form[:language]}
-          type="select"
-          label="Language"
-          options={["English": :en, "French": :fr]} />
 
         <.input field={@form[:email]} type="email" label="Email" required />
-        <.input field={@form[:username]} type="text" label="Username" />
         <.input field={@form[:password]} type="password" label="Password" required />
-
         <:actions>
           <.button phx-disable-with="Creating account..." class="w-full">Create an account</.button>
         </:actions>
