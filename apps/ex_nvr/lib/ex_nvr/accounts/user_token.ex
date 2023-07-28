@@ -51,7 +51,7 @@ defmodule ExNVR.Accounts.UserToken do
 
   def build_access_token(user) do
     token = :crypto.strong_rand_bytes(@rand_size)
-    {Base.encode64(token), %UserToken{token: token, context: "access", user_id: user.id}}
+    {Base.url_encode64(token), %UserToken{token: token, context: "access", user_id: user.id}}
   end
 
   @doc """

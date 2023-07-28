@@ -14,6 +14,7 @@ defmodule ExNVR.Pipelines.VideoAssembler do
 
   @impl true
   def handle_init(_ctx, options) do
+    Logger.metadata(device_id: options[:device_id])
     Membrane.Logger.info("Initialize VideoAssembler pipeline with: #{inspect(options)}")
 
     spec = [
@@ -32,7 +33,7 @@ defmodule ExNVR.Pipelines.VideoAssembler do
 
   @impl true
   def handle_element_end_of_stream(:sink, _pad, _ctx, state) do
-    Membrane.Logger.info("Finished creating video file for #{state.device_id}")
+    Membrane.Logger.info("Finished assembling video file")
     {[terminate: :shutdown], state}
   end
 

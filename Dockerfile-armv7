@@ -11,7 +11,8 @@ RUN \
   openssl-dev \ 
   ffmpeg-dev \
   clang-dev \
-  vips-dev
+  vips-dev \
+  libsrtp-dev
 
 ARG VERSION
 ENV VERSION=${VERSION}
@@ -58,7 +59,8 @@ RUN \
   ffmpeg \
   clang \ 
   curl \
-  vips
+  vips \
+  libsrtp
 
 WORKDIR /app
 

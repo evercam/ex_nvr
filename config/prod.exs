@@ -14,8 +14,5 @@ config :ex_nvr_web, ExNVRWeb.Endpoint, cache_static_manifest: "priv/static/cache
 # Configures Swoosh API Client
 config :swoosh, :api_client, ExNVR.Finch
 
-# Do not print debug messages in production
-config :logger, level: :info
-
 # Runtime production configuration, including reading
 # of environment variables, is done on config/runtime.exs.
