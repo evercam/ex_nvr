@@ -167,13 +167,13 @@ defmodule ExNVR.AccountsTest do
           "first_name" => "Firstname",
           "last_name" => "Lastname",
           "username" => new_username,
-          "language" => :fr
+          "language" => :en
         })
 
       assert changeset.valid?
       assert get_change(changeset, :first_name) == "Firstname"
       assert get_change(changeset, :last_name) == "Lastname"
-      assert get_change(changeset, :language) == :fr
+      assert is_nil(get_change(changeset, :language))
       assert get_change(changeset, :username) != new_username
     end
   end
@@ -214,7 +214,7 @@ defmodule ExNVR.AccountsTest do
     test "updates the user info", %{user: user} do
       new_firstn = "first_name_success"
       new_lastn = "last_name_success"
-      language = :fr
+      language = :en
       {:ok, user} =
         Accounts.update_user_info(user, %{
           first_name: new_firstn,

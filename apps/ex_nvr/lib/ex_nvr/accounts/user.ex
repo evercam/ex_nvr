@@ -13,7 +13,7 @@ defmodule ExNVR.Accounts.User do
     field :hashed_password, :string, redact: true
     field :confirmed_at, :naive_datetime
     field :role, Ecto.Enum, values: [:admin, :user], default: :user
-    field :language, Ecto.Enum, values: [:en, :fr], default: :en
+    field :language, Ecto.Enum, values: [:en], default: :en
 
     timestamps()
   end
