@@ -52,7 +52,7 @@ defmodule ExNVR.AccountsTest do
 
   describe "register_user/1" do
     test "requires firstname, lastname, email, password to be set" do
-      {:error, changeset} = Accounts.register_user(%{})
+      {:error, changeset} = Accounts.register_user(%{}, validate_full_name: true)
 
       assert %{
                password: ["can't be blank"],
@@ -62,17 +62,13 @@ defmodule ExNVR.AccountsTest do
              } = errors_on(changeset)
     end
 
-    test "validates firstname, lastname, username format (must start with alphabetic char and only [A-Z][a-z][0-9] and underscores allowed)." do
-      {:error, changeset} = Accounts.register_user(%{username: "^&*£(<>", first_name: "_?$@(*)", last_name: "2abe", email: unique_user_email(), password: valid_user_password()})
-      errors = errors_on(changeset)
-
-      assert "Invalid first name format(only [A-Z][a-z][0-9] and underscores are accepted)" in errors.first_name
-      assert "Invalid last name format(only [A-Z][a-z][0-9] and underscores are accepted)" in errors.last_name
-      assert "Invalid username format(only [A-Z][a-z][0-9] and underscores are accepted)" in errors.username
-    end
-
-    test "validates email and password when given, and minimum length of " do
-      {:error, changeset} = Accounts.register_user(%{email: "invalid", password: "invalid", first_name: "f", last_name: "l"})
+    test "validates first_name, last_name, email and password when given. " do
+      {:error, changeset} = Accounts.register_user(%{
+                                        email: "invalid",
+                                        password: "invalid",
+                                        first_name: "f",
+                                        last_name: "l"
+                                      })
 
       errors = errors_on(changeset)
 
@@ -89,7 +85,6 @@ defmodule ExNVR.AccountsTest do
       assert "should be at most 72 character(s)" in errors_on(changeset).password
       assert "should be at most 72 character(s)" in errors_on(changeset).first_name
       assert "should be at most 72 character(s)" in errors_on(changeset).last_name
-      assert "should be at most 72 character(s)" in errors_on(changeset).username
     end
 
     test "validates username auto-generation when not provided(first part before @ from email)" do
@@ -114,16 +109,6 @@ defmodule ExNVR.AccountsTest do
       assert "has already been taken" in errors_on(changeset).email
     end
 
-    test "validates username uniqueness" do
-      %{username: username} = user_fixture()
-      {:error, changeset} = Accounts.register_user(valid_user_attributes(username: username))
-      assert "has already been taken" in errors_on(changeset).username
-
-      # Now try with the upper cased username too, to check that username case is ignored.
-      {:error, changeset} = Accounts.register_user(valid_user_attributes(username: String.upcase(username)))
-      assert "has already been taken" in errors_on(changeset).username
-    end
-
     test "registers users with a hashed password" do
       email = unique_user_email()
       {:ok, user} = Accounts.register_user(valid_user_attributes(email: email))
@@ -137,13 +122,12 @@ defmodule ExNVR.AccountsTest do
   describe "change_user_registration/2" do
     test "returns a changeset" do
       assert %Ecto.Changeset{} = changeset = Accounts.change_user_registration(%User{})
-      assert changeset.required == [:password, :email, :first_name, :last_name]
+      assert changeset.required == [:password, :email]
     end
 
     test "allows fields to be set" do
       email = unique_user_email()
       password = valid_user_password()
-      username = valid_username()
       first_name = valid_first_name()
       last_name = valid_last_name()
       language = valid_language()
@@ -152,29 +136,27 @@ defmodule ExNVR.AccountsTest do
         Accounts.change_user_registration(
           %User{},
           valid_user_attributes(
-                email: email,
-                password: password,
-                first_name: first_name,
-                last_name: last_name,
-                language: language,
-                username: username
-                )
+                  email: email,
+                  password: password,
+                  first_name: first_name,
+                  last_name: last_name,
+                  language: language
+                  )
         )
 
       assert changeset.valid?
       assert get_change(changeset, :first_name) == first_name
       assert get_change(changeset, :last_name) == last_name
-      assert get_change(changeset, :language) == language
+      assert is_nil(get_change(changeset, :language))
       assert get_change(changeset, :email) == email
       assert get_change(changeset, :password) == password
-      assert get_change(changeset, :username) == username
       assert is_nil(get_change(changeset, :hashed_password))
     end
   end
 
   describe "change_user_information" do
     test "returns a user info changeset" do
-      assert %Ecto.Changeset{} = changeset = Accounts.change_user_info(%User{})
+      assert %Ecto.Changeset{} = changeset = Accounts.change_user_info(%User{}, %{}, validate_full_name: true)
       assert changeset.required == [:first_name, :last_name]
     end
 
@@ -204,7 +186,7 @@ defmodule ExNVR.AccountsTest do
     test "validates user info", %{user: user} do
       {:error, changeset} =
         Accounts.update_user_info(user, %{
-          first_name: "@£$?±",
+          first_name: "e",
           last_name: "i",
           username: "username",
           language: :wrong,
@@ -212,7 +194,7 @@ defmodule ExNVR.AccountsTest do
 
       errors = errors_on(changeset)
 
-      assert "Invalid first name format(only [A-Z][a-z][0-9] and underscores are accepted)" in errors.first_name
+      assert "should be at least 2 character(s)" in errors.first_name
       assert "should be at least 2 character(s)" in errors.last_name
       assert "is invalid" in errors.language
 
