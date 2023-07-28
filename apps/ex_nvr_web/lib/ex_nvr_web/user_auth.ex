@@ -95,7 +95,7 @@ defmodule ExNVRWeb.UserAuth do
     {user_token, context, conn} = ensure_user_token(conn)
     user = fetch_user_by_token(user_token, context)
 
-    if user, do: Logger.metadata(user: user.id)
+    if user, do: Logger.metadata(user_id: user.id)
 
     assign(conn, :current_user, user)
   end
