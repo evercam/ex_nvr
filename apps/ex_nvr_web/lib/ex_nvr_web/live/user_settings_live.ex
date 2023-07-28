@@ -21,12 +21,11 @@ defmodule ExNVRWeb.UserSettingsLive do
           >
             <.input field={@info_form[:first_name]} type="text" label="First Name" required />
             <.input field={@info_form[:last_name]} type="text" label="Last Name" required />
-            <.input field={@info_form[:username]} type="text" label="Username" disabled />
             <.input
               field={@info_form[:language]}
               type="select"
               label="Language"
-              options={["English": :en, "French": :fr]}
+              options={["English": :en]}
             />
             <:actions>
               <.button phx-disable-with="Changing...">Change</.button>
