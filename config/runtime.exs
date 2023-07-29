@@ -121,11 +121,6 @@ if config_env() == :prod do
       on_init: :disabled
 
     config :logger, level: :info, backends: [LoggerJSON]
-  else
-    config :logger, :console,
-      level: :info,
-      metadata: [:device_id, :user_id, :request_id],
-      format: "$dateT$time $metadata[$level] $message\n"
   end
 
   # ## Configuring the mailer
