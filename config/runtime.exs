@@ -111,6 +111,18 @@ if config_env() == :prod do
 
   config :ex_nvr_web, ExNVRWeb.Endpoint, server: true
 
+  ## Logging configuration
+  log_json? = System.get_env("EXNVR_JSON_LOGGER", "true") == "true"
+
+  if log_json? do
+    config :logger_json, :backend,
+      metadata: :all,
+      formatter: LoggerJSON.Formatters.BasicLogger,
+      on_init: :disabled
+
+    config :logger, level: :info, backends: [LoggerJSON]
+  end
+
   # ## Configuring the mailer
   #
   # In production you need to configure the mailer to use a different adapter.

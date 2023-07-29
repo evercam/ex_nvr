@@ -51,7 +51,8 @@ defmodule ExNVRWeb.MixProject do
       {:ex_nvr, in_umbrella: true},
       {:jason, "~> 1.2"},
       {:plug_cowboy, "~> 2.5"},
-      {:corsica, "~> 1.0"}
+      {:corsica, "~> 1.0"},
+      {:logger_json, "~> 5.1"}
     ]
   end
 

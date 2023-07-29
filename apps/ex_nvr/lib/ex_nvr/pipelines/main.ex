@@ -94,8 +94,6 @@ defmodule ExNVR.Pipelines.Main do
   end
 
   def start_link(options \\ []) do
-    Membrane.Logger.info("Starting a new NVR pipeline with options: #{inspect(options)}")
-
     with {:ok, sup_pid, pid} = res <-
            Membrane.Pipeline.start_link(__MODULE__, options, name: pipeline_name(options[:device])) do
       send(pid, {:pipeline_supervisor, sup_pid})
@@ -134,8 +132,16 @@ defmodule ExNVR.Pipelines.Main do
   @impl true
   def handle_init(_ctx, options) do
     device = options[:device]
-
     {stream_uri, sub_stream_uri} = Device.streams(device)
+
+    Logger.metadata(device_id: device.id)
+    Membrane.Logger.info("Starting main pipeline for device: #{device.id}")
+
+    Membrane.Logger.info("""
+    Start streaming for
+    main stream: #{stream_uri}
+    sub stream: #{sub_stream_uri}
+    """)
 
     state = %State{
       device: device,

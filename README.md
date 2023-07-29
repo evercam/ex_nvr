@@ -45,6 +45,7 @@ variables needed to configure `ex_nvr` are:
 | EXNVR_HTTPS_PORT | Https `port`, defaults to: `443` |
 | EXNVR_SSL_KEY_PATH | The path to the SSL key. |
 | EXNVR_SSL_CERT_PATH | The path to the SSL certificate. |
+| EXNVR_JSON_LOGGER | Enable json logging, defaults to: `true` |
 
 * **WebRTC Configuration**
 

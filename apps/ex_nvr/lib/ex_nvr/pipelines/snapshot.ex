@@ -5,6 +5,8 @@ defmodule ExNVR.Pipelines.Snapshot do
 
   use Membrane.Pipeline
 
+  require Membrane.Logger
+
   alias Membrane.H264
   alias ExNVR.Elements
   alias ExNVR.Elements.MP4
@@ -15,6 +17,9 @@ defmodule ExNVR.Pipelines.Snapshot do
 
   @impl true
   def handle_init(_ctx, options) do
+    Logger.metadata(device_id: options[:device_id])
+    Membrane.Logger.info("Start snapshot pipeline with options: #{inspect(options)}")
+
     rank = if options[:method] == :precise, do: :last, else: :first
 
     spec = [
@@ -35,6 +40,7 @@ defmodule ExNVR.Pipelines.Snapshot do
 
   @impl true
   def handle_child_notification({:snapshot, snapshot}, :sink, _ctx, state) do
+    Membrane.Logger.info("Got snapshot")
     send(state.caller, {:snapshot, snapshot})
     {[terminate: :shutdown], %{state | caller: nil}}
   end

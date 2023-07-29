@@ -5,28 +5,38 @@ defmodule ExNVR.Pipelines.HlsPlayback do
 
   use Membrane.Pipeline
 
+  require Membrane.Logger
+
   alias ExNVR.Elements.MP4
 
   @call_timeout 60_000
 
+  @spec start_link(Keyword.t()) :: Pipeline.on_start()
   def start_link(opts) do
     Pipeline.start_link(__MODULE__, opts, name: opts[:name])
   end
 
+  @spec start(Keyword.t()) :: Pipeline.on_start()
   def start(opts) do
     Pipeline.start(__MODULE__, opts, name: opts[:name])
   end
 
+  @spec start_streaming(pid() | atom()) :: :ok
   def start_streaming(pipeline) do
+    Membrane.Logger.info("Start playback")
     Pipeline.call(pipeline, :start_streaming, @call_timeout)
   end
 
+  @spec stop_streaming(pid() | atom()) :: :ok
   def stop_streaming(pipeline) do
     Pipeline.call(pipeline, :stop_streaming)
   end
 
   @impl true
   def handle_init(ctx, options) do
+    Logger.metadata(device_id: options[:device_id])
+    Membrane.Logger.info("Start playback pipeline with options: #{inspect(options)}")
+
     File.mkdir_p!(options[:directory])
 
     Membrane.ResourceGuard.register(ctx.resource_guard, fn ->
@@ -72,6 +82,7 @@ defmodule ExNVR.Pipelines.HlsPlayback do
 
   @impl true
   def handle_call(:stop_streaming, _ctx, state) do
+    Membrane.Logger.info("Stop playback")
     {[reply: :ok, terminate: :shutdown], state}
   end
 

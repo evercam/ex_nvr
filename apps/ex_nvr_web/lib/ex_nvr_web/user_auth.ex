@@ -1,6 +1,8 @@
 defmodule ExNVRWeb.UserAuth do
   use ExNVRWeb, :verified_routes
 
+  require Logger
+
   import ExNVRWeb.Controller.Helpers
   import Plug.Conn
   import Phoenix.Controller
@@ -92,6 +94,9 @@ defmodule ExNVRWeb.UserAuth do
   def fetch_current_user(conn, _opts) do
     {user_token, context, conn} = ensure_user_token(conn)
     user = fetch_user_by_token(user_token, context)
+
+    if user, do: Logger.metadata(user_id: user.id)
+
     assign(conn, :current_user, user)
   end
 
@@ -138,7 +143,7 @@ defmodule ExNVRWeb.UserAuth do
   defp decode_access_token(nil), do: nil
 
   defp decode_access_token(token) do
-    case Base.decode64(token) do
+    case Base.url_decode64(token) do
       {:ok, decoded_token} -> decoded_token
       _ -> nil
     end

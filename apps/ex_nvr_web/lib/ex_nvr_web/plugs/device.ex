@@ -5,6 +5,8 @@ defmodule ExNVRWeb.Plug.Device do
 
   import ExNVRWeb.Controller.Helpers
 
+  require Logger
+
   alias ExNVR.{Devices, Model.Device}
   alias Plug.Conn
 
@@ -16,6 +18,7 @@ defmodule ExNVRWeb.Plug.Device do
 
     case Devices.get(device_id) do
       %Device{} = device ->
+        Logger.metadata(device_id: device.id)
         Conn.assign(conn, :device, device)
 
       nil ->
