@@ -1,0 +1,16 @@
+version: 2
+updates:
+  - package-ecosystem: "mix"
+    directory: "/apps/ex_nvr"
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: "mix"
+    directory: "/apps/ex_nvr_web"
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: "npm"
+    directory: "/apps/ex_nvr_web/assets"
+    schedule:
+      interval: weekly
