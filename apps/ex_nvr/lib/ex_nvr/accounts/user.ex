@@ -77,7 +77,6 @@ defmodule ExNVR.Accounts.User do
     |> cast(attrs, [:language, :first_name, :last_name])
     |> validate_user_language(opts)
     |> validate_user_full_name(opts)
-    |> validate_user_language(opts)
   end
 
   @doc """
