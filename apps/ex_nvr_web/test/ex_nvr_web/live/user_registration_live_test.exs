@@ -41,7 +41,7 @@ defmodule ExNVRWeb.UserRegistrationLiveTest do
       {:ok, lv, _html} = live(conn, ~p"/users/register")
 
       email = unique_user_email()
-      form = form(lv, "#registration_form", user: valid_user_attributes(%{email: email}, include_user_info: false))
+      form = form(lv, "#registration_form", user: valid_user_attributes(%{email: email}))
       render_submit(form)
       conn = follow_trigger_action(form, conn)
 

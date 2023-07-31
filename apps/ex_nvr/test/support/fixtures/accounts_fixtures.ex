@@ -10,23 +10,21 @@ defmodule ExNVR.AccountsFixtures do
   def valid_last_name, do: "Smith"
   def valid_language, do: :en
 
-  def valid_user_attributes(attrs \\ %{}, opts \\ []) do
-    if Keyword.get(opts, :include_user_info, true) do
-      user_attrs = %{
+  def valid_user_attributes(attrs \\ %{}) do
+    Enum.into(attrs, %{
+      email: unique_user_email(),
+      password: valid_user_password()
+    })
+  end
+
+  def valid_user_full_attributes(attrs \\ %{}) do
+    Enum.into(attrs, %{
         email: unique_user_email(),
         password: valid_user_password(),
         first_name: valid_first_name(),
         last_name: valid_last_name(),
         language: valid_language()
-      }
-      Enum.into(attrs, user_attrs)
-    else
-      user_attrs = %{
-        email: unique_user_email(),
-        password: valid_user_password()
-      }
-      Enum.into(attrs, user_attrs)
-    end
+      })
   end
 
   def user_fixture(attrs \\ %{}) do

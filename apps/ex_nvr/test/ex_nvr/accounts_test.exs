@@ -88,13 +88,13 @@ defmodule ExNVR.AccountsTest do
     end
 
     test "validates username auto-generation when not provided(first part before @ from email)" do
-      %{email: email, first_name: first_name, last_name: last_name} = valid_user_attributes()
+      %{email: email, first_name: first_name, last_name: last_name} = valid_user_full_attributes()
       expected_username = email
                           |> to_string
                           |> String.split("@")
                           |> List.first()
 
-      {:ok, user} = Accounts.register_user(valid_user_attributes(email: email, first_name: first_name, last_name: last_name))
+      {:ok, user} = Accounts.register_user(valid_user_full_attributes(email: email, first_name: first_name, last_name: last_name))
       assert user.username == expected_username
     end
 
