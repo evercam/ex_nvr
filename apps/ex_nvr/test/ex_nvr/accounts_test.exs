@@ -92,8 +92,7 @@ defmodule ExNVR.AccountsTest do
       expected_username = email
                           |> to_string
                           |> String.split("@")
-                          |> hd
-                          |> String.replace("-", "_")
+                          |> List.first()
 
       {:ok, user} = Accounts.register_user(valid_user_attributes(email: email, first_name: first_name, last_name: last_name))
       assert user.username == expected_username

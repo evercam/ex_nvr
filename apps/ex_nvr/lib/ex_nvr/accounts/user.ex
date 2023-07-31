@@ -46,7 +46,7 @@ defmodule ExNVR.Accounts.User do
     |> cast(attrs, [:email, :password, :first_name, :last_name, :language, :role])
     |> validate_user_full_name(opts)
     |> validate_email(opts)
-    |> generate_username(opts)
+    |> generate_username()
     |> unique_constraint(:username)
     |> validate_user_language(opts)
     |> validate_password(opts)
@@ -174,25 +174,15 @@ defmodule ExNVR.Accounts.User do
     |> validate_inclusion(:language, [:en, :fr], message: "Invalid language.")
   end
 
-  defp generate_username(changeset, opts) do
-    if Keyword.get(opts, :set_default_username, true) do
-      username = get_change(changeset, :username, nil)
-      email = get_change(changeset, :email, nil)
+  defp generate_username(%{valid?: false} = changeset), do: changeset
 
-      with nil <- username,
-          0 <- byte_size(to_string(username)) do
-        generated_username = email
-                            |> to_string()
-                            |> String.split("@")
-                            |> hd()
-                            |> String.replace("-", "_")
-        put_change(changeset, :username, generated_username)
-      else
-        _error -> changeset
-      end
-    else
-      changeset
-    end
+  defp generate_username(changeset) do
+    changeset
+    |> get_change(:email)
+    |> to_string
+    |> String.split("@")
+    |> List.first()
+    |> then(&put_change(changeset, :username, &1))
   end
 
   defp maybe_hash_password(changeset, opts) do
