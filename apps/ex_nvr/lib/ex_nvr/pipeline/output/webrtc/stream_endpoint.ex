@@ -58,7 +58,7 @@ defmodule ExNVR.Pipeline.Output.WebRTC.StreamEndpoint do
 
   @impl true
   def handle_parent_notification(:remove_track, _ctx, state) do
-    Logger.warn("Remove track notification received, removed track: #{state.track.id}")
+    Logger.warning("Remove track notification received, removed track: #{state.track.id}")
     {[notify_parent: {:publish, {:removed_tracks, [state.track]}}], %{state | track: nil}}
   end
 

@@ -95,7 +95,9 @@ defmodule ExNVR.Pipelines.Main do
 
   def start_link(options \\ []) do
     with {:ok, sup_pid, pid} = res <-
-           Membrane.Pipeline.start_link(__MODULE__, options, name: pipeline_name(options[:device])) do
+           Membrane.Pipeline.start_link(__MODULE__, options,
+             name: pipeline_name(options[:device])
+           ) do
       send(pid, {:pipeline_supervisor, sup_pid})
       res
     end

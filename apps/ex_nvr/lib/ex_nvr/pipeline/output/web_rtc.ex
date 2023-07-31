@@ -205,7 +205,7 @@ defmodule ExNVR.Pipeline.Output.WebRTC do
     if peer_channel do
       send(peer_channel, :endpoint_crashed)
     else
-      Membrane.Logger.warn("""
+      Membrane.Logger.warning("""
       No peer corresponding to endpoint: #{peer_id}.
       It might have left just before the crash happend or the
       crash happend because of the peer leaving
@@ -232,7 +232,7 @@ defmodule ExNVR.Pipeline.Output.WebRTC do
 
   @impl true
   def handle_info(message, _ctx, state) do
-    Membrane.Logger.warn("Received unexpected message: #{inspect(message)}")
+    Membrane.Logger.warning("Received unexpected message: #{inspect(message)}")
     {[], state}
   end
 

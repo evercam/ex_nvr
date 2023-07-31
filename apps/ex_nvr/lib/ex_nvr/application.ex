@@ -45,7 +45,7 @@ defmodule ExNVR.Application do
 
       Application.put_env(:ex_nvr, :integrated_turn_cert_pkey, @cert_file_path)
     else
-      Membrane.Logger.warn("""
+      Membrane.Logger.warning("""
       Integrated TURN certificate or private key path not specified.
       Integrated TURN will not handle TLS connections.
       """)
