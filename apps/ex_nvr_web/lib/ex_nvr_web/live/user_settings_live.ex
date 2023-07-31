@@ -17,7 +17,6 @@ defmodule ExNVRWeb.UserSettingsLive do
             for={@info_form}
             id="info_form"
             phx-submit="update_personal_info"
-            phx-change="validate_personal_info"
           >
             <.input field={@info_form[:first_name]} type="text" label="First Name" required />
             <.input field={@info_form[:last_name]} type="text" label="Last Name" required />
@@ -128,20 +127,7 @@ defmodule ExNVRWeb.UserSettingsLive do
     {:ok, socket}
   end
 
-  def handle_event("validate_personal_info", params, socket) do
-    %{"user" => user_params} = params
-
-    info_form =
-      socket.assigns.current_user
-      |> Accounts.change_user_info(user_params)
-      |> Map.put(:action, :validate)
-      |> to_form()
-
-    {:noreply, assign(socket, info_form: info_form)}
-  end
-
-  def handle_event("update_personal_info", params, socket) do
-    %{"user" => user_params} = params
+  def handle_event("update_personal_info", %{"user" => user_params}, socket) do
     user = socket.assigns.current_user
     case Accounts.update_user_info(user, user_params) do
       {:ok, user} ->
