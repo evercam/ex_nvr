@@ -43,8 +43,7 @@ defmodule ExNVR.Accounts.User do
   """
   def registration_changeset(user, attrs, opts \\ []) do
     user
-    |> cast(attrs, [:email, :password, :first_name, :last_name, :username, :language, :role])
-    |> maybe_cast_only_email_password(attrs, opts)
+    |> cast(attrs, [:email, :password, :first_name, :last_name, :language, :role])
     |> validate_user_full_name(opts)
     |> validate_email(opts)
     |> generate_username(opts)
@@ -78,14 +77,6 @@ defmodule ExNVR.Accounts.User do
     |> maybe_validate_required_full_name(opts)
     |> validate_length(:first_name, min: 2, max: 72)
     |> validate_length(:last_name, min: 2, max: 72)
-  end
-
-  defp maybe_cast_only_email_password(user, attrs, opts) do
-    if Keyword.get(opts, :cast_user_info, false) do
-      cast(user, attrs, [:email, :password, :role])
-    else
-      user
-    end
   end
 
   defp maybe_validate_required_full_name(changeset, opts) do
