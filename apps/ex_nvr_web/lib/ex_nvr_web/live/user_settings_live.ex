@@ -27,7 +27,7 @@ defmodule ExNVRWeb.UserSettingsLive do
               options={["English": :en]}
             />
             <:actions>
-              <.button phx-disable-with="Changing...">Change</.button>
+              <.button phx-disable-with="Changing...">Change User Information</.button>
             </:actions>
           </.simple_form>
         </div>
@@ -37,6 +37,7 @@ defmodule ExNVRWeb.UserSettingsLive do
             id="email_form"
             phx-submit="update_email"
             phx-change="validate_email"
+            method="post"
           >
             <.input field={@email_form[:email]} type="email" label="Email" required />
             <.input
@@ -136,7 +137,8 @@ defmodule ExNVRWeb.UserSettingsLive do
           |> Accounts.change_user_info(user_params)
           |> to_form()
 
-        {:noreply, assign(socket, trigger_submit: true, info_form: info_form)}
+        info = "User information updated successfully."
+        {:noreply, socket |> put_flash(:info, info) |> assign(socket, info_form: info_form)}
 
       {:error, changeset} ->
         {:noreply, assign(socket, info_form: to_form(changeset))}

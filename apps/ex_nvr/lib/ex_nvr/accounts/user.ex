@@ -171,7 +171,7 @@ defmodule ExNVR.Accounts.User do
 
   defp validate_user_language(changeset, _opts) do
     changeset
-    |> validate_inclusion(:language, [:en, :fr], message: "Invalid language.")
+    |> validate_inclusion(:language, [:en], message: "Invalid language.")
   end
 
   defp generate_username(%{valid?: false} = changeset), do: changeset

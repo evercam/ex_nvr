@@ -8,7 +8,7 @@ defmodule ExNVR.AccountsFixtures do
   def valid_user_password, do: "Hello world!"
   def valid_first_name, do: "John"
   def valid_last_name, do: "Smith"
-  def valid_language, do: :en
+  def valid_language, do: Enum.random([:en])
 
   def valid_user_attributes(attrs \\ %{}) do
     Enum.into(attrs, %{
