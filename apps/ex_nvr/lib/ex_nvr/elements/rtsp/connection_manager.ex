@@ -115,7 +115,7 @@ defmodule ExNVR.Elements.RTSP.ConnectionManager do
         # RTSP session returns timeout
         :exit, error ->
           Membrane.Logger.error("""
-          EXIT error when trying to connect to rtsp server
+          ConnectionManager: EXIT error when trying to connect to rtsp server
           #{inspect(error)}
           """)
 
@@ -221,7 +221,7 @@ defmodule ExNVR.Elements.RTSP.ConnectionManager do
          stream_uri: stream_uri,
          endpoint: endpoint
        }) do
-    case RTSP.start(stream_uri, ExNVR.Elements.RTSP.TCPSocket, media_receiver: endpoint) do
+    case RTSP.start(stream_uri, ExNVR.Elements.RTSP.MediaTCPSocket, media_receiver: endpoint) do
       {:ok, session} ->
         Process.monitor(session)
         session
@@ -239,28 +239,6 @@ defmodule ExNVR.Elements.RTSP.ConnectionManager do
 
   defp start_rtsp_session(%ConnectionStatus{rtsp_session: rtsp_session}) do
     rtsp_session
-  end
-
-  defp start_keep_alive(%ConnectionStatus{} = connection_status) do
-    Membrane.Logger.debug("ConnectionManager: Starting Keep alive process")
-
-    {keep_alive, _ref} =
-      spawn_monitor(fn ->
-        Process.sleep(@keep_alive_interval)
-        rtsp_keep_alive(connection_status.rtsp_session, @keep_alive_interval)
-      end)
-
-    {:ok, %{connection_status | keep_alive: keep_alive}}
-  end
-
-  defp rtsp_keep_alive(rtsp_session, keep_alive_interval) do
-    if Process.alive?(rtsp_session) do
-      RTSP.get_parameter(rtsp_session)
-      Process.sleep(keep_alive_interval)
-      rtsp_keep_alive(rtsp_session, keep_alive_interval)
-    else
-      Process.exit(self(), :rtsp_session_closed)
-    end
   end
 
   defp get_rtsp_description(%ConnectionStatus{rtsp_session: rtsp_session} = connection_status) do
@@ -297,6 +275,27 @@ defmodule ExNVR.Elements.RTSP.ConnectionManager do
         )
 
         {:error, :setting_up_sdp_connection_failed}
+    end
+  end
+
+  defp start_keep_alive(%ConnectionStatus{} = connection_status) do
+    Membrane.Logger.debug("ConnectionManager: Starting Keep alive process")
+
+    {keep_alive, _ref} =
+      spawn_monitor(fn ->
+        rtsp_keep_alive(connection_status.rtsp_session, @keep_alive_interval)
+      end)
+
+    {:ok, %{connection_status | keep_alive: keep_alive}}
+  end
+
+  defp rtsp_keep_alive(rtsp_session, keep_alive_interval) do
+    if Process.alive?(rtsp_session) do
+      RTSP.get_parameter(rtsp_session)
+      Process.sleep(keep_alive_interval)
+      rtsp_keep_alive(rtsp_session, keep_alive_interval)
+    else
+      Process.exit(self(), :rtsp_session_closed)
     end
   end
 

@@ -1,4 +1,4 @@
-defmodule ExNVR.Elements.RTSP.TCPSocket do
+defmodule ExNVR.Elements.RTSP.MediaTCPSocket do
   @moduledoc """
   This module is a wrapper around Membrane.RTSP.Transport.TCPSocket and augments
   it with the possibility to receive media data via the same connection that's used for
@@ -17,13 +17,17 @@ defmodule ExNVR.Elements.RTSP.TCPSocket do
   alias Membrane.RTSP.{Response, Transport.TCPSocket}
 
   @media_wait_timeout 10_000
-  @dummy_rtsp_response "RTSP/1.0 200 OK\nCSeq: 0\r\n\r\n"
 
   @impl true
   def init(connection_info, options) do
     case TCPSocket.init(connection_info, options) do
       {:ok, socket} ->
-        {:ok, %{socket: socket, media_receiver: options[:media_receiver]}}
+        {:ok, tcp_handler} =
+          Task.start_link(fn ->
+            handle_tcp_messages(socket, options[:media_receiver], false, nil, <<>>)
+          end)
+
+        {:ok, %{socket: socket, tcp_handler: tcp_handler}}
 
       other ->
         other
@@ -31,21 +35,19 @@ defmodule ExNVR.Elements.RTSP.TCPSocket do
   end
 
   @impl true
-  def execute(request, %{socket: socket, media_receiver: media_receiver}, options) do
-    if (pid = Process.whereis(:media_handler)) && Process.alive?(pid) do
-      # If a message arrive after the PLAY request, it's
-      # a keep alive message. No need to check for an error since
-      # the session will fail eventually if there's no media packets
-      send(pid, {:request, request})
-      {:ok, @dummy_rtsp_response}
-    else
-      with {:ok, data} <- TCPSocket.execute(request, socket, options) do
-        if play?(request) do
-          spawn_link(fn -> handle_media_packets(socket, media_receiver) end)
-        end
+  def execute(request, %{tcp_handler: tcp_handler}, _options) do
+    send(tcp_handler, {:request, request, self()})
 
-        {:ok, data}
-      end
+    if play?(request) do
+      send(tcp_handler, :play)
+    end
+
+    receive do
+      {:response, response} when is_binary(response) ->
+        {:ok, response}
+
+      {:response, response} ->
+        response
     end
   end
 
@@ -58,31 +60,48 @@ defmodule ExNVR.Elements.RTSP.TCPSocket do
   defp play?(<<"PLAY", _::binary>>), do: true
   defp play?(_), do: false
 
-  defp handle_media_packets(socket, media_received) do
-    Process.register(self(), :media_handler)
-    do_handle_media_packets(socket, media_received)
+  defp handle_tcp_messages(socket, media_received, false, requester, acc) do
+    receive do
+      :play ->
+        handle_tcp_messages(socket, media_received, requester, acc)
+
+      {:request, request, requester} ->
+        response = TCPSocket.execute(request, socket, [])
+        send(requester, {:response, response})
+        handle_tcp_messages(socket, media_received, false, requester, acc)
+    after
+      2_000 -> handle_tcp_messages(socket, media_received, false, requester, acc)
+    end
   end
 
-  defp do_handle_media_packets(socket, media_receiver, acc \\ <<>>) do
+  defp handle_tcp_messages(socket, media_receiver, requester, acc) do
     receive do
-      {:request, request} ->
+      :play ->
+        handle_tcp_messages(socket, media_receiver, requester, acc)
+
+      {:request, request, requester} ->
         :gen_tcp.send(socket, request)
-        do_handle_media_packets(socket, media_receiver, acc)
+        handle_tcp_messages(socket, media_receiver, requester, acc)
     after
       0 ->
         case read(socket, 4, acc) do
           {<<0x24::8, _channel::8, size::16>>, acc} ->
             {packet, acc} = read(socket, size, acc)
             send(media_receiver, {:media_packet, packet})
-            do_handle_media_packets(socket, media_receiver, acc)
+            handle_tcp_messages(socket, media_receiver, requester, acc)
 
           {"RTSP", acc} ->
-            acc = parse_rtsp_response(socket, "RTSP" <> acc)
-            do_handle_media_packets(socket, media_receiver, acc)
+            {response, acc} = parse_rtsp_response(socket, "RTSP" <> acc)
+
+            if is_pid(requester) do
+              send(requester, {:response, response})
+            end
+
+            handle_tcp_messages(socket, media_receiver, nil, acc)
 
           {_other, _acc} ->
             # ignore remaining packets in acc
-            do_handle_media_packets(socket, media_receiver, <<>>)
+            handle_tcp_messages(socket, media_receiver, nil, <<>>)
         end
     end
   end
@@ -114,8 +133,8 @@ defmodule ExNVR.Elements.RTSP.TCPSocket do
 
   defp parse_rtsp_response(socket, response) do
     with {_pos, _length} <- :binary.match(response, ["\r\n\r\n", "\n\n", "\r\r"]),
-         acc when is_binary(acc) <- do_parse_response(response) do
-      acc
+         {response, acc} <- do_parse_response(response) do
+      {response, acc}
     else
       _other ->
         response = do_read_from_socket(socket, response)
@@ -129,7 +148,8 @@ defmodule ExNVR.Elements.RTSP.TCPSocket do
          content_length <- String.to_integer(length_str),
          true <- byte_size(body) >= content_length do
       <<_ignore::binary-size(content_length), acc::binary>> = body
-      acc
+      response = :binary.part(response, 0, byte_size(response) - byte_size(acc))
+      {response, acc}
     end
   end
 end
