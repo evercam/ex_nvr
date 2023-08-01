@@ -119,13 +119,18 @@ export default function createTimeline(element) {
     svg.on("click", function (event) {
         const [mouseX, _] = d3.pointer(event, this)
         const date = x.invert(mouseX)
-        const datePart = new Intl.DateTimeFormat("en-CA").format(date)
-        const timePart = new Intl.DateTimeFormat("en", {
+        const formatter = new Intl.DateTimeFormat("en", {
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
             hour: "2-digit",
             minute: "2-digit",
             timeZone: timeline.dataset.timezone || "UTC",
             hour12: false,
-        }).format(date)
+        })
+        const dateFormatted = formatter.formatToParts(date)
+        const datePart = `${dateFormatted[4].value}-${dateFormatted[0].value}-${dateFormatted[2].value}`
+        const timePart = `${dateFormatted[6].value}:${dateFormatted[8].value}`
 
         window.TimelineHook.pushEvent("datetime", {
             value: `${datePart}T${timePart}`,
