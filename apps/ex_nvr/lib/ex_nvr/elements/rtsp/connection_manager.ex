@@ -134,15 +134,16 @@ defmodule ExNVR.Elements.RTSP.ConnectionManager do
 
     kill_children(connection_status)
 
-    connection_status = %{connection_status | rtsp_session: nil}
+    connection_status = %{connection_status | rtsp_session: nil, keep_alive: nil}
 
     send(connection_status.endpoint, {:connection_info, :disconnected})
 
     {:noconnect, connection_status, :hibernate}
   end
 
-  defp kill_children(%ConnectionStatus{rtsp_session: rtsp_session}) do
+  defp kill_children(%ConnectionStatus{rtsp_session: rtsp_session, keep_alive: keep_alive}) do
     if !is_nil(rtsp_session) and Process.alive?(rtsp_session), do: RTSP.close(rtsp_session)
+    if !is_nil(keep_alive) and Process.alive?(keep_alive), do: Process.exit(keep_alive, :normal)
   end
 
   @impl true
@@ -186,6 +187,7 @@ defmodule ExNVR.Elements.RTSP.ConnectionManager do
     end
 
     send(connection_status.endpoint, {:connection_info, {:connection_failed, :session_crashed}})
+    kill_children(connection_status)
     {:connect, :reload, %{connection_status | rtsp_session: nil, keep_alive: nil}}
   end
 

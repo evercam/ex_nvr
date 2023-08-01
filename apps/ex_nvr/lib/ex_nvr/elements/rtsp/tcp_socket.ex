@@ -32,7 +32,7 @@ defmodule ExNVR.Elements.RTSP.TCPSocket do
 
   @impl true
   def execute(request, %{socket: socket, media_receiver: media_receiver}, options) do
-    if pid = Process.whereis(:media_handler) do
+    if (pid = Process.whereis(:media_handler)) && Process.alive?(pid) do
       # If a message arrive after the PLAY request, it's
       # a keep alive message. No need to check for an error since
       # the session will fail eventually if there's no media packets
@@ -77,7 +77,7 @@ defmodule ExNVR.Elements.RTSP.TCPSocket do
             do_handle_media_packets(socket, media_receiver, acc)
 
           {"RTSP", acc} ->
-            acc = parse_rtsp_response("RTSP" <> acc)
+            acc = parse_rtsp_response(socket, "RTSP" <> acc)
             do_handle_media_packets(socket, media_receiver, acc)
 
           {_other, _acc} ->
@@ -93,34 +93,43 @@ defmodule ExNVR.Elements.RTSP.TCPSocket do
         {data, rest}
 
       acc ->
-        case :gen_tcp.recv(socket, 0, @media_wait_timeout) do
-          {:ok, data} ->
-            read(socket, size, acc <> data)
-
-          {:error, :ealready} ->
-            Process.sleep(10)
-            read(socket, size, acc)
-
-          {:error, reason} ->
-            raise "connection lost due to: #{inspect(reason)}"
-        end
+        acc = do_read_from_socket(socket, acc)
+        read(socket, size, acc)
     end
   end
 
-  defp parse_rtsp_response(response) do
-    with {:ok, %{body: body, headers: headers}} <- Response.parse(response),
-         {"Content-Length", length_str} <- List.keyfind(headers, "Content-Length", 0),
-         content_length <- String.to_integer(length_str) do
-      <<_ignore::binary-size(content_length), acc::binary>> = body
+  defp do_read_from_socket(socket, acc) do
+    case :gen_tcp.recv(socket, 0, @media_wait_timeout) do
+      {:ok, data} ->
+        acc <> data
+
+      {:error, :ealready} ->
+        Process.sleep(10)
+        do_read_from_socket(socket, acc)
+
+      {:error, reason} ->
+        raise "connection lost due to: #{inspect(reason)}"
+    end
+  end
+
+  defp parse_rtsp_response(socket, response) do
+    with {_pos, _length} <- :binary.match(response, ["\r\n\r\n", "\n\n", "\r\r"]),
+         acc when is_binary(acc) <- do_parse_response(response) do
       acc
     else
-      other ->
-        Membrane.Logger.warning("""
-        Could not parse RTSP response
-        #{inspect(other)}
-        """)
+      _other ->
+        response = do_read_from_socket(socket, response)
+        parse_rtsp_response(socket, response)
+    end
+  end
 
-        <<>>
+  defp do_parse_response(response) do
+    with {:ok, %{body: body, headers: headers}} <- Response.parse(response),
+         {"Content-Length", length_str} <- List.keyfind(headers, "Content-Length", 0),
+         content_length <- String.to_integer(length_str),
+         true <- byte_size(body) >= content_length do
+      <<_ignore::binary-size(content_length), acc::binary>> = body
+      acc
     end
   end
 end
