@@ -7,6 +7,9 @@ defmodule ExNVR do
 
   alias ExNVR.{Accounts, Devices, Pipelines}
 
+  @first_name "Admin"
+  @last_name "Admin"
+
   @doc """
   Start the main pipeline
   """
@@ -29,16 +32,14 @@ defmodule ExNVR do
     if Accounts.count_users() == 0 do
       username = Application.get_env(:ex_nvr, :admin_username)
       password = Application.get_env(:ex_nvr, :admin_password)
-      first_name = Application.get_env(:ex_nvr, :admin)
-      last_name = Application.get_env(:ex_nvr, :admin)
 
       with {:error, changeset} <-
              Accounts.register_user(%{
                email: username,
                password: password,
                role: :admin,
-               first_name: first_name,
-               last_name: last_name
+               first_name: @first_name,
+               last_name: @last_name
              }) do
         Logger.error("""
         Could not create admin user, exiting app...
