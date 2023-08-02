@@ -112,7 +112,6 @@ defmodule ExNVRWeb.UserSettingsLive do
     socket =
       socket
       |> assign(:info_form, to_form(user_info_changeset))
-      |> assign(:username, user.username)
       |> assign(:current_password, nil)
       |> assign(:email_form_current_password, nil)
       |> assign(:current_email, user.email)
