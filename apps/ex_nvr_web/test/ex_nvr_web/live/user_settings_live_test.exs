@@ -27,9 +27,8 @@ defmodule ExNVRWeb.UserSettingsLiveTest do
 
   describe "update user information form" do
     setup %{conn: conn} do
-      password = valid_user_password()
-      user = user_fixture(%{password: password})
-      %{conn: log_in_user(conn, user), user: user, password: password}
+      user = user_fixture()
+      %{conn: log_in_user(conn, user), user: user}
     end
 
     test "updates the user first & last names and language", %{conn: conn, user: user} do
