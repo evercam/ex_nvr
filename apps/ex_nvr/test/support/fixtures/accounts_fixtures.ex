@@ -19,12 +19,12 @@ defmodule ExNVR.AccountsFixtures do
 
   def valid_user_full_attributes(attrs \\ %{}) do
     Enum.into(attrs, %{
-        email: unique_user_email(),
-        password: valid_user_password(),
-        first_name: valid_first_name(),
-        last_name: valid_last_name(),
-        language: valid_language()
-      })
+      email: unique_user_email(),
+      password: valid_user_password(),
+      first_name: valid_first_name(),
+      last_name: valid_last_name(),
+      language: valid_language()
+    })
   end
 
   def user_fixture(attrs \\ %{}) do

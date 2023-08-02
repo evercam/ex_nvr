@@ -133,7 +133,6 @@ defmodule ExNVR.Accounts.User do
     end
   end
 
-
   defp validate_email(changeset, opts) do
     changeset
     |> validate_required([:email])
@@ -211,5 +210,4 @@ defmodule ExNVR.Accounts.User do
       changeset
     end
   end
-
 end

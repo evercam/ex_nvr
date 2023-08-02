@@ -12,19 +12,15 @@ defmodule ExNVRWeb.UserSettingsLive do
       </.header>
 
       <div class="space-y-12 divide-y">
-      <div>
-          <.simple_form
-            for={@info_form}
-            id="info_form"
-            phx-submit="update_personal_info"
-          >
+        <div>
+          <.simple_form for={@info_form} id="info_form" phx-submit="update_personal_info">
             <.input field={@info_form[:first_name]} type="text" label="First Name" required />
             <.input field={@info_form[:last_name]} type="text" label="Last Name" required />
             <.input
               field={@info_form[:language]}
               type="select"
               label="Language"
-              options={["English": :en]}
+              options={[English: :en]}
             />
             <:actions>
               <.button phx-disable-with="Changing...">Change User Information</.button>
@@ -129,6 +125,7 @@ defmodule ExNVRWeb.UserSettingsLive do
 
   def handle_event("update_personal_info", %{"user" => user_params}, socket) do
     user = socket.assigns.current_user
+
     case Accounts.update_user_info(user, user_params) do
       {:ok, user} ->
         info_form =
@@ -142,7 +139,6 @@ defmodule ExNVRWeb.UserSettingsLive do
       {:error, changeset} ->
         {:noreply, assign(socket, info_form: to_form(changeset))}
     end
-
   end
 
   def handle_event("validate_email", params, socket) do

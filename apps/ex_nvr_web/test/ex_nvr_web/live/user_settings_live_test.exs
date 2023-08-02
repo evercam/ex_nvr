@@ -51,7 +51,7 @@ defmodule ExNVRWeb.UserSettingsLiveTest do
 
       refreshed_user = Accounts.get_user_by_email(user.email)
 
-      assert result =~"User information updated successfully."
+      assert result =~ "User information updated successfully."
 
       assert refreshed_user.language == new_language
       assert refreshed_user.first_name == new_first_name

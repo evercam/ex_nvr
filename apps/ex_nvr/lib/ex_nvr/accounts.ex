@@ -38,11 +38,10 @@ defmodule ExNVR.Accounts do
   end
 
   def update_user_info(user, attrs) do
-      user
-      |> User.user_info_changeset(attrs)
-      |> Repo.update()
+    user
+    |> User.user_info_changeset(attrs)
+    |> Repo.update()
   end
-
 
   def change_user_email(user, attrs \\ %{}) do
     User.email_changeset(user, attrs, validate_email: false)
