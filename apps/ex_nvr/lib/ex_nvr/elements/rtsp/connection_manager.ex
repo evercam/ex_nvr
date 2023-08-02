@@ -183,7 +183,7 @@ defmodule ExNVR.Elements.RTSP.ConnectionManager do
         Membrane.Logger.warning("ConnectionManager: Keep alive process crashed")
 
       process ->
-        Membrane.Logger.warning("RTSP.ConnectionManager: #{inspect(process)} process crashed")
+        Membrane.Logger.warning("ConnectionManager: #{inspect(process)} process crashed")
     end
 
     send(connection_status.endpoint, {:connection_info, {:connection_failed, :session_crashed}})

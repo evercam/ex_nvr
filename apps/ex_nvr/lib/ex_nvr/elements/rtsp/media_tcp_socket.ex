@@ -38,17 +38,20 @@ defmodule ExNVR.Elements.RTSP.MediaTCPSocket do
   def execute(request, %{tcp_handler: tcp_handler}, _options) do
     send(tcp_handler, {:request, request, self()})
 
-    if play?(request) do
+    response =
+      receive do
+        {:response, response} when is_binary(response) ->
+          {:ok, response}
+
+        {:response, response} ->
+          response
+      end
+
+    if elem(response, 0) == :ok and play?(request) do
       send(tcp_handler, :play)
     end
 
-    receive do
-      {:response, response} when is_binary(response) ->
-        {:ok, response}
-
-      {:response, response} ->
-        response
-    end
+    response
   end
 
   @impl true
@@ -144,12 +147,18 @@ defmodule ExNVR.Elements.RTSP.MediaTCPSocket do
 
   defp do_parse_response(response) do
     with {:ok, %{body: body, headers: headers}} <- Response.parse(response),
-         {"Content-Length", length_str} <- List.keyfind(headers, "Content-Length", 0),
-         content_length <- String.to_integer(length_str),
-         true <- byte_size(body) >= content_length do
-      <<_ignore::binary-size(content_length), acc::binary>> = body
+         body_size <- content_length(headers),
+         true <- byte_size(body) >= body_size do
+      <<_ignore::binary-size(body_size), acc::binary>> = body
       response = :binary.part(response, 0, byte_size(response) - byte_size(acc))
       {response, acc}
+    end
+  end
+
+  defp content_length(headers) do
+    case List.keyfind(headers, "Content-Length", 0) do
+      {"Content-Length", length_str} -> String.to_integer(length_str)
+      nil -> 0
     end
   end
 end
