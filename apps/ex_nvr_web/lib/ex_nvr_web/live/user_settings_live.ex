@@ -37,7 +37,6 @@ defmodule ExNVRWeb.UserSettingsLive do
             id="email_form"
             phx-submit="update_email"
             phx-change="validate_email"
-            method="post"
           >
             <.input field={@email_form[:email]} type="email" label="Email" required />
             <.input
