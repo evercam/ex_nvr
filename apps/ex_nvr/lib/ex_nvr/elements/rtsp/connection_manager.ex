@@ -9,6 +9,7 @@ defmodule ExNVR.Elements.RTSP.ConnectionManager do
 
   @content_type_header [{"accept", "application/sdp"}]
   @transport_header [{"Transport", "RTP/AVP/TCP;interleaved=0-1"}]
+  @keep_alive_interval 15_000
 
   defmodule ConnectionStatus do
     @moduledoc false
@@ -23,7 +24,8 @@ defmodule ExNVR.Elements.RTSP.ConnectionManager do
             video_track: MediaTrack.t(),
             reconnect_delay: non_neg_integer(),
             max_reconnect_attempts: non_neg_integer() | :infinity,
-            reconnect_attempt: non_neg_integer()
+            reconnect_attempt: non_neg_integer(),
+            keep_alive: pid()
           }
 
     @enforce_keys [
@@ -34,7 +36,7 @@ defmodule ExNVR.Elements.RTSP.ConnectionManager do
       :reconnect_attempt
     ]
 
-    defstruct @enforce_keys ++ [:video_track, :rtsp_session]
+    defstruct @enforce_keys ++ [:video_track, :rtsp_session, :keep_alive]
   end
 
   @spec reconnect(GenServer.server()) :: :ok
@@ -85,6 +87,7 @@ defmodule ExNVR.Elements.RTSP.ConnectionManager do
       try do
         with {:ok, connection_status} <- get_rtsp_description(connection_status),
              {:ok, connection_status} <- setup_rtsp_connection(connection_status),
+             {:ok, connection_status} <- start_keep_alive(connection_status),
              :ok <- play(connection_status) do
           send(
             connection_status.endpoint,
@@ -112,7 +115,7 @@ defmodule ExNVR.Elements.RTSP.ConnectionManager do
         # RTSP session returns timeout
         :exit, error ->
           Membrane.Logger.error("""
-          EXIT error when trying to connect to rtsp server
+          ConnectionManager: EXIT error when trying to connect to rtsp server
           #{inspect(error)}
           """)
 
@@ -131,15 +134,16 @@ defmodule ExNVR.Elements.RTSP.ConnectionManager do
 
     kill_children(connection_status)
 
-    connection_status = %{connection_status | rtsp_session: nil}
+    connection_status = %{connection_status | rtsp_session: nil, keep_alive: nil}
 
     send(connection_status.endpoint, {:connection_info, :disconnected})
 
     {:noconnect, connection_status, :hibernate}
   end
 
-  defp kill_children(%ConnectionStatus{rtsp_session: rtsp_session}) do
+  defp kill_children(%ConnectionStatus{rtsp_session: rtsp_session, keep_alive: keep_alive}) do
     if !is_nil(rtsp_session) and Process.alive?(rtsp_session), do: RTSP.close(rtsp_session)
+    if !is_nil(keep_alive) and Process.alive?(keep_alive), do: Process.exit(keep_alive, :normal)
   end
 
   @impl true
@@ -159,20 +163,32 @@ defmodule ExNVR.Elements.RTSP.ConnectionManager do
   @impl true
   def handle_info(
         {:DOWN, _ref, :process, pid, reason},
-        %ConnectionStatus{rtsp_session: pid} = connection_status
-      )
-      when reason != :normal do
-    send(connection_status.endpoint, {:connection_info, {:connection_failed, :session_crashed}})
-    {:connect, :reload, %{connection_status | rtsp_session: nil}}
+        %ConnectionStatus{endpoint: pid} = connection_status
+      ) do
+    kill_children(connection_status)
+    {:stop, reason, connection_status}
   end
 
   @impl true
   def handle_info(
         {:DOWN, _ref, :process, pid, reason},
-        %ConnectionStatus{endpoint: pid} = connection_status
-      ) do
+        %ConnectionStatus{rtsp_session: rtsp_session, keep_alive: keep_alive} = connection_status
+      )
+      when reason != :normal do
+    case pid do
+      ^rtsp_session ->
+        Membrane.Logger.warning("ConnectionManager: RTSP session crashed")
+
+      ^keep_alive ->
+        Membrane.Logger.warning("ConnectionManager: Keep alive process crashed")
+
+      process ->
+        Membrane.Logger.warning("ConnectionManager: #{inspect(process)} process crashed")
+    end
+
+    send(connection_status.endpoint, {:connection_info, {:connection_failed, :session_crashed}})
     kill_children(connection_status)
-    {:stop, reason, connection_status}
+    {:connect, :reload, %{connection_status | rtsp_session: nil, keep_alive: nil}}
   end
 
   @impl true
@@ -205,7 +221,7 @@ defmodule ExNVR.Elements.RTSP.ConnectionManager do
          stream_uri: stream_uri,
          endpoint: endpoint
        }) do
-    case RTSP.start(stream_uri, ExNVR.Elements.RTSP.TCPSocket, media_receiver: endpoint) do
+    case RTSP.start(stream_uri, ExNVR.Elements.RTSP.MediaTCPSocket, media_receiver: endpoint) do
       {:ok, session} ->
         Process.monitor(session)
         session
@@ -259,6 +275,27 @@ defmodule ExNVR.Elements.RTSP.ConnectionManager do
         )
 
         {:error, :setting_up_sdp_connection_failed}
+    end
+  end
+
+  defp start_keep_alive(%ConnectionStatus{} = connection_status) do
+    Membrane.Logger.debug("ConnectionManager: Starting Keep alive process")
+
+    {keep_alive, _ref} =
+      spawn_monitor(fn ->
+        rtsp_keep_alive(connection_status.rtsp_session, @keep_alive_interval)
+      end)
+
+    {:ok, %{connection_status | keep_alive: keep_alive}}
+  end
+
+  defp rtsp_keep_alive(rtsp_session, keep_alive_interval) do
+    if Process.alive?(rtsp_session) do
+      RTSP.get_parameter(rtsp_session)
+      Process.sleep(keep_alive_interval)
+      rtsp_keep_alive(rtsp_session, keep_alive_interval)
+    else
+      Process.exit(self(), :rtsp_session_closed)
     end
   end
 

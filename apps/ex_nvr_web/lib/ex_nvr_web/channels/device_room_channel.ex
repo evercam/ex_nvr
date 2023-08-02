@@ -46,7 +46,7 @@ defmodule ExNVRWeb.DeviceRoomChannel do
 
   @impl true
   def handle_info(message, socket) do
-    Logger.warn("""
+    Logger.warning("""
     Received unexpected message
     #{inspect(message)}
     """)
