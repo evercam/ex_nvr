@@ -6,7 +6,7 @@ defmodule ExNVRWeb.UserRegistrationLive do
 
   def render(assigns) do
     ~H"""
-    <div class="mx-auto max-w-sm">
+    <div class="items-center justify-center mx-auto max-w-sm">
       <.header class="text-center">
         Register for an account
         <:subtitle>
@@ -33,7 +33,6 @@ defmodule ExNVRWeb.UserRegistrationLive do
 
         <.input field={@form[:email]} type="email" label="Email" required />
         <.input field={@form[:password]} type="password" label="Password" required />
-
         <:actions>
           <.button phx-disable-with="Creating account..." class="w-full">Create an account</.button>
         </:actions>

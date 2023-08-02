@@ -6,11 +6,24 @@ defmodule ExNVR.AccountsFixtures do
 
   def unique_user_email, do: "user#{System.unique_integer()}@example.com"
   def valid_user_password, do: "Hello world!"
+  def valid_first_name, do: "John"
+  def valid_last_name, do: "Smith"
+  def valid_language, do: Enum.random([:en])
 
   def valid_user_attributes(attrs \\ %{}) do
     Enum.into(attrs, %{
       email: unique_user_email(),
       password: valid_user_password()
+    })
+  end
+
+  def valid_user_full_attributes(attrs \\ %{}) do
+    Enum.into(attrs, %{
+      email: unique_user_email(),
+      password: valid_user_password(),
+      first_name: valid_first_name(),
+      last_name: valid_last_name(),
+      language: valid_language()
     })
   end
 

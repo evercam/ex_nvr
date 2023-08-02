@@ -20,9 +20,9 @@ defmodule ExNVR.Accounts do
 
   def get_user!(id), do: Repo.get!(User, id)
 
-  def register_user(attrs) do
+  def register_user(attrs, opts \\ []) do
     %User{}
-    |> User.registration_changeset(attrs)
+    |> User.registration_changeset(attrs, opts)
     |> Repo.insert()
   end
 
@@ -33,6 +33,16 @@ defmodule ExNVR.Accounts do
   def count_users(), do: Repo.aggregate(User, :count)
 
   ## Settings
+  def change_user_info(user, attrs \\ %{}, opts \\ []) do
+    User.user_info_changeset(user, attrs, opts)
+  end
+
+  def update_user_info(user, attrs) do
+    user
+    |> User.user_info_changeset(attrs)
+    |> Repo.update()
+  end
+
   def change_user_email(user, attrs \\ %{}) do
     User.email_changeset(user, attrs, validate_email: false)
   end

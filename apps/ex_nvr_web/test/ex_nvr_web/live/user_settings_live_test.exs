@@ -25,6 +25,58 @@ defmodule ExNVRWeb.UserSettingsLiveTest do
     end
   end
 
+  describe "update user information form" do
+    setup %{conn: conn} do
+      user = user_fixture()
+      %{conn: log_in_user(conn, user), user: user}
+    end
+
+    test "updates the user first & last names and language", %{conn: conn, user: user} do
+      new_first_name = "Kevin"
+      new_last_name = "Malebo"
+      new_language = valid_language()
+
+      {:ok, lv, _html} = live(conn, ~p"/users/settings")
+
+      form =
+        form(lv, "#info_form", %{
+          "user" => %{
+            "first_name" => new_first_name,
+            "last_name" => new_last_name,
+            "language" => new_language
+          }
+        })
+
+      result = render_submit(form)
+
+      refreshed_user = Accounts.get_user_by_email(user.email)
+
+      assert result =~ "User information updated successfully."
+
+      assert refreshed_user.language == new_language
+      assert refreshed_user.first_name == new_first_name
+      assert refreshed_user.last_name == new_last_name
+    end
+
+    test "renders errors with invalid data (phx-submit)", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/users/settings")
+
+      result =
+        lv
+        |> form("#info_form", %{
+          "user" => %{
+            "first_name" => "f",
+            "last_name" => "l",
+            "language" => :en
+          }
+        })
+        |> render_submit()
+
+      assert result =~ "Change User Information"
+      assert result =~ "should be at least 2 character(s)"
+    end
+  end
+
   describe "update email form" do
     setup %{conn: conn} do
       password = valid_user_password()
