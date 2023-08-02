@@ -26,6 +26,8 @@ config :ex_nvr,
   integrated_turn_pkey: nil,
   integrated_turn_cert: nil
 
+config :ex_nvr, :rtsp_transport, ExNVR.RTSP.Transport.Fake
+
 # We don't run a server during test. If one is required,
 # you can enable the server option below.
 config :ex_nvr_web, ExNVRWeb.Endpoint,
