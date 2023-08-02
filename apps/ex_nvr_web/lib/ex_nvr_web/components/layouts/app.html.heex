@@ -58,8 +58,7 @@
             >
               <div class="px-4 py-3" role="none">
                 <p class="text-sm text-gray-900 dark:text-white" role="none">
-                  <%= if @current_user && @current_user.first_name && @current_user.last_name,
-                    do: @current_user.first_name <> " " <> @current_user.last_name %>
+                  <%= if @current_user, do: "#{@current_user.first_name} #{@current_user.last_name}" %>
                 </p>
                 <p
                   class="text-sm font-medium text-gray-900 truncate dark:text-gray-300 mr-4"
