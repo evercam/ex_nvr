@@ -133,7 +133,7 @@ defmodule ExNVRWeb.UserSettingsLive do
           |> to_form()
 
         info = "User information updated successfully."
-        {:noreply, socket |> put_flash(:info, info) |> assign(socket, info_form: info_form)}
+        {:noreply, socket |> put_flash(:info, info) |> assign(info_form: info_form)}
 
       {:error, changeset} ->
         {:noreply, assign(socket, info_form: to_form(changeset))}
