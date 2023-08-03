@@ -2,8 +2,6 @@ defmodule ExNVR.RTSP.Transport.Fake do
   @moduledoc false
   use Membrane.RTSP.Transport
 
-  import Mockery.Macro
-
   @get_parameter_response "RTSP/1.0 200 OK\r\nCSeq: 4\r\n\r\n"
 
   @describe_response """
@@ -42,8 +40,16 @@ defmodule ExNVR.RTSP.Transport.Fake do
   @play_response "RTSP/1.0 200 OK\r\nCSeq: 6\r\nDate: Wed, Aug 02 2023 22:20:54 GMT\r\nRange: npt=0.000-\r\nSession: D1F824DA\r\nRTP-Info: url=rtsp://192.168.1.190/main/track1;seq=53626;rtptime=1692503820,url=rtsp://192.168.1.190/main/track2;seq=0;rtptime=0\r\n\r\n"
 
   @impl true
-  def execute(request, ref, options \\ []) do
-    mockable(__MODULE__).perform_request(request, ref, options)
+  def execute(request, ref, _options \\ []) do
+    # An ugly way of mocking tcp interactions
+    resolver =
+      Application.get_env(
+        :ex_nvr,
+        :tcp_socket_resolver,
+        &__MODULE__.establish_session_without_media_packets/2
+      )
+
+    resolver.(request, ref)
   end
 
   @impl true
@@ -58,12 +64,43 @@ defmodule ExNVR.RTSP.Transport.Fake do
 
   @spec perform_request(binary(), any(), Keyword.t()) ::
           {:ok, binary()} | {:error, term()}
-  def perform_request(request, _state, _options) do
-    {:ok, establish_session_without_media_packets(request)}
+  def perform_request(request, state, _options) do
+    {:ok, establish_session_without_media_packets(request, state)}
   end
 
-  @spec establish_session_without_media_packets(binary()) :: binary()
-  def establish_session_without_media_packets(request) do
+  @spec establish_session_without_media_packets(binary(), any()) :: binary()
+  def establish_session_without_media_packets(request, _state) do
+    {:ok, process_request(request)}
+  end
+
+  @spec establish_session_with_media_packets(binary(), any()) :: binary()
+  def establish_session_with_media_packets(request, state) do
+    response = process_request(request)
+    if play?(request), do: spawn_link(fn -> emit_media_packets(state[:media_receiver]) end)
+    {:ok, response}
+  end
+
+  @spec establish_session_with_media_error(binary(), any()) :: binary()
+  def establish_session_with_media_error(request, _state) do
+    response = process_request(request)
+
+    if play?(request) do
+      spawn_link(fn ->
+        Process.sleep(50)
+        raise "unexpected error"
+      end)
+    end
+
+    {:ok, response}
+  end
+
+  defp emit_media_packets(media_reciever) do
+    send(media_reciever, {:media_packet, <<1, 2, 3, 4, 5>>})
+    Process.sleep(100)
+    emit_media_packets(media_reciever)
+  end
+
+  defp process_request(request) do
     case request do
       <<"DESCRIBE", _::binary>> -> @describe_response
       <<"GET_PARAMETER", _::binary>> -> @get_parameter_response
@@ -71,4 +108,7 @@ defmodule ExNVR.RTSP.Transport.Fake do
       <<"PLAY", _::binary>> -> @play_response
     end
   end
+
+  defp play?(<<"PLAY", _::binary>>), do: true
+  defp play?(_request), do: false
 end
