@@ -194,4 +194,35 @@ defmodule ExNVR.Accounts.UserToken do
   def user_and_contexts_query(user, [_ | _] = contexts) do
     from t in UserToken, where: t.user_id == ^user.id and t.context in ^contexts
   end
+
+  def get_expired_tokens(current_date) do
+    valid_datetime_session = get_valid_datetime("session", current_date)
+    valid_datetime_access = get_valid_datetime("access", current_date)
+    valid_datetime_change = get_valid_datetime("change", current_date)
+    valid_datetime_reset = get_valid_datetime("reset", current_date)
+    valid_datetime_confirm = get_valid_datetime("confirm", current_date)
+
+    from(
+      t in __MODULE__,
+      where: (t.context == "session" and t.inserted_at < ^valid_datetime_session) \
+              or (t.context == "access" and t.inserted_at < ^valid_datetime_access) \
+              or (t.context == "change" and t.inserted_at < ^valid_datetime_change) \
+              or (t.context == "reset" and t.inserted_at < ^valid_datetime_reset) \
+              or (t.context == "confirm" and t.inserted_at < ^valid_datetime_confirm)
+    )
+  end
+
+  defp get_valid_datetime(context, current_date) do
+
+    days_to_add =
+      case context do
+        "access" -> -1 * @access_token_validity_in_days
+        "session" -> -1 * @session_validity_in_days
+        "change" -> -1 * @change_email_validity_in_days
+        "reset" -> -1 * @reset_password_validity_in_days
+        "confirm" -> -1 * @confirm_validity_in_days
+      end
+
+    DateTime.add(current_date, days_to_add, :day)
+  end
 end
