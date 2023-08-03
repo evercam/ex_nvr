@@ -31,7 +31,7 @@ defmodule ExNVR.Jobs do
     Process.send_after(self(), :delete_expired_tokens, 2 * 60 * 60 * 1000)
   end
 
-  defp delete_all_expired_tokens() do
+  def delete_all_expired_tokens() do
     now = DateTime.utc_now()
 
     UserToken.get_expired_tokens(now)
