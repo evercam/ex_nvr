@@ -204,16 +204,16 @@ defmodule ExNVR.Accounts.UserToken do
 
     from(
       t in __MODULE__,
-      where: (t.context == "session" and t.inserted_at < ^valid_datetime_session) \
-              or (t.context == "access" and t.inserted_at < ^valid_datetime_access) \
-              or (t.context == "change" and t.inserted_at < ^valid_datetime_change) \
-              or (t.context == "reset" and t.inserted_at < ^valid_datetime_reset) \
-              or (t.context == "confirm" and t.inserted_at < ^valid_datetime_confirm)
+      where:
+        (t.context == "session" and t.inserted_at < ^valid_datetime_session) or
+          (t.context == "access" and t.inserted_at < ^valid_datetime_access) or
+          (t.context == "change" and t.inserted_at < ^valid_datetime_change) or
+          (t.context == "reset" and t.inserted_at < ^valid_datetime_reset) or
+          (t.context == "confirm" and t.inserted_at < ^valid_datetime_confirm)
     )
   end
 
   defp get_valid_datetime(context, current_date) do
-
     days_to_add =
       case context do
         "access" -> -1 * @access_token_validity_in_days
