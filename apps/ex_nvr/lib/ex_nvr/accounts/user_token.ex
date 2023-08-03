@@ -195,6 +195,13 @@ defmodule ExNVR.Accounts.UserToken do
     from t in UserToken, where: t.user_id == ^user.id and t.context in ^contexts
   end
 
+  @doc """
+  Returns All expired Tokens compared to current_Date.
+
+  The query returns the user_tokens for all possible contexts.
+
+  Making use of the private method get_valid_datetime/2 for each context.
+  """
   def get_expired_tokens(current_date) do
     valid_datetime_session = get_valid_datetime("session", current_date)
     valid_datetime_access = get_valid_datetime("access", current_date)
