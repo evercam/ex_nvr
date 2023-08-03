@@ -16,6 +16,7 @@ defmodule ExNVR.Application do
 
     children = [
       ExNVR.Repo,
+      ExNVR.Jobs,
       {Phoenix.PubSub, name: ExNVR.PubSub},
       {Finch, name: ExNVR.Finch},
       {DynamicSupervisor, [name: ExNVR.PipelineSupervisor, strategy: :one_for_one]},
