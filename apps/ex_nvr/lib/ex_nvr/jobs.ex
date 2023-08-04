@@ -32,9 +32,7 @@ defmodule ExNVR.Jobs do
   end
 
   def delete_all_expired_tokens() do
-    now = DateTime.utc_now()
-
-    UserToken.get_expired_tokens(now)
+    UserToken.get_expired_tokens()
     |> Repo.delete_all()
   end
 end

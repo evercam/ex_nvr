@@ -202,34 +202,13 @@ defmodule ExNVR.Accounts.UserToken do
 
   Making use of the private method get_valid_datetime/2 for each context.
   """
-  def get_expired_tokens(current_date) do
-    valid_datetime_session = get_valid_datetime("session", current_date)
-    valid_datetime_access = get_valid_datetime("access", current_date)
-    valid_datetime_change = get_valid_datetime("change", current_date)
-    valid_datetime_reset = get_valid_datetime("reset", current_date)
-    valid_datetime_confirm = get_valid_datetime("confirm", current_date)
+  def get_expired_tokens() do
+    tokens_validity =  [{"session", @session_validity_in_days}, {"access", @access_token_validity_in_days},
+    {"confirm", @confirm_validity_in_days}, {"change", @change_email_validity_in_days}, {"reset", @reset_password_validity_in_days},]
 
-    from(
-      t in __MODULE__,
-      where:
-        (t.context == "session" and t.inserted_at < ^valid_datetime_session) or
-          (t.context == "access" and t.inserted_at < ^valid_datetime_access) or
-          (t.context == "change" and t.inserted_at < ^valid_datetime_change) or
-          (t.context == "reset" and t.inserted_at < ^valid_datetime_reset) or
-          (t.context == "confirm" and t.inserted_at < ^valid_datetime_confirm)
-    )
+    Enum.reduce(tokens_validity, __MODULE__, fn {token_type, validity_in_days}, q ->
+      or_where(q, [t], t.context == ^token_type and t.inserted_at < ago(^validity_in_days, "day"))
+    end)
   end
 
-  defp get_valid_datetime(context, current_date) do
-    days_to_add =
-      case context do
-        "access" -> -1 * @access_token_validity_in_days
-        "session" -> -1 * @session_validity_in_days
-        "change" -> -1 * @change_email_validity_in_days
-        "reset" -> -1 * @reset_password_validity_in_days
-        "confirm" -> -1 * @confirm_validity_in_days
-      end
-
-    DateTime.add(current_date, days_to_add, :day)
-  end
 end

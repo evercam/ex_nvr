@@ -51,8 +51,7 @@ defmodule ExNVR.JobsTest do
       expired_access: expired_access,
       expired_session: expired_session
     } do
-      current_date = DateTime.utc_now()
-      all_expired_tokens_query = UserToken.get_expired_tokens(current_date)
+      all_expired_tokens_query = UserToken.get_expired_tokens()
 
       count_rows =
         from(all_expired_tokens_query, select: count())
