@@ -18,6 +18,7 @@
     stroke: #0000;
 }
 video::-webkit-media-controls-timeline, 
+video::-webkit-media-controls-play-button,
 video::-webkit-media-controls-time-remaining-display, 
 video::-webkit-media-controls-current-time-display { 
     display: none 
