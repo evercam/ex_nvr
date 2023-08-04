@@ -23,8 +23,7 @@ defmodule ExNVR.TokenPruner do
   end
 
   defp schedule_job() do
-    # In 2 hours
-    Process.send_after(self(), :delete_expired_tokens, 2 * 60 * 60 * 1000)
+    Process.send_after(self(), :delete_expired_tokens, :timer.hours(2))
   end
 
   def prune_expired_tokens() do
