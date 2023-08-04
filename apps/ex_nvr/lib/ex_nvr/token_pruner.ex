@@ -17,6 +17,9 @@ defmodule ExNVR.TokenPruner do
   end
 
   def handle_info(:delete_expired_tokens, state) do
+    require Logger
+
+    Logger.info("TokenPruner: start deleting expired token..")
     prune_expired_tokens()
     schedule_job()
     {:noreply, state}
