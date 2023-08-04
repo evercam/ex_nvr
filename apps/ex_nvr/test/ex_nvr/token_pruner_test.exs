@@ -1,4 +1,4 @@
-defmodule ExNVR.JobsTest do
+defmodule ExNVR.TokenPrunerTest do
   alias Membrane.HTTPAdaptiveStream.Manifest.Changeset
   use ExNVR.DataCase
 
@@ -6,7 +6,7 @@ defmodule ExNVR.JobsTest do
   import ExNVR.AccountsFixtures
 
   alias ExNVR.Accounts.UserToken
-  alias ExNVR.Jobs
+  alias ExNVR.TokenPruner
   alias Ecto.Changeset
 
   describe "Run delete_expired_tokens job" do
@@ -67,7 +67,7 @@ defmodule ExNVR.JobsTest do
       valid_access: valid_access,
       valid_session: valid_session
     } do
-      Jobs.delete_all_expired_tokens()
+      TokenPruner.prune_expired_tokens()
 
       current_tokens_query = from(t in UserToken)
 
