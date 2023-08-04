@@ -17,3 +17,6 @@
 #timeline path {
     stroke: #0000;
 }
+video::-webkit-media-controls-timeline {
+    display: none;
+}
