@@ -41,4 +41,43 @@ defmodule ExNVR.AccountsFixtures do
     [_, token | _] = String.split(captured_email.text_body, "[TOKEN]")
     token
   end
+
+  def valid_user_token(user, context) do
+    alias ExNVR.Accounts
+    alias ExNVR.Accounts.UserToken
+
+    case context do
+      "access" ->
+        with {_, user_access_token} <- UserToken.build_access_token(user) do
+          Accounts.insert_user_token(user_access_token)
+        end
+
+      "session" ->
+        with {_, user_session_token} <- UserToken.build_session_token(user) do
+          Accounts.insert_user_token(user_session_token)
+        end
+    end
+  end
+
+  def expired_user_token(user, context) do
+    alias ExNVR.Accounts
+    alias ExNVR.Accounts.UserToken
+    alias Ecto.Changeset
+
+    case context do
+      "access" ->
+        with {_, user_access_token} <- UserToken.build_access_token(user) do
+          Accounts.insert_user_token(user_access_token)
+          |> Changeset.change(inserted_at: ~N[2022-08-03 09:53:05])
+          |> Accounts.update_user_token()
+        end
+
+      "session" ->
+        with {_, user_session_token} <- UserToken.build_session_token(user) do
+          Accounts.insert_user_token(user_session_token)
+          |> Changeset.change(inserted_at: ~N[2022-08-03 09:53:05])
+          |> Accounts.update_user_token()
+        end
+    end
+  end
 end

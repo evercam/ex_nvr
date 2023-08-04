@@ -1,5 +1,4 @@
 defmodule ExNVR.TokenPrunerTest do
-  alias Membrane.HTTPAdaptiveStream.Manifest.Changeset
   use ExNVR.DataCase
 
   import Ecto.Query
@@ -7,37 +6,16 @@ defmodule ExNVR.TokenPrunerTest do
 
   alias ExNVR.Accounts.UserToken
   alias ExNVR.TokenPruner
-  alias Ecto.Changeset
 
   describe "Run delete_expired_tokens job" do
     setup do
       user = user_fixture()
 
-      # Create valid access token
-      {_, user_access_token} = UserToken.build_access_token(user)
-      {:ok, valid_access} = Repo.insert(user_access_token)
+      valid_access = valid_user_token(user, "access")
+      valid_session = valid_user_token(user, "session")
 
-      # Create valid session token
-      {_, user_session_token} = UserToken.build_session_token(user)
-      {:ok, valid_session} = Repo.insert(user_session_token)
-
-      # Create expired access token
-      {_, user_expired_access_token} = UserToken.build_access_token(user)
-      {:ok, inserted_token} = Repo.insert(user_expired_access_token)
-
-      {:ok, expired_access} =
-        inserted_token
-        |> Changeset.change(inserted_at: ~N[2022-08-03 09:53:05])
-        |> Repo.update()
-
-      # Create expired session token
-      {_, user_expired_session_token} = UserToken.build_session_token(user)
-      {:ok, inserted_token} = Repo.insert(user_expired_session_token)
-
-      {:ok, expired_session} =
-        inserted_token
-        |> Changeset.change(inserted_at: ~N[2022-08-02 09:53:05])
-        |> Repo.update()
+      expired_access = expired_user_token(user, "access")
+      expired_session = expired_user_token(user, "session")
 
       %{
         expired_access: expired_access,

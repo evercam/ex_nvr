@@ -190,4 +190,17 @@ defmodule ExNVR.Accounts do
     UserToken.get_expired_tokens()
     |> Repo.delete_all()
   end
+
+  def insert_user_token(user_token) do
+    {:ok, valid_token} = Repo.insert(user_token)
+    valid_token
+  end
+
+  def update_user_token(user_token_changeset) do
+    {:ok, updated_user_token} =
+      user_token_changeset
+      |> Repo.update()
+
+    updated_user_token
+  end
 end
