@@ -139,7 +139,7 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
     types = %{
       time: :utc_datetime,
       method: {:parameterized, Ecto.Enum, Ecto.Enum.init(values: ~w(before precise)a)},
-      format: {:parameterized, Ecto.Enum, Ecto.Enum.init(values: ~w(jpeg png)a)}
+      format: {:parameterized, Ecto.Enum, Ecto.Enum.init(values: ~w(jpeg)a)}
     }
 
     {%{method: :before, format: :jpeg, time: nil}, types}

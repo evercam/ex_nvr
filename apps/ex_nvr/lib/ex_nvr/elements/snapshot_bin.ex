@@ -17,7 +17,7 @@ defmodule ExNVR.Elements.SnapshotBin do
     availability: :on_request,
     options: [
       format: [
-        spec: :jpeg | :png,
+        spec: :jpeg,
         default: :jpeg
       ],
       rank: [
@@ -38,12 +38,10 @@ defmodule ExNVR.Elements.SnapshotBin do
   def handle_pad_added(Pad.ref(:input, ref) = pad, ctx, state) do
     spec = [
       bin_input(pad)
-      |> child({:decoder, ref}, Membrane.H264.FFmpeg.Decoder)
-      |> child({:filter, ref}, %ExNVR.Elements.FirstOrLast{allow: ctx.options[:rank]})
-      |> child({:sink, ref}, %ExNVR.Elements.Image{
-        destination: self(),
-        format: ctx.options[:format]
-      })
+      |> child({:decoder, ref}, %Membrane.H264.FFmpeg.Decoder{use_shm?: true})
+      |> child({:filter, ref}, %ExNVR.Elements.OnePass{allow: ctx.options[:rank]})
+      |> child({:jpeg, ref}, Turbojpeg.Filter)
+      |> child({:sink, ref}, %ExNVR.Elements.Process.Sink{pid: self()})
     ]
 
     {[spec: spec], state}
@@ -65,7 +63,7 @@ defmodule ExNVR.Elements.SnapshotBin do
   end
 
   @impl true
-  def handle_info({:snapshot, _snapshot} = message, _ctx, state) do
-    {[notify_parent: message], state}
+  def handle_info({:buffer, snapshot}, _ctx, state) do
+    {[notify_parent: {:snapshot, snapshot}], state}
   end
 end

@@ -11,7 +11,8 @@ RUN \
   openssl-dev \ 
   ffmpeg-dev \
   clang-dev \
-  libsrtp-dev
+  libsrtp-dev \
+  libjpeg-turbo-dev
 
 ARG VERSION
 ENV VERSION=${VERSION}
@@ -56,7 +57,8 @@ RUN \
   ffmpeg \
   clang \ 
   curl \
-  libsrtp
+  libsrtp \
+  libjpeg-turbo
 
 WORKDIR /app
 

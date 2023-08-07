@@ -299,16 +299,16 @@ paths:
             enum: [before, precise]
         - name: format
           required: false
-          default: jpeg
+          default: jpg
           description: Image format
           schema:
             type: string
-            enum: [jpeg, png]
+            enum: [jpeg]
       responses:
         '200':
           description: success
           content:
-            image/jpeg:
+            image/jpg:
               schema:
                 type: string
                 format: byte
