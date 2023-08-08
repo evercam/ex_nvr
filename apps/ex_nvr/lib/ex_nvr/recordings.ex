@@ -7,6 +7,8 @@ defmodule ExNVR.Recordings do
   alias ExNVR.Model.{Device, Recording, Run}
   alias ExNVR.{Repo, Utils}
 
+  import Ecto.Query
+
   @type error :: {:error, Ecto.Changeset.t() | File.posix()}
 
   @spec create(Run.t(), map()) :: {:ok, Recording.t(), Run.t()} | error()
@@ -36,6 +38,11 @@ defmodule ExNVR.Recordings do
   def index(device_id) do
     Recording.with_device(device_id)
     |> Repo.all()
+  end
+
+  def list(params \\ %{}) do
+    Repo.all(Recording.filter(params) |> order_by([r], desc: r.start_date))
+    |> Repo.preload([:device])
   end
 
   @spec get_recordings_between(binary(), DateTime.t(), DateTime.t(), Keyword.t()) :: [
