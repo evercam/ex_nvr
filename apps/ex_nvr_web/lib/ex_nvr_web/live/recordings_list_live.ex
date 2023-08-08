@@ -13,7 +13,6 @@ defmodule ExNVRWeb.RecordingListLive do
       <.table id="recordings" rows={@recordings}>
         <:col :let={recording} label="Id"><%= recording.id %></:col>
         <:col :let={recording} label="Device"><%= recording.device.name %></:col>
-        <:col :let={recording} label="Filename"><%= recording.filename %></:col>
         <:col :let={recording} label="Start-date"><%= recording.start_date %></:col>
         <:col :let={recording} label="End-date"><%= recording.end_date %></:col>
         <:action :let={recording}>
