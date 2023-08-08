@@ -7,6 +7,11 @@ defmodule ExNVR.Elements.RTSP.ConnectionManager do
 
   alias Membrane.RTSP
 
+  @default_transport Application.compile_env(
+                       :ex_nvr,
+                       :rtsp_transport,
+                       ExNVR.Elements.RTSP.MediaTCPSocket
+                     )
   @content_type_header [{"accept", "application/sdp"}]
   @transport_header [{"Transport", "RTP/AVP/TCP;interleaved=0-1"}]
   @keep_alive_interval 15_000
@@ -221,7 +226,7 @@ defmodule ExNVR.Elements.RTSP.ConnectionManager do
          stream_uri: stream_uri,
          endpoint: endpoint
        }) do
-    case RTSP.start(stream_uri, ExNVR.Elements.RTSP.MediaTCPSocket, media_receiver: endpoint) do
+    case RTSP.start(stream_uri, @default_transport, media_receiver: endpoint) do
       {:ok, session} ->
         Process.monitor(session)
         session
