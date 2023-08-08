@@ -80,7 +80,7 @@ downloadRecording = (recording_file, device_id) => {
         let tempUrl = URL.createObjectURL(file);
         const aTag = document.createElement("a");
         aTag.href = tempUrl;
-        aTag.download = url.replace(/^.*[\\\/]/, '');
+        aTag.download = recording_file;
         document.body.appendChild(aTag);
         aTag.click();
         URL.revokeObjectURL(tempUrl);
