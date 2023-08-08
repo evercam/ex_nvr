@@ -47,6 +47,7 @@ defmodule ExNVRWeb.DashboardLive do
               id="live-video"
               class="w-full h-auto dark:bg-gray-500 rounded-tr rounded-tl"
               autoplay
+              controls
               muted
             />
             <div id="loader" role="status" class="absolute top-2/4 left-1/2">
