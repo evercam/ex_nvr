@@ -23,7 +23,7 @@ defmodule ExNVRWeb.MixProject do
   def application do
     [
       mod: {ExNVRWeb.Application, []},
-      extra_applications: [:logger, :runtime_tools, :os_mon]
+      extra_applications: [:logger, :runtime_tools, :os_mon, :scrivener_ecto]
     ]
   end
 
@@ -52,7 +52,8 @@ defmodule ExNVRWeb.MixProject do
       {:jason, "~> 1.2"},
       {:plug_cowboy, "~> 2.5"},
       {:corsica, "~> 2.1"},
-      {:logger_json, "~> 5.1"}
+      {:logger_json, "~> 5.1"},
+      {:scrivener_ecto, "~> 2.0"}
     ]
   end
 

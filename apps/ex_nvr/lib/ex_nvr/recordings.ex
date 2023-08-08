@@ -41,8 +41,14 @@ defmodule ExNVR.Recordings do
   end
 
   def list(params \\ %{}) do
-    Repo.all(Recording.filter(params) |> order_by([r], desc: r.start_date))
-    |> Repo.preload([:device])
+    Repo.all(Recording.filter(params) |> order_by([r], desc: r.start_date) |> preload([:device]))
+  end
+
+  def paginate_recordings(params \\ []) do
+    Recording.filter(params)
+    |> order_by([r], desc: r.start_date)
+    |> preload([:device])
+    |> Repo.paginate(params)
   end
 
   @spec get_recordings_between(binary(), DateTime.t(), DateTime.t(), Keyword.t()) :: [

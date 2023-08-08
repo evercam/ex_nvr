@@ -3,8 +3,9 @@ defmodule ExNVRWeb.RecordingListLive do
 
   use ExNVRWeb, :live_view
 
-  alias ExNVR.Model.Device
-  alias ExNVR.{Devices, Recordings, Pipelines}
+  alias ExNVRWeb.Router.Helpers, as: Routes
+  alias ExNVR.Recordings
+  alias ExNVRWeb.RecordingListLive
 
   def render(assigns) do
     ~H"""
@@ -40,7 +41,7 @@ defmodule ExNVRWeb.RecordingListLive do
               >
                 <li>
                   <.link
-                    href={~p"/devices/#{recording.device.id}"}
+                    href={~p"/devices/#{recording.device_id}"}
                     class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white"
                   >
                     Update
@@ -60,34 +61,91 @@ defmodule ExNVRWeb.RecordingListLive do
           </.button>
         </:action>
       </.table>
+      <nav class="border-t border-gray-200">
+        <ul class="flex my-2">
+          <li>
+            <a
+            class={previous_page(@page_number)}
+            href="#"
+            phx-click="nav"
+            phx-value-page={@page_number - 1}
+            >
+            Previous
+            </a>
+          </li>
+          <%= for idx <-  Enum.to_list(1..@total_pages) do %>
+          <li>
+            <a
+              class={current_page(@page_number, idx)}
+              href="#"
+              phx-click="nav"
+              phx-value-page={idx}
+              >
+              <%= idx %>
+            </a>
+          </li>
+          <% end %>
+          <li>
+            <a
+              class={next_page(@page_number, @total_pages)}
+              href="#"
+              phx-click="nav"
+              phx-value-page={@page_number + 1}
+            >
+              Next
+            </a>
+          </li>
+        </ul>
+      </nav>
     </div>
     """
   end
 
-  def mount(_params, _session, socket) do
-    {:ok, assign(socket, recordings: Recordings.list())}
+  def mount(_session, socket) do
+    {:ok, assign(socket, conn: socket)}
   end
 
-  def handle_event("stop-recording", %{"device" => device_id}, socket) do
-    update_device_state(socket, device_id, :stopped)
+  def handle_event("nav", %{"page" => page}, socket) do
+    {:noreply, push_redirect(socket, to: Routes.recording_list_path(socket, :list, page: page))}
   end
 
-  def handle_event("start-recording", %{"device" => device_id}, socket) do
-    update_device_state(socket, device_id, :recording)
+  def handle_params(%{"page" => page}, _, socket) do
+    assigns = get_and_assign_page(page)
+    {:noreply, assign(socket, assigns)}
   end
 
-  defp update_device_state(socket, device_id, new_state) do
-    devices = socket.assigns.devices
+  def handle_params(_, _, socket) do
+    assigns = get_and_assign_page(nil)
+    {:noreply, assign(socket, assigns)}
+  end
 
-    with %Device{} = device <- Enum.find(devices, &(&1.id == device_id)),
-         {:ok, device} <- Devices.update_state(device, new_state) do
-      if new_state == :recording,
-        do: Pipelines.Supervisor.start_pipeline(device),
-        else: Pipelines.Supervisor.stop_pipeline(device)
+  defp get_and_assign_page(page_number) do
+    %{
+      entries: entries,
+      page_number: page_number,
+      page_size: page_size,
+      total_entries: total_entries,
+      total_pages: total_pages
+    } = Recordings.paginate_recordings(page: page_number)
 
-      {:noreply, assign(socket, devices: Devices.list())}
-    else
-      _other -> {:noreply, put_flash(socket, :error, "could not update device state")}
-    end
+    [
+      recordings: entries,
+      page_number: page_number,
+      page_size: page_size,
+      total_entries: total_entries,
+      total_pages: total_pages
+    ]
+  end
+
+  defp next_page(page_number, total_pages) do
+    if page_number >= total_pages, do: "px-2 py-2 pointer-events-none", else: "px-2 py-2 text-gray-600"
+  end
+
+  defp previous_page(page_number) do
+    if page_number <= 1, do: "px-2 py-2 pointer-events-none", else: "px-2 py-2 text-gray-600"
+  end
+
+  defp current_page(page_number, idx) do
+    if page_number == idx, do: "px-2 py-2 pointer-events-none", else: "px-2 py-2 text-gray-600"
   end
 end
