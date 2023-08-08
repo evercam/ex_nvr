@@ -65,8 +65,6 @@ function initDarkMode() {
     document.documentElement.classList.add("dark")
 }
 
-let download = require('./download.min');
-
 downloadRecording = (recording_file, device_id) => {
     var url = "http://"+window.location.host+"/api/devices/"+device_id+"/recordings/"+recording_file+"/blob"
     var headers = new Headers();
