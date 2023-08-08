@@ -41,14 +41,6 @@ defmodule ExNVRWeb.RecordingListLive do
               >
                 <li>
                   <.link
-                    href={~p"/devices/#{recording.device_id}"}
-                    class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white"
-                  >
-                    Update
-                  </.link>
-                </li>
-                <li>
-                  <.link
                     phx-click="download-recording"
                     phx-value-device={recording.id}
                     class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white"
