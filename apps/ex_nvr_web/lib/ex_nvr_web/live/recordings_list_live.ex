@@ -5,7 +5,6 @@ defmodule ExNVRWeb.RecordingListLive do
 
   alias ExNVRWeb.Router.Helpers, as: Routes
   alias ExNVR.Recordings
-  alias ExNVRWeb.RecordingListLive
 
   def render(assigns) do
     ~H"""
@@ -41,7 +40,8 @@ defmodule ExNVRWeb.RecordingListLive do
                 <li>
                   <.link
                     phx-click="download-recording"
-                    phx-value-device={recording.id}
+                    phx-value-recording={recording.filename}
+                    phx-value-device={recording.device_id}
                     class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white"
                   >
                     Download
@@ -94,6 +94,10 @@ defmodule ExNVRWeb.RecordingListLive do
 
   def mount(_session, socket) do
     {:ok, assign(socket, conn: socket)}
+  end
+
+  def handle_event("download-recording", %{"recording" => recording_file, "device" => device_id}, socket) do
+    {:noreply, push_event(socket, "download-recording", %{recording_file: recording_file, device_id: device_id})}
   end
 
   def handle_event("nav", %{"page" => page}, socket) do
