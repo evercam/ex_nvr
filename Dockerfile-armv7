@@ -11,8 +11,8 @@ RUN \
   openssl-dev \ 
   ffmpeg-dev \
   clang-dev \
-  vips-dev \
-  libsrtp-dev
+  libsrtp-dev \
+  libjpeg-turbo-dev
 
 ARG VERSION
 ENV VERSION=${VERSION}
@@ -29,7 +29,6 @@ RUN mix local.hex --force && \
 
 # set build ENV
 ENV MIX_ENV=prod
-ENV VIX_COMPILATION_MODE=PLATFORM_PROVIDED_LIBVIPS
 
 # install mix dependencies
 COPY mix.exs mix.lock ./
@@ -38,7 +37,6 @@ COPY assets assets
 COPY apps apps
 
 RUN mix deps.get
-RUN sed -i 's/-Werror//' deps/vix/c_src/Makefile
 RUN mix deps.compile
 
 RUN cd apps/ex_nvr_web/assets && npm install
@@ -59,8 +57,8 @@ RUN \
   ffmpeg \
   clang \ 
   curl \
-  vips \
-  libsrtp
+  libsrtp \
+  libjpeg-turbo
 
 WORKDIR /app
 

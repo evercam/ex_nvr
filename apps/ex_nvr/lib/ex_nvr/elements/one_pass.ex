@@ -1,6 +1,9 @@
-defmodule ExNVR.Elements.FirstOrLast do
+defmodule ExNVR.Elements.OnePass do
   @moduledoc """
   Element that only allows the first or last buffer to pass.
+
+  When working on `last` mode, the buffer will be sent only when the end of stream
+  event is received.
   """
 
   use Membrane.Filter
@@ -18,7 +21,7 @@ defmodule ExNVR.Elements.FirstOrLast do
   def_options allow: [
                 spec: :first | :last,
                 default: :first,
-                description: "Allow only the specified buffer"
+                description: "Allow the first or last buffer to pass down the pipeline"
               ]
 
   @impl true
