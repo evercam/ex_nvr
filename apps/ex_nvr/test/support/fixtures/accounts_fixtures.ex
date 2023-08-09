@@ -4,6 +4,10 @@ defmodule ExNVR.AccountsFixtures do
   entities via the `ExNVR.Accounts` context.
   """
 
+  alias ExNVR.Accounts
+  alias ExNVR.Accounts.UserToken
+  alias Ecto.Changeset
+
   def unique_user_email, do: "user#{System.unique_integer()}@example.com"
   def valid_user_password, do: "Hello world!"
   def valid_first_name, do: "John"
@@ -43,9 +47,6 @@ defmodule ExNVR.AccountsFixtures do
   end
 
   def valid_user_token(user, context) do
-    alias ExNVR.Accounts
-    alias ExNVR.Accounts.UserToken
-
     case context do
       "access" ->
         with {_, user_access_token} <- UserToken.build_access_token(user) do
@@ -60,10 +61,6 @@ defmodule ExNVR.AccountsFixtures do
   end
 
   def expired_user_token(user, context) do
-    alias ExNVR.Accounts
-    alias ExNVR.Accounts.UserToken
-    alias Ecto.Changeset
-
     case context do
       "access" ->
         with {_, user_access_token} <- UserToken.build_access_token(user) do
