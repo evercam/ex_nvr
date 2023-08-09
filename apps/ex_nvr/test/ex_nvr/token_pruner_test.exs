@@ -32,9 +32,7 @@ defmodule ExNVR.TokenPrunerTest do
 
       current_tokens_query = from(t in UserToken)
 
-      count_rows =
-        from(current_tokens_query, select: count())
-        |> Repo.one()
+      count_rows = Repo.aggregate(UserToken, :count)
 
       assert count_rows == 2
 
