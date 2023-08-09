@@ -47,13 +47,18 @@ defmodule ExNVR.AccountsFixtures do
 
   def user_token(user, context, inserted_at \\ nil) do
     {_token, user_token} =
-       if context == "session" do
-          UserToken.build_session_token(user)
-       else
-          UserToken.build_access_token(user)
-       end
+      if context == "session" do
+        UserToken.build_session_token(user)
+      else
+        UserToken.build_access_token(user)
+      end
 
-    user_token = %UserToken{user_token | inserted_at: inserted_at || NaiveDateTime.truncate(DateTime.to_naive(DateTime.utc_now()), :second)}
+    user_token = %UserToken{
+      user_token
+      | inserted_at:
+          inserted_at || NaiveDateTime.truncate(DateTime.to_naive(DateTime.utc_now()), :second)
+    }
+
     {:ok, inserted_token} = Repo.insert(user_token)
     inserted_token
   end
