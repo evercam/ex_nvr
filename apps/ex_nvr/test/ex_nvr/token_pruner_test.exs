@@ -4,6 +4,7 @@ defmodule ExNVR.TokenPrunerTest do
   import Ecto.Query
   import ExNVR.AccountsFixtures
 
+  alias ExNVR.Accounts
   alias ExNVR.Accounts.UserToken
   alias ExNVR.TokenPruner
 
@@ -45,7 +46,7 @@ defmodule ExNVR.TokenPrunerTest do
       valid_access: valid_access,
       valid_session: valid_session
     } do
-      TokenPruner.prune_expired_tokens()
+      Accounts.delete_all_expired_tokens()
 
       current_tokens_query = from(t in UserToken)
 

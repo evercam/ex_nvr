@@ -5,6 +5,8 @@ defmodule ExNVR.TokenPruner do
 
   use GenServer
 
+  require Logger
+
   alias ExNVR.Accounts
 
   def start_link(_opts) do
@@ -17,19 +19,13 @@ defmodule ExNVR.TokenPruner do
   end
 
   def handle_info(:delete_expired_tokens, state) do
-    require Logger
-
     Logger.info("TokenPruner: start deleting expired token..")
-    prune_expired_tokens()
+    Accounts.delete_all_expired_tokens()
     schedule_job()
     {:noreply, state}
   end
 
   defp schedule_job() do
     Process.send_after(self(), :delete_expired_tokens, :timer.hours(2))
-  end
-
-  def prune_expired_tokens() do
-    Accounts.delete_all_expired_tokens()
   end
 end
