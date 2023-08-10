@@ -12,8 +12,26 @@ defmodule ExNVRWeb.RecordingListLive do
       <.table id="recordings" rows={@recordings}>
         <:col :let={recording} label="Id"><%= recording.id %></:col>
         <:col :let={recording} label="Device"><%= recording.device.name %></:col>
-        <:col :let={recording} label="Start-date"><%= recording.start_date %></:col>
-        <:col :let={recording} label="End-date"><%= recording.end_date %></:col>
+        <:col :let={recording} label="Start-date">
+          <time
+            phx-hook="DateWithTimeZone"
+            id={"start-date-with-timezone-#{recording.id}"}
+            class="invisible"
+            data-timezone={recording.device.timezone}
+          >
+            <%= recording.start_date %>
+          </time>
+        </:col>
+        <:col :let={recording} label="End-date">
+          <time
+            phx-hook="DateWithTimeZone"
+            id={"end-date-with-timezone-#{recording.id}"}
+            class="invisible"
+            data-timezone={recording.device.timezone}
+          >
+            <%= recording.end_date %>
+          </time>
+        </:col>
         <:action :let={recording}>
           <.button
             id={"dropdownMenuIconButton_#{recording.id}"}
@@ -56,25 +74,20 @@ defmodule ExNVRWeb.RecordingListLive do
         <ul class="flex my-2">
           <li>
             <a
-            class={previous_page(@page_number)}
-            href="#"
-            phx-click="nav"
-            phx-value-page={@page_number - 1}
+              class={previous_page(@page_number)}
+              href="#"
+              phx-click="nav"
+              phx-value-page={@page_number - 1}
             >
-            Previous
+              Previous
             </a>
           </li>
           <%= for idx <-  Enum.to_list(1..@total_pages) do %>
-          <li>
-            <a
-              class={current_page(@page_number, idx)}
-              href="#"
-              phx-click="nav"
-              phx-value-page={idx}
-              >
-              <%= idx %>
-            </a>
-          </li>
+            <li>
+              <a class={current_page(@page_number, idx)} href="#" phx-click="nav" phx-value-page={idx}>
+                <%= idx %>
+              </a>
+            </li>
           <% end %>
           <li>
             <a
@@ -96,8 +109,16 @@ defmodule ExNVRWeb.RecordingListLive do
     {:ok, assign(socket, conn: socket)}
   end
 
-  def handle_event("download-recording", %{"recording" => recording_file, "device" => device_id}, socket) do
-    {:noreply, push_event(socket, "download-recording", %{recording_file: recording_file, device_id: device_id})}
+  def handle_event(
+        "download-recording",
+        %{"recording" => recording_file, "device" => device_id},
+        socket
+      ) do
+    {:noreply,
+     push_event(socket, "download-recording", %{
+       recording_file: recording_file,
+       device_id: device_id
+     })}
   end
 
   def handle_event("nav", %{"page" => page}, socket) do
@@ -133,7 +154,9 @@ defmodule ExNVRWeb.RecordingListLive do
   end
 
   defp next_page(page_number, total_pages) do
-    if page_number >= total_pages, do: "px-2 py-2 pointer-events-none", else: "px-2 py-2 text-gray-600"
+    if page_number >= total_pages,
+      do: "px-2 py-2 pointer-events-none",
+      else: "px-2 py-2 text-gray-600"
   end
 
   defp previous_page(page_number) do

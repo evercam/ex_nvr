@@ -47,5 +47,4 @@ defmodule ExNVR.Model.Recording do
       _, q -> q
     end)
   end
-
 end
