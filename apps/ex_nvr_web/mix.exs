@@ -23,7 +23,7 @@ defmodule ExNVRWeb.MixProject do
   def application do
     [
       mod: {ExNVRWeb.Application, []},
-      extra_applications: [:logger, :runtime_tools, :os_mon, :scrivener_ecto]
+      extra_applications: [:logger, :runtime_tools, :os_mon]
     ]
   end
 
