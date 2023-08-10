@@ -51,9 +51,7 @@ let Hooks = {
                 second: "numeric",
                 fractionalSecondDigits: 3,
                 hourCycle: "h23"
-            }) + 
-            ", " + 
-            this.el.dataset.timezone;
+            });
             this.el.classList.remove("invisible")
         }
     }
