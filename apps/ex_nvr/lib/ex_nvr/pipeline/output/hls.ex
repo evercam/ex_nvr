@@ -8,6 +8,8 @@ defmodule ExNVR.Pipeline.Output.HLS do
   alias Membrane.{H264, ResourceGuard}
   alias Membrane.HTTPAdaptiveStream.{Sink, Storages}
 
+  @segment_duration Membrane.Time.seconds(5)
+
   def_input_pad :video,
     demand_unit: :buffers,
     demand_mode: :auto,
@@ -78,12 +80,12 @@ defmodule ExNVR.Pipeline.Output.HLS do
       |> add_transcoding_spec(ref, ctx.options[:resolution])
       |> child({:payloader, ref}, Membrane.MP4.Payloader.H264)
       |> child({:muxer, ref}, %Membrane.MP4.Muxer.CMAF{
-        segment_min_duration: Membrane.Time.seconds(5)
+        segment_min_duration: @segment_duration
       })
       |> via_in(Pad.ref(:input, ref),
         options: [
-          track_name: "#{state.segment_prefix}_#{ref}",
-          segment_duration: Membrane.Time.seconds(5)
+          track_name: track_name(state.segment_prefix, ref),
+          segment_duration: @segment_duration
         ]
       )
       |> get_child(:sink)
@@ -119,4 +121,6 @@ defmodule ExNVR.Pipeline.Output.HLS do
     })
     |> child({:parser, ref}, Membrane.H264.Parser)
   end
+
+  defp track_name(prefix, ref), do: "#{prefix}_#{ref}"
 end
