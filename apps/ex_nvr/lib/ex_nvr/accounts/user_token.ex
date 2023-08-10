@@ -194,4 +194,23 @@ defmodule ExNVR.Accounts.UserToken do
   def user_and_contexts_query(user, [_ | _] = contexts) do
     from t in UserToken, where: t.user_id == ^user.id and t.context in ^contexts
   end
+
+  @doc """
+  Returns All expired Tokens compared to validity_in_days.
+
+  The query returns the user_tokens for all possible contexts.
+  """
+  def get_expired_tokens() do
+    tokens_validity = [
+      {"session", @session_validity_in_days},
+      {"access", @access_token_validity_in_days},
+      {"confirm", @confirm_validity_in_days},
+      {"change", @change_email_validity_in_days},
+      {"reset", @reset_password_validity_in_days}
+    ]
+
+    Enum.reduce(tokens_validity, __MODULE__, fn {token_type, validity_in_days}, q ->
+      or_where(q, [t], t.context == ^token_type and t.inserted_at < ago(^validity_in_days, "day"))
+    end)
+  end
 end

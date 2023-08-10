@@ -4,6 +4,9 @@ defmodule ExNVR.AccountsFixtures do
   entities via the `ExNVR.Accounts` context.
   """
 
+  alias ExNVR.Accounts.UserToken
+  alias ExNVR.Repo
+
   def unique_user_email, do: "user#{System.unique_integer()}@example.com"
   def valid_user_password, do: "Hello world!"
   def valid_first_name, do: "John"
@@ -40,5 +43,21 @@ defmodule ExNVR.AccountsFixtures do
     {:ok, captured_email} = fun.(&"[TOKEN]#{&1}[TOKEN]")
     [_, token | _] = String.split(captured_email.text_body, "[TOKEN]")
     token
+  end
+
+  def user_token_fixture(user, context, inserted_at \\ nil) do
+    {_token, user_token} =
+      if context == "session" do
+        UserToken.build_session_token(user)
+      else
+        UserToken.build_access_token(user)
+      end
+
+    user_token = %UserToken{
+      user_token
+      | inserted_at: inserted_at
+    }
+
+    Repo.insert!(user_token)
   end
 end

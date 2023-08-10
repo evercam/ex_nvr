@@ -185,4 +185,9 @@ defmodule ExNVR.Accounts do
     {:ok, query} = UserToken.verify_access_token_query(token)
     Repo.one(query)
   end
+
+  def delete_all_expired_tokens() do
+    UserToken.get_expired_tokens()
+    |> Repo.delete_all()
+  end
 end
