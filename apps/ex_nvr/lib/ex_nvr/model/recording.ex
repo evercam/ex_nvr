@@ -42,8 +42,8 @@ defmodule ExNVR.Model.Recording do
 
   def filter(query \\ __MODULE__, params) do
     Enum.reduce(params, query, fn
-      {:state, value}, q when is_atom(value) -> where(q, [r], r.device_id == ^value)
-      {:state, values}, q when is_list(values) -> where(q, [r], r.device_id in ^values)
+      {:device_id, value}, q when is_atom(value) -> where(q, [r], r.device_id == ^value)
+      {:device_id, values}, q when is_list(values) -> where(q, [r], r.device_id in ^values)
       _, q -> q
     end)
   end
