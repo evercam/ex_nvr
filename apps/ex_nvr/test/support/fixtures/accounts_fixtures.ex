@@ -58,7 +58,6 @@ defmodule ExNVR.AccountsFixtures do
       | inserted_at: inserted_at
     }
 
-    {:ok, inserted_token} = Repo.insert(user_token)
-    inserted_token
+    Repo.insert!(user_token)
   end
 end
