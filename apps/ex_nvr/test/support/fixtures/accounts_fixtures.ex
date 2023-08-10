@@ -45,7 +45,7 @@ defmodule ExNVR.AccountsFixtures do
     token
   end
 
-  def user_token(user, context, inserted_at \\ nil) do
+  def user_token_fixture(user, context, inserted_at \\ nil) do
     {_token, user_token} =
       if context == "session" do
         UserToken.build_session_token(user)

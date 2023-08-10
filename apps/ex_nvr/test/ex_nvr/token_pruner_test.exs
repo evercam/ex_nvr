@@ -11,12 +11,12 @@ defmodule ExNVR.TokenPrunerTest do
     setup do
       user = user_fixture()
 
-      valid_access = user_token(user, "access")
-      valid_session = user_token(user, "session")
+      valid_access = user_token_fixture(user, "access")
+      valid_session = user_token_fixture(user, "session")
 
       # expired tokens
-      user_token(user, "access", ~N[2022-08-03 09:53:05])
-      user_token(user, "session", ~N[2022-08-03 09:53:05])
+      user_token_fixture(user, "access", ~N[2022-08-03 09:53:05])
+      user_token_fixture(user, "session", ~N[2022-08-03 09:53:05])
 
       %{
         valid_access: valid_access,
