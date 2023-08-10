@@ -16,7 +16,7 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
   @spec hls_stream(Plug.Conn.t(), map()) :: return_t()
   def hls_stream(conn, params) do
     with {:ok, params} <- validate_hls_stream_params(params) do
-      path = start_hls_pipeline(conn.assigns.device.id, params.pos)
+      path = start_hls_pipeline(conn.assigns.device, params)
       manifest_file = File.read!(Path.join(path, "index.m3u8"))
 
       conn
@@ -127,11 +127,12 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
   end
 
   defp validate_hls_stream_params(params) do
-    types = %{pos: :utc_datetime, stream: :integer}
+    types = %{pos: :utc_datetime, stream: :integer, resolution: :integer}
 
-    {%{pos: nil, stream: nil}, types}
+    {%{pos: nil, stream: nil, resolution: nil}, types}
     |> Changeset.cast(params, Map.keys(types))
     |> Changeset.validate_inclusion(:stream, [0, 1])
+    |> Changeset.validate_inclusion(:resolution, [240, 480, 640, 720, 1080])
     |> Changeset.apply_action(:create)
   end
 
@@ -192,21 +193,22 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
     end
   end
 
-  defp start_hls_pipeline(device_id, nil) do
-    Path.join(Utils.hls_dir(device_id), "live")
+  defp start_hls_pipeline(device, %{pos: nil}) do
+    Path.join(Utils.hls_dir(device.id), "live")
   end
 
-  defp start_hls_pipeline(device_id, pos) do
+  defp start_hls_pipeline(device, params) do
     id = UUID.uuid4()
 
     path =
-      device_id
+      device.id
       |> Utils.hls_dir()
       |> Path.join(id)
 
     pipeline_options = [
-      device_id: device_id,
-      start_date: pos,
+      device_id: device.id,
+      start_date: params.pos,
+      resolution: params.resolution,
       directory: path,
       segment_name_prefix: id
     ]

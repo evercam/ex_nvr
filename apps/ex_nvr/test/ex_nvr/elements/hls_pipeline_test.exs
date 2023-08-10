@@ -4,6 +4,7 @@ defmodule ExNVR.Elements.HLSPipelineTest do
 
   require Membrane.Pad
 
+  import ExNVR.HLS.Assertions
   import Membrane.ChildrenSpec
   import Membrane.Testing.Assertions
 
@@ -49,7 +50,7 @@ defmodule ExNVR.Elements.HLSPipelineTest do
       assert_pipeline_notified(pid, :sink, {:track_playable, :main_stream})
       assert_end_of_stream(pid, :parser)
 
-      check_separate_hls_playlist(out_dir, 2)
+      check_hls_playlist(out_dir, 2)
 
       Testing.Pipeline.terminate(pid)
     end
@@ -63,7 +64,7 @@ defmodule ExNVR.Elements.HLSPipelineTest do
       assert_pipeline_notified(pid, :sink, {:track_playable, :main_stream}, 5_000)
       assert_end_of_stream(pid, :parser)
 
-      check_separate_hls_playlist(out_dir, 2)
+      check_hls_playlist(out_dir, 2)
 
       Testing.Pipeline.terminate(pid)
     end
@@ -81,23 +82,9 @@ defmodule ExNVR.Elements.HLSPipelineTest do
       assert_end_of_stream(pid, :parser)
       assert_end_of_stream(pid, :parser2)
 
-      check_separate_hls_playlist(out_dir, 3)
+      check_hls_playlist(out_dir, 3)
 
       Testing.Pipeline.terminate(pid)
     end
-  end
-
-  defp check_separate_hls_playlist(output_dir, manifests_number) do
-    output_files = File.ls!(output_dir) |> Enum.sort()
-
-    manifest_files = Enum.filter(output_files, &String.ends_with?(&1, ".m3u8"))
-    headers = find_headers(output_files)
-
-    assert Enum.count(manifest_files) == manifests_number
-    assert Enum.count(headers) == manifests_number - 1
-  end
-
-  defp find_headers(files) do
-    Enum.filter(files, &String.match?(&1, ~r/.*header.*$/))
   end
 end

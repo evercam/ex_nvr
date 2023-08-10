@@ -258,6 +258,16 @@ paths:
             type: integer
             minimum: 0
             maximum: 1
+        - name: resolution
+          in: query
+          description: |
+            The resolution (height) of the video, defaults to `nil`. If provided the video will be
+            trancoded.
+
+            Transcoding is a CPU intensive operation.
+          schema:
+            type: integer
+            enum: [240, 480, 640, 720, 1080] 
       responses:
         '200':
           description: Success

@@ -8,6 +8,7 @@ defmodule ExNVR.Pipelines.HlsPlayback do
   require Membrane.Logger
 
   alias ExNVR.Elements.MP4
+  alias ExNVR.Pipeline.Output
 
   @call_timeout 60_000
 
@@ -33,15 +34,9 @@ defmodule ExNVR.Pipelines.HlsPlayback do
   end
 
   @impl true
-  def handle_init(ctx, options) do
+  def handle_init(_ctx, options) do
     Logger.metadata(device_id: options[:device_id])
     Membrane.Logger.info("Start playback pipeline with options: #{inspect(options)}")
-
-    File.mkdir_p!(options[:directory])
-
-    Membrane.ResourceGuard.register(ctx.resource_guard, fn ->
-      File.rm_rf!(options[:directory])
-    end)
 
     spec = [
       child(:source, %MP4.Depayloader{
@@ -50,8 +45,8 @@ defmodule ExNVR.Pipelines.HlsPlayback do
       })
       |> child(:realtimer, Membrane.Realtimer)
       |> child(:parser, %Membrane.H264.Parser{framerate: {0, 0}})
-      |> via_in(Pad.ref(:input, :playback))
-      |> child(:sink, %ExNVR.Elements.HLSBin{
+      |> via_in(Pad.ref(:video, :playback), options: [resolution: options[:resolution]])
+      |> child(:sink, %Output.HLS{
         location: options[:directory],
         segment_name_prefix: options[:segment_name_prefix]
       })
@@ -68,11 +63,6 @@ defmodule ExNVR.Pipelines.HlsPlayback do
   @impl true
   def handle_child_notification({:track_playable, _track}, :sink, _ctx, state) do
     {[reply_to: {state.caller, :ok}], %{state | caller: nil}}
-  end
-
-  @impl true
-  def handle_child_notification(_notification, _element, _ctx, state) do
-    {[], state}
   end
 
   @impl true
