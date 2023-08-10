@@ -52,6 +52,11 @@ defmodule ExNVR.Elements.RTSP.Source do
   end
 
   @impl true
+  def handle_pad_added(_pad, _ctx, state) do
+    {[], state}
+  end
+
+  @impl true
   def handle_playing(_context, state) do
     {[], state}
   end

@@ -73,8 +73,6 @@ defmodule ExNVR.Pipelines.Main do
             segment_duration: non_neg_integer(),
             supervisor_pid: pid(),
             live_snapshot_waiting_pids: list(),
-            subscriptions: map(),
-            pending_subscriptions: map(),
             rtc_engine: pid() | atom()
           }
 
@@ -87,8 +85,6 @@ defmodule ExNVR.Pipelines.Main do
                   sub_stream_video_track: nil,
                   supervisor_pid: nil,
                   live_snapshot_waiting_pids: [],
-                  subscriptions: %{},
-                  pending_subscriptions: %{},
                   rtc_engine: nil
                 ]
   end
@@ -151,7 +147,7 @@ defmodule ExNVR.Pipelines.Main do
       rtc_engine: options[:rtc_engine]
     }
 
-    hls_sink = %ExNVR.Elements.HLSBin{
+    hls_sink = %ExNVR.Pipeline.Output.HLS{
       location: Path.join(Utils.hls_dir(device.id), "live"),
       segment_name_prefix: "live"
     }
@@ -180,19 +176,19 @@ defmodule ExNVR.Pipelines.Main do
 
   @impl true
   def handle_child_notification({:connection_lost, _ref}, :rtsp_source, _ctx, state) do
-    maybe_update_device_and_report(state, :failed)
+    state = maybe_update_device_and_report(state, :failed)
 
     unlink_actions = [
       remove_link: {:webrtc, Pad.ref(:input, :main_stream)},
-      remove_link: {:hls_sink, Pad.ref(:input, :main_stream)}
+      remove_link: {:hls_sink, Pad.ref(:video, :main_stream)}
     ]
 
-    {[remove_children: :main_stream] ++ unlink_actions, %{state | subscriptions: %{}}}
+    {[remove_children: :main_stream] ++ unlink_actions, state}
   end
 
   @impl true
   def handle_child_notification({:connection_lost, _ref}, _elem, _ctx, state) do
-    {[remove_child: :sub_stream, remove_link: {:hls_sink, Pad.ref(:input, :sub_stream)}], state}
+    {[remove_child: :sub_stream, remove_link: {:hls_sink, Pad.ref(:video, :sub_stream)}], state}
   end
 
   @impl true
@@ -250,7 +246,7 @@ defmodule ExNVR.Pipelines.Main do
       }),
       get_child(:video_tee)
       |> via_out(:copy)
-      |> via_in(Pad.ref(:input, :main_stream))
+      |> via_in(Pad.ref(:video, :main_stream))
       |> get_child(:hls_sink),
       get_child(:video_tee)
       |> via_out(:copy)
@@ -275,7 +271,7 @@ defmodule ExNVR.Pipelines.Main do
       get_child(rtp_child)
       |> via_out(Pad.ref(:output, ssrc), options: [depayloader: Membrane.RTP.H264.Depayloader])
       |> child({:rtp_parser, :sub_stream, ref}, %Membrane.H264.Parser{framerate: {0, 0}})
-      |> via_in(Pad.ref(:input, :sub_stream))
+      |> via_in(Pad.ref(:video, :sub_stream))
       |> get_child(:hls_sink)
     ]
 
