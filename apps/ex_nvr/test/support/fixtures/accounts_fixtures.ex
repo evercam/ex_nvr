@@ -55,8 +55,7 @@ defmodule ExNVR.AccountsFixtures do
 
     user_token = %UserToken{
       user_token
-      | inserted_at:
-          inserted_at || NaiveDateTime.truncate(DateTime.to_naive(DateTime.utc_now()), :second)
+      | inserted_at: inserted_at
     }
 
     {:ok, inserted_token} = Repo.insert(user_token)
