@@ -1,43 +1,33 @@
 defmodule ExNVR.TokenPrunerTest do
   use ExNVR.DataCase
 
-  import Ecto.Query
   import ExNVR.AccountsFixtures
 
   alias ExNVR.Accounts
   alias ExNVR.Accounts.UserToken
 
   describe "Run delete_expired_tokens job" do
-    setup do
+    test "delete_all_expired_tokens/0 deletes all expired tokens." do
       user = user_fixture()
 
-      valid_access = user_token_fixture(user, "access")
-      valid_session = user_token_fixture(user, "session")
+      valid_token_1 = user_token_fixture(user, "access")
+      valid_token_2 = user_token_fixture(user, "session")
 
       # expired tokens
-      user_token_fixture(user, "access", ~N[2022-08-03 09:53:05])
-      user_token_fixture(user, "session", ~N[2022-08-03 09:53:05])
+      expired_token_1 = user_token_fixture(user, "access", ~N[2022-08-03 09:53:05])
+      expired_token_2 = user_token_fixture(user, "session", ~N[2022-08-03 09:53:05])
 
-      %{
-        valid_access: valid_access,
-        valid_session: valid_session
-      }
-    end
+      count = Repo.aggregate(UserToken, :count)
 
-    test "delete_all_expired_tokens/0 deletes all expired tokens.", %{
-      valid_access: valid_access,
-      valid_session: valid_session
-    } do
       Accounts.delete_all_expired_tokens()
 
-      current_tokens_query = from(t in UserToken)
+      assert Repo.aggregate(UserToken, :count) == count - 2
 
-      count_rows = Repo.aggregate(UserToken, :count)
+      assert Repo.get(UserToken, valid_token_1.id)
+      assert Repo.get(UserToken, valid_token_2.id)
 
-      assert count_rows == 2
-
-      assert Repo.exists?(from t in current_tokens_query, where: t.id == ^valid_access.id)
-      assert Repo.exists?(from t in current_tokens_query, where: t.id == ^valid_session.id)
+      refute Repo.get(UserToken, expired_token_1.id)
+      refute Repo.get(UserToken, expired_token_2.id)
     end
   end
 end
