@@ -81,11 +81,6 @@ startStreaming = (src, poster_url) => {
         })
         window.hls.loadSource(src)
         window.hls.attachMedia(video)
-
-        window.hls.on(Hls.Events.BUFFER_CREATED, (_) => {
-            let loader = document.getElementById("loader")
-            loader.classList.add("invisible")
-        })
     }
 }
 
