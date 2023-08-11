@@ -49,6 +49,7 @@ defmodule ExNVR.Elements.OnePass do
     {[demand: :input], %{state | last_buffer: buffer}}
   end
 
+  @impl true
   def handle_end_of_stream(:input, _ctx, %{allow: :first} = state) do
     {[], state}
   end

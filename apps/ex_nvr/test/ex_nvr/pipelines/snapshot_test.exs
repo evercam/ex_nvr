@@ -25,13 +25,27 @@ defmodule ExNVR.Pipelines.SnapshotTest do
     %{device: device, recording: recording}
   end
 
-  test "Snapshot is created from the video", %{device: device, recording: recording} do
-    pid = prepare_pipeline(device, recording)
+  describe "snapshot is created" do
+    test "from closest keyframe before specified date time", %{
+      device: device,
+      recording: recording
+    } do
+      pid = prepare_pipeline(device, recording)
 
-    assert_pipeline_notified(pid, :sink, {:snapshot, snapshot})
-    Testing.Pipeline.terminate(pid)
+      assert_pipeline_notified(pid, :sink, {:snapshot, snapshot})
+      Testing.Pipeline.terminate(pid)
 
-    assert_receive {:snapshot, ^snapshot}, 1_000, "No snapshot received"
+      assert_receive {:snapshot, ^snapshot}, 1_000, "No snapshot received"
+    end
+
+    test "with exact time", %{device: device, recording: recording} do
+      pid = prepare_pipeline(device, recording, method: :precise)
+
+      assert_pipeline_notified(pid, :sink, {:snapshot, snapshot})
+      Testing.Pipeline.terminate(pid)
+
+      assert_receive {:snapshot, ^snapshot}, 1_000, "No snapshot received"
+    end
   end
 
   test "PNG Snapshot is created from the video", %{device: device, recording: recording} do

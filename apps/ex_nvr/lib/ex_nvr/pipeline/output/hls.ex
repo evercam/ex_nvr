@@ -1,8 +1,6 @@
-defmodule ExNVR.Elements.HLSBin do
+defmodule ExNVR.Pipeline.Output.HLS do
   @moduledoc """
-  An hls element that receive an H264 stream and create playlists.
-
-  This element may transcode the stream to different resolutions to support multiple clients
+  Output element that create HLS playlists from audio/video
   """
 
   use Membrane.Bin
@@ -10,11 +8,24 @@ defmodule ExNVR.Elements.HLSBin do
   alias Membrane.{H264, ResourceGuard}
   alias Membrane.HTTPAdaptiveStream.{Sink, Storages}
 
-  def_input_pad :input,
+  @segment_duration Membrane.Time.seconds(5)
+
+  def_input_pad :video,
     demand_unit: :buffers,
     demand_mode: :auto,
     accepted_format: %H264{alignment: :au},
-    availability: :on_request
+    availability: :on_request,
+    options: [
+      resolution: [
+        spec: non_neg_integer() | nil,
+        default: nil,
+        description: """
+        Transcode the video to the provided resolution.
+
+        The resolution denotes the height of the video. e.g. 720p
+        """
+      ]
+    ]
 
   def_options location: [
                 spec: Path.t(),
@@ -63,28 +74,29 @@ defmodule ExNVR.Elements.HLSBin do
   end
 
   @impl true
-  def handle_pad_added(Pad.ref(:input, ref) = pad, _ctx, state) do
+  def handle_pad_added(Pad.ref(:video, ref) = pad, ctx, state) do
     spec = [
       bin_input(pad)
+      |> add_transcoding_spec(ref, ctx.options[:resolution])
       |> child({:payloader, ref}, Membrane.MP4.Payloader.H264)
       |> child({:muxer, ref}, %Membrane.MP4.Muxer.CMAF{
-        segment_min_duration: Membrane.Time.seconds(5)
+        segment_min_duration: @segment_duration
       })
-      |> via_in(pad,
+      |> via_in(Pad.ref(:input, ref),
         options: [
-          track_name: "#{state.segment_prefix}_#{ref}",
-          segment_duration: Membrane.Time.seconds(5)
+          track_name: track_name(state.segment_prefix, ref),
+          segment_duration: @segment_duration
         ]
       )
       |> get_child(:sink)
     ]
 
-    {[spec: spec], state}
+    {[spec: {spec, group: ref}], state}
   end
 
   @impl true
-  def handle_pad_removed(Pad.ref(:input, ref), _ctx, state) do
-    {[remove_children: [{:payloader, ref}, {:muxer, ref}]], state}
+  def handle_pad_removed(Pad.ref(:video, ref), _ctx, state) do
+    {[remove_children: ref], state}
   end
 
   @impl true
@@ -96,4 +108,19 @@ defmodule ExNVR.Elements.HLSBin do
   def handle_child_notification(_notification, _element, _ctx, state) do
     {[], state}
   end
+
+  defp add_transcoding_spec(link_builder, _ref, nil), do: link_builder
+
+  defp add_transcoding_spec(link_builder, ref, resolution) do
+    link_builder
+    |> child({:decoder, ref}, Membrane.H264.FFmpeg.Decoder)
+    |> child({:scaler, ref}, %Membrane.FFmpeg.SWScale.Scaler{output_height: resolution})
+    |> child({:encoder, ref}, %Membrane.H264.FFmpeg.Encoder{
+      profile: :baseline,
+      tune: :zerolatency
+    })
+    |> child({:parser, ref}, Membrane.H264.Parser)
+  end
+
+  defp track_name(prefix, ref), do: "#{prefix}_#{ref}"
 end
