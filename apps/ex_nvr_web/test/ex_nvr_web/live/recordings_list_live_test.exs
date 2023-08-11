@@ -2,14 +2,15 @@ defmodule ExNVRWeb.RecordingListLiveTest do
   @moduledoc false
   use ExNVRWeb.ConnCase
 
-  import ExNVR.{AccountsFixtures, DevicesFixtures, RecordingsFixtures}
+  import ExNVR.{AccountsFixtures, RecordingsFixtures}
   import Phoenix.LiveViewTest
 
-  describe "Recording list page" do
-    setup do
-      device = device_fixture()
+  @moduletag :tmp_dir
+  @moduletag :device
 
-      %{device: device, recording: recording_fixture(device)}
+  describe "Recording list page" do
+    setup %{device: device} do
+      %{recording: recording_fixture(device)}
     end
 
     test "render recordings page", %{conn: conn, device: device, recording: recording} do
@@ -18,10 +19,11 @@ defmodule ExNVRWeb.RecordingListLiveTest do
         |> log_in_user(user_fixture())
         |> live(~p"/recordings")
 
-      assert html =~ recording.id
+      assert html =~ "#{recording.id}"
       assert html =~ device.name
-      assert html =~ recording.start_date
-      assert html =~ recording.end_date
+
+      assert html =~ "#{DateTime.to_iso8601(recording.start_date, :extended, 0)}"
+      assert html =~ "#{DateTime.to_iso8601(recording.end_date, :extended, 0)}"
     end
 
     test "redirect if user is not logged in", %{conn: conn} do
