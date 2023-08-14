@@ -74,7 +74,7 @@ defmodule ExNVRWeb.RecordingListLive do
         <ul class="flex my-2">
           <li>
             <a
-              class={previous_page(@page_number)}
+              class={if (@page_number <= 1), do: "px-2 py-2 pointer-events-none", else: "px-2 py-2 text-gray-600"}
               href="#"
               phx-click="nav"
               phx-value-page={@page_number - 1}
@@ -84,14 +84,14 @@ defmodule ExNVRWeb.RecordingListLive do
           </li>
           <%= for idx <-  Enum.to_list(1..@total_pages) do %>
             <li>
-              <a class={current_page(@page_number, idx)} href="#" phx-click="nav" phx-value-page={idx}>
+              <a class={if (@page_number == idx), do: "px-2 py-2 pointer-events-none", else: "px-2 py-2 text-gray-600"} href="#" phx-click="nav" phx-value-page={idx}>
                 <%= idx %>
               </a>
             </li>
           <% end %>
           <li>
             <a
-              class={next_page(@page_number, @total_pages)}
+              class={if (@page_number >= @total_pages), do: "px-2 py-2 pointer-events-none", else: "px-2 py-2 text-gray-600"}
               href="#"
               phx-click="nav"
               phx-value-page={@page_number + 1}
@@ -151,19 +151,5 @@ defmodule ExNVRWeb.RecordingListLive do
       total_entries: total_entries,
       total_pages: total_pages
     ]
-  end
-
-  defp next_page(page_number, total_pages) do
-    if page_number >= total_pages,
-      do: "px-2 py-2 pointer-events-none",
-      else: "px-2 py-2 text-gray-600"
-  end
-
-  defp previous_page(page_number) do
-    if page_number <= 1, do: "px-2 py-2 pointer-events-none", else: "px-2 py-2 text-gray-600"
-  end
-
-  defp current_page(page_number, idx) do
-    if page_number == idx, do: "px-2 py-2 pointer-events-none", else: "px-2 py-2 text-gray-600"
   end
 end
