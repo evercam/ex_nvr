@@ -28,17 +28,23 @@ defmodule ExNVR.HLS.Processor do
     end
   end
 
-  @spec add_query_params(binary(), map()) :: binary()
+  @spec add_query_params(binary(), Enumerable.t()) :: binary()
   def add_query_params(manifest_content, query_params) do
     encoded_params = URI.encode_query(query_params)
 
-    String.split(manifest_content, "\n")
-    |> Enum.map(fn line ->
-      case String.ends_with?(line, [".m3u8", ".m4s"]) do
-        true -> "#{line}?#{encoded_params}"
-        false -> line
+    manifest_content
+    |> String.split("\n")
+    |> Enum.map_join("\n", fn line ->
+      cond do
+        String.match?(line, ~r/.+\.mp4"$/) ->
+          String.replace(line, ~r/(.+\.mp4)"$/, "\\1?#{encoded_params}\"")
+
+        String.ends_with?(line, [".m3u8", ".m4s"]) ->
+          "#{line}?#{encoded_params}"
+
+        true ->
+          line
       end
     end)
-    |> Enum.join("\n")
   end
 end

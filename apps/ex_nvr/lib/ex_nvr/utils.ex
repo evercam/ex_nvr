@@ -15,4 +15,8 @@ defmodule ExNVR.Utils do
 
   @spec run_main_pipeline?() :: boolean()
   def run_main_pipeline?(), do: Application.get_env(:ex_nvr, :run_pipelines, true)
+
+  @spec generate_token(non_neg_integer()) :: binary()
+  def generate_token(token_len \\ 16),
+    do: :crypto.strong_rand_bytes(token_len) |> Base.url_encode64()
 end
