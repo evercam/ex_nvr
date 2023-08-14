@@ -83,32 +83,6 @@ function initDarkMode() {
     document.documentElement.classList.add("dark")
 }
 
-downloadRecording = (recording_file, device_id) => {
-    var url = "http://"+window.location.host+"/api/devices/"+device_id+"/recordings/"+recording_file+"/blob"
-    var headers = new Headers();
-    headers.append("Content-Type", "video/mp4");
-
-    var reqOptions = {
-        method: 'GET',
-        headers: headers
-    }
-
-    fetch(url, reqOptions)
-    .then(res => res.blob()).then(file => {
-        let tempUrl = URL.createObjectURL(file);
-        const aTag = document.createElement("a");
-        aTag.href = tempUrl;
-        aTag.download = recording_file;
-        document.body.appendChild(aTag);
-        aTag.click();
-        URL.revokeObjectURL(tempUrl);
-        aTag.remove();
-    }).catch(() => {
-        alert("Failed to download file!");
-    });
-    
-}
-
 startStreaming = (src, poster_url) => {
     var video = document.getElementById("live-video")
     if (video != null && Hls.isSupported()) {
@@ -141,10 +115,6 @@ window.addEventListener("phx:js-exec", ({ detail }) => {
     document.querySelectorAll(detail.to).forEach((el) => {
         liveSocket.execJS(el, el.getAttribute(detail.attr))
     })
-})
-
-window.addEventListener("phx:download-recording", (e) => {
-    downloadRecording(e.detail.recording_file, e.detail.device_id)
 })
 
 initDarkMode()

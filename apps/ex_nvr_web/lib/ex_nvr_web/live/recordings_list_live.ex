@@ -33,41 +33,20 @@ defmodule ExNVRWeb.RecordingListLive do
           </time>
         </:col>
         <:action :let={recording}>
-          <.button
-            id={"dropdownMenuIconButton_#{recording.id}"}
-            data-dropdown-toggle={"dropdownDots_#{recording.id}"}
-            class="text-sm ml-3 hover:bg-gray-100 dark:bg-gray-800"
+          <.simple_form
+            for={@form}
+            id="download_recording_form"
+            action={"/api/devices/#{recording.device_id}/recordings/#{recording.filename}/blob"}
+            method="get"
           >
-            <svg
-              class="w-5 h-5"
-              aria-hidden="true"
-              fill="currentColor"
-              viewBox="0 0 20 20"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
-            </svg>
-            <div
-              id={"dropdownDots_#{recording.id}"}
-              class="z-10 hidden text-left bg-white divide-y divide-gray-100 rounded-lg shadow w-44 dark:bg-gray-700 dark:divide-gray-600"
-            >
-              <ul
-                class="py-2 text-sm text-gray-700 dark:text-gray-200"
-                aria-labelledby={"dropdownMenuIconButton_#{recording.id}"}
+            <:actions>
+              <.button
+                class="w-full hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white"
               >
-                <li>
-                  <.link
-                    phx-click="download-recording"
-                    phx-value-recording={recording.filename}
-                    phx-value-device={recording.device_id}
-                    class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white"
-                  >
-                    Download
-                  </.link>
-                </li>
-              </ul>
-            </div>
-          </.button>
+                Download
+              </.button>
+            </:actions>
+          </.simple_form>
         </:action>
       </.table>
       <nav class="border-t border-gray-200">
@@ -109,18 +88,6 @@ defmodule ExNVRWeb.RecordingListLive do
     {:ok, assign(socket, conn: socket)}
   end
 
-  def handle_event(
-        "download-recording",
-        %{"recording" => recording_file, "device" => device_id},
-        socket
-      ) do
-    {:noreply,
-     push_event(socket, "download-recording", %{
-       recording_file: recording_file,
-       device_id: device_id
-     })}
-  end
-
   def handle_event("nav", %{"page" => page}, socket) do
     {:noreply, push_redirect(socket, to: Routes.recording_list_path(socket, :list, page: page))}
   end
@@ -149,7 +116,8 @@ defmodule ExNVRWeb.RecordingListLive do
       page_number: page_number,
       page_size: page_size,
       total_entries: total_entries,
-      total_pages: total_pages
+      total_pages: total_pages,
+      form: nil
     ]
   end
 end
