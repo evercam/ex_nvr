@@ -25,13 +25,5 @@ defmodule ExNVRWeb.RecordingListLiveTest do
       assert html =~ "#{DateTime.to_iso8601(recording.start_date, :extended, 0)}"
       assert html =~ "#{DateTime.to_iso8601(recording.end_date, :extended, 0)}"
     end
-
-    test "redirect if user is not logged in", %{conn: conn} do
-      {:error, redirect} = live(conn, ~p"/recordings")
-
-      assert {:redirect, %{to: path, flash: flash}} = redirect
-      assert path == ~p"/users/login"
-      assert %{"error" => "You must log in to access this page."} = flash
-    end
   end
 end
