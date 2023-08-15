@@ -76,7 +76,7 @@ defmodule ExNVRWeb.RecordingListLive do
   end
 
   def handle_event("nav", %{"page" => page}, socket) do
-    {:noreply, push_redirect(socket, to: Routes.recording_list_path(socket, :list, page: page))}
+    {:noreply, push_patch(socket, to: Routes.recording_list_path(socket, :list, page: page))}
   end
 
   def handle_params(%{"page" => page}, _uri, socket) do
