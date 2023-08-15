@@ -35,16 +35,18 @@ defmodule ExNVRWeb.RecordingListLive do
         <:action :let={recording}>
           <.simple_form
             for={@form}
-            id="download_recording_form"
+            id={"#{recording.id}_form"}
+            class="download-form flex flex-col items-center"
             action={"/api/devices/#{recording.device_id}/recordings/#{recording.filename}/blob"}
             method="get"
           >
             <:actions>
-              <.button
-                class="w-full hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white"
-              >
-                Download
-              </.button>
+                <.button
+                  class="download-btn w-full hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white"
+                  phx-disable-with="Downloading..."
+                >
+                  Download
+                </.button>
             </:actions>
           </.simple_form>
         </:action>
