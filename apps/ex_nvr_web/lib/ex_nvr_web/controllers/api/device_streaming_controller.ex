@@ -9,39 +9,46 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
 
   alias Ecto.Changeset
   alias ExNVR.Pipelines.{HlsPlayback, Main, Snapshot, VideoAssembler}
-  alias ExNVR.Utils
+  alias ExNVR.{HLS, Utils}
 
   @type return_t :: Plug.Conn.t() | {:error, Changeset.t()}
 
   @spec hls_stream(Plug.Conn.t(), map()) :: return_t()
   def hls_stream(conn, params) do
     with {:ok, params} <- validate_hls_stream_params(params) do
-      path = start_hls_pipeline(conn.assigns.device, params)
+      query_params = [stream_id: Utils.generate_token()]
+      path = start_hls_pipeline(conn.assigns.device, params, query_params[:stream_id])
       manifest_file = File.read!(Path.join(path, "index.m3u8"))
 
       conn
       |> put_resp_content_type("application/vnd.apple.mpegurl")
-      |> send_resp(200, remove_unused_stream(manifest_file, params))
+      |> send_resp(
+        200,
+        remove_unused_stream(manifest_file, params) |> HLS.Processor.add_query_params(query_params)
+      )
     end
   end
 
   @spec hls_stream_segment(Plug.Conn.t(), map()) :: return_t()
-  def hls_stream_segment(conn, %{"segment_name" => segment_name}) do
-    # segment names are in the following format <segment_name>_<track_id>_<segment_id>.<extension>
-    # this is a temporary measure until Membrane HLS plugin supports query params
-    # in segment files
-    id =
-      segment_name
-      |> Path.basename(".m3u8")
-      |> String.trim_leading("video_header_")
-      |> String.split("_")
-      |> hd()
+  def hls_stream_segment(conn, %{"stream_id" => stream_id, "segment_name" => segment_name}) do
+    path = Path.join([Utils.hls_dir(conn.assigns.device.id), stream_id, segment_name])
 
-    if not String.ends_with?(segment_name, ".m3u8") do
-      ExNVRWeb.HlsStreamingMonitor.update_last_access_time(id)
+    case File.exists?(path) do
+      true ->
+        if String.ends_with?(segment_name, ".m3u8") do
+          ExNVRWeb.HlsStreamingMonitor.update_last_access_time(stream_id)
+
+          path
+          |> File.read!()
+          |> HLS.Processor.add_query_params(stream_id: stream_id)
+          |> then(&send_resp(conn, 200, &1))
+        else
+          send_file(conn, 200, path)
+        end
+
+      false ->
+        {:error, :not_found}
     end
-
-    send_file(conn, 200, Path.join([Utils.hls_dir(conn.assigns.device.id), id, segment_name]))
   end
 
   @spec snapshot(Plug.Conn.t(), map()) :: return_t()
@@ -193,28 +200,27 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
     end
   end
 
-  defp start_hls_pipeline(device, %{pos: nil}) do
+  defp start_hls_pipeline(device, %{pos: nil}, stream_id) do
+    ExNVRWeb.HlsStreamingMonitor.register(stream_id, fn -> :ok end)
     Path.join(Utils.hls_dir(device.id), "live")
   end
 
-  defp start_hls_pipeline(device, params) do
-    id = UUID.uuid4()
-
+  defp start_hls_pipeline(device, params, stream_id) do
     path =
       device.id
       |> Utils.hls_dir()
-      |> Path.join(id)
+      |> Path.join(stream_id)
 
     pipeline_options = [
       device_id: device.id,
       start_date: params.pos,
       resolution: params.resolution,
       directory: path,
-      segment_name_prefix: id
+      segment_name_prefix: UUID.uuid4()
     ]
 
     {:ok, _, pid} = HlsPlayback.start(pipeline_options)
-    ExNVRWeb.HlsStreamingMonitor.register(id, fn -> HlsPlayback.stop_streaming(pid) end)
+    ExNVRWeb.HlsStreamingMonitor.register(stream_id, fn -> HlsPlayback.stop_streaming(pid) end)
 
     :ok = HlsPlayback.start_streaming(pid)
 
@@ -224,23 +230,9 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
   def remove_unused_stream(manifest_file, %{pos: pos}) when not is_nil(pos), do: manifest_file
   def remove_unused_stream(manifest_file, %{stream: nil}), do: manifest_file
 
-  def remove_unused_stream(manifest_file, %{stream: stream}) do
-    track_to_delete =
-      if stream == 0,
-        do: "live_sub_stream",
-        else: "live_main_stream"
+  def remove_unused_stream(manifest_file, %{stream: 0}),
+    do: HLS.Processor.delete_stream(manifest_file, "live_sub_stream")
 
-    manifest_file_lines = String.split(manifest_file, "\n")
-
-    case Enum.find_index(manifest_file_lines, &String.starts_with?(&1, track_to_delete)) do
-      nil ->
-        manifest_file
-
-      idx ->
-        manifest_file_lines
-        |> Enum.with_index()
-        |> Enum.reject(fn {_, index} -> index in [idx - 1, idx] end)
-        |> Enum.map_join("\n", fn {line, _} -> line end)
-    end
-  end
+  def remove_unused_stream(manifest_file, %{stream: 1}),
+    do: HLS.Processor.delete_stream(manifest_file, "live_main_stream")
 end

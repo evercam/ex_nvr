@@ -24,12 +24,6 @@ defmodule ExNVRWeb.Router do
   end
 
   scope "/api", ExNVRWeb do
-    pipe_through :api
-
-    post "/users/login", API.UserSessionController, :login
-  end
-
-  scope "/api", ExNVRWeb do
     pipe_through [:api, :api_require_authenticated_user]
 
     resources "/devices", API.DeviceController, only: [:create, :update]
@@ -41,10 +35,21 @@ defmodule ExNVRWeb.Router do
       get "/recordings/:recording_id/blob", API.RecordingController, :blob
 
       get "/hls/index.m3u8", API.DeviceStreamingController, :hls_stream
-      get "/hls/:segment_name", API.DeviceStreamingController, :hls_stream_segment
 
       get "/snapshot", API.DeviceStreamingController, :snapshot
       get "/footage", API.DeviceStreamingController, :footage
+    end
+  end
+
+  scope "/api", ExNVRWeb do
+    pipe_through :api
+
+    post "/users/login", API.UserSessionController, :login
+
+    scope "/devices/:device_id" do
+      pipe_through ExNVRWeb.Plug.Device
+
+      get "/hls/:segment_name", API.DeviceStreamingController, :hls_stream_segment
     end
   end
 

@@ -18,22 +18,6 @@ defmodule ExNVRWeb.API.DeviceStreamingControllerTest do
   live_sub_stream.m3u8
   """
 
-  @manifest_main_stream """
-  #EXTM3U
-  #EXT-X-VERSION:7
-  #EXT-X-INDEPENDENT-SEGMENTS
-  #EXT-X-STREAM-INF:BANDWIDTH=1138520,CODECS="avc1.42e00a"
-  live_main_stream.m3u8
-  """
-
-  @manifest_sub_stream """
-  #EXTM3U
-  #EXT-X-VERSION:7
-  #EXT-X-INDEPENDENT-SEGMENTS
-  #EXT-X-STREAM-INF:BANDWIDTH=138520,CODECS="avc1.42e00a"
-  live_sub_stream.m3u8
-  """
-
   setup %{conn: conn} do
     %{conn: log_in_user_with_access_token(conn, user_fixture())}
   end
@@ -54,7 +38,10 @@ defmodule ExNVRWeb.API.DeviceStreamingControllerTest do
       assert ["application/vnd.apple.mpegurl; charset=utf-8"] =
                get_resp_header(conn, "content-type")
 
-      assert response(conn, 200) == @manifest
+      body = response(conn, 200)
+
+      assert body =~ "live_main_stream.m3u8"
+      assert body =~ "live_sub_stream.m3u8"
     end
 
     test "get manifest file for selected stream", %{conn: conn, device: device} do
@@ -63,14 +50,17 @@ defmodule ExNVRWeb.API.DeviceStreamingControllerTest do
         |> get(~p"/api/devices/#{device.id}/hls/index.m3u8?stream=0")
         |> response(200)
 
-      assert response == @manifest_main_stream
+      assert response =~ "live_main_stream.m3u8"
+      refute response =~ "live_sub_stream.m3u8"
 
       response =
         conn
         |> get(~p"/api/devices/#{device.id}/hls/index.m3u8?stream=1")
         |> response(200)
 
-      assert response == @manifest_sub_stream
+
+      refute response =~ "live_main_stream.m3u8"
+      assert response =~ "live_sub_stream.m3u8"
     end
 
     test "get manifest file with invalid params", %{conn: conn, device: device} do
