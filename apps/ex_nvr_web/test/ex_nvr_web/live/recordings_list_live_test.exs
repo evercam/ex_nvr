@@ -43,7 +43,7 @@ defmodule ExNVRWeb.RecordingListLiveTest do
       end
     end
 
-    test "download recording", %{conn: conn, device: device, recordings: recordings} do
+    test "download recording", %{conn: conn, recordings: recordings} do
         {:ok, lv, _html} =
           conn
           |> log_in_user(user_fixture())
