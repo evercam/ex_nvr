@@ -18,6 +18,7 @@ defmodule ExNVRWeb.RecordingListLive do
           <.link
             href={~p"/api/devices/#{recording.device_id}/recordings/#{recording.filename}/blob"}
             class="inline-flex items-center text-gray-900 rounded-lg"
+            id={"recording-#{recording.id}-link"}
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
