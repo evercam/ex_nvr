@@ -11,7 +11,7 @@ defmodule ExNVRWeb.RecordingListLiveTest do
   describe "Recording list page" do
     setup %{device: device} do
       %{
-        recordings: Enum.map(1..500, fn _ -> recording_fixture(device) end)
+        recordings: Enum.map(1..5, fn _ -> recording_fixture(device) end)
       }
     end
 
@@ -30,25 +30,32 @@ defmodule ExNVRWeb.RecordingListLiveTest do
       assert lv
               |> element("a", "1")
               |> has_element?()
-      assert lv
-              |> element("a", "2")
-              |> has_element?()
-      assert lv
-              |> element("a", "3")
-              |> has_element?()
-      assert lv
-              |> element("a", "4")
-              |> has_element?()
-      assert lv
-              |> element("a", "5")
-              |> has_element?()
-      # for recording <- recordings do
-      #   assert html =~ "#{recording.id}"
-      #   assert html =~ device.name
+      for recording <- recordings do
+        assert html =~ "#{recording.id}"
+        assert html =~ device.name
 
-      #   assert html =~ "#{DateTime.to_iso8601(recording.start_date, :extended, 0)}"
-      #   assert html =~ "#{DateTime.to_iso8601(recording.end_date, :extended, 0)}"
-      # end
+        assert html =~ "#{DateTime.to_iso8601(recording.start_date, :extended, 0)}"
+        assert html =~ "#{DateTime.to_iso8601(recording.end_date, :extended, 0)}"
+
+        assert lv
+        |> element("button", "Download")
+        |> has_element?()
+      end
     end
+
+    test "download recording", %{conn: conn, device: device, recordings: recordings} do
+        {:ok, lv, _html} =
+          conn
+          |> log_in_user(user_fixture())
+          |> live(~p"/recordings")
+
+        recording = List.first(recordings)
+        form_id = "#"<>"#{recording.id}_form"
+        form = lv
+                |> form(form_id)
+
+        conn = submit_form(form, conn)
+        assert conn.method == "GET"
+      end
   end
 end
