@@ -37,24 +37,6 @@ let Hooks = {
             updateTimelineSegments(this.el)
         },
     },
-    DateWithTimeZone: {
-        mounted() {
-            let dt = new Date(this.el.textContent.trim());
-            this.el.textContent = 
-            dt.toLocaleString("UTC", {
-                timeZone: this.el.dataset.timezone, 
-                year: "numeric",
-                month: "short",
-                day: "2-digit",
-                hour: "2-digit",
-                minute: "2-digit",
-                second: "numeric",
-                fractionalSecondDigits: 3,
-                hourCycle: "h23"
-            });
-            this.el.classList.remove("invisible")
-        }
-    }
 }
 
 let csrfToken = document
