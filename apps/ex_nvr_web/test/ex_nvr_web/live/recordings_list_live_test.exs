@@ -58,7 +58,15 @@ defmodule ExNVRWeb.RecordingListLiveTest do
           |> live(~p"/recordings")
 
         recording = List.first(recordings)
-        assert true
+
+        {:error, redirect} =
+                lv
+                |> element(~s|a[href="/api/devices/#{recording.device_id}/recordings/#{recording.filename}/blob"]|)
+                |> render_click()
+
+        assert {:redirect, %{to: path}} = redirect
+        assert path == "/api/devices/#{recording.device_id}/recordings/#{recording.filename}/blob"
+
       end
   end
 end
