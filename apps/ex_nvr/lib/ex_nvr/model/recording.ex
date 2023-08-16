@@ -39,4 +39,12 @@ defmodule ExNVR.Model.Recording do
     |> Changeset.cast(params, @required_fields)
     |> Changeset.validate_required(@required_fields)
   end
+
+  def filter(query \\ __MODULE__, params) do
+    Enum.reduce(params, query, fn
+      {:device_id, value}, q when is_atom(value) -> where(q, [r], r.device_id == ^value)
+      {:device_id, values}, q when is_list(values) -> where(q, [r], r.device_id in ^values)
+      _, q -> q
+    end)
+  end
 end

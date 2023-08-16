@@ -21,7 +21,7 @@ defmodule ExNVR.MixProject do
   def application do
     [
       mod: {ExNVR.Application, []},
-      extra_applications: [:logger, :runtime_tools]
+      extra_applications: [:logger, :runtime_tools, :scrivener]
     ]
   end
 
