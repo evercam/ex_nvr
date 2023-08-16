@@ -12,8 +12,12 @@ defmodule ExNVRWeb.RecordingListLive do
       <.table id="recordings" rows={@recordings}>
         <:col :let={recording} label="Id"><%= recording.id %></:col>
         <:col :let={recording} label="Device"><%= recording.device.name %></:col>
-        <:col :let={recording} label="Start-date"><%= format_date(recording.start_date, recording.device.timezone) %></:col>
-        <:col :let={recording} label="End-date"><%= format_date(recording.end_date, recording.device.timezone) %></:col>
+        <:col :let={recording} label="Start-date">
+          <%= format_date(recording.start_date, recording.device.timezone) %>
+        </:col>
+        <:col :let={recording} label="End-date">
+          <%= format_date(recording.end_date, recording.device.timezone) %>
+        </:col>
         <:action :let={recording}>
           <.link
             href={~p"/api/devices/#{recording.device_id}/recordings/#{recording.filename}/blob"}
@@ -44,12 +48,30 @@ defmodule ExNVRWeb.RecordingListLive do
               href="#"
               phx-click="nav"
               phx-value-page={@page_number - 1}
-              class={if (@page_number <= 1), do: "flex items-center justify-center pointer-events-none px-3 h-8 ml-0 leading-tight text-gray-500 bg-white border border-gray-300 rounded-l-lg hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white", else: "flex items-center justify-center px-3 h-8 ml-0 leading-tight text-gray-500 bg-white border border-gray-300 rounded-l-lg hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"}
-              aria-current={if (@page_number <= 1), do: "page", else: ""}
-              >
+              class={
+                if @page_number <= 1,
+                  do:
+                    "flex items-center justify-center pointer-events-none px-3 h-8 ml-0 leading-tight text-gray-500 bg-white border border-gray-300 rounded-l-lg hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white",
+                  else:
+                    "flex items-center justify-center px-3 h-8 ml-0 leading-tight text-gray-500 bg-white border border-gray-300 rounded-l-lg hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
+              }
+              aria-current={if @page_number <= 1, do: "page", else: ""}
+            >
               <span class="sr-only">Previous</span>
-              <svg class="w-2.5 h-2.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 6 10">
-                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 1 1 5l4 4"/>
+              <svg
+                class="w-2.5 h-2.5"
+                aria-hidden="true"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 6 10"
+              >
+                <path
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M5 1 1 5l4 4"
+                />
               </svg>
             </a>
           </li>
@@ -59,10 +81,16 @@ defmodule ExNVRWeb.RecordingListLive do
                 href="#"
                 phx-click="nav"
                 phx-value-page={idx}
-                class={if (@page_number == idx), do: "z-10 flex items-center justify-center pointer-events-none px-3 h-8 leading-tight text-gray-500 bg-white border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white", else: "flex items-center justify-center px-3 h-8 leading-tight text-gray-500 bg-white border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"}
-                aria-current={if (@page_number == idx), do: "page", else: ""}
+                class={
+                  if @page_number == idx,
+                    do:
+                      "z-10 flex items-center justify-center pointer-events-none px-3 h-8 leading-tight text-gray-500 bg-white border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white",
+                    else:
+                      "flex items-center justify-center px-3 h-8 leading-tight text-gray-500 bg-white border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
+                }
+                aria-current={if @page_number == idx, do: "page", else: ""}
               >
-              <%= idx %>
+                <%= idx %>
               </a>
             </li>
           <% end %>
@@ -71,17 +99,35 @@ defmodule ExNVRWeb.RecordingListLive do
               href="#"
               phx-click="nav"
               phx-value-page={@page_number + 1}
-              class={if (@page_number >= @total_pages), do: "flex items-center justify-center pointer-events-none px-3 h-8 leading-tight text-gray-500 bg-white border border-gray-300 rounded-r-lg hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white", else: "flex items-center justify-center px-3 h-8 leading-tight text-gray-500 bg-white border border-gray-300 rounded-r-lg hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"}
-              aria-current={if (@page_number >= @total_pages), do: "page", else: ""}
-              >
+              class={
+                if @page_number >= @total_pages,
+                  do:
+                    "flex items-center justify-center pointer-events-none px-3 h-8 leading-tight text-gray-500 bg-white border border-gray-300 rounded-r-lg hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white",
+                  else:
+                    "flex items-center justify-center px-3 h-8 leading-tight text-gray-500 bg-white border border-gray-300 rounded-r-lg hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
+              }
+              aria-current={if @page_number >= @total_pages, do: "page", else: ""}
+            >
               <span class="sr-only">Next</span>
-              <svg class="w-2.5 h-2.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 6 10">
-                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 9 4-4-4-4"/>
+              <svg
+                class="w-2.5 h-2.5"
+                aria-hidden="true"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 6 10"
+              >
+                <path
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="m1 9 4-4-4-4"
+                />
               </svg>
             </a>
           </li>
         </ul>
-    </nav>
+      </nav>
     </div>
     """
   end

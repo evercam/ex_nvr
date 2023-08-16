@@ -22,51 +22,57 @@ defmodule ExNVRWeb.RecordingListLiveTest do
         |> live(~p"/recordings")
 
       assert lv
-              |> element("a", "Previous")
-              |> has_element?()
+             |> element("a", "Previous")
+             |> has_element?()
+
       assert lv
-              |> element("a", "Next")
-              |> has_element?()
+             |> element("a", "Next")
+             |> has_element?()
+
       assert lv
-              |> element("a", "1")
-              |> has_element?()
+             |> element("a", "1")
+             |> has_element?()
+
       for recording <- recordings do
         assert html =~ "#{recording.id}"
         assert html =~ device.name
 
-        expected_start_date = recording.start_date
-                        |> DateTime.shift_zone!(device.timezone)
-                        |> Calendar.strftime("%b %d, %Y %H:%M:%S")
+        expected_start_date =
+          recording.start_date
+          |> DateTime.shift_zone!(device.timezone)
+          |> Calendar.strftime("%b %d, %Y %H:%M:%S")
 
-        expected_end_date = recording.end_date
-                        |> DateTime.shift_zone!(device.timezone)
-                        |> Calendar.strftime("%b %d, %Y %H:%M:%S")
+        expected_end_date =
+          recording.end_date
+          |> DateTime.shift_zone!(device.timezone)
+          |> Calendar.strftime("%b %d, %Y %H:%M:%S")
 
         assert html =~ "#{expected_start_date}"
         assert html =~ "#{expected_end_date}"
 
         assert lv
-        |> element(~s{[id="recording-#{recording.id}-link"]})
-        |> has_element?()
+               |> element(~s{[id="recording-#{recording.id}-link"]})
+               |> has_element?()
       end
     end
 
     test "download recording", %{conn: conn, recordings: recordings} do
-        {:ok, lv, _html} =
-          conn
-          |> log_in_user(user_fixture())
-          |> live(~p"/recordings")
+      {:ok, lv, _html} =
+        conn
+        |> log_in_user(user_fixture())
+        |> live(~p"/recordings")
 
-        recording = List.first(recordings)
+      recording = List.first(recordings)
 
-        {:error, redirect} =
-                lv
-                |> element(~s|a[href="/api/devices/#{recording.device_id}/recordings/#{recording.filename}/blob"]|)
-                |> render_click()
+      {:error, redirect} =
+        lv
+        |> element(
+          ~s|a[href="/api/devices/#{recording.device_id}/recordings/#{recording.filename}/blob"]|
+        )
+        |> render_click()
 
-        assert {:redirect, %{to: path}} = redirect
-        assert path == "/api/devices/#{recording.device_id}/recordings/#{recording.filename}/blob"
-
-      end
+      assert {:redirect, %{to: path}} = redirect
+      assert path == "/api/devices/#{recording.device_id}/recordings/#{recording.filename}/blob"
+    end
   end
 end
