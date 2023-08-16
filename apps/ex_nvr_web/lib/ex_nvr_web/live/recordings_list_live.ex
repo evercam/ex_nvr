@@ -87,7 +87,7 @@ defmodule ExNVRWeb.RecordingListLive do
   end
 
   def mount(_session, socket) do
-    {:ok, assign(socket, recordings: Recordings.list())}
+    {:ok, assign(socket, %{})}
   end
 
   def handle_event("nav", %{"page" => page}, socket) do
