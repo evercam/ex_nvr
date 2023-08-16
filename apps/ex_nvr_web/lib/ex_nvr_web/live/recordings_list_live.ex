@@ -37,7 +37,7 @@ defmodule ExNVRWeb.RecordingListLive do
           </.link>
         </:action>
       </.table>
-      <nav aria-label="Page navigation">
+      <nav aria-label="Page navigation" class="flex justify-end mt-4">
         <ul class="flex items-center -space-x-px h-8 text-sm">
           <li>
             <a
