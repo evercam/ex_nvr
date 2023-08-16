@@ -17,7 +17,3 @@
 #timeline path {
     stroke: #0000;
 }
-
-span:has(> form) {
-    display: flex;
-}
