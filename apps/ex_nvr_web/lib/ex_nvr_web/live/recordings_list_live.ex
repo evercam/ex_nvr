@@ -37,37 +37,51 @@ defmodule ExNVRWeb.RecordingListLive do
           </.link>
         </:action>
       </.table>
-      <nav class="border-t border-gray-200">
-        <ul class="flex my-2">
+      <nav aria-label="Page navigation">
+        <ul class="flex items-center -space-x-px h-8 text-sm">
           <li>
             <a
-              class={if (@page_number <= 1), do: "px-2 py-2 pointer-events-none", else: "px-2 py-2 text-gray-600"}
               href="#"
               phx-click="nav"
               phx-value-page={@page_number - 1}
-            >
-              Previous
+              class={if (@page_number <= 1), do: "flex items-center justify-center pointer-events-none px-3 h-8 ml-0 leading-tight text-gray-500 bg-white border border-gray-300 rounded-l-lg hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white", else: "flex items-center justify-center px-3 h-8 ml-0 leading-tight text-gray-500 bg-white border border-gray-300 rounded-l-lg hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"}
+              aria-current={if (@page_number <= 1), do: "page", else: ""}
+              >
+              <span class="sr-only">Previous</span>
+              <svg class="w-2.5 h-2.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 6 10">
+                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 1 1 5l4 4"/>
+              </svg>
             </a>
           </li>
           <%= for idx <-  Enum.to_list(1..@total_pages) do %>
             <li>
-              <a class={if (@page_number == idx), do: "px-2 py-2 pointer-events-none", else: "px-2 py-2 text-gray-600"} href="#" phx-click="nav" phx-value-page={idx}>
-                <%= idx %>
+              <a
+                href="#"
+                phx-click="nav"
+                phx-value-page={idx}
+                class={if (@page_number == idx), do: "z-10 flex items-center justify-center pointer-events-none px-3 h-8 leading-tight text-gray-500 bg-white border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white", else: "flex items-center justify-center px-3 h-8 leading-tight text-gray-500 bg-white border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"}
+                aria-current={if (@page_number == idx), do: "page", else: ""}
+              >
+              <%= idx %>
               </a>
             </li>
           <% end %>
           <li>
             <a
-              class={if (@page_number >= @total_pages), do: "px-2 py-2 pointer-events-none", else: "px-2 py-2 text-gray-600"}
               href="#"
               phx-click="nav"
               phx-value-page={@page_number + 1}
-            >
-              Next
+              class={if (@page_number >= @total_pages), do: "flex items-center justify-center pointer-events-none px-3 h-8 leading-tight text-gray-500 bg-white border border-gray-300 rounded-r-lg hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white", else: "flex items-center justify-center px-3 h-8 leading-tight text-gray-500 bg-white border border-gray-300 rounded-r-lg hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"}
+              aria-current={if (@page_number >= @total_pages), do: "page", else: ""}
+              >
+              <span class="sr-only">Next</span>
+              <svg class="w-2.5 h-2.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 6 10">
+                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 9 4-4-4-4"/>
+              </svg>
             </a>
           </li>
         </ul>
-      </nav>
+    </nav>
     </div>
     """
   end
