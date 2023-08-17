@@ -48,12 +48,12 @@ defmodule ExNVRWeb.RecordingListLive do
               href="#"
               phx-click="nav"
               phx-value-page={@page_number - 1}
-              class={
+              class={["flex items-center justify-center px-3 h-8 ml-0 leading-tight bg-white border border-gray-300 rounded-l-lg"] ++
                 if @page_number <= 1,
                   do:
-                    "flex items-center justify-center pointer-events-none px-3 h-8 ml-0 leading-tight text-gray-300 bg-white border border-gray-300 rounded-l-lg",
+                    ["pointer-events-none text-gray-300"],
                   else:
-                    "flex items-center justify-center px-3 h-8 ml-0 leading-tight text-gray-500 bg-white border border-gray-300 rounded-l-lg hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
+                    ["text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"]
               }
             >
               <span class="sr-only">Previous</span>
@@ -81,12 +81,12 @@ defmodule ExNVRWeb.RecordingListLive do
                   href="#"
                   phx-click="nav"
                   phx-value-page={page}
-                  class={
+                  class={["flex items-center justify-center px-3 h-8 leading-tight border dark:border-gray-700"] ++
                     if @page_number == page,
                       do:
-                        "z-10 flex items-center justify-center pointer-events-none px-3 h-8 leading-tight text-blue-600 bg-blue-50 border border-blue-300 hover:bg-blue-100 hover:text-blue-700 dark:border-gray-700 dark:bg-gray-700 dark:text-white",
+                        ["z-10 pointer-events-none text-blue-600 bg-blue-50 border-blue-300 hover:bg-blue-100 hover:text-blue-700 dark:bg-gray-700 dark:text-white"],
                       else:
-                        "flex items-center justify-center px-3 h-8 leading-tight text-gray-500 bg-white border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
+                        ["text-gray-500 bg-white border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"]
                   }
                 >
                 <%= page %>
@@ -107,12 +107,12 @@ defmodule ExNVRWeb.RecordingListLive do
                     href="#"
                     phx-click="nav"
                     phx-value-page={idx}
-                    class={
+                    class={["flex items-center justify-center px-3 h-8 leading-tight border dark:border-gray-700"] ++
                       if @page_number == idx,
                         do:
-                          "z-10 flex items-center justify-center pointer-events-none px-3 h-8 leading-tight text-blue-600 bg-blue-50 border border-blue-300 hover:bg-blue-100 hover:text-blue-700 dark:border-gray-700 dark:bg-gray-700 dark:text-white",
+                          ["z-10 pointer-events-none text-blue-600 bg-blue-50 border-blue-300 hover:bg-blue-100 hover:text-blue-700 dark:bg-gray-700 dark:text-white"],
                         else:
-                          "flex items-center justify-center px-3 h-8 leading-tight text-gray-500 bg-white border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
+                          ["text-gray-500 bg-white border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"]
                     }
                   >
                     <%= idx %>
@@ -133,12 +133,12 @@ defmodule ExNVRWeb.RecordingListLive do
                   href="#"
                   phx-click="nav"
                   phx-value-page={page}
-                  class={
+                  class={["flex items-center justify-center px-3 h-8 leading-tight border dark:border-gray-700"] ++
                     if @page_number == page,
                       do:
-                        "z-10 flex items-center justify-center pointer-events-none px-3 h-8 leading-tight text-blue-600 bg-blue-50 border border-blue-300 hover:bg-blue-100 hover:text-blue-700 dark:border-gray-700 dark:bg-gray-700 dark:text-white",
+                        ["z-10 pointer-events-none text-blue-600 bg-blue-50 border-blue-300 hover:bg-blue-100 hover:text-blue-700 dark:bg-gray-700 dark:text-white"],
                       else:
-                        "flex items-center justify-center px-3 h-8 leading-tight text-gray-500 bg-white border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
+                        ["text-gray-500 bg-white border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"]
                   }
                 >
                 <%= page %>
@@ -152,12 +152,12 @@ defmodule ExNVRWeb.RecordingListLive do
                   href="#"
                   phx-click="nav"
                   phx-value-page={idx}
-                  class={
+                  class={["flex items-center justify-center px-3 h-8 leading-tight border dark:border-gray-700"] ++
                     if @page_number == idx,
                       do:
-                        "z-10 flex items-center justify-center pointer-events-none px-3 h-8 leading-tight text-blue-600 bg-blue-50 border border-blue-300 hover:bg-blue-100 hover:text-blue-700 dark:border-gray-700 dark:bg-gray-700 dark:text-white",
+                        ["z-10 pointer-events-none text-blue-600 bg-blue-50 border-blue-300 hover:bg-blue-100 hover:text-blue-700 dark:bg-gray-700 dark:text-white"],
                       else:
-                        "flex items-center justify-center px-3 h-8 leading-tight text-gray-500 bg-white border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
+                        ["text-gray-500 bg-white border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"]
                   }
                 >
                   <%= idx %>
@@ -170,12 +170,12 @@ defmodule ExNVRWeb.RecordingListLive do
               href="#"
               phx-click="nav"
               phx-value-page={@page_number + 1}
-              class={
+              class={["flex items-center justify-center px-3 h-8 leading-tight border border-gray-300 bg-white rounded-r-lg"] ++
                 if @page_number >= @total_pages,
                   do:
-                    "flex items-center justify-center pointer-events-none px-3 h-8 leading-tight text-gray-300 bg-white border border-gray-300 rounded-r-lg",
+                    ["pointer-events-none text-gray-300"],
                   else:
-                    "flex items-center justify-center px-3 h-8 leading-tight text-gray-500 bg-white border border-gray-300 rounded-r-lg hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
+                    ["text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"]
               }
             >
               <span class="sr-only">Next</span>
