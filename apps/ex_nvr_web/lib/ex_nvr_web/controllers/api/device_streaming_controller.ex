@@ -24,7 +24,8 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
       |> put_resp_content_type("application/vnd.apple.mpegurl")
       |> send_resp(
         200,
-        remove_unused_stream(manifest_file, params) |> HLS.Processor.add_query_params(query_params)
+        remove_unused_stream(manifest_file, params)
+        |> HLS.Processor.add_query_params(query_params)
       )
     end
   end

@@ -60,8 +60,7 @@ defmodule ExNVR.MixProject do
       {:membrane_udp_plugin, "~> 0.10.0"},
       {:connection, "~> 1.1.0"},
       {:tzdata, "~> 1.1"},
-      {:turbojpeg,
-       github: "gBillal/elixir-turbojpeg", branch: "refactor-code-to-use-membrane-core-0.12"},
+      {:turbojpeg, github: "BinaryNoggin/elixir-turbojpeg", ref: "14e2b36"},
       {:faker, "~> 0.17", only: :test}
     ]
   end

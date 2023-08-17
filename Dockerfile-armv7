@@ -58,7 +58,8 @@ RUN \
   clang \ 
   curl \
   libsrtp \
-  libjpeg-turbo
+  libjpeg-turbo \
+  coreutils
 
 WORKDIR /app
 

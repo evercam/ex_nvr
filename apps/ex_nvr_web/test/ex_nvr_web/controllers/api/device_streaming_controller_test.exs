@@ -58,7 +58,6 @@ defmodule ExNVRWeb.API.DeviceStreamingControllerTest do
         |> get(~p"/api/devices/#{device.id}/hls/index.m3u8?stream=1")
         |> response(200)
 
-
       refute response =~ "live_main_stream.m3u8"
       assert response =~ "live_sub_stream.m3u8"
     end
