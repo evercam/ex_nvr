@@ -74,33 +74,79 @@ defmodule ExNVRWeb.RecordingListLive do
               </svg>
             </a>
           </li>
-          <%= for first <-  Enum.to_list(1..2) do %>
-            <li>
-              <a
-                href="#"
-                phx-click="nav"
-                phx-value-page={first}
-                class={
-                  if @page_number == first,
-                    do:
-                      "z-10 flex items-center justify-center pointer-events-none px-3 h-8 leading-tight text-blue-600 bg-blue-50 border border-blue-300 hover:bg-blue-100 hover:text-blue-700 dark:border-gray-700 dark:bg-gray-700 dark:text-white",
-                    else:
-                      "flex items-center justify-center px-3 h-8 leading-tight text-gray-500 bg-white border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
-                }
-              >
-               <%= first %>
-              </a>
-            </li>
-          <% end %>
-          <%= if @page_number > 4 do %>
-            <li>
-              <span class="flex items-center justify-center px-3 h-8 leading-tight text-gray-500">
-                ...
-              </span>
-            </li>
-          <% end %>
-          <%= for idx <-  Enum.to_list(3..@total_pages-2) do %>
-            <%= if abs(@page_number - idx) <= 1 do %>
+          <%= if @total_pages > 6 do %>
+            <%= for page <- [1,2] do %>
+              <li>
+                <a
+                  href="#"
+                  phx-click="nav"
+                  phx-value-page={page}
+                  class={
+                    if @page_number == page,
+                      do:
+                        "z-10 flex items-center justify-center pointer-events-none px-3 h-8 leading-tight text-blue-600 bg-blue-50 border border-blue-300 hover:bg-blue-100 hover:text-blue-700 dark:border-gray-700 dark:bg-gray-700 dark:text-white",
+                      else:
+                        "flex items-center justify-center px-3 h-8 leading-tight text-gray-500 bg-white border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
+                  }
+                >
+                <%= page %>
+                </a>
+              </li>
+            <% end %>
+            <%= if @page_number > 4 do %>
+              <li>
+                <span class="flex items-center justify-center px-3 h-8 leading-tight text-gray-500">
+                  ...
+                </span>
+              </li>
+            <% end %>
+            <%= for idx <-  Enum.to_list(3..@total_pages-2) do %>
+              <%= if abs(@page_number - idx) <= 1 do %>
+                <li>
+                  <a
+                    href="#"
+                    phx-click="nav"
+                    phx-value-page={idx}
+                    class={
+                      if @page_number == idx,
+                        do:
+                          "z-10 flex items-center justify-center pointer-events-none px-3 h-8 leading-tight text-blue-600 bg-blue-50 border border-blue-300 hover:bg-blue-100 hover:text-blue-700 dark:border-gray-700 dark:bg-gray-700 dark:text-white",
+                        else:
+                          "flex items-center justify-center px-3 h-8 leading-tight text-gray-500 bg-white border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
+                    }
+                  >
+                    <%= idx %>
+                  </a>
+                </li>
+              <% end %>
+            <% end %>
+            <%= if @page_number < @total_pages - 3 do %>
+              <li>
+                <span class="flex items-center justify-center px-3 h-8 leading-tight text-gray-500">
+                  ...
+                </span>
+              </li>
+            <% end %>
+            <%= for page <- [@total_pages-1, @total_pages] do %>
+              <li>
+                <a
+                  href="#"
+                  phx-click="nav"
+                  phx-value-page={page}
+                  class={
+                    if @page_number == page,
+                      do:
+                        "z-10 flex items-center justify-center pointer-events-none px-3 h-8 leading-tight text-blue-600 bg-blue-50 border border-blue-300 hover:bg-blue-100 hover:text-blue-700 dark:border-gray-700 dark:bg-gray-700 dark:text-white",
+                      else:
+                        "flex items-center justify-center px-3 h-8 leading-tight text-gray-500 bg-white border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
+                  }
+                >
+                <%= page %>
+                </a>
+              </li>
+            <% end %>
+          <% else %>
+          <%= for idx <-  Enum.to_list(1..@total_pages) do %>
               <li>
                 <a
                   href="#"
@@ -118,31 +164,6 @@ defmodule ExNVRWeb.RecordingListLive do
                 </a>
               </li>
             <% end %>
-          <% end %>
-          <%= if @page_number < @total_pages - 3 do %>
-            <li>
-              <span class="flex items-center justify-center px-3 h-8 leading-tight text-gray-500">
-                ...
-              </span>
-            </li>
-          <% end %>
-          <%= for last <-  Enum.to_list(@total_pages-1..@total_pages) do %>
-            <li>
-              <a
-                href="#"
-                phx-click="nav"
-                phx-value-page={last}
-                class={
-                  if @page_number == last,
-                    do:
-                      "z-10 flex items-center justify-center pointer-events-none px-3 h-8 leading-tight text-blue-600 bg-blue-50 border border-blue-300 hover:bg-blue-100 hover:text-blue-700 dark:border-gray-700 dark:bg-gray-700 dark:text-white",
-                    else:
-                      "flex items-center justify-center px-3 h-8 leading-tight text-gray-500 bg-white border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
-                }
-              >
-               <%= last %>
-              </a>
-            </li>
           <% end %>
           <li>
             <a
