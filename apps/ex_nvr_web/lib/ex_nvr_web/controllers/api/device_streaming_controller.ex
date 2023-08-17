@@ -16,7 +16,7 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
   @spec hls_stream(Plug.Conn.t(), map()) :: return_t()
   def hls_stream(conn, params) do
     with {:ok, params} <- validate_hls_stream_params(params) do
-      query_params = [stream_id: Utils.generate_token()]
+      query_params = [stream_id: Utils.generate_token(), live: is_nil(params.pos)]
       path = start_hls_pipeline(conn.assigns.device, params, query_params[:stream_id])
       manifest_file = File.read!(Path.join(path, "index.m3u8"))
 
@@ -31,8 +31,9 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
   end
 
   @spec hls_stream_segment(Plug.Conn.t(), map()) :: return_t()
-  def hls_stream_segment(conn, %{"stream_id" => stream_id, "segment_name" => segment_name}) do
-    path = Path.join([Utils.hls_dir(conn.assigns.device.id), stream_id, segment_name])
+  def hls_stream_segment(conn, %{"stream_id" => stream_id, "segment_name" => segment_name} = params) do
+    folder = if params["live"] == "true", do: "live", else: stream_id
+    path = Path.join([Utils.hls_dir(conn.assigns.device.id), folder, segment_name])
 
     case File.exists?(path) do
       true ->
@@ -41,7 +42,7 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
 
           path
           |> File.read!()
-          |> HLS.Processor.add_query_params(stream_id: stream_id)
+          |> HLS.Processor.add_query_params(stream_id: stream_id, live: params["live"])
           |> then(&send_resp(conn, 200, &1))
         else
           send_file(conn, 200, path)
