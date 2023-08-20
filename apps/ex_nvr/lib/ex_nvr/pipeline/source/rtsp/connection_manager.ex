@@ -249,9 +249,7 @@ defmodule ExNVR.Pipeline.Source.RTSP.ConnectionManager do
   end
 
   defp start_rtsp_session(%ConnectionStatus{rtsp_session: rtsp_session} = state) do
-    RTSP.close(rtsp_session)
-    kill_children(state)
-    start_rtsp_session(%{state | rtsp_session: nil, keep_alive: nil})
+    rtsp_session
   end
 
   defp get_rtsp_description(%ConnectionStatus{rtsp_session: rtsp_session} = connection_status) do

@@ -95,7 +95,7 @@ defmodule ExNVR.RTSP.Transport.Fake do
   end
 
   defp emit_media_packets(media_reciever) do
-    send(media_reciever, {:media_packet, <<1, 2, 3, 4, 5>>})
+    send(media_reciever, {:media_packet, 0, <<1, 2, 3, 4, 5>>})
     Process.sleep(100)
     emit_media_packets(media_reciever)
   end

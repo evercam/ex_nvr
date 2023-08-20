@@ -2,7 +2,7 @@ defmodule ExNVR.RTSP.SourcePipeline do
   @moduledoc false
   use Membrane.Pipeline
 
-  alias ExNVR.Elements.RTSP.Source
+  alias ExNVR.Pipeline.Source.RTSP.Source
 
   @impl true
   def handle_init(_ctx, options) do
@@ -12,10 +12,10 @@ defmodule ExNVR.RTSP.SourcePipeline do
   end
 
   @impl true
-  def handle_child_notification({:rtsp_setup_complete, _track, ref}, :source, _ctx, state) do
+  def handle_child_notification({:rtsp_setup_complete, _tracks}, :source, _ctx, state) do
     spec = [
       get_child(:source)
-      |> via_out(Pad.ref(:output, ref))
+      |> via_out(Pad.ref(:output, make_ref()))
       |> child(:sink, Membrane.Testing.Sink)
     ]
 
