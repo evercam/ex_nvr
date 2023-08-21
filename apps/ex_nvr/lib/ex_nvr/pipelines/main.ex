@@ -39,10 +39,9 @@ defmodule ExNVR.Pipelines.Main do
 
   require Membrane.Logger
 
-  alias ExNVR.Elements.RTSP.Source
   alias ExNVR.{Devices, Recordings, Utils}
   alias ExNVR.Model.Device
-  alias Membrane.RTP.SessionBin
+  alias ExNVR.Pipeline.Source.RTSP
 
   @event_prefix [:ex_nvr, :main_pipeline]
 
@@ -154,13 +153,13 @@ defmodule ExNVR.Pipelines.Main do
 
     spec =
       [
-        child(:rtsp_source, %Source{stream_uri: stream_uri}),
+        child(:rtsp_source, %RTSP{stream_uri: stream_uri}),
         {child(:hls_sink, hls_sink, get_if_exists: true), crash_group: {"hls", :temporary}},
         child(:snapshooter, ExNVR.Elements.SnapshotBin),
         child(:webrtc, %ExNVR.Pipeline.Output.WebRTC{stream_id: device.id})
       ] ++
         if sub_stream_uri,
-          do: [child({:rtsp_source, :sub_stream}, %Source{stream_uri: sub_stream_uri})],
+          do: [child({:rtsp_source, :sub_stream}, %RTSP{stream_uri: sub_stream_uri})],
           else: []
 
     {[spec: spec], state}
@@ -175,7 +174,7 @@ defmodule ExNVR.Pipelines.Main do
   end
 
   @impl true
-  def handle_child_notification({:connection_lost, _ref}, :rtsp_source, _ctx, state) do
+  def handle_child_pad_removed(:rtsp_source, Pad.ref(:output, _ssrc), _ctx, state) do
     state = maybe_update_device_and_report(state, :failed)
 
     unlink_actions = [
@@ -183,24 +182,29 @@ defmodule ExNVR.Pipelines.Main do
       remove_link: {:hls_sink, Pad.ref(:video, :main_stream)}
     ]
 
-    {[remove_children: :main_stream] ++ unlink_actions, state}
+    {[remove_child: [:main_stream]] ++ unlink_actions, state}
   end
 
   @impl true
-  def handle_child_notification({:connection_lost, _ref}, _elem, _ctx, state) do
-    {[remove_child: :sub_stream, remove_link: {:hls_sink, Pad.ref(:video, :sub_stream)}], state}
+  def handle_child_pad_removed({:rtsp_source, :sub_stream}, Pad.ref(:output, _ssrc), _ctx, state) do
+    {[], state}
+  end
+
+  @impl true
+  def handle_child_pad_removed(_child, _pad, _ctx, state) do
+    {[], state}
   end
 
   @impl true
   def handle_child_notification(
-        {:rtsp_setup_complete, video_track, ref},
+        {:new_track, ssrc, track},
         :rtsp_source,
-        _ctx,
+        ctx,
         %State{} = state
       ) do
-    if video_track.codec != :H264 do
+    if track.encoding != :H264 do
       Membrane.Logger.error("""
-      Video codec #{video_track.codec} is not supported
+      Video codec #{track.encoding} is not supported
       Supported codecs are: H264
       """)
 
@@ -208,74 +212,53 @@ defmodule ExNVR.Pipelines.Main do
       {[terminate: :normal], state}
     else
       state = maybe_update_device_and_report(state, :recording)
-      handle_rtsp_stream_setup(video_track, ref, state)
+
+      spec = [
+        get_child(:rtsp_source)
+        |> via_out(Pad.ref(:output, ssrc))
+        |> child(:video_tee, Membrane.Tee.Master)
+        |> via_out(:master)
+        |> child({:storage_bin, ssrc}, %ExNVR.Elements.StorageBin{
+          device_id: state.device.id,
+          target_segment_duration: state.segment_duration
+        }),
+        get_child(:video_tee)
+        |> via_out(:copy)
+        |> via_in(Pad.ref(:video, :main_stream))
+        |> get_child(:hls_sink),
+        get_child(:video_tee)
+        |> via_out(:copy)
+        |> child({:cvs_bufferer, ssrc}, ExNVR.Elements.CVSBufferer),
+        get_child(:video_tee)
+        |> via_out(:copy)
+        |> via_in(Pad.ref(:input, :main_stream), options: [media_track: track])
+        |> get_child(:webrtc)
+      ]
+
+      {[spec: {spec, group: :main_stream}], state}
     end
   end
 
   @impl true
   def handle_child_notification(
-        {:rtsp_setup_complete, video_track, ref},
+        {:new_track, ssrc, track},
         {:rtsp_source, :sub_stream},
         _ctx,
         %State{} = state
       ) do
-    if video_track.codec != :H264 do
+    if track.encoding != :H264 do
       Membrane.Logger.error("SubStream: only H264 streams are supported now")
       {[remove_child: {:rtsp_source, :sub_stream}], state}
     else
-      handle_rtsp_sub_stream_setup(video_track, ref, state)
+      spec = [
+        get_child({:rtsp_source, :sub_stream})
+        |> via_out(Pad.ref(:output, ssrc))
+        |> via_in(Pad.ref(:video, :sub_stream))
+        |> get_child(:hls_sink)
+      ]
+
+      {[spec: spec], state}
     end
-  end
-
-  @impl true
-  def handle_child_notification(
-        {:new_rtp_stream, ssrc, _pt, _extensions},
-        {:rtp, ref},
-        _ctx,
-        state
-      ) do
-    spec = [
-      get_child({:rtp, ref})
-      |> via_out(Pad.ref(:output, ssrc), options: [depayloader: Membrane.RTP.H264.Depayloader])
-      |> child({:rtp_parser, ref}, %Membrane.H264.Parser{framerate: {0, 0}})
-      |> child(:video_tee, Membrane.Tee.Master)
-      |> via_out(:master)
-      |> child({:storage_bin, ref}, %ExNVR.Elements.StorageBin{
-        device_id: state.device.id,
-        target_segment_duration: state.segment_duration
-      }),
-      get_child(:video_tee)
-      |> via_out(:copy)
-      |> via_in(Pad.ref(:video, :main_stream))
-      |> get_child(:hls_sink),
-      get_child(:video_tee)
-      |> via_out(:copy)
-      |> child({:cvs_bufferer, ref}, ExNVR.Elements.CVSBufferer),
-      get_child(:video_tee)
-      |> via_out(:copy)
-      |> via_in(Pad.ref(:input, :main_stream), options: [media_track: state.video_track])
-      |> get_child(:webrtc)
-    ]
-
-    {[spec: {spec, group: :main_stream}], state}
-  end
-
-  @impl true
-  def handle_child_notification(
-        {:new_rtp_stream, ssrc, _pt, _extensions},
-        {:rtp, :sub_stream, ref} = rtp_child,
-        _ctx,
-        state
-      ) do
-    spec = [
-      get_child(rtp_child)
-      |> via_out(Pad.ref(:output, ssrc), options: [depayloader: Membrane.RTP.H264.Depayloader])
-      |> child({:rtp_parser, :sub_stream, ref}, %Membrane.H264.Parser{framerate: {0, 0}})
-      |> via_in(Pad.ref(:video, :sub_stream))
-      |> get_child(:hls_sink)
-    ]
-
-    {[spec: {spec, group: :sub_stream}], state}
   end
 
   @impl true
@@ -345,45 +328,12 @@ defmodule ExNVR.Pipelines.Main do
   end
 
   @impl true
-  def handle_child_pad_removed(_child, _pad, _ctx, state) do
-    {[], state}
-  end
-
-  @impl true
   def handle_terminate_request(_ctx, state) do
     :telemetry.execute(@event_prefix ++ [:terminate], %{system_time: System.system_time()}, %{
       device_id: state.device.id
     })
 
     {[], state}
-  end
-
-  defp handle_rtsp_stream_setup(%ExNVR.MediaTrack{} = video_track, ref, state) do
-    fmt_mapping =
-      Map.put(%{}, video_track.payload_type, {video_track.codec, video_track.clock_rate})
-
-    spec = [
-      get_child(:rtsp_source)
-      |> via_out(Pad.ref(:output, ref))
-      |> via_in(Pad.ref(:rtp_input, make_ref()))
-      |> child({:rtp, ref}, %SessionBin{fmt_mapping: fmt_mapping})
-    ]
-
-    {[spec: spec], %State{state | video_track: video_track}}
-  end
-
-  defp handle_rtsp_sub_stream_setup(%ExNVR.MediaTrack{} = video_track, ref, state) do
-    fmt_mapping =
-      Map.put(%{}, video_track.payload_type, {video_track.codec, video_track.clock_rate})
-
-    spec = [
-      get_child({:rtsp_source, :sub_stream})
-      |> via_out(Pad.ref(:output, ref))
-      |> via_in(Pad.ref(:rtp_input, make_ref()))
-      |> child({:rtp, :sub_stream, ref}, %SessionBin{fmt_mapping: fmt_mapping})
-    ]
-
-    {[spec: spec], %State{state | sub_stream_video_track: video_track}}
   end
 
   defp link_live_snapshot_elements(ctx, image_format) do

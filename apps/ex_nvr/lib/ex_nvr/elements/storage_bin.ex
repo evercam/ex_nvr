@@ -46,7 +46,8 @@ defmodule ExNVR.Elements.StorageBin do
       recordings_temp_dir: System.tmp_dir!(),
       pending_segments: %{},
       segment_extension: ".mp4",
-      run: nil
+      run: nil,
+      terminating?: false
     }
 
     {[spec: spec], state}
@@ -90,12 +91,21 @@ defmodule ExNVR.Elements.StorageBin do
   @impl true
   def handle_element_end_of_stream({:sink, seg_ref}, _pad, _ctx, state) do
     {state, segment} = do_save_recording(state, seg_ref)
-    {[remove_children: seg_ref, notify_parent: {:segment_stored, segment}], state}
+
+    actions = [remove_child: seg_ref, notify_parent: {:segment_stored, segment}]
+    terminate_action = if state.terminating?, do: [terminate: :normal], else: []
+
+    {actions ++ terminate_action, state}
   end
 
   @impl true
   def handle_element_end_of_stream(_element, _pad, _ctx, state) do
     {[], state}
+  end
+
+  @impl true
+  def handle_terminate_request(_ctx, state) do
+    {[], %{state | terminating?: true}}
   end
 
   defp do_save_recording(state, recording_ref) do

@@ -13,6 +13,7 @@ defmodule ExNVR.Media.Track do
           fmtp: map()
         }
 
+  @derive {Inspect, only: [:type, :encoding, :rtpmap]}
   @enforce_keys [:type]
   defstruct @enforce_keys ++ [encoding: nil, rtpmap: nil, fmtp: nil]
 

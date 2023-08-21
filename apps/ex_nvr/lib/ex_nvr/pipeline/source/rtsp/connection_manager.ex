@@ -29,7 +29,7 @@ defmodule ExNVR.Pipeline.Source.RTSP.ConnectionManager do
             reconnect_attempt: non_neg_integer(),
             keep_alive: pid(),
             tracks: [map()],
-            ignore_tracks: [atom()]
+            stream_types: [atom()]
           }
 
     @enforce_keys [
@@ -45,7 +45,7 @@ defmodule ExNVR.Pipeline.Source.RTSP.ConnectionManager do
                   :rtsp_session,
                   :keep_alive,
                   :tracks,
-                  :ignore_tracks
+                  :stream_types
                 ]
   end
 
@@ -81,7 +81,7 @@ defmodule ExNVR.Pipeline.Source.RTSP.ConnectionManager do
        reconnect_delay: opts[:reconnect_delay],
        max_reconnect_attempts: opts[:max_reconnect_attempts],
        reconnect_attempt: 0,
-       ignore_tracks: opts[:ignore_tracks] || []
+       stream_types: opts[:stream_types]
      }}
   end
 
@@ -257,7 +257,7 @@ defmodule ExNVR.Pipeline.Source.RTSP.ConnectionManager do
 
     case RTSP.describe(rtsp_session, @content_type_header) do
       {:ok, %{status: 200} = response} ->
-        tracks = get_tracks(response, connection_status.ignore_tracks)
+        tracks = get_tracks(response, connection_status.stream_types)
         {:ok, %{connection_status | tracks: tracks}}
 
       {:ok, %{status: 401}} ->
@@ -306,8 +306,6 @@ defmodule ExNVR.Pipeline.Source.RTSP.ConnectionManager do
       RTSP.get_parameter(rtsp_session)
       Process.sleep(keep_alive_interval)
       rtsp_keep_alive(rtsp_session, keep_alive_interval)
-    else
-      Process.exit(self(), :rtsp_session_closed)
     end
   end
 
@@ -323,9 +321,9 @@ defmodule ExNVR.Pipeline.Source.RTSP.ConnectionManager do
     end
   end
 
-  defp get_tracks(%{body: %ExSDP{media: media_list}}, ignore_tracks) do
+  defp get_tracks(%{body: %ExSDP{media: media_list}}, stream_types) do
     media_list
-    |> Enum.reject(&(&1.type in ignore_tracks))
+    |> Enum.filter(&(&1.type in stream_types))
     |> Enum.map(fn media ->
       %{
         type: media.type,

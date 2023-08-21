@@ -3,7 +3,6 @@ defmodule ExNVR.Pipeline.Output.WebRTC.StreamEndpoint do
   An RTC endpoint that receives NAL units from the main pipeline.
   """
 
-  require Logger
   use Membrane.Bin
 
   require Membrane.Logger
@@ -33,20 +32,18 @@ defmodule ExNVR.Pipeline.Output.WebRTC.StreamEndpoint do
   def handle_parent_notification({:media_track, media_track}, ctx, state) do
     {:endpoint, endpoint_id} = ctx.name
 
+    rtpmap = media_track.rtpmap
+
     track =
       Track.new(
         media_track.type,
         Track.stream_id(),
         endpoint_id,
-        media_track.codec,
-        media_track.clock_rate,
-        %{media_track.payload_type => {"#{media_track.codec}", media_track.clock_rate}},
+        media_track.encoding,
+        rtpmap.clock_rate,
+        %{rtpmap.payload_type => {"#{media_track.encoding}", rtpmap.clock_rate}},
         ctx: %{
-          rtpmap: %{
-            payload_type: media_track.payload_type,
-            clock_rate: media_track.clock_rate,
-            encoding: "#{media_track.codec}"
-          }
+          rtpmap: rtpmap
         }
       )
 
@@ -58,7 +55,10 @@ defmodule ExNVR.Pipeline.Output.WebRTC.StreamEndpoint do
 
   @impl true
   def handle_parent_notification(:remove_track, _ctx, state) do
-    Logger.warning("Remove track notification received, removed track: #{state.track.id}")
+    Membrane.Logger.warning(
+      "Remove track notification received, removed track: #{state.track.id}"
+    )
+
     {[notify_parent: {:publish, {:removed_tracks, [state.track]}}], %{state | track: nil}}
   end
 

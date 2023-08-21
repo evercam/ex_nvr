@@ -18,6 +18,10 @@ defmodule ExNVR.Pipeline.Source.RTSP.Source do
                 spec: binary(),
                 default: nil,
                 description: "A RTSP URI from where to read the stream"
+              ],
+              stream_types: [
+                spec: [:video | :audio | :application],
+                description: "The type of stream to read"
               ]
 
   def_output_pad :output,
@@ -30,6 +34,7 @@ defmodule ExNVR.Pipeline.Source.RTSP.Source do
     {[],
      %{
        stream_uri: options[:stream_uri],
+       stream_types: options[:stream_types],
        connection_manager: nil,
        buffers: [],
        play?: false,
@@ -67,7 +72,7 @@ defmodule ExNVR.Pipeline.Source.RTSP.Source do
   @impl true
   def handle_info({:connection_info, {:connection_failed, error}}, _ctx, state) do
     Membrane.Logger.error("could not connect to RTSP server due to #{inspect(error)}")
-    {connection_lost_actions(state), %{state | play?: false}}
+    {connection_lost_actions(state), %{state | play?: false, buffers: []}}
   end
 
   @impl true
@@ -85,7 +90,7 @@ defmodule ExNVR.Pipeline.Source.RTSP.Source do
     [event: {state.output_pad, %Membrane.Event.Discontinuity{}}, notify_parent: :connection_lost]
   end
 
-  defp connection_lost_actions(_state), do: []
+  defp connection_lost_actions(_state), do: [notify_parent: :connection_lost]
 
   defp do_handle_setup(state) do
     {:ok, connection_manager} =
@@ -94,7 +99,7 @@ defmodule ExNVR.Pipeline.Source.RTSP.Source do
         stream_uri: state[:stream_uri],
         max_reconnect_attempts: @max_reconnect_attempts,
         reconnect_delay: @reconnect_delay,
-        ignore_tracks: []
+        stream_types: state.stream_types
       )
 
     Process.monitor(connection_manager)

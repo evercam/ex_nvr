@@ -5,6 +5,8 @@ defmodule ExNVR.Pipeline.Source.RTSP do
 
   use Membrane.Bin
 
+  require Membrane.Logger
+
   alias ExNVR.Pipeline.Source.RTSP
 
   def_output_pad :output,
@@ -18,12 +20,23 @@ defmodule ExNVR.Pipeline.Source.RTSP do
                 description: """
                 The uri of the resource in the RTSP server to read the streams from.
                 """
+              ],
+              stream_types: [
+                spec: [:video | :audio | :application],
+                default: [:video],
+                description: """
+                The type of streams to read from the RTSP server.
+                Defaults to read only video streams
+                """
               ]
 
   @impl true
   def handle_init(_ctx, options) do
     spec = [
-      child(:source, %RTSP.Source{stream_uri: options.stream_uri})
+      child(:source, %RTSP.Source{
+        stream_uri: options.stream_uri,
+        stream_types: options.stream_types
+      })
     ]
 
     {[spec: spec], %{tracks: [], ssrc_to_track: %{}}}
@@ -31,6 +44,8 @@ defmodule ExNVR.Pipeline.Source.RTSP do
 
   @impl true
   def handle_child_notification({:rtsp_setup_complete, tracks}, _element, _ctx, state) do
+    Membrane.Logger.info("Received rtsp setup complete notification with #{inspect(tracks)}")
+
     fmt_mapping =
       Enum.map(tracks, fn %{rtpmap: rtpmap} = track ->
         {rtpmap.payload_type, {track.encoding, rtpmap.clock_rate}}
@@ -52,9 +67,21 @@ defmodule ExNVR.Pipeline.Source.RTSP do
   end
 
   @impl true
-  def handle_child_notification(:connection_lost, :source, _ctx, state) do
-    {[remove_child: :rtp_session, remove_child: Map.keys(state.ssrc_to_track)],
-     %{state | ssrc_to_track: %{}, tracks: []}}
+  def handle_child_notification(:connection_lost, :source, ctx, state) do
+    Membrane.Logger.info("Connection lost to RTSP server")
+
+    ssrcs = Map.keys(state.ssrc_to_track)
+
+    childs =
+      ctx.children
+      |> Map.keys()
+      |> Enum.filter(fn
+        {_, ssrc} -> ssrc in ssrcs
+        :rtp_session -> true
+        _other -> false
+      end)
+
+    {[remove_child: childs], %{state | ssrc_to_track: %{}, tracks: []}}
   end
 
   @impl true
@@ -64,9 +91,12 @@ defmodule ExNVR.Pipeline.Source.RTSP do
         _ctx,
         state
       ) do
-    track = Enum.find(state.tracks, fn track -> track.rtpmap.payload_type == pt end)
-    ssrc_to_track = Map.put(state.ssrc_to_track, ssrc, track)
-    {[notify_parent: {:new_track, ssrc, track}], %{state | ssrc_to_track: ssrc_to_track}}
+    if track = Enum.find(state.tracks, fn track -> track.rtpmap.payload_type == pt end) do
+      ssrc_to_track = Map.put(state.ssrc_to_track, ssrc, track)
+      {[notify_parent: {:new_track, ssrc, track}], %{state | ssrc_to_track: ssrc_to_track}}
+    else
+      {[], state}
+    end
   end
 
   @impl true
@@ -78,7 +108,7 @@ defmodule ExNVR.Pipeline.Source.RTSP do
   def handle_pad_added(Pad.ref(:output, ssrc) = pad, _ctx, state) do
     track = Map.fetch!(state.ssrc_to_track, ssrc)
     spec = [get_specs(track, ssrc) |> bin_output(pad)]
-    {[spec: {spec, group: ssrc}], state}
+    {[spec: spec], state}
   end
 
   defp get_specs(%{type: :video} = track, ssrc) do
