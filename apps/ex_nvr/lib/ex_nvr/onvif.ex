@@ -3,6 +3,8 @@ defmodule ExNVR.Onvif do
   Onvif client
   """
 
+  import Mockery.Macro
+
   alias ExNVR.Onvif.Discovery
 
   @onvif_path Path.join([Application.app_dir(:ex_nvr), "priv", "onvif"])
@@ -12,20 +14,19 @@ defmodule ExNVR.Onvif do
   @doc """
   Probe the network for IP cameras
   """
-  @spec discover() :: {:ok, [map()]} | {:error, term()}
-  def discover() do
-    case Discovery.probe(@default_timeout) do
+  @spec discover(Keyword.t()) :: {:ok, [map()]} | {:error, term()}
+  def discover(opts \\ []) do
+    timeout = opts[:timeout] || @default_timeout
+
+    case Discovery.probe(timeout) do
       {:ok, matches} ->
-        Enum.map(matches, fn %{addresses: addrs} = match ->
-          Enum.reduce_while(addrs, %{}, fn addr, acc ->
-            if check_connectivity?(addr) do
-              {:halt, Map.delete(match, :addresses) |> Map.put(:url, addr)}
-            else
-              {:cont, acc}
-            end
-          end)
+        matches
+        |> Enum.map(fn %{addresses: addrs} = match ->
+          match
+          |> Map.delete(:addresses)
+          |> Map.put(:url, Enum.find(addrs, &check_connectivity?/1))
         end)
-        |> Enum.filter(&(&1 != %{}))
+        |> Enum.reject(&is_nil(&1.url))
         |> then(&{:ok, &1})
 
       error ->
@@ -36,7 +37,7 @@ defmodule ExNVR.Onvif do
   defp check_connectivity?(address) do
     wsdl = %{init_wsdl_model(@device_model_path) | endpoint: address}
 
-    case Soap.call(wsdl, "GetSystemDateAndTime", %{}) do
+    case mockable(Soap).call(wsdl, "GetSystemDateAndTime", %{}) do
       {:ok, %{status_code: 200}} -> true
       _other -> false
     end

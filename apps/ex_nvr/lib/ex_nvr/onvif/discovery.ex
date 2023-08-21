@@ -1,6 +1,8 @@
 defmodule ExNVR.Onvif.Discovery do
   @moduledoc false
 
+  import Mockery.Macro
+
   @multicast_addr {239, 255, 255, 250}
   @multicast_port 3702
   @probe_message """
@@ -21,10 +23,11 @@ defmodule ExNVR.Onvif.Discovery do
     </e:Body>
   </e:Envelope>
   """
+  @scope_regex ~r[^onvif://www.onvif.org/(name|hardware)/(.*)]
 
   def probe(timeout) do
-    with {:ok, socket} <- :gen_udp.open(0, [:binary, active: false]),
-         :ok <- :gen_udp.send(socket, @multicast_addr, @multicast_port, @probe_message) do
+    with {:ok, socket} <- mockable(:gen_udp).open(0, [:binary, active: false]),
+         :ok <- mockable(:gen_udp).send(socket, @multicast_addr, @multicast_port, @probe_message) do
       socket
       |> recv(timeout)
       |> Map.values()
@@ -37,7 +40,7 @@ defmodule ExNVR.Onvif.Discovery do
   end
 
   defp recv(socket, timeout, acc \\ %{}) do
-    case :gen_udp.recv(socket, 0, timeout) do
+    case mockable(:gen_udp).recv(socket, 0, timeout) do
       {:ok, {address, port, packet}} ->
         acc = Map.update(acc, {address, port}, packet, fn data -> data <> packet end)
         recv(socket, timeout, acc)
@@ -49,11 +52,19 @@ defmodule ExNVR.Onvif.Discovery do
 
   defp format_response(response) do
     probe_match = get_in(response, [:"d:ProbeMatches", :"d:ProbeMatch"])
+    scopes = probe_match[:"d:Scopes"] |> String.split()
 
     %{
       types: probe_match[:"d:Types"] |> String.split(),
-      scopes: probe_match[:"d:Scopes"] |> String.split(),
       addresses: probe_match[:"d:XAddrs"] |> String.split()
     }
+    |> Map.merge(parse_scopes(scopes))
+  end
+
+  defp parse_scopes(scopes) do
+    scopes
+    |> Enum.flat_map(&Regex.scan(@scope_regex, &1, capture: :all_but_first))
+    |> Enum.map(fn [key, value] -> {String.to_atom(key), URI.decode(value)} end)
+    |> Map.new()
   end
 end
