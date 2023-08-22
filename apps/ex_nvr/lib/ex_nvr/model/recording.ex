@@ -7,6 +7,26 @@ defmodule ExNVR.Model.Recording do
 
   alias Ecto.Changeset
 
+  @derive {Flop.Schema,
+           filterable: [:start_date, :end_date, :device_name],
+           sortable: [:start_date, :end_date, :device_name],
+           default_order: %{
+            order_by: [:start_date, :end_date, :device_name],
+            order_directions: [:desc, :desc, :asc]
+          },
+           adapter_opts: [
+            join_fields: [
+              device_name: [
+                binding: :joined_device,
+                field: :name,
+                ecto_type: :string
+              ]
+            ]
+          ],
+           pagination_types: [:page],
+           default_limit: 100,
+           max_limit: 150}
+
   @type t :: %__MODULE__{
           start_date: DateTime.t(),
           end_date: DateTime.t(),
@@ -38,6 +58,23 @@ defmodule ExNVR.Model.Recording do
     %__MODULE__{}
     |> Changeset.cast(params, @required_fields)
     |> Changeset.validate_required(@required_fields)
+  end
+
+  def recordings_by_device_name() do
+    from(r in __MODULE__,
+      join: d in assoc(r, :device),
+      as: :joined_device,
+      on: r.device_id == d.id,
+      select: %{
+        id: r.id,
+        start_date: r.start_date,
+        end_date: r.end_date,
+        device_id: r.device_id,
+        device_name: d.name,
+        timezone: d.timezone,
+        filename: r.filename
+      }
+    )
   end
 
   def filter(query \\ __MODULE__, params) do
