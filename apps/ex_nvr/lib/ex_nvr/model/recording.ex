@@ -11,18 +11,18 @@ defmodule ExNVR.Model.Recording do
            filterable: [:start_date, :end_date, :device_name],
            sortable: [:start_date, :end_date, :device_name],
            default_order: %{
-            order_by: [:start_date, :end_date, :device_name],
-            order_directions: [:desc, :desc, :asc]
-          },
+             order_by: [:start_date, :end_date, :device_name],
+             order_directions: [:desc, :desc, :asc]
+           },
            adapter_opts: [
-            join_fields: [
-              device_name: [
-                binding: :joined_device,
-                field: :name,
-                ecto_type: :string
-              ]
-            ]
-          ],
+             join_fields: [
+               device_name: [
+                 binding: :joined_device,
+                 field: :name,
+                 ecto_type: :string
+               ]
+             ]
+           ],
            pagination_types: [:page],
            default_limit: 100,
            max_limit: 150}
