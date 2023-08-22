@@ -3,12 +3,8 @@ defmodule ExNVR.Onvif do
   Onvif client
   """
 
-  import Mockery.Macro
+  alias ExNVR.Onvif.{Discovery, Http}
 
-  alias ExNVR.Onvif.Discovery
-
-  @onvif_path Path.join([Application.app_dir(:ex_nvr), "priv", "onvif"])
-  @device_model_path Path.join(@onvif_path, "devicemgmt.wsdl")
   @default_timeout 3_000
 
   @doc """
@@ -34,17 +30,30 @@ defmodule ExNVR.Onvif do
     end
   end
 
-  defp check_connectivity?(address) do
-    wsdl = %{init_wsdl_model(@device_model_path) | endpoint: address}
+  def get_device_information(url, opts \\ []) do
+    url
+    |> Http.call("GetDeviceInformation", %{}, opts)
+    |> handle_response(Keyword.get(opts, :parse, true))
+  end
 
-    case mockable(Soap).call(wsdl, "GetSystemDateAndTime", %{}) do
+  def get_capabilities(url, opts \\ []) do
+    url
+    |> Http.call("GetCapabilities", %{}, opts)
+    |> handle_response(Keyword.get(opts, :parse, true))
+  end
+
+  defp check_connectivity?(address) do
+    case Http.call(address, "GetSystemDateAndTime", %{}) do
       {:ok, %{status_code: 200}} -> true
       _other -> false
     end
   end
 
-  defp init_wsdl_model(path) do
-    {:ok, model} = Soap.init_model(path)
-    model
+  defp handle_response(response, false), do: response
+
+  defp handle_response({:ok, %{body: body, status_code: 200} = resp}, _parse) do
+    {:ok, Soap.Response.parse(%{resp | body: String.replace(body, ["\r\n", "\r", "\n"], "")})}
   end
+
+  defp handle_response(response, _parse), do: response
 end
