@@ -9,6 +9,7 @@ defmodule ExNVRWeb.RecordingListLive do
   def render(assigns) do
     ~H"""
     <div class="grow">
+      <.filter_form meta={@meta} devices={@devices} id="recording-filter-form" />
 
       <Flop.Phoenix.table
         id="recordings"
@@ -16,16 +17,17 @@ defmodule ExNVRWeb.RecordingListLive do
         items={@recordings}
         meta={@meta}
         path={~p"/recordings"}
-        >
-          <:col :let={recording} label="Id" field={:id}><%= recording.id %></:col>
-          <:col :let={recording} label="Device" field={:device_name}><%= recording.device_name %></:col>
-          <:col :let={recording} label="Start-date" field={:start_date}>
-            <%= format_date(recording.start_date, recording.timezone) %>
-          </:col>
-          <:col :let={recording} label="End-date" field={:end_date}>
-            <%= format_date(recording.end_date, recording.timezone) %>
-          </:col>
-          <:action :let={recording}>
+      >
+        <:col :let={recording} label="Id" field={:id}><%= recording.id %></:col>
+        <:col :let={recording} label="Device" field={:device_name}><%= recording.device_name %></:col>
+        <:col :let={recording} label="Start-date" field={:start_date}>
+          <%= format_date(recording.start_date, recording.timezone) %>
+        </:col>
+        <:col :let={recording} label="End-date" field={:end_date}>
+          <%= format_date(recording.end_date, recording.timezone) %>
+        </:col>
+        <:action :let={recording}>
+          <div class="flex justify-end">
             <.link
               href={~p"/api/devices/#{recording.device_id}/recordings/#{recording.filename}/blob"}
               class="inline-flex items-center text-gray-900 rounded-lg"
@@ -46,8 +48,9 @@ defmodule ExNVRWeb.RecordingListLive do
                 />
               </svg>
             </.link>
-          </:action>
-        </Flop.Phoenix.table>
+          </div>
+        </:action>
+      </Flop.Phoenix.table>
 
       <nav aria-label="Page navigation" class="flex justify-end mt-4">
         <ul class="flex items-center -space-x-px h-8 text-sm">
@@ -56,12 +59,15 @@ defmodule ExNVRWeb.RecordingListLive do
               href="#"
               phx-click="nav"
               phx-value-page={@meta.previous_page}
-              class={["flex items-center justify-center px-3 h-8 ml-0 leading-tight bg-white border border-gray-300 rounded-l-lg"] ++
-                if not @meta.has_previous_page?,
-                  do:
-                    ["pointer-events-none text-gray-300"],
-                  else:
-                    ["text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"]
+              class={
+                [
+                  "flex items-center justify-center px-3 h-8 ml-0 leading-tight bg-white border border-gray-300 rounded-l-lg"
+                ] ++
+                  if not @meta.has_previous_page?,
+                    do: ["pointer-events-none text-gray-300"],
+                    else: [
+                      "text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
+                    ]
               }
             >
               <span class="sr-only">Previous</span>
@@ -89,15 +95,20 @@ defmodule ExNVRWeb.RecordingListLive do
                   href="#"
                   phx-click="nav"
                   phx-value-page={page}
-                  class={["flex items-center justify-center px-3 h-8 leading-tight border dark:border-gray-700"] ++
-                    if @meta.current_page == page,
-                      do:
-                        ["z-10 pointer-events-none text-blue-600 bg-blue-50 border-blue-300 hover:bg-blue-100 hover:text-blue-700 dark:bg-gray-700 dark:text-white"],
-                      else:
-                        ["text-gray-500 bg-white border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"]
+                  class={
+                    [
+                      "flex items-center justify-center px-3 h-8 leading-tight border dark:border-gray-700"
+                    ] ++
+                      if @meta.current_page == page,
+                        do: [
+                          "z-10 pointer-events-none text-blue-600 bg-blue-50 border-blue-300 hover:bg-blue-100 hover:text-blue-700 dark:bg-gray-700 dark:text-white"
+                        ],
+                        else: [
+                          "text-gray-500 bg-white border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
+                        ]
                   }
                 >
-                <%= page %>
+                  <%= page %>
                 </a>
               </li>
             <% end %>
@@ -115,12 +126,17 @@ defmodule ExNVRWeb.RecordingListLive do
                     href="#"
                     phx-click="nav"
                     phx-value-page={idx}
-                    class={["flex items-center justify-center px-3 h-8 leading-tight border dark:border-gray-700"] ++
-                      if @meta.current_page == idx,
-                        do:
-                          ["z-10 pointer-events-none text-blue-600 bg-blue-50 border-blue-300 hover:bg-blue-100 hover:text-blue-700 dark:bg-gray-700 dark:text-white"],
-                        else:
-                          ["text-gray-500 bg-white border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"]
+                    class={
+                      [
+                        "flex items-center justify-center px-3 h-8 leading-tight border dark:border-gray-700"
+                      ] ++
+                        if @meta.current_page == idx,
+                          do: [
+                            "z-10 pointer-events-none text-blue-600 bg-blue-50 border-blue-300 hover:bg-blue-100 hover:text-blue-700 dark:bg-gray-700 dark:text-white"
+                          ],
+                          else: [
+                            "text-gray-500 bg-white border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
+                          ]
                     }
                   >
                     <%= idx %>
@@ -141,31 +157,41 @@ defmodule ExNVRWeb.RecordingListLive do
                   href="#"
                   phx-click="nav"
                   phx-value-page={page}
-                  class={["flex items-center justify-center px-3 h-8 leading-tight border dark:border-gray-700"] ++
-                    if @meta.current_page == page,
-                      do:
-                        ["z-10 pointer-events-none text-blue-600 bg-blue-50 border-blue-300 hover:bg-blue-100 hover:text-blue-700 dark:bg-gray-700 dark:text-white"],
-                      else:
-                        ["text-gray-500 bg-white border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"]
+                  class={
+                    [
+                      "flex items-center justify-center px-3 h-8 leading-tight border dark:border-gray-700"
+                    ] ++
+                      if @meta.current_page == page,
+                        do: [
+                          "z-10 pointer-events-none text-blue-600 bg-blue-50 border-blue-300 hover:bg-blue-100 hover:text-blue-700 dark:bg-gray-700 dark:text-white"
+                        ],
+                        else: [
+                          "text-gray-500 bg-white border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
+                        ]
                   }
                 >
-                <%= page %>
+                  <%= page %>
                 </a>
               </li>
             <% end %>
           <% else %>
-          <%= for idx <-  Enum.to_list(1..@meta.total_pages) do %>
+            <%= for idx <-  Enum.to_list(1..@meta.total_pages) do %>
               <li>
                 <a
                   href="#"
                   phx-click="nav"
                   phx-value-page={idx}
-                  class={["flex items-center justify-center px-3 h-8 leading-tight border dark:border-gray-700"] ++
-                    if @meta.current_page == idx,
-                      do:
-                        ["z-10 pointer-events-none text-blue-600 bg-blue-50 border-blue-300 hover:bg-blue-100 hover:text-blue-700 dark:bg-gray-700 dark:text-white"],
-                      else:
-                        ["text-gray-500 bg-white border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"]
+                  class={
+                    [
+                      "flex items-center justify-center px-3 h-8 leading-tight border dark:border-gray-700"
+                    ] ++
+                      if @meta.current_page == idx,
+                        do: [
+                          "z-10 pointer-events-none text-blue-600 bg-blue-50 border-blue-300 hover:bg-blue-100 hover:text-blue-700 dark:bg-gray-700 dark:text-white"
+                        ],
+                        else: [
+                          "text-gray-500 bg-white border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
+                        ]
                   }
                 >
                   <%= idx %>
@@ -178,12 +204,15 @@ defmodule ExNVRWeb.RecordingListLive do
               href="#"
               phx-click="nav"
               phx-value-page={@meta.next_page}
-              class={["flex items-center justify-center px-3 h-8 leading-tight border border-gray-300 bg-white rounded-r-lg"] ++
-                if not @meta.has_next_page?,
-                  do:
-                    ["pointer-events-none text-gray-300"],
-                  else:
-                    ["text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"]
+              class={
+                [
+                  "flex items-center justify-center px-3 h-8 leading-tight border border-gray-300 bg-white rounded-r-lg"
+                ] ++
+                  if not @meta.has_next_page?,
+                    do: ["pointer-events-none text-gray-300"],
+                    else: [
+                      "text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
+                    ]
               }
             >
               <span class="sr-only">Next</span>
@@ -206,13 +235,61 @@ defmodule ExNVRWeb.RecordingListLive do
           </li>
         </ul>
       </nav>
-
     </div>
     """
   end
 
-  def mount(_session, socket) do
-    {:ok, assign(socket, %{})}
+  def filter_form(%{meta: meta, devices: devices} = assigns) do
+    assigns = assign(assigns, form: Phoenix.Component.to_form(meta), meta: meta, devices: devices)
+
+    ~H"""
+    <div class="flex space-x-4">
+      <.form
+        for={@form}
+        id={@id}
+        phx-submit="update-filter"
+        phx-change="update-filter"
+        class="flex items-center space-x-4"
+      >
+        <Flop.Phoenix.filter_fields
+          :let={f}
+          form={@form}
+          fields={[
+            device_name: [
+              op: :like_and,
+              type: "select",
+              options: Enum.map(@devices, & &1.name),
+              label: "Device"
+            ],
+            start_date: [op: :>=, type: "datetime-local", label: "Start Date"],
+            end_date: [op: :<=, type: "datetime-local", label: "End Date"]
+          ]}
+        >
+          <.input field={f.field} type={f.type} phx-debounce="500" {f.rest} />
+        </Flop.Phoenix.filter_fields>
+
+        <div class="flex items-center">
+          <button
+            class="button bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded"
+            type="submit"
+          >
+            Filter
+          </button>
+        </div>
+      </.form>
+    </div>
+    """
+  end
+
+  def mount(_params, _session, socket) do
+    {:ok, assign(socket, devices: Devices.list())}
+  end
+
+  @spec handle_event(<<_::24, _::_*80>>, map, Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_event("update-filter", params, socket) do
+    params = Map.delete(params, "_target")
+    {:noreply, push_patch(socket, to: ~p"/recordings?#{params}")}
   end
 
   def handle_event("nav", %{"page" => page}, socket) do
@@ -222,7 +299,7 @@ defmodule ExNVRWeb.RecordingListLive do
   def handle_params(params, _uri, socket) do
     case Recordings.list(params) do
       {:ok, {recordings, meta}} ->
-        {:noreply, assign(socket, %{recordings: recordings, meta: meta, form: nil, devices: Devices.list()})}
+        {:noreply, assign(socket, %{recordings: recordings, meta: meta, form: nil})}
 
       {:error, _meta} ->
         {:noreply, push_navigate(socket, to: ~p"/recordings")}
