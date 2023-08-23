@@ -6,7 +6,7 @@ defmodule ExNVR.RTSP.SourcePipeline do
 
   @impl true
   def handle_init(_ctx, options) do
-    spec = [child(:source, %Source{stream_uri: options[:stream_uri]})]
+    spec = [child(:source, %Source{stream_uri: options[:stream_uri], stream_types: [:video]})]
 
     {[spec: spec], %{}}
   end

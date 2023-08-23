@@ -41,7 +41,7 @@ defmodule ExNVR.Pipelines.Main do
 
   alias ExNVR.{Devices, Recordings, Utils}
   alias ExNVR.Model.Device
-  alias ExNVR.Pipeline.Source.RTSP
+  alias ExNVR.Pipeline.{Output, Source}
 
   @event_prefix [:ex_nvr, :main_pipeline]
 
@@ -58,8 +58,6 @@ defmodule ExNVR.Pipelines.Main do
     Pipeline state
 
     `device` - The device from where to pull the media streams
-    `video_track` - Media description got from calling DESCRIBE method on the RTSP uri
-    `sub_stream_video_track` - Media description of the sub stream got from calling DESCRIBE method on the RTSP uri
     `segment_duration` - The duration of each video chunk saved by the storage bin.
     `supervisor_pid` - The supervisor pid of this pipeline (needed to stop a pipeline)
     `live_snapshot_waiting_pids` - List of pid waiting for live snapshot request to be completed
@@ -67,8 +65,6 @@ defmodule ExNVR.Pipelines.Main do
     """
     @type t :: %__MODULE__{
             device: Device.t(),
-            video_track: ExNVR.MediaTrack.t(),
-            sub_stream_video_track: ExNVR.MediaTrack.t(),
             segment_duration: non_neg_integer(),
             supervisor_pid: pid(),
             live_snapshot_waiting_pids: list(),
@@ -80,8 +76,6 @@ defmodule ExNVR.Pipelines.Main do
     defstruct @enforce_keys ++
                 [
                   segment_duration: @default_segment_duration,
-                  video_track: nil,
-                  sub_stream_video_track: nil,
                   supervisor_pid: nil,
                   live_snapshot_waiting_pids: [],
                   rtc_engine: nil
@@ -109,11 +103,6 @@ defmodule ExNVR.Pipelines.Main do
   @spec live_snapshot(Device.t(), :jpeg | :png) :: term()
   def live_snapshot(device, image_format) do
     Pipeline.call(pipeline_pid(device), {:live_snapshot, image_format})
-  end
-
-  @spec media_track(Device.t(), :main_stream | :sub_stream) :: term()
-  def media_track(device, stream \\ :main_stream) do
-    Pipeline.call(pipeline_pid(device), {:media_track, stream})
   end
 
   def add_webrtc_peer(device, peer_id, channel_pid) do
@@ -146,20 +135,20 @@ defmodule ExNVR.Pipelines.Main do
       rtc_engine: options[:rtc_engine]
     }
 
-    hls_sink = %ExNVR.Pipeline.Output.HLS{
+    hls_sink = %Output.HLS{
       location: Path.join(Utils.hls_dir(device.id), "live"),
       segment_name_prefix: "live"
     }
 
     spec =
       [
-        child(:rtsp_source, %RTSP{stream_uri: stream_uri}),
+        child(:rtsp_source, %Source.RTSP{stream_uri: stream_uri}),
         {child(:hls_sink, hls_sink, get_if_exists: true), crash_group: {"hls", :temporary}},
         child(:snapshooter, ExNVR.Elements.SnapshotBin),
-        child(:webrtc, %ExNVR.Pipeline.Output.WebRTC{stream_id: device.id})
+        child(:webrtc, %Output.WebRTC{stream_id: device.id})
       ] ++
         if sub_stream_uri,
-          do: [child({:rtsp_source, :sub_stream}, %RTSP{stream_uri: sub_stream_uri})],
+          do: [child({:rtsp_source, :sub_stream}, %Source.RTSP{stream_uri: sub_stream_uri})],
           else: []
 
     {[spec: spec], state}
@@ -174,32 +163,10 @@ defmodule ExNVR.Pipelines.Main do
   end
 
   @impl true
-  def handle_child_pad_removed(:rtsp_source, Pad.ref(:output, _ssrc), _ctx, state) do
-    state = maybe_update_device_and_report(state, :failed)
-
-    unlink_actions = [
-      remove_link: {:webrtc, Pad.ref(:input, :main_stream)},
-      remove_link: {:hls_sink, Pad.ref(:video, :main_stream)}
-    ]
-
-    {[remove_child: [:main_stream]] ++ unlink_actions, state}
-  end
-
-  @impl true
-  def handle_child_pad_removed({:rtsp_source, :sub_stream}, Pad.ref(:output, _ssrc), _ctx, state) do
-    {[], state}
-  end
-
-  @impl true
-  def handle_child_pad_removed(_child, _pad, _ctx, state) do
-    {[], state}
-  end
-
-  @impl true
   def handle_child_notification(
         {:new_track, ssrc, track},
         :rtsp_source,
-        ctx,
+        _ctx,
         %State{} = state
       ) do
     if track.encoding != :H264 do
@@ -274,6 +241,28 @@ defmodule ExNVR.Pipelines.Main do
   end
 
   @impl true
+  def handle_child_pad_removed(:rtsp_source, Pad.ref(:output, _ssrc), _ctx, state) do
+    state = maybe_update_device_and_report(state, :failed)
+
+    unlink_actions = [
+      remove_link: {:webrtc, Pad.ref(:input, :main_stream)},
+      remove_link: {:hls_sink, Pad.ref(:video, :main_stream)}
+    ]
+
+    {[remove_child: [:main_stream]] ++ unlink_actions, state}
+  end
+
+  @impl true
+  def handle_child_pad_removed({:rtsp_source, :sub_stream}, Pad.ref(:output, _ssrc), _ctx, state) do
+    {[], state}
+  end
+
+  @impl true
+  def handle_child_pad_removed(_child, _pad, _ctx, state) do
+    {[], state}
+  end
+
+  @impl true
   def handle_crash_group_down(group, ctx, state) do
     Membrane.Logger.error("Group '#{group}' crashed")
     {[remove_children: ctx.members], state}
@@ -302,16 +291,6 @@ defmodule ExNVR.Pipelines.Main do
   end
 
   @impl true
-  def handle_call({:media_track, :main_stream}, _ctx, state) do
-    {[reply: state.video_track], state}
-  end
-
-  @impl true
-  def handle_call({:media_track, :sub_stream}, _ctx, state) do
-    {[reply: state.sub_stream_video_track], state}
-  end
-
-  @impl true
   def handle_call({:add_peer, _peer} = message, _ctx, state) do
     case state.device.state do
       :recording ->
@@ -333,7 +312,7 @@ defmodule ExNVR.Pipelines.Main do
       device_id: state.device.id
     })
 
-    {[], state}
+    {[terminate: :normal], state}
   end
 
   defp link_live_snapshot_elements(ctx, image_format) do

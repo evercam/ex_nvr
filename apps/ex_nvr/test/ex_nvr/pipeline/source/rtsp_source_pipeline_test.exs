@@ -12,6 +12,8 @@ defmodule ExNVR.Pipeline.Source.RTSP.SourcePipelineTest do
 
   @rtsp_uri "rtsp://example.com:554/video1"
 
+  @rtp_packets "../../../fixtures/rtp/video-30-10s.rtp" |> Path.expand(__DIR__) |> File.read!()
+
   test "receive media packets" do
     Application.put_env(
       :ex_nvr,
@@ -23,7 +25,13 @@ defmodule ExNVR.Pipeline.Source.RTSP.SourcePipelineTest do
 
     assert_pipeline_notified(pipeline_pid, :source, {:rtsp_setup_complete, _tracks})
     assert_sink_stream_format(pipeline_pid, :sink, %Membrane.RemoteStream{type: :packetized})
-    assert_sink_buffer(pipeline_pid, :sink, %Membrane.Buffer{payload: <<1, 2, 3, 4, 5>>})
+
+    # check only the few first packets
+    # it takes time to check them all
+    for <<size::16, packet::binary-size(size) <- :binary.part(@rtp_packets, {0, 10_000})>> do
+      assert_sink_buffer(pipeline_pid, :sink, %Membrane.Buffer{payload: ^packet})
+      packet
+    end
   end
 
   test "receive connection lost notification" do

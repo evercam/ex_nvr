@@ -21,6 +21,7 @@ defmodule ExNVR.Pipeline.Source.RTSP.Source do
               ],
               stream_types: [
                 spec: [:video | :audio | :application],
+                default: [:video, :audio, :application],
                 description: "The type of stream to read"
               ]
 

@@ -120,14 +120,8 @@ defmodule ExNVR.Pipeline.Source.RTSP do
     |> child({:rtp_parser, ssrc}, %Membrane.H264.Parser{sps: sps, pps: pps})
   end
 
-  defp get_specs(%{type: :audio} = track, ssrc) do
-    get_child(:rtp_session)
-    |> via_out(Pad.ref(:output, ssrc), options: [depayloader: get_depayloader(track)])
-  end
-
-  defp get_specs(%{type: :application} = track, ssrc) do
-    get_child(:rtp_session)
-    |> via_out(Pad.ref(:output, ssrc), options: [depayloader: get_depayloader(track)])
+  defp get_specs(%{type: type} = track, ssrc) do
+    raise "Support for tracks for type '#{type}' not yet implemented"
   end
 
   defp get_depayloader(%{encoding: :H264}), do: Membrane.RTP.H264.Depayloader
