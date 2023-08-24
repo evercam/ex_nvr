@@ -28,6 +28,23 @@ import Hls from "hls.js"
 const MANIFEST_LOAD_TIMEOUT = 60_000
 
 let Hooks = {
+    VideoPopup: {
+        mounted() {
+            //this.el.addEventListener("mouseenter", this.showPopup);
+            this.el.addEventListener("click", this.showPopup);
+        },
+        showPopup(event) {
+            event.preventDefault();
+            const popupContainer = document.getElementById("popup-container");
+            const videoElement = popupContainer.querySelector("video");
+            const videoUrl = event.currentTarget.getAttribute("phx-value-url");
+            videoElement.src = videoUrl;
+            
+            // Display the popup container
+            popupContainer.classList.remove("hidden");
+            videoElement.play();
+        },
+      },      
     Timeline: {
         mounted() {
             createTimeline(this.el)
