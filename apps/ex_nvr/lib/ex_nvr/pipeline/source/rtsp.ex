@@ -7,6 +7,7 @@ defmodule ExNVR.Pipeline.Source.RTSP do
 
   require Membrane.Logger
 
+  alias ExNVR.Media.Track
   alias ExNVR.Pipeline.Source.RTSP
 
   def_output_pad :output,
@@ -111,7 +112,7 @@ defmodule ExNVR.Pipeline.Source.RTSP do
     {[spec: spec], state}
   end
 
-  defp get_specs(%{type: :video} = track, ssrc) do
+  defp get_specs(%Track{type: :video} = track, ssrc) do
     sps = track.fmtp.sprop_parameter_sets.sps
     pps = track.fmtp.sprop_parameter_sets.pps
 
@@ -120,7 +121,7 @@ defmodule ExNVR.Pipeline.Source.RTSP do
     |> child({:rtp_parser, ssrc}, %Membrane.H264.Parser{sps: sps, pps: pps})
   end
 
-  defp get_specs(%{type: type} = track, ssrc) do
+  defp get_specs(%Track{type: type}, _ssrc) do
     raise "Support for tracks for type '#{type}' not yet implemented"
   end
 
