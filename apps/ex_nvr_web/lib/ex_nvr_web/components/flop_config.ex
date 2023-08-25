@@ -12,8 +12,7 @@ defmodule ExNVRWeb.FlopConfig do
         class: "bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50"
       ],
       tbody_td_attrs: [class: "relative w-14 p-0 p-4"],
-      symbol_attrs: [class: "text-xl"],
-
+      symbol_attrs: [class: "text-xl"]
     ]
   end
 end
