@@ -267,7 +267,7 @@ defmodule ExNVRWeb.RecordingListLive do
       id="popup-container"
     >
       <button class="popup-close absolute top-4 right-4 text-white" phx-click="close-popup">×</button>
-      <video autoplay class="w-full h-auto" style="width: 100%; max-height: 80%;">
+      <video autoplay class="w-full h-auto max-w-full max-h-[80%]">
         <source src="" type="video/mp4" phx-value-video-url />
         Your browser does not support the video tag.
       </video>
