@@ -29,23 +29,25 @@ defmodule ExNVRWeb.RecordingListLive do
         <:action :let={recording}>
           <div class="flex justify-end">
             <div class="popup-container relative">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-                class="w-8 h-8 mr-2 cursor-pointer thumbnail"
-                phx-hook="VideoPopup"
-                phx-value-url={"/api/devices/#{recording.device_id}/recordings/#{recording.filename}/blob"}
-                id={"thumbnail-#{recording.id}"}
-                alt="Thumbnail"
-              >
-                <path d="M12 15a3 3 0 100-6 3 3 0 000 6z" />
-                <path
-                  fill-rule="evenodd"
-                  d="M1.323 11.447C2.811 6.976 7.028 3.75 12.001 3.75c4.97 0 9.185 3.223 10.675 7.69.12.362.12.752 0 1.113-1.487 4.471-5.705 7.697-10.677 7.697-4.97 0-9.186-3.223-10.675-7.69a1.762 1.762 0 010-1.113zM17.25 12a5.25 5.25 0 11-10.5 0 5.25 5.25 0 0110.5 0z"
-                  clip-rule="evenodd"
-                />
-              </svg>
+              <span title="Preview recording">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  class="w-6 h-6 mr-2 cursor-pointer thumbnail"
+                  phx-hook="VideoPopup"
+                  phx-value-url={"/api/devices/#{recording.device_id}/recordings/#{recording.filename}/blob"}
+                  id={"thumbnail-#{recording.id}"}
+                  alt="Thumbnail"
+                >
+                  <path d="M12 15a3 3 0 100-6 3 3 0 000 6z" />
+                  <path
+                    fill-rule="evenodd"
+                    d="M1.323 11.447C2.811 6.976 7.028 3.75 12.001 3.75c4.97 0 9.185 3.223 10.675 7.69.12.362.12.752 0 1.113-1.487 4.471-5.705 7.697-10.677 7.697-4.97 0-9.186-3.223-10.675-7.69a1.762 1.762 0 010-1.113zM17.25 12a5.25 5.25 0 11-10.5 0 5.25 5.25 0 0110.5 0z"
+                    clip-rule="evenodd"
+                  />
+                </svg>
+              </span>
             </div>
             <div class="flex justify-end">
               <.link
@@ -53,20 +55,22 @@ defmodule ExNVRWeb.RecordingListLive do
                 class="inline-flex items-center text-gray-900 rounded-lg"
                 id={"recording-#{recording.id}-link"}
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="currentColor"
-                  viewBox="0 0 24 24"
-                  stroke-width="1.5"
-                  stroke="white"
-                  class="w-6 h-6"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"
-                  />
-                </svg>
+                <span title="Download recording">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="currentColor"
+                    viewBox="0 0 24 24"
+                    stroke-width="1.5"
+                    stroke="white"
+                    class="w-6 h-6"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"
+                    />
+                  </svg>
+                </span>
               </.link>
             </div>
           </div>
@@ -301,7 +305,13 @@ defmodule ExNVRWeb.RecordingListLive do
             end_date: [op: :<=, type: "datetime-local", label: "End Date"]
           ]}
         >
-          <.input field={f.field} type={f.type} phx-debounce="500" {f.rest} />
+          <.input
+            class="border rounded p-1"
+            field={f.field}
+            type={f.type}
+            phx-debounce="500"
+            {f.rest}
+          />
         </Flop.Phoenix.filter_fields>
 
         <div class="flex items-center">
