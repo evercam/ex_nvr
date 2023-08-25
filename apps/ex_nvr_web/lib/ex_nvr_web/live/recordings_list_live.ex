@@ -283,14 +283,8 @@ defmodule ExNVRWeb.RecordingListLive do
     assigns = assign(assigns, form: Phoenix.Component.to_form(meta), meta: meta, devices: devices)
 
     ~H"""
-    <div class="flex space-x-4">
-      <.form
-        for={@form}
-        id={@id}
-        phx-submit="update-filter"
-        phx-change="update-filter"
-        class="flex items-center space-x-4"
-      >
+    <div class="flex justify-between">
+      <.form for={@form} id={@id} phx-change="update-filter" class="flex items-baseline space-x-4">
         <Flop.Phoenix.filter_fields
           :let={f}
           form={@form}
@@ -305,23 +299,16 @@ defmodule ExNVRWeb.RecordingListLive do
             end_date: [op: :<=, type: "datetime-local", label: "End Date"]
           ]}
         >
-          <.input
-            class="border rounded p-1"
-            field={f.field}
-            type={f.type}
-            phx-debounce="500"
-            {f.rest}
-          />
+          <div>
+            <.input
+              class="border rounded p-1"
+              field={f.field}
+              type={f.type}
+              phx-debounce="500"
+              {f.rest}
+            />
+          </div>
         </Flop.Phoenix.filter_fields>
-
-        <div class="flex items-center">
-          <button
-            class="button bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded"
-            type="submit"
-          >
-            Filter
-          </button>
-        </div>
       </.form>
     </div>
     """
