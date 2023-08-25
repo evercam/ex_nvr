@@ -30,7 +30,6 @@ const MANIFEST_LOAD_TIMEOUT = 60_000
 let Hooks = {
     VideoPopup: {
         mounted() {
-            //this.el.addEventListener("mouseenter", this.showPopup);
             this.el.addEventListener("click", this.showPopup);
         },
         showPopup(event) {

@@ -322,7 +322,6 @@ defmodule ExNVRWeb.RecordingListLive do
   end
 
   def handle_event("close-popup", _params, socket) do
-    IO.inspect("Event phx-click")
     {:noreply, push_navigate(socket, to: ~p"/recordings")}
   end
 
