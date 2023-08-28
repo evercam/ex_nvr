@@ -1,36 +1,35 @@
-defmodule ExNVR.Elements.RTSP.ConnectionManager do
+defmodule ExNVR.Pipeline.Source.RTSP.ConnectionManager do
   @moduledoc false
 
   use Connection
 
   require Membrane.Logger
 
+  alias ExNVR.Media.Track
   alias Membrane.RTSP
 
   @default_transport Application.compile_env(
                        :ex_nvr,
                        :rtsp_transport,
-                       ExNVR.Elements.RTSP.MediaTCPSocket
+                       ExNVR.Pipeline.Source.RTSP.MediaTCPSocket
                      )
   @content_type_header [{"accept", "application/sdp"}]
-  @transport_header [{"Transport", "RTP/AVP/TCP;interleaved=0-1"}]
   @keep_alive_interval 15_000
 
   defmodule ConnectionStatus do
     @moduledoc false
     use Bunch.Access
 
-    alias ExNVR.MediaTrack
-
     @type t :: %__MODULE__{
             stream_uri: binary(),
             rtsp_session: pid(),
             endpoint: pid(),
-            video_track: MediaTrack.t(),
             reconnect_delay: non_neg_integer(),
             max_reconnect_attempts: non_neg_integer() | :infinity,
             reconnect_attempt: non_neg_integer(),
-            keep_alive: pid()
+            keep_alive: pid(),
+            tracks: [map()],
+            stream_types: [atom()]
           }
 
     @enforce_keys [
@@ -41,7 +40,13 @@ defmodule ExNVR.Elements.RTSP.ConnectionManager do
       :reconnect_attempt
     ]
 
-    defstruct @enforce_keys ++ [:video_track, :rtsp_session, :keep_alive]
+    defstruct @enforce_keys ++
+                [
+                  :rtsp_session,
+                  :keep_alive,
+                  :tracks,
+                  :stream_types
+                ]
   end
 
   @spec reconnect(GenServer.server()) :: :ok
@@ -75,7 +80,8 @@ defmodule ExNVR.Elements.RTSP.ConnectionManager do
        endpoint: opts[:endpoint],
        reconnect_delay: opts[:reconnect_delay],
        max_reconnect_attempts: opts[:max_reconnect_attempts],
-       reconnect_attempt: 0
+       reconnect_attempt: 0,
+       stream_types: opts[:stream_types]
      }}
   end
 
@@ -96,7 +102,7 @@ defmodule ExNVR.Elements.RTSP.ConnectionManager do
              :ok <- play(connection_status) do
           send(
             connection_status.endpoint,
-            {:rtsp_setup_complete, connection_status.video_track}
+            {:rtsp_setup_complete, map_tracks(connection_status.tracks)}
           )
 
           {:ok, %{connection_status | reconnect_attempt: 0}}
@@ -242,7 +248,7 @@ defmodule ExNVR.Elements.RTSP.ConnectionManager do
     end
   end
 
-  defp start_rtsp_session(%ConnectionStatus{rtsp_session: rtsp_session}) do
+  defp start_rtsp_session(%ConnectionStatus{rtsp_session: rtsp_session} = state) do
     rtsp_session
   end
 
@@ -251,8 +257,8 @@ defmodule ExNVR.Elements.RTSP.ConnectionManager do
 
     case RTSP.describe(rtsp_session, @content_type_header) do
       {:ok, %{status: 200} = response} ->
-        attributes = get_video_attributes(response)
-        {:ok, %{connection_status | video_track: ExNVR.MediaTrack.from_sdp(attributes)}}
+        tracks = get_tracks(response, connection_status.stream_types)
+        {:ok, %{connection_status | tracks: tracks}}
 
       {:ok, %{status: 401}} ->
         {:error, :unauthorized}
@@ -262,25 +268,26 @@ defmodule ExNVR.Elements.RTSP.ConnectionManager do
     end
   end
 
-  defp setup_rtsp_connection(
-         %ConnectionStatus{
-           rtsp_session: rtsp_session,
-           video_track: video_track
-         } = connection_status
-       ) do
+  defp setup_rtsp_connection(%ConnectionStatus{rtsp_session: rtsp_session} = connection_status) do
     Membrane.Logger.debug("ConnectionManager: Setting up RTSP connection")
 
-    case RTSP.setup(rtsp_session, video_track.control, @transport_header) do
-      {:ok, %{status: 200}} ->
-        {:ok, connection_status}
+    connection_status.tracks
+    |> Enum.with_index()
+    |> Enum.reduce_while({:ok, connection_status}, fn {track, idx}, acc ->
+      transport_header = [{"Transport", "RTP/AVP/TCP;interleaved=#{idx * 2}-#{idx * 2 + 1}"}]
 
-      result ->
-        Membrane.Logger.debug(
-          "ConnectionManager: Setting up RTSP connection failed: #{inspect(result)}"
-        )
+      case RTSP.setup(rtsp_session, track.control, transport_header) do
+        {:ok, %{status: 200}} ->
+          {:cont, acc}
 
-        {:error, :setting_up_sdp_connection_failed}
-    end
+        result ->
+          Membrane.Logger.debug(
+            "ConnectionManager: Setting up RTSP connection failed: #{inspect(result)}"
+          )
+
+          {:halt, {:error, :setting_up_sdp_connection_failed}}
+      end
+    end)
   end
 
   defp start_keep_alive(%ConnectionStatus{} = connection_status) do
@@ -299,8 +306,6 @@ defmodule ExNVR.Elements.RTSP.ConnectionManager do
       RTSP.get_parameter(rtsp_session)
       Process.sleep(keep_alive_interval)
       rtsp_keep_alive(rtsp_session, keep_alive_interval)
-    else
-      Process.exit(self(), :rtsp_session_closed)
     end
   end
 
@@ -316,7 +321,30 @@ defmodule ExNVR.Elements.RTSP.ConnectionManager do
     end
   end
 
-  defp get_video_attributes(%{body: %ExSDP{media: media_list}}) do
-    media_list |> Enum.find(fn elem -> elem.type == :video end)
+  defp get_tracks(%{body: %ExSDP{media: media_list}}, stream_types) do
+    media_list
+    |> Enum.filter(&(&1.type in stream_types))
+    |> Enum.map(fn media ->
+      %{
+        type: media.type,
+        rtpmap: get_attribute(media, ExSDP.Attribute.RTPMapping),
+        fmtp: get_attribute(media, ExSDP.Attribute.FMTP),
+        control: get_attribute(media, "control", "")
+      }
+    end)
+  end
+
+  defp get_attribute(video_attributes, attribute, default \\ nil) do
+    case ExSDP.Media.get_attribute(video_attributes, attribute) do
+      {^attribute, value} -> value
+      %^attribute{} = value -> value
+      _other -> default
+    end
+  end
+
+  defp map_tracks(tracks) do
+    Enum.map(tracks, fn track ->
+      Track.new(track.type, String.to_atom(track.rtpmap.encoding), track.rtpmap, track.fmtp)
+    end)
   end
 end

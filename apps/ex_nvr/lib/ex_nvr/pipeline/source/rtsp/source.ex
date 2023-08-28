@@ -1,4 +1,4 @@
-defmodule ExNVR.Elements.RTSP.Source do
+defmodule ExNVR.Pipeline.Source.RTSP.Source do
   @moduledoc """
   Element that starts an RTSP session and read packets from the same connection
   """
@@ -8,7 +8,7 @@ defmodule ExNVR.Elements.RTSP.Source do
 
   require Membrane.Logger
 
-  alias ExNVR.Elements.RTSP.ConnectionManager
+  alias ExNVR.Pipeline.Source.RTSP.ConnectionManager
   alias Membrane.{Buffer, RemoteStream}
 
   @max_reconnect_attempts :infinity
@@ -18,6 +18,11 @@ defmodule ExNVR.Elements.RTSP.Source do
                 spec: binary(),
                 default: nil,
                 description: "A RTSP URI from where to read the stream"
+              ],
+              stream_types: [
+                spec: [:video | :audio | :application],
+                default: [:video, :audio, :application],
+                description: "The type of stream to read"
               ]
 
   def_output_pad :output,
@@ -30,10 +35,11 @@ defmodule ExNVR.Elements.RTSP.Source do
     {[],
      %{
        stream_uri: options[:stream_uri],
+       stream_types: options[:stream_types],
        connection_manager: nil,
-       buffered_actions: [],
-       output_ref: nil,
-       play?: false
+       buffers: [],
+       play?: false,
+       output_pad: nil
      }}
   end
 
@@ -43,44 +49,31 @@ defmodule ExNVR.Elements.RTSP.Source do
   end
 
   @impl true
-  def handle_pad_added(Pad.ref(:output, ref), _ctx, %{output_ref: ref} = state) do
-    actions =
-      [stream_format: {Pad.ref(:output, ref), %RemoteStream{type: :packetized}}] ++
-        Enum.reverse(state.buffered_actions)
-
-    {actions, %{state | buffered_actions: [], play?: true}}
+  def handle_pad_added(Pad.ref(:output, _ref) = pad, _ctx, state) do
+    buffers = Enum.map(state.buffers, &{:buffer, {pad, &1}}) |> Enum.reverse()
+    state = %{state | output_pad: pad, play?: true}
+    {[stream_format: {pad, %RemoteStream{type: :packetized}}] ++ buffers, state}
   end
 
   @impl true
-  def handle_pad_added(_pad, _ctx, state) do
-    {[], state}
+  def handle_info({:rtsp_setup_complete, tracks}, _context, state) do
+    {[notify_parent: {:rtsp_setup_complete, tracks}], state}
   end
 
   @impl true
-  def handle_playing(_context, state) do
-    {[], state}
+  def handle_info({:media_packet, _channel, packet}, _ctx, %{play?: true} = state) do
+    {[buffer: {state.output_pad, wrap_in_buffer(packet)}], state}
   end
 
   @impl true
-  def handle_info({:rtsp_setup_complete, setup}, _context, state) do
-    {[notify_parent: {:rtsp_setup_complete, setup, state.output_ref}], state}
-  end
-
-  @impl true
-  def handle_info({:media_packet, packet}, _ctx, %{play?: true} = state) do
-    {[buffer: {Pad.ref(:output, state.output_ref), packet_to_buffer(packet)}], state}
-  end
-
-  @impl true
-  def handle_info({:media_packet, packet}, _ctx, state) do
-    buffer_action = {:buffer, {Pad.ref(:output, state.output_ref), packet_to_buffer(packet)}}
-    {[], %{state | buffered_actions: [buffer_action | state.buffered_actions]}}
+  def handle_info({:media_packet, _channel, packet}, _ctx, state) do
+    {[], %{state | buffers: [wrap_in_buffer(packet) | state.buffers]}}
   end
 
   @impl true
   def handle_info({:connection_info, {:connection_failed, error}}, _ctx, state) do
     Membrane.Logger.error("could not connect to RTSP server due to #{inspect(error)}")
-    {connection_lost_actions(state), %{state | play?: false, output_ref: make_ref()}}
+    {connection_lost_actions(state), %{state | play?: false, buffers: []}}
   end
 
   @impl true
@@ -94,15 +87,11 @@ defmodule ExNVR.Elements.RTSP.Source do
     {[], state}
   end
 
-  defp connection_lost_actions(%{play?: true, output_ref: ref}) do
-    [
-      event: {Pad.ref(:output, ref), %Membrane.Event.Discontinuity{}},
-      end_of_stream: Pad.ref(:output, ref),
-      notify_parent: {:connection_lost, ref}
-    ]
+  defp connection_lost_actions(%{play?: true} = state) do
+    [event: {state.output_pad, %Membrane.Event.Discontinuity{}}, notify_parent: :connection_lost]
   end
 
-  defp connection_lost_actions(_state), do: []
+  defp connection_lost_actions(_state), do: [notify_parent: :connection_lost]
 
   defp do_handle_setup(state) do
     {:ok, connection_manager} =
@@ -110,15 +99,16 @@ defmodule ExNVR.Elements.RTSP.Source do
         endpoint: self(),
         stream_uri: state[:stream_uri],
         max_reconnect_attempts: @max_reconnect_attempts,
-        reconnect_delay: @reconnect_delay
+        reconnect_delay: @reconnect_delay,
+        stream_types: state.stream_types
       )
 
     Process.monitor(connection_manager)
 
-    %{state | connection_manager: connection_manager, play?: false, output_ref: make_ref()}
+    %{state | connection_manager: connection_manager, play?: false, output_pad: nil}
   end
 
-  defp packet_to_buffer(packet) do
+  defp wrap_in_buffer(packet) do
     %Buffer{payload: packet, metadata: %{arrival_ts: Membrane.Time.os_time()}}
   end
 end

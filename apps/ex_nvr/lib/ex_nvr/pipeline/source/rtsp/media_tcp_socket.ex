@@ -1,4 +1,4 @@
-defmodule ExNVR.Elements.RTSP.MediaTCPSocket do
+defmodule ExNVR.Pipeline.Source.RTSP.MediaTCPSocket do
   @moduledoc """
   This module is a wrapper around Membrane.RTSP.Transport.TCPSocket and augments
   it with the possibility to receive media data via the same connection that's used for
@@ -88,9 +88,9 @@ defmodule ExNVR.Elements.RTSP.MediaTCPSocket do
     after
       0 ->
         case read(socket, 4, acc) do
-          {<<0x24::8, _channel::8, size::16>>, acc} ->
+          {<<0x24::8, channel::8, size::16>>, acc} ->
             {packet, acc} = read(socket, size, acc)
-            send(media_receiver, {:media_packet, packet})
+            send(media_receiver, {:media_packet, channel, packet})
             handle_tcp_messages(socket, media_receiver, requester, acc)
 
           {"RTSP", acc} ->

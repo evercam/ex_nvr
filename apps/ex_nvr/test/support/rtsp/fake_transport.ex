@@ -39,6 +39,8 @@ defmodule ExNVR.RTSP.Transport.Fake do
   @setup_response "RTSP/1.0 200 OK\r\nCSeq: 5\r\nDate: Wed, Aug 02 2023 22:20:54 GMT\r\nTransport: RTP/AVP/TCP;unicast;destination=105.235.129.26;source=192.168.1.190;interleaved=0-1\r\nSession: D1F824DA\r\n\r\n"
   @play_response "RTSP/1.0 200 OK\r\nCSeq: 6\r\nDate: Wed, Aug 02 2023 22:20:54 GMT\r\nRange: npt=0.000-\r\nSession: D1F824DA\r\nRTP-Info: url=rtsp://192.168.1.190/main/track1;seq=53626;rtptime=1692503820,url=rtsp://192.168.1.190/main/track2;seq=0;rtptime=0\r\n\r\n"
 
+  @rtp_packets "../../fixtures/rtp/video-30-10s.rtp" |> Path.expand(__DIR__)
+
   @impl true
   def execute(request, ref, _options \\ []) do
     # An ugly way of mocking tcp interactions
@@ -68,19 +70,23 @@ defmodule ExNVR.RTSP.Transport.Fake do
     {:ok, establish_session_without_media_packets(request, state)}
   end
 
-  @spec establish_session_without_media_packets(binary(), any()) :: binary()
+  @spec establish_session_without_media_packets(binary(), any()) :: {:ok, binary()}
   def establish_session_without_media_packets(request, _state) do
     {:ok, process_request(request)}
   end
 
-  @spec establish_session_with_media_packets(binary(), any()) :: binary()
+  @spec establish_session_with_media_packets(binary(), any()) :: {:ok, binary()}
   def establish_session_with_media_packets(request, state) do
     response = process_request(request)
-    if play?(request), do: spawn_link(fn -> emit_media_packets(state[:media_receiver]) end)
+
+    if play?(request),
+      do:
+        spawn_link(fn -> emit_media_packets(state[:media_receiver], File.read!(@rtp_packets)) end)
+
     {:ok, response}
   end
 
-  @spec establish_session_with_media_error(binary(), any()) :: binary()
+  @spec establish_session_with_media_error(binary(), term()) :: {:ok, binary()}
   def establish_session_with_media_error(request, _state) do
     response = process_request(request)
 
@@ -94,11 +100,13 @@ defmodule ExNVR.RTSP.Transport.Fake do
     {:ok, response}
   end
 
-  defp emit_media_packets(media_reciever) do
-    send(media_reciever, {:media_packet, <<1, 2, 3, 4, 5>>})
-    Process.sleep(100)
-    emit_media_packets(media_reciever)
+  defp emit_media_packets(media_receiver, <<size::16, packet::binary-size(size), rest::binary>>) do
+    send(media_receiver, {:media_packet, 0, packet})
+    Process.sleep(10)
+    emit_media_packets(media_receiver, rest)
   end
+
+  defp emit_media_packets(_media_receiver, _data), do: :ok
 
   defp process_request(request) do
     case request do

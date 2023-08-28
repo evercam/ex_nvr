@@ -18,7 +18,7 @@ defmodule ExNVR.Pipeline.Output.WebRTC do
 
   require Membrane.Logger
 
-  alias ExNVR.MediaTrack
+  alias ExNVR.Media.Track
   alias ExNVR.Pipeline.Output
   alias Membrane.H264
   alias Membrane.ICE.TURNManager
@@ -34,7 +34,7 @@ defmodule ExNVR.Pipeline.Output.WebRTC do
     availability: :on_request,
     options: [
       media_track: [
-        spec: MediaTrack.t(),
+        spec: Track.t(),
         description: "Media track description"
       ]
     ]

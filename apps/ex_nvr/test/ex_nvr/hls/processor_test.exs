@@ -7,15 +7,15 @@ defmodule ExNVR.Hls.ProcessorTest do
 
   describe "add query params" do
     test "to master manifest file" do
-      in_file = "../../fixtures/index.m3u8" |> Path.expand(__DIR__)
-      ref_file = "../../fixtures/ref_index.m3u8" |> Path.expand(__DIR__)
+      in_file = "../../fixtures/hls/index.m3u8" |> Path.expand(__DIR__)
+      ref_file = "../../fixtures/hls/ref_index.m3u8" |> Path.expand(__DIR__)
 
       perform_test(in_file, ref_file)
     end
 
     test "to manifest file with segment" do
-      in_file = "../../fixtures/live_main_stream.m3u8" |> Path.expand(__DIR__)
-      ref_file = "../../fixtures/ref_live_main_stream.m3u8" |> Path.expand(__DIR__)
+      in_file = "../../fixtures/hls/live_main_stream.m3u8" |> Path.expand(__DIR__)
+      ref_file = "../../fixtures/hls/ref_live_main_stream.m3u8" |> Path.expand(__DIR__)
 
       perform_test(in_file, ref_file)
     end
@@ -33,12 +33,12 @@ defmodule ExNVR.Hls.ProcessorTest do
         """
         |> String.trim_trailing()
 
-      in_file = "../../fixtures/index.m3u8" |> Path.expand(__DIR__)
+      in_file = "../../fixtures/hls/index.m3u8" |> Path.expand(__DIR__)
       assert expected_result == Processor.delete_stream(File.read!(in_file), "live_sub_stream")
     end
 
     test "when stream does not exists" do
-      in_file = "../../fixtures/index.m3u8" |> Path.expand(__DIR__)
+      in_file = "../../fixtures/hls/index.m3u8" |> Path.expand(__DIR__)
       assert File.read!(in_file) == Processor.delete_stream(File.read!(in_file), "random_stream")
     end
   end
