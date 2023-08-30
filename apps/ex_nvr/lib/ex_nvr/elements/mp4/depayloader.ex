@@ -127,11 +127,16 @@ defmodule ExNVR.Elements.MP4.Depayloader do
   defp maybe_read_next_file(state) do
     Membrane.Logger.debug("Reached end of file of the current file")
 
-    state = %{
-      state
-      | current_dts: state.last_access_unit_dts || 0,
-        last_access_unit_dts: nil
-    }
+    state =
+      if state.buffer? do
+        %{state | pending_buffers: []}
+      else
+        %{
+          state
+          | current_dts: state.last_access_unit_dts || 0,
+            last_access_unit_dts: nil
+        }
+      end
 
     {[redemand: :output], open_file(state)}
   end
@@ -158,27 +163,30 @@ defmodule ExNVR.Elements.MP4.Depayloader do
     if last_dts >= time_diff do
       {first, second} = Enum.split_while(pending_buffers, &(not &1.metadata.key_frame?))
 
-      # rewrite the dts/pts of the buffers so the hd(second) will have dts/pts of 0
-      first_dts = hd(second).dts
-
+      # rewrite the dts/pts of the buffers so the buffers at the
+      # requested start date will have dts/pts 0
       buffers =
         Enum.map(
           [hd(second) | Enum.reverse(first)],
-          &%Buffer{&1 | dts: &1.dts - first_dts, pts: &1.pts - first_dts}
+          &%Buffer{&1 | dts: &1.dts - last_dts, pts: &1.pts - last_dts}
         )
 
       # Since we start from the nearest keyframe before the provided start date
       # we'll add the duration offset between the provided start date and the real start date
-      duration_offset = last_dts - first_dts
-      duration = if state.duration > 0, do: state.duration + duration_offset, else: 0
+      duration =
+        if state.duration > 0 do
+          state.duration + last_dts - hd(first).dts
+        else
+          0
+        end
 
       {[buffer: {:output, buffers}],
        %{
          state
          | buffer?: false,
            pending_buffers: [],
-           last_access_unit_dts: last_dts - first_dts,
-           current_dts: -first_dts,
+           last_access_unit_dts: 0,
+           current_dts: -last_dts,
            duration: duration
        }}
     else

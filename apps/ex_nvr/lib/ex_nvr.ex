@@ -53,7 +53,14 @@ defmodule ExNVR do
 
   defp run_pipelines() do
     for device <- Devices.list(%{state: [:recording, :failed]}) do
+      File.mkdir_p!(bif_dir(device.id))
+
       Pipelines.Supervisor.start_pipeline(device)
+
+      DynamicSupervisor.start_child(
+        ExNVR.BifPipelineSupervisor,
+        {ExNVR.BifGenerator, [device: device]}
+      )
     end
   end
 end

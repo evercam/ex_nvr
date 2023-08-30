@@ -20,6 +20,7 @@ defmodule ExNVR.Application do
       {Phoenix.PubSub, name: ExNVR.PubSub},
       {Finch, name: ExNVR.Finch},
       {DynamicSupervisor, [name: ExNVR.PipelineSupervisor, strategy: :one_for_one]},
+      {DynamicSupervisor, [name: ExNVR.BifPipelineSupervisor, strategy: :one_for_one]},
       Task.child_spec(fn -> ExNVR.start() end)
     ]
 
