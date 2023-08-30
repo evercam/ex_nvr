@@ -3,7 +3,7 @@ defmodule ExNVR.Pipeline.Output.Bif.KeyFrameSelector do
 
   use Membrane.Filter
 
-  alias Membrane.H264
+  alias Membrane.{H264, Time}
 
   def_options interval: [
                 spec: Membrane.Time.t(),
@@ -26,13 +26,14 @@ defmodule ExNVR.Pipeline.Output.Bif.KeyFrameSelector do
 
   @impl true
   def handle_init(_ctx, opts) do
-    {[], %{interval: opts.interval, last_keyframe_pts: nil}}
+    {[], %{interval: Time.round_to_seconds(opts.interval), last_keyframe_pts: nil}}
   end
 
   @impl true
   def handle_process(:input, buffer, _ctx, state) when key_frame?(buffer) do
-    if is_nil(state.last_keyframe_pts) or buffer.pts - state.last_keyframe_pts >= state.interval do
-      {[buffer: {:output, buffer}], %{state | last_keyframe_pts: buffer.pts}}
+    if is_nil(state.last_keyframe_pts) or diff(buffer, state) >= state.interval do
+      {[buffer: {:output, buffer}],
+       %{state | last_keyframe_pts: Time.round_to_seconds(buffer.pts)}}
     else
       {[], state}
     end
@@ -41,5 +42,9 @@ defmodule ExNVR.Pipeline.Output.Bif.KeyFrameSelector do
   @impl true
   def handle_process(:input, _buffer, _ctx, state) do
     {[], state}
+  end
+
+  defp diff(buffer, state) do
+    Membrane.Time.round_to_seconds(buffer.pts) - state.last_keyframe_pts
   end
 end

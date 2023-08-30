@@ -36,6 +36,7 @@ defmodule ExNVR.Pipeline.Output.Bif.ArchiverTest do
     |> Enum.sort()
     |> Enum.map(fn file ->
       idx = Path.basename(file, ".jpg") |> String.to_integer()
+
       %Membrane.Buffer{
         payload: File.read!(file),
         pts: Membrane.Time.seconds(idx)
