@@ -59,7 +59,7 @@ defmodule ExNVR do
 
       DynamicSupervisor.start_child(
         ExNVR.BifPipelineSupervisor,
-        {ExNVR.BifGenerator, [device: device]}
+        {ExNVR.BifGeneratorServer, [device: device]}
       )
     end
   end
