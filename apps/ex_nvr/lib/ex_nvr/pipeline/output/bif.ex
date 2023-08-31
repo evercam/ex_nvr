@@ -40,8 +40,8 @@ defmodule ExNVR.Pipeline.Output.Bif do
     spec = [
       bin_input()
       |> child(:key_frame_filter, %KeyFrameSelector{interval: options.interval})
-      |> child(:decoder, H264.FFmpeg.Decoder)
-      |> child(:scaler, %FFmpeg.SWScale.Scaler{output_width: options.image_width})
+      |> child(:decoder, %H264.FFmpeg.Decoder{use_shm?: true})
+      |> child(:scaler, %FFmpeg.SWScale.Scaler{output_width: options.image_width, use_shm?: true})
       |> child(:image_encoder, Turbojpeg.Filter)
       |> child(:archiver, Archiver)
       |> child(:sink, %File.Sink{location: options.location})
