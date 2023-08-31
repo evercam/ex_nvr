@@ -31,7 +31,6 @@ defmodule ExNVR.Pipeline.Output.Bif do
 
   def_input_pad :input,
     demand_unit: :buffers,
-    demand_mode: :auto,
     accepted_format: %H264{alignment: :au},
     availability: :always
 
@@ -40,6 +39,7 @@ defmodule ExNVR.Pipeline.Output.Bif do
     spec = [
       bin_input()
       |> child(:key_frame_filter, %KeyFrameSelector{interval: options.interval})
+      |> via_in(:input, auto_demand_size: 10)
       |> child(:decoder, %H264.FFmpeg.Decoder{use_shm?: true})
       |> child(:scaler, %FFmpeg.SWScale.Scaler{output_width: options.image_width, use_shm?: true})
       |> child(:image_encoder, Turbojpeg.Filter)
