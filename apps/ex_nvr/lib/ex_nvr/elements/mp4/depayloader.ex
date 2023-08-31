@@ -71,7 +71,8 @@ defmodule ExNVR.Elements.MP4.Depayloader do
         current_dts: 0,
         last_access_unit_dts: nil,
         pending_buffers: [],
-        buffer?: true
+        buffer?: true,
+        size_to_read: 0
       })
 
     {[], state}
@@ -87,6 +88,10 @@ defmodule ExNVR.Elements.MP4.Depayloader do
   def handle_playing(_ctx, state) do
     {actions, state} = maybe_read_next_file(state)
     {[stream_format: {:output, %H264.RemoteStream{alignment: :au}}] ++ actions, state}
+  end
+
+  def handle_demand(:output, size, :buffers, _ctx, %{size_to_read: 0} = state) do
+    {[redemand: :output], %{state | size_to_read: size}}
   end
 
   @impl true
@@ -187,7 +192,8 @@ defmodule ExNVR.Elements.MP4.Depayloader do
            pending_buffers: [],
            last_access_unit_dts: 0,
            current_dts: -last_dts,
-           duration: duration
+           duration: duration,
+           size_to_read: max(0, state.size_to_read - length(buffers))
        }}
     else
       {[],
@@ -200,7 +206,12 @@ defmodule ExNVR.Elements.MP4.Depayloader do
   end
 
   defp prepare_buffer_actions(buffers, state) do
-    state = %{state | last_access_unit_dts: List.last(buffers).dts}
+    state = %{
+      state
+      | last_access_unit_dts: List.last(buffers).dts,
+        size_to_read: max(0, state.size_to_read - length(buffers))
+    }
+
     {[buffer: {:output, buffers}] ++ maybe_end_stream(state), state}
   end
 
@@ -222,7 +233,7 @@ defmodule ExNVR.Elements.MP4.Depayloader do
   end
 
   defp maybe_redemand({actions, state}) do
-    if Keyword.has_key?(actions, :end_of_stream) do
+    if Keyword.has_key?(actions, :end_of_stream) or state.size_to_read == 0 do
       {actions, state}
     else
       {actions ++ [redemand: :output], state}
