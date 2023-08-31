@@ -3,6 +3,8 @@ defmodule ExNVR.BifGeneratorTest do
 
   use ExNVR.DataCase
 
+  alias ExNVR.BifGeneratorServer
+
   @moduletag :tmp_dir
 
   setup do
@@ -38,14 +40,14 @@ defmodule ExNVR.BifGeneratorTest do
              ~U(2023-08-12 14:00:00Z),
              ~U(2023-08-12 15:00:00Z),
              ~U(2023-08-12 16:00:00Z)
-           ] = ExNVR.BifGenerator.list_hours(device)
+           ] = BifGeneratorServer.list_hours(device)
 
     ExNVR.Utils.bif_dir(device.id)
     |> Path.join("2023081214.bif")
     |> File.touch!()
 
     assert [~U(2023-08-12 15:00:00Z), ~U(2023-08-12 16:00:00Z)] =
-             ExNVR.BifGenerator.list_hours(device)
+             BifGeneratorServer.list_hours(device)
   end
 
   test "generate bif files", %{device: device, run: run} do
@@ -67,8 +69,8 @@ defmodule ExNVR.BifGeneratorTest do
       run: run
     )
 
-    assert {:ok, state} = ExNVR.BifGenerator.init(device: device)
-    assert {:noreply, ^state} = ExNVR.BifGenerator.handle_info(:tick, state)
+    assert {:ok, state} = BifGeneratorServer.init(device: device)
+    assert {:noreply, ^state} = BifGeneratorServer.handle_info(:tick, state)
 
     bif_dir = ExNVR.Utils.bif_dir(device.id)
 

@@ -1,4 +1,4 @@
-defmodule ExNVR.BifGenerator do
+defmodule ExNVR.BifGeneratorServer do
   @moduledoc """
   A process that periodically generates BIF (Base Index Frames) files
   """
@@ -62,7 +62,7 @@ defmodule ExNVR.BifGenerator do
     Utils.bif_dir(device.id)
     |> Path.join("*.bif")
     |> Path.wildcard()
-    |> Enum.sort()
+    |> Enum.sort(:desc)
     |> List.first()
     |> case do
       nil ->
