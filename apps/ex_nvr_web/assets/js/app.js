@@ -36,7 +36,7 @@ let Hooks = {
         updated() {
             updateTimelineSegments(this.el)
         },
-    },
+    }
 }
 
 let csrfToken = document
@@ -92,6 +92,22 @@ window.addEventListener("phx:js-exec", ({ detail }) => {
     document.querySelectorAll(detail.to).forEach((el) => {
         liveSocket.execJS(el, el.getAttribute(detail.attr))
     })
+})
+
+window.addEventListener("phx:show_alert", (e) => {
+    let alertContainer = document.getElementById("alert-container")
+    let alertImage = document.getElementById("alert-image")
+    let alertLabel = document.getElementById("alert-label")
+    let closeAlertButton = document.getElementById("close-alert")
+
+    alertImage.src = `data:image/jpeg;base64, ${e.detail.image}` //["data:image/jpg;base64,"image]
+    
+    alertLabel.textContent = e.detail.label
+    alertContainer.classList.remove("hidden")
+    
+    closeAlertButton.addEventListener("click", () => {
+        alertContainer.classList.add("hidden")
+      })
 })
 
 initDarkMode()

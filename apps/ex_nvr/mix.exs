@@ -58,10 +58,15 @@ defmodule ExNVR.MixProject do
       {:membrane_rtc_engine_webrtc, "~> 0.1.0"},
       {:ex_libsrtp, "~> 0.6.0"},
       {:membrane_udp_plugin, "~> 0.10.0"},
+      {:membrane_framerate_converter_plugin, "~> 0.7.0"},
+      {:membrane_camera_capture_plugin, "~> 0.5.0"},
       {:connection, "~> 1.1.0"},
       {:tzdata, "~> 1.1"},
       {:turbojpeg, github: "BinaryNoggin/elixir-turbojpeg", ref: "14e2b36"},
-      {:faker, "~> 0.17", only: :test}
+      {:faker, "~> 0.17", only: :test},
+      {:bumblebee, "~> 0.2.0"},
+      {:exla, ">= 0.0.0"},
+      {:evision, "~> 0.1.27"}
     ]
   end
 

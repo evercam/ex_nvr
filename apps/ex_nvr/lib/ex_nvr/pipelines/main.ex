@@ -145,6 +145,7 @@ defmodule ExNVR.Pipelines.Main do
         child(:rtsp_source, %Source.RTSP{stream_uri: stream_uri}),
         {child(:hls_sink, hls_sink, get_if_exists: true), crash_group: {"hls", :temporary}},
         child(:snapshooter, ExNVR.Elements.SnapshotBin),
+        child(:object_detector, ExNVR.Elements.ObjectDetectionBin),
         child(:webrtc, %Output.WebRTC{stream_id: device.id})
       ] ++
         if sub_stream_uri,
@@ -189,17 +190,25 @@ defmodule ExNVR.Pipelines.Main do
           device_id: state.device.id,
           target_segment_duration: state.segment_duration
         }),
+
         get_child(:video_tee)
         |> via_out(:copy)
         |> via_in(Pad.ref(:video, :main_stream))
         |> get_child(:hls_sink),
+
         get_child(:video_tee)
         |> via_out(:copy)
         |> child({:cvs_bufferer, ssrc}, ExNVR.Elements.CVSBufferer),
+
         get_child(:video_tee)
         |> via_out(:copy)
         |> via_in(Pad.ref(:input, :main_stream), options: [media_track: track])
-        |> get_child(:webrtc)
+        |> get_child(:webrtc),
+
+        get_child(:video_tee)
+        |> via_out(:copy)
+        |> via_in(Pad.ref(:video, :main_stream))
+        |> get_child(:object_detector)
       ]
 
       {[spec: {spec, group: :main_stream}], state}
@@ -221,7 +230,12 @@ defmodule ExNVR.Pipelines.Main do
         get_child({:rtsp_source, :sub_stream})
         |> via_out(Pad.ref(:output, ssrc))
         |> via_in(Pad.ref(:video, :sub_stream))
-        |> get_child(:hls_sink)
+        |> get_child(:hls_sink),
+
+        get_child({:rtsp_source, :sub_stream})
+        |> via_out(Pad.ref(:output, ssrc))
+        |> via_in(Pad.ref(:video, :sub_stream))
+        |> get_child(:object_detector),
       ]
 
       {[spec: spec], state}
@@ -233,6 +247,13 @@ defmodule ExNVR.Pipelines.Main do
     state.live_snapshot_waiting_pids
     |> Enum.map(&{:reply_to, {&1, {:ok, snapshot}}})
     |> then(&{&1, %{state | live_snapshot_waiting_pids: []}})
+  end
+
+  @impl true
+  def handle_child_notification({:detection, prediction}, _element, _ctx, state) do
+    current_encoded_frame = state.current_encoded_frame
+    Phoenix.PubSub.broadcast(ExNVR.PubSub, "detection", {:prediction, prediction, current_encoded_frame})
+    {:ok, state}
   end
 
   @impl true

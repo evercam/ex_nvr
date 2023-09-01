@@ -9,11 +9,26 @@ defmodule ExNVRWeb.DashboardLive do
   def render(assigns) do
     ~H"""
     <div class="bg-white sm:w-2/3 dark:bg-gray-800">
+
+      <div class="hidden" id="alert-container">
+
+        <div class="bg-white rounded-md p-4 shadow-md">
+          <button id="close-alert" class="absolute top-2 right-2 text-gray-400 hover:text-gray-600">
+            <svg class="w-4 h-4" fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" stroke="currentColor" viewBox="0 0 24 24">
+              <path d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+          <img id="alert-image" class="w-24 h-24 mx-auto mb-2" src="" alt="Alert Image">
+          <p id="alert-label" class="text-center text-gray-800">
+          </p>
+        </div>
+      </div>
+
       <div :if={@devices == []} class="grid tracking-wide text-lg text-center dark:text-gray-200">
         You have no devices, you can create one
         <span><.link href={~p"/devices"} class="ml-2 dark:text-blue-600">here</.link></span>
       </div>
-      <div :if={@devices != []}>
+      <div :if={@devices == []}>
         <div class="flex items-center justify-between invisible sm:visible">
           <.simple_form for={@form} id="device_form">
             <div class="flex items-center">
@@ -70,6 +85,11 @@ defmodule ExNVRWeb.DashboardLive do
   end
 
   def mount(_params, _session, socket) do
+    if connected?(socket) do
+      Phoenix.PubSub.subscribe(ExNVR.PubSub, "detection")
+      IO.inspect("SUBSCRRIIIIIIIIIBBBBBEEEEEDDD!!!!!")
+    end
+
     socket =
       socket
       |> assign_devices()
@@ -83,6 +103,12 @@ defmodule ExNVRWeb.DashboardLive do
       |> maybe_push_stream_event(nil)
 
     {:ok, assign(socket, start_date: nil)}
+  end
+
+  def handle_info({:prediction, prediction, current_encoded_frame}, socket) do
+    IO.inspect("prediction Event!!!!! #{prediction} ")
+    push_event(socket, "show_alert", %{image: current_encoded_frame, label: prediction})
+    {:noreply, socket}
   end
 
   def handle_event("switch_device", %{"device" => device_id}, socket) do
