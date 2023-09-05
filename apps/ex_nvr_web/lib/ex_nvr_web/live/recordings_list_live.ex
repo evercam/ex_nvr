@@ -289,10 +289,10 @@ defmodule ExNVRWeb.RecordingListLive do
           :let={f}
           form={@form}
           fields={[
-            device_name: [
-              op: :like_and,
+            device_id: [
+              op: :==,
               type: "select",
-              options: Enum.map(@devices, & &1.name),
+              options: Enum.map(@devices, & &1.id),
               label: "Device"
             ],
             start_date: [op: :>=, type: "datetime-local", label: "Start Date"],

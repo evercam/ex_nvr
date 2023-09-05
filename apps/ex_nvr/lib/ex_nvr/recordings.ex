@@ -39,7 +39,7 @@ defmodule ExNVR.Recordings do
   end
 
   def list(params \\ %{}) do
-    Recording.recordings_by_device_name()
+    Recording.recordings_joined_by_device()
     |> ExNVR.Flop.validate_and_run(params, for: Recording)
   end
 

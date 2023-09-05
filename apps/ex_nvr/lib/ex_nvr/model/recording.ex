@@ -8,11 +8,11 @@ defmodule ExNVR.Model.Recording do
   alias Ecto.Changeset
 
   @derive {Flop.Schema,
-           filterable: [:start_date, :end_date, :device_name],
+           filterable: [:start_date, :end_date, :device_id],
            sortable: [:start_date, :end_date, :device_name],
            default_order: %{
              order_by: [:start_date, :end_date, :device_name],
-             order_directions: [:desc, :desc, :asc]
+             order_directions: [:desc]
            },
            adapter_opts: [
              join_fields: [
@@ -60,21 +60,17 @@ defmodule ExNVR.Model.Recording do
     |> Changeset.validate_required(@required_fields)
   end
 
-  def recordings_by_device_name() do
+  def recordings_joined_by_device() do
     from(r in __MODULE__,
-      join: d in assoc(r, :device),
-      as: :joined_device,
-      on: r.device_id == d.id,
-      select: %{
-        id: r.id,
-        start_date: r.start_date,
-        end_date: r.end_date,
-        device_id: r.device_id,
-        device_name: d.name,
-        timezone: d.timezone,
-        filename: r.filename
-      }
-    )
+        join: d in assoc(r, :device),
+        as: :joined_device,
+        on: r.device_id == d.id,
+        select: map(r, ^__MODULE__.__schema__(:fields)),
+        select_merge: %{
+          device_name: d.name,
+          timezone: d.timezone,
+        }
+      )
   end
 
   def filter(query \\ __MODULE__, params) do
