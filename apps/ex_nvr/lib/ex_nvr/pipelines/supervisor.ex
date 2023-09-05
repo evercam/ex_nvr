@@ -17,11 +17,6 @@ defmodule ExNVR.Pipelines.Supervisor do
         ExNVR.PipelineSupervisor,
         {Pipelines.Main, [device: device]}
       )
-
-      # DynamicSupervisor.start_child(
-      #   ExNVR.PipelineSupervisor,
-      #   {Pipelines.ObjectDetection, []}
-      # )
     end
   end
 
