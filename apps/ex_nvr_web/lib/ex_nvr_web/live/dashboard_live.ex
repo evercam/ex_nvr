@@ -9,7 +9,7 @@ defmodule ExNVRWeb.DashboardLive do
   def render(assigns) do
     ~H"""
     <div class="bg-white sm:w-2/3 dark:bg-gray-800">
-      <div class="hidden" id="alert-container">
+      <%!-- <div class="hidden" id="alert-container">
         <div class="bg-white rounded-md p-4 shadow-md">
           <button id="close-alert" class="absolute top-2 right-2 text-gray-400 hover:text-gray-600">
             <svg
@@ -27,7 +27,7 @@ defmodule ExNVRWeb.DashboardLive do
           <img id="alert-image" class="w-24 h-24 mx-auto mb-2" src="" alt="Alert Image" />
           <p id="alert-label" class="text-center text-gray-800"></p>
         </div>
-      </div>
+      </div> --%>
 
       <div :if={@devices == []} class="grid tracking-wide text-lg text-center dark:text-gray-200">
         You have no devices, you can create one
@@ -85,16 +85,25 @@ defmodule ExNVRWeb.DashboardLive do
           />
         </div>
       </div>
+
+      <div id="detection-container" class="text-center text-green-500">
+        <div class="mb-4">
+          <h2 class="text-xl font-bold">Image Detected: </h2>
+        </div>
+        <img id="alert-image" class="w-224 h-224 mx-auto mb-2" src={@detection_img} alt="Alert Image" />
+        <div class="mb-4">
+          <h2 class="text-xl font-bold"> Prediction: </h2>
+        </div>
+        <div class="bg-white inline-block px-2">
+          <p><%= @detection_label %></p>
+        </div>
+      </div>
     </div>
     """
   end
 
+  @spec mount(any, any, Phoenix.LiveView.Socket.t()) :: {:ok, any}
   def mount(_params, _session, socket) do
-    if connected?(socket) do
-      Phoenix.PubSub.subscribe(ExNVR.PubSub, "detection")
-      IO.inspect("SUBSCRRIIIIIIIIIBBBBBEEEEEDDD!!!!!")
-    end
-
     socket =
       socket
       |> assign_devices()
@@ -107,13 +116,25 @@ defmodule ExNVRWeb.DashboardLive do
       |> assign_timezone()
       |> maybe_push_stream_event(nil)
 
-    {:ok, assign(socket, start_date: nil)}
+      if connected?(socket) do
+        Enum.each(socket.assigns.devices, fn device -> Phoenix.PubSub.subscribe(ExNVR.PubSub, "detection-#{device.id}") end)
+      end
+
+    {:ok, assign(socket, start_date: nil, detection_label: "", detection_img: "")}
   end
 
-  def handle_info({:prediction, prediction, current_encoded_frame}, socket) do
-    IO.inspect("prediction Event!!!!! #{prediction} ")
-    push_event(socket, "show_alert", %{image: current_encoded_frame, label: prediction})
-    {:noreply, socket}
+  def handle_info({:prediction, prediction, current_encoded_frame, _device_id}, socket) do
+    # IO.inspect("LIVE VIEW ===== prediction Event!!!!! #{prediction} ")
+    # push_event(socket, "show_alert", %{image: current_encoded_frame, label: prediction})
+    # {:noreply, socket}
+    # if socket.current_device and socket.current_device.id == device_id do
+    new_socket = assign(socket, detection_label: prediction, detection_img: "data:image/jpeg;base64, #{current_encoded_frame}")
+    {:noreply, new_socket}
+
+    # else
+    #   {:noreply, socket}
+    # end
+
   end
 
   def handle_event("switch_device", %{"device" => device_id}, socket) do
