@@ -32,52 +32,32 @@ defmodule ExNVR.Elements.ObjectDetectionBin do
     ]
 
   @impl true
-  def handle_setup(_ctx, state) do
-    Membrane.Logger.debug("Setup the ObjectDetection element, start loading the Model")
-    state =
-      state
-      |> load_model()
-      |> load_featurizer()
-      |> load_serving()
+  def handle_init(_ctx, _options) do
+    {[], %{}}
+  end
 
+  @impl true
+  def handle_setup(_ctx, state) do
     {[notify_parent: {:pid, self()}], state}
   end
-  @impl true
-  def handle_init(_ctx, options) do
-    Membrane.Logger.debug("Initialize the Object Detection element")
-
-    state =
-      Map.from_struct(options)
-      |> Map.merge(%{
-        model: nil,
-        featurizer: nil,
-        serving: nil,
-        label: nil,
-        current_encoded_frame: nil
-      })
-
-    {[], state}
-  end
 
   @impl true
-  def handle_pad_added(Pad.ref(:input, ref) = pad, ctx, state) do
+  def handle_pad_added(Pad.ref(:input, ref) = pad, _ctx, state) do
+    IO.inspect("handle_pad_added ObjectDetection element")
 
     spec = [
       bin_input(pad)
       |> child({:decoder, ref}, %Membrane.H264.FFmpeg.Decoder{use_shm?: true})
-      |> child(converter: %Membrane.FramerateConverter{framerate: {2, 1}})
-      |> child(:scaler, %Membrane.FFmpeg.SWScale.Scaler{output_width: 224, output_height: 224}) # 224x224 image size for the model
-      |> child(:converter, %Membrane.FFmpeg.SWScale.PixelFormatConverter{format: :I420})
-      |> child({:filter, ref}, %ExNVR.Elements.OnePass{allow: ctx.options[:rank]})
+      |> child(:frame_converter, %Membrane.FramerateConverter{framerate: {2, 1}})
       |> child({:jpeg, ref}, Turbojpeg.Filter)
-      |> child({:sink, ref}, %ExNVR.Elements.Process.Sink{pid: self()})
+      |> child({:vision_sink, ref}, %ExNVR.Elements.Ml.ObjectDetectionSink{pid: self()})
     ]
 
     {[spec: spec], state}
   end
 
   @impl true
-  def handle_element_end_of_stream({:sink, ref}, _pad, ctx, state) do
+  def handle_element_end_of_stream({:vision_sink, ref}, _pad, ctx, state) do
     Map.keys(ctx.children)
     |> Enum.filter(fn
       {_, ^ref} -> true
@@ -92,51 +72,8 @@ defmodule ExNVR.Elements.ObjectDetectionBin do
   end
 
   @impl true
-  def handle_info({:buffer, image}, _ctx, state) do
-    IO.inspect("Handling INFOOOOO")
-    prediction = predict(state.serving, image)
-    encoded_img = encode_frame(image)
-    {[notify_parent: {:detection, prediction}], %{state | current_encoded_frame: encoded_img}}
-  end
-
-  defp load_model(%{model: nil} = state, model \\ "microsoft/resnet-50") do
-    Membrane.Logger.debug(
-      "Load Model <<<#{model}>>>"
-    )
-    {:ok, model_info} = Bumblebee.load_model({:hf, model})
-    %{state | model: model_info}
-  end
-
-  defp load_featurizer(%{model: _model, featurizer: nil} = state, featurizer \\ "microsoft/resnet-50") do
-    Membrane.Logger.debug(
-      "Load Model Featurizer <<<#{featurizer}>>>"
-    )
-
-    {:ok, featurizer} = Bumblebee.load_featurizer({:hf, "microsoft/resnet-50"})
-    %{state | featurizer: featurizer}
-  end
-
-  defp load_serving(%{model: model, featurizer: featurizer, serving: nil} = state) do
-    Membrane.Logger.debug(
-      "Model Serving <<<Model: #{model}, Featurizer: #{featurizer}>>>"
-    )
-    serving = Bumblebee.Vision.image_classification(model, featurizer,
-                top_k: 1,
-                compile: [batch_size: 1],
-                defn_options: [compiler: EXLA]
-              )
-     %{state | serving: serving}
-  end
-
-  defp encode_frame(frame) do
-    Evision.imencode(".jpg", frame) |> Base.encode64()
-  end
-
-  defp predict(serving, frame) do
-    tensor = frame |> Evision.Mat.to_nx() |> Nx.backend_transfer()
-
-    %{predictions: [%{label: label}]} = Nx.Serving.run(serving, tensor)
-
-    label
+  def handle_info({:detection, prediction, current_encoded_frame: encoded_img}, _ctx, state) do
+    Membrane.Logger.debug("Prediction from Object Detection Sink: #{prediction}")
+    {[notify_parent: {:detection, prediction, encoded_img}], state}
   end
 end

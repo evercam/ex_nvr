@@ -16,11 +16,12 @@ defmodule ExNVR.Pipelines.ObjectDetection do
     Membrane.Logger.info("Start Object Detection pipeline")
 
     state = %{
-        model: nil,
-        featurizer: nil,
-        label: nil,
-        current_encoded_frame: nil
-      }
+      model: nil,
+      featurizer: nil,
+      label: nil,
+      current_encoded_frame: nil
+    }
+
     spec =
       [
         child(:source, Membrane.CameraCapture)
@@ -30,16 +31,19 @@ defmodule ExNVR.Pipelines.ObjectDetection do
         |> child(:jpeg, Turbojpeg.Filter)
         |> child(:sink, %ExNVR.Elements.Process.Sink{pid: self()})
       ]
+
     {[spec: spec], state}
   end
 
   @impl true
   def handle_setup(_ctx, state) do
     Membrane.Logger.debug("Setup the ObjectDetection element, start loading the Model")
+
     state =
       state
       |> load_model()
       |> load_featurizer()
+
     {[], state}
   end
 
@@ -72,31 +76,29 @@ defmodule ExNVR.Pipelines.ObjectDetection do
   end
 
   defp load_model(%{model: nil} = state, model \\ "microsoft/resnet-50") do
-    Membrane.Logger.debug(
-      "Load Model <<<#{model}>>>"
-    )
+    Membrane.Logger.debug("Load Model <<<#{model}>>>")
     {:ok, model_info} = Bumblebee.load_model({:hf, model})
     %{state | model: model_info}
   end
 
-  defp load_featurizer(%{model: _model, featurizer: nil} = state, featurizer \\ "microsoft/resnet-50") do
-    Membrane.Logger.debug(
-      "Load Model Featurizer <<<#{featurizer}>>>"
-    )
+  defp load_featurizer(
+         %{model: _model, featurizer: nil} = state,
+         featurizer \\ "microsoft/resnet-50"
+       ) do
+    Membrane.Logger.debug("Load Model Featurizer <<<#{featurizer}>>>")
     {:ok, featurizer} = Bumblebee.load_featurizer({:hf, "microsoft/resnet-50"})
 
     %{state | featurizer: featurizer}
   end
 
   defp load_serving(%{model: model, featurizer: featurizer} = _state) do
-    Membrane.Logger.debug(
-      "Model Serving"
-    )
+    Membrane.Logger.debug("Model Serving")
+
     Bumblebee.Vision.image_classification(model, featurizer,
-                top_k: 1,
-                compile: [batch_size: 1],
-                defn_options: [compiler: EXLA]
-              )
+      top_k: 1,
+      compile: [batch_size: 1],
+      defn_options: [compiler: EXLA]
+    )
   end
 
   defp encode_frame(frame) do
