@@ -19,4 +19,7 @@ defmodule ExNVR.Utils do
   @spec generate_token(non_neg_integer()) :: binary()
   def generate_token(token_len \\ 16),
     do: :crypto.strong_rand_bytes(token_len) |> Base.url_encode64()
+
+  # Streaming & Codecs utilities
+  defguard keyframe(buffer) when buffer.metadata.h264.key_frame?
 end
