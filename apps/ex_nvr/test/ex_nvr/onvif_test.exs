@@ -33,6 +33,8 @@ defmodule ExNVR.OnvifTest do
   </Envelope>
   """
 
+  @default_media_uri "http://192.168.1.100/onvif/Media"
+
   describe "Probe network" do
     test "for onvif devices" do
       mock_gen_udp()
@@ -85,6 +87,31 @@ defmodule ExNVR.OnvifTest do
     end
   end
 
+  describe "Operations" do
+    test "Get media profiles" do
+      ref_file = "../fixtures/onvif/GetProfilesResponse.xml" |> Path.expand(__DIR__)
+      body = %{"Type" => "All"}
+
+      mock_operation("GetProfiles", body, ref_file)
+
+      assert {:ok, %{"GetProfilesResponse" => profiles}} =
+               Onvif.get_profiles(@default_media_uri, %{"Type" => "All"})
+
+      assert length(profiles) == 2
+      assert Enum.map(profiles, & &1["token"]) == ["Profile_1", "Profile_2"]
+    end
+
+    test "Get stream uri" do
+      ref_file = "../fixtures/onvif/GetStreamUriResponse.xml" |> Path.expand(__DIR__)
+      body = %{"ProfileToken" => "Profile_1", "Protocol" => ""}
+
+      mock_operation("GetStreamUri", body, ref_file)
+
+      assert {:ok, %{"GetStreamUriResponse" => %{"Uri" => "rtsp://192.168.8.101:9101/main"}}} =
+               Onvif.get_stream_uri(@default_media_uri, body)
+    end
+  end
+
   defp mock_gen_udp() do
     mock(:gen_udp, :open, Agent.start(fn -> 0 end))
 
@@ -92,5 +119,15 @@ defmodule ExNVR.OnvifTest do
       assert request =~ "dn:NetworkVideoTransmitter"
       :ok
     end)
+  end
+
+  defp mock_operation(operation, body, reference_file) do
+    mock(
+      Soap,
+      [call: 3],
+      fn _wsdl, ^operation, ^body ->
+        {:ok, %Soap.Response{status_code: 200, body: File.read!(reference_file)}}
+      end
+    )
   end
 end

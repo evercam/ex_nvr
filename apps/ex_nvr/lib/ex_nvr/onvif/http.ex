@@ -4,12 +4,13 @@ defmodule ExNVR.Onvif.Http do
   import Mockery.Macro
 
   @onvif_path Path.join([Application.app_dir(:ex_nvr), "priv", "onvif"])
-  @device_model_path Path.join(@onvif_path, "devicemgmt.wsdl")
+  @device_wsdl Soap.init_model(Path.join(@onvif_path, "devicemgmt.wsdl")) |> elem(1)
+  @media_wsdl Soap.init_model(Path.join(@onvif_path, "media2.wsdl")) |> elem(1)
 
   @spec call(binary(), binary(), map(), Keyword.t()) ::
           {:ok, Soap.Response.t()} | {:error, term()}
   def call(url, operation, body, opts \\ []) do
-    wsdl = init_wsdl_model_with_url(@device_model_path, url)
+    wsdl = get_model(opts[:model] || :device, url)
 
     username = opts[:username] || ""
     password = opts[:password] || ""
@@ -17,7 +18,7 @@ defmodule ExNVR.Onvif.Http do
     if username == "" or password == "" do
       mockable(Soap).call(wsdl, operation, body)
     else
-      http_headers = [{"authorization", Base.encode64(username <> ":" <> password)}]
+      http_headers = [{"Authorization", "Basic " <> Base.encode64(username <> ":" <> password)}]
       result = mockable(Soap).call(wsdl, operation, body, http_headers)
 
       with {:ok, %{status_code: 401} = resp} <- result,
@@ -71,8 +72,6 @@ defmodule ExNVR.Onvif.Http do
     end
   end
 
-  defp init_wsdl_model_with_url(path, url) do
-    {:ok, model} = Soap.init_model(path)
-    %{model | endpoint: url}
-  end
+  defp get_model(:media, endpoint), do: %{@media_wsdl | endpoint: endpoint}
+  defp get_model(:device, endpoint), do: %{@device_wsdl | endpoint: endpoint}
 end
