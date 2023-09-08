@@ -94,11 +94,15 @@ defmodule ExNVR.OnvifTest do
 
       mock_operation("GetProfiles", body, ref_file)
 
-      assert {:ok, %{"GetProfilesResponse" => profiles}} =
+      assert {:ok, %{GetProfilesResponse: profiles}} =
                Onvif.get_profiles(@default_media_uri, %{"Type" => "All"})
 
       assert length(profiles) == 2
-      assert Enum.map(profiles, & &1["token"]) == ["Profile_1", "Profile_2"]
+
+      assert Enum.map(profiles, fn {_, profile} -> profile.token end) == [
+               "Profile_1",
+               "Profile_2"
+             ]
     end
 
     test "Get stream uri" do
@@ -107,7 +111,7 @@ defmodule ExNVR.OnvifTest do
 
       mock_operation("GetStreamUri", body, ref_file)
 
-      assert {:ok, %{"GetStreamUriResponse" => %{"Uri" => "rtsp://192.168.8.101:9101/main"}}} =
+      assert {:ok, %{GetStreamUriResponse: %{Uri: "rtsp://192.168.8.101:9101/main"}}} =
                Onvif.get_stream_uri(@default_media_uri, body)
     end
   end

@@ -88,12 +88,16 @@ defmodule ExNVR.Onvif do
     Enum.map(response, &delete_namespaces/1)
   end
 
-  defp delete_namespaces({_key, value}), do: delete_namespaces(value)
+  defp delete_namespaces({key, value}) do
+    {delete_namespace(key), delete_namespaces(value)}
+  end
+
   defp delete_namespaces(response), do: response
 
   defp delete_namespace(key) do
     to_string(key)
     |> String.split(":")
     |> List.last()
+    |> String.to_atom()
   end
 end
