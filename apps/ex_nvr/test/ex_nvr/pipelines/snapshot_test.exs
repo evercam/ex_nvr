@@ -5,9 +5,8 @@ defmodule ExNVR.Pipelines.SnapshotTest do
 
   import ExNVR.DevicesFixtures
   import ExNVR.RecordingsFixtures
-  import Membrane.Testing.Assertions
 
-  alias Membrane.Testing
+  alias ExNVR.Pipelines
 
   @moduletag :tmp_dir
 
@@ -25,50 +24,30 @@ defmodule ExNVR.Pipelines.SnapshotTest do
     %{device: device, recording: recording}
   end
 
+  defp perform_test(device, recording, ref_path, method \\ :before) do
+    assert {:ok, _sup_pid, _pid} =
+             Pipelines.Snapshot.start_link(
+               device_id: device.id,
+               date: DateTime.add(recording.start_date, 3),
+               method: method
+             )
+
+    assert_receive {:snapshot, snapshot}, 1_000, "No snapshot received"
+    assert snapshot == File.read!(ref_path)
+  end
+
   describe "snapshot is created" do
     test "from closest keyframe before specified date time", %{
       device: device,
       recording: recording
     } do
-      pid = prepare_pipeline(device, recording)
-
-      assert_pipeline_notified(pid, :sink, {:snapshot, snapshot})
-      Testing.Pipeline.terminate(pid)
-
-      assert_receive {:snapshot, ^snapshot}, 1_000, "No snapshot received"
+      ref_path = "../../fixtures/images/ref_snapshot_before_keyframe.jpeg" |> Path.expand(__DIR__)
+      perform_test(device, recording, ref_path)
     end
 
     test "with exact time", %{device: device, recording: recording} do
-      pid = prepare_pipeline(device, recording, method: :precise)
-
-      assert_pipeline_notified(pid, :sink, {:snapshot, snapshot})
-      Testing.Pipeline.terminate(pid)
-
-      assert_receive {:snapshot, ^snapshot}, 1_000, "No snapshot received"
+      ref_path = "../../fixtures/images/ref_snapshot_exact_time.jpeg" |> Path.expand(__DIR__)
+      perform_test(device, recording, ref_path, :precise)
     end
-  end
-
-  test "PNG Snapshot is created from the video", %{device: device, recording: recording} do
-    pid = prepare_pipeline(device, recording, format: :png)
-
-    assert_pipeline_notified(pid, :sink, {:snapshot, snapshot})
-    Testing.Pipeline.terminate(pid)
-
-    assert_receive {:snapshot, ^snapshot}, 1_000, "No snapshot received"
-  end
-
-  defp prepare_pipeline(device, recording, options \\ []) do
-    options = [
-      module: ExNVR.Pipelines.Snapshot,
-      custom_args:
-        [
-          device_id: device.id,
-          date: DateTime.add(recording.start_date, 3),
-          caller: self()
-        ]
-        |> Keyword.merge(options)
-    ]
-
-    Testing.Pipeline.start_supervised!(options)
   end
 end

@@ -96,8 +96,13 @@ defmodule ExNVR.Elements.RecordingBin do
   end
 
   @impl true
-  def handle_setup(_ctx, state) do
+  def handle_setup(_ctx, %{current_recording: nil} = state) do
     {[notify_parent: :no_recordings], state}
+  end
+
+  @impl true
+  def handle_setup(_ctx, state) do
+    {[], state}
   end
 
   @impl true
