@@ -248,7 +248,7 @@ defmodule ExNVR.Pipeline.Source.RTSP.ConnectionManager do
     end
   end
 
-  defp start_rtsp_session(%ConnectionStatus{rtsp_session: rtsp_session} = state) do
+  defp start_rtsp_session(%ConnectionStatus{rtsp_session: rtsp_session}) do
     rtsp_session
   end
 

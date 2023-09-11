@@ -88,14 +88,15 @@ defmodule ExNVR.Elements.RecordingPipelineTest do
     test "source notifies parent", %{device: device, tmp_dir: tmp_dir} do
       out_path = Path.join(tmp_dir, "output.h264")
 
-      pid = start_pipeline(
-        device,
-        out_path,
-        ~U(2023-09-05 10:00:03Z),
-        ~U(2023-09-05 10:01:10Z),
-        :keyframe_before,
-        0
-      )
+      pid =
+        start_pipeline(
+          device,
+          out_path,
+          ~U(2023-09-05 10:00:03Z),
+          ~U(2023-09-05 10:01:10Z),
+          :keyframe_before,
+          0
+        )
 
       assert_pipeline_play(pid)
       assert_pipeline_notified(pid, :source, :no_recordings)

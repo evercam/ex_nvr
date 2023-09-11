@@ -7,9 +7,8 @@ defmodule ExNVR.Pipelines.Snapshot do
 
   require Membrane.Logger
 
-  alias Membrane.H264
   alias ExNVR.Elements
-  alias ExNVR.Elements.MP4
+  alias ExNVR.Elements.RecordingBin
 
   def start_link(options) do
     Pipeline.start_link(__MODULE__, Keyword.put(options, :caller, self()))
@@ -23,12 +22,13 @@ defmodule ExNVR.Pipelines.Snapshot do
     rank = if options[:method] == :precise, do: :last, else: :first
 
     spec = [
-      child(:source, %MP4.Depayloader{
+      child(:source, %RecordingBin{
         device_id: options[:device_id],
         start_date: options[:date],
-        end_date: options[:date]
+        end_date: options[:date],
+        strategy: :keyframe_before
       })
-      |> child(:parser, H264.Parser)
+      |> via_out(:video)
       |> via_in(Pad.ref(:input, make_ref()),
         options: [format: options[:format] || :jpeg, rank: rank]
       )
@@ -42,6 +42,6 @@ defmodule ExNVR.Pipelines.Snapshot do
   def handle_child_notification({:snapshot, snapshot}, :sink, _ctx, state) do
     Membrane.Logger.info("Got snapshot")
     send(state.caller, {:snapshot, snapshot})
-    {[terminate: :shutdown], %{state | caller: nil}}
+    {[terminate: :normal], %{state | caller: nil}}
   end
 end
