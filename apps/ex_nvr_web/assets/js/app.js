@@ -37,6 +37,40 @@ let Hooks = {
             updateTimelineSegments(this.el)
         },
     },
+    toggleConfigInputs: {
+        mounted() {
+            this.toggleInputs();
+            this.el.addEventListener("change", this.toggleInputs);
+        },
+        updated() {
+            this.toggleInputs();
+        },
+        toggleInputs(event) {
+            var selectElement = document.getElementById("device_type");
+            var ipConfigInputs = document.getElementById("ip_config_inputs");
+            var ipStreamUriInput = document.getElementById("config_stream_uri")
+
+            var fileConfigInputs = document.getElementById("file_config_inputs");
+            var fileLocationInput = document.getElementById("config_file_location")
+
+            var credentialsInputs = document.getElementById("credentials_inputs")
+            
+            if (selectElement.value === "IP") {
+                ipConfigInputs.classList.remove("hidden");
+                credentialsInputs.classList.remove("hidden");
+
+                fileConfigInputs.classList.add("hidden");
+                fileLocationInput.required = false
+            } else if (selectElement.value === "FILE") {
+                ipConfigInputs.classList.add("hidden");
+                credentialsInputs.classList.add("hidden");
+                
+                ipStreamUriInput.required = false
+
+                fileConfigInputs.classList.remove("hidden");
+            }
+        },
+    }
 }
 
 let csrfToken = document
