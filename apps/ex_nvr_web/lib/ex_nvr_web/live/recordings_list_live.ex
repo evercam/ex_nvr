@@ -292,7 +292,7 @@ defmodule ExNVRWeb.RecordingListLive do
             device_id: [
               op: :==,
               type: "select",
-              options: Enum.map(@devices, & &1.id),
+              options: Enum.map(@devices, &{&1.name, &1.id}),
               label: "Device"
             ],
             start_date: [op: :>=, type: "datetime-local", label: "Start Date"],
@@ -327,8 +327,14 @@ defmodule ExNVRWeb.RecordingListLive do
     {:noreply, push_patch(socket, to: ~p"/recordings?#{params}")}
   end
 
-  def handle_event("nav", %{"page" => page}, socket) do
-    {:noreply, push_patch(socket, to: Routes.recording_list_path(socket, :list, page: page))}
+  def handle_event("nav", params, socket) do
+    route =
+      Routes.recording_list_path(socket, :list,
+        page: params["page"],
+        page_size: params["page_size"]
+      )
+
+    {:noreply, push_patch(socket, to: route)}
   end
 
   def handle_params(params, _uri, socket) do

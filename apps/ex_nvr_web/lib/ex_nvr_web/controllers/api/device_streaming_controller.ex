@@ -31,7 +31,10 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
   end
 
   @spec hls_stream_segment(Plug.Conn.t(), map()) :: return_t()
-  def hls_stream_segment(conn, %{"stream_id" => stream_id, "segment_name" => segment_name} = params) do
+  def hls_stream_segment(
+        conn,
+        %{"stream_id" => stream_id, "segment_name" => segment_name} = params
+      ) do
     folder = if params["live"] == "true", do: "live", else: stream_id
     path = Path.join([Utils.hls_dir(conn.assigns.device.id), folder, segment_name])
 
