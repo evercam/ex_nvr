@@ -222,8 +222,9 @@ defmodule ExNVR.Model.Device do
 
   defp build_stream_uri(%__MODULE__{stream_config: config, credentials: credentials_config}) do
     userinfo =
-      if to_string(credentials_config.username) != "" and to_string(credentials_config.password) != "" do
-            "#{credentials_config.username}:#{credentials_config.password}"
+      if to_string(credentials_config.username) != "" and
+           to_string(credentials_config.password) != "" do
+        "#{credentials_config.username}:#{credentials_config.password}"
       end
 
     {do_build_uri(config.stream_uri, userinfo), do_build_uri(config.sub_stream_uri, userinfo)}
