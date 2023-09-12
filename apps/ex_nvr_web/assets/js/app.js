@@ -71,13 +71,13 @@ let Hooks = {
 
             var credentialsInputs = document.getElementById("credentials_inputs")
             
-            if (selectElement.value === "ip") {
+            if (selectElement.value === "IP") {
                 ipConfigInputs.classList.remove("hidden");
                 credentialsInputs.classList.remove("hidden");
 
                 fileConfigInputs.classList.add("hidden");
                 fileLocationInput.required = false
-            } else if (selectElement.value === "file") {
+            } else if (selectElement.value === "FILE") {
                 ipConfigInputs.classList.add("hidden");
                 credentialsInputs.classList.add("hidden");
                 
