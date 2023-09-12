@@ -32,8 +32,10 @@ defmodule ExNVR.Pipeline.Output.Bif.KeyFrameSelector do
   @impl true
   def handle_process(:input, buffer, _ctx, state) when key_frame?(buffer) do
     if is_nil(state.last_keyframe_pts) or diff(buffer, state) >= state.interval do
-      {[buffer: {:output, buffer}],
-       %{state | last_keyframe_pts: Time.round_to_seconds(buffer.pts)}}
+      pts = rem(buffer.metadata.timestamp, 3600 * 10 ** 9)
+      state = %{state | last_keyframe_pts: Time.round_to_seconds(buffer.pts)}
+
+      {[buffer: {:output, %{buffer | pts: pts}}], state}
     else
       {[], state}
     end

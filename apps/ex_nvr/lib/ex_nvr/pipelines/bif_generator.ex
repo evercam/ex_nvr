@@ -5,8 +5,8 @@ defmodule ExNVR.Pipelines.BifGenerator do
 
   use Membrane.Pipeline
 
-  def start_link(options) do
-    Pipeline.start_link(__MODULE__, options)
+  def start(options) do
+    Pipeline.start(__MODULE__, options)
   end
 
   @impl true
@@ -15,7 +15,8 @@ defmodule ExNVR.Pipelines.BifGenerator do
       child(:source, %ExNVR.Elements.RecordingBin{
         device_id: options[:device_id],
         start_date: options[:start_date],
-        end_date: options[:end_date]
+        end_date: options[:end_date],
+        strategy: :exact
       })
       |> via_out(:video)
       |> child(:bif, %ExNVR.Pipeline.Output.Bif{

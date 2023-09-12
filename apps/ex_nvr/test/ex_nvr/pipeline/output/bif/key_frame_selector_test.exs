@@ -34,6 +34,7 @@ defmodule ExNVR.Pipeline.Output.Bif.KeyFrameSelectorTest do
       payload: String.duplicate(<<1>>, 10),
       pts: Time.milliseconds(pts_in_ms),
       metadata: %{
+        timestamp: Time.milliseconds(pts_in_ms),
         h264: %{
           key_frame?: key_frame?
         }
