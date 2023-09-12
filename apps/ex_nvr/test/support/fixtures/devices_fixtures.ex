@@ -6,30 +6,50 @@ defmodule ExNVR.DevicesFixtures do
 
   def valid_rtsp_url(), do: "rtsp://example#{System.unique_integer()}:8541"
 
-  def valid_file_location(), do: "../../fixtures/big_buck.mp4" |> Path.expand(__DIR__)
-  def invalid_file_extenstion(), do: "../../fixtures/video-30-10s.h264" |> Path.expand(__DIR__)
+  def valid_file_location(), do: "/Dir/data/recordings/exampe#{System.unique_integer()}.mp4"
 
-  def valid_device_name(), do: "Device_#{System.unique_integer([:monotonic, :positive])}"
+  def valid_device_attributes(attrs \\ %{}, type \\ :IP) do
+    {camera_config, attrs} = Map.pop(attrs, :stream_config, %{})
 
-  def valid_device_credentials(), do: %{username: "user", password: "pass"}
+    if type == :IP do
+      credentials = %{
+        username: "user",
+        password: "pass"
+      }
 
-  def valid_device_attributes(attrs \\ %{}, type \\ "ip") do
-    {stream_config, attrs} = Map.pop(attrs, :stream_config, %{})
-    credentials = valid_device_credentials()
-    stream_config = build_stream_config(stream_config, type)
+      stream_config =
+        Enum.into(camera_config, %{
+          stream_uri: "rtsp://localhost:554/my_device_stream"
+        })
 
-    Enum.into(attrs, %{
-      id: UUID.uuid4(),
-      name: valid_device_name(),
-      type: type,
-      timezone: "UTC",
-      state: :recording,
-      stream_config: stream_config,
-      credentials: credentials
-    })
+      Enum.into(attrs, %{
+        id: UUID.uuid4(),
+        name: "Device_#{System.unique_integer([:monotonic, :positive])}",
+        type: "IP",
+        timezone: "UTC",
+        state: :recording,
+        stream_config: stream_config,
+        credentials: credentials
+      })
+    else
+      stream_config =
+        Enum.into(camera_config, %{
+          location:
+            "/ex_nvr/data/recordings/3f81d8b2-f288-4f61-8c71-404d228a5f6b/1693825914151636.mp4"
+        })
+
+      Enum.into(attrs, %{
+        id: UUID.uuid4(),
+        name: "Device_#{System.unique_integer([:monotonic, :positive])}",
+        type: "FILE",
+        timezone: "UTC",
+        state: :recording,
+        stream_config: stream_config
+      })
+    end
   end
 
-  def device_fixture(attrs \\ %{}, device_type \\ "ip") do
+  def device_fixture(attrs \\ %{}, device_type \\ :IP) do
     {:ok, device} =
       attrs
       |> valid_device_attributes(device_type)

@@ -38,7 +38,7 @@ defmodule ExNVRWeb.DeviceLiveTest do
         |> form("#device_form", %{
           "device" => %{
             "name" => "My Device",
-            "type" => "file",
+            "type" => "FILE",
             "stream_config" => %{
               "location" => valid_file_location()
             }
@@ -58,13 +58,13 @@ defmodule ExNVRWeb.DeviceLiveTest do
         |> form("#device_form", %{
           "device" => %{
             "name" => "My Device",
-            "type" => "file",
+            "type" => "FILE",
             "stream_config" => %{"location" => "rtsp://"}
           }
         })
         |> render_submit()
 
-      assert result =~ "File does not exist"
+      assert result =~ "invalid File location"
       assert Enum.empty?(Devices.list())
     end
 
@@ -76,7 +76,7 @@ defmodule ExNVRWeb.DeviceLiveTest do
         |> form("#device_form", %{
           "device" => %{
             "name" => "My Device",
-            "type" => "ip",
+            "type" => "IP",
             "credentials" => %{
               "username" => "user",
               "password" => "pass"
@@ -100,7 +100,7 @@ defmodule ExNVRWeb.DeviceLiveTest do
         |> form("#device_form", %{
           "device" => %{
             "name" => "My Device",
-            "type" => "ip",
+            "type" => "IP",
             "stream_config" => %{"stream_uri" => "rtsp://"}
           }
         })
@@ -113,7 +113,7 @@ defmodule ExNVRWeb.DeviceLiveTest do
 
   describe "Update a device" do
     setup do
-      %{device: device_fixture(), file_device: device_fixture(%{}, "file")}
+      %{device: device_fixture(), file_device: device_fixture(%{}, device_type: "FILE")}
     end
 
     test "update an IP Camera device", %{conn: conn, device: device} do
@@ -154,8 +154,6 @@ defmodule ExNVRWeb.DeviceLiveTest do
     end
 
     test "update a File Source device", %{conn: conn, file_device: device} do
-      file1_path = valid_file_location()
-
       {:ok, lv, _} = live(conn, ~p"/devices/#{device.id}")
 
       view =
@@ -164,38 +162,35 @@ defmodule ExNVRWeb.DeviceLiveTest do
           "device" => %{
             "name" => "My Updated Device",
             "stream_config" => %{
-              "location" => file1_path
+              "location" => "/Users/Recordings/my_stream.mp4"
             }
           }
         })
         |> render_submit()
 
       assert view =~ "My Updated Device"
-      assert view =~ file1_path
+      assert view =~ "/Users/Recordings/my_stream.mp4"
 
       assert updated_device = Devices.get(device.id)
       assert updated_device.name == "My Updated Device"
     end
 
-    test "renders errors on invalid update params for a FILE type Device (Invalid file extension)",
-         %{
-           conn: conn,
-           file_device: device
-         } do
-      file1_path = invalid_file_extenstion()
-
+    test "renders errors on invalid update params for a FILE type Device", %{
+      conn: conn,
+      file_device: device
+    } do
       {:ok, lv, _} = live(conn, ~p"/devices/#{device.id}")
 
       result =
         lv
         |> form("#device_form", %{
           "device" => %{
-            "stream_config" => %{"location" => file1_path}
+            "stream_config" => %{"location" => "/Users/Recordings/nothing.pdf"}
           }
         })
         |> render_submit()
 
-      assert result =~ "Invalid file extension"
+      assert result =~ "invalid File location"
     end
   end
 end
