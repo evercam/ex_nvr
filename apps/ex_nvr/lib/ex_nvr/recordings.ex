@@ -38,8 +38,9 @@ defmodule ExNVR.Recordings do
     |> Repo.all()
   end
 
+  @spec list(map()) :: {:ok, {[map()], Flop.Meta.t()}} | {:error, Flop.Meta.t()}
   def list(params \\ %{}) do
-    Recording.recordings_joined_by_device()
+    Recording.list_with_devices()
     |> ExNVR.Flop.validate_and_run(params, for: Recording)
   end
 

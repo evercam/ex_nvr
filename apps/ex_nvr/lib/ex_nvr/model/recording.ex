@@ -54,23 +54,17 @@ defmodule ExNVR.Model.Recording do
     where(query, [r], r.device_id == ^device_id)
   end
 
-  def changeset(params) do
-    %__MODULE__{}
-    |> Changeset.cast(params, @required_fields)
-    |> Changeset.validate_required(@required_fields)
-  end
-
-  def recordings_joined_by_device() do
+  def list_with_devices() do
     from(r in __MODULE__,
-        join: d in assoc(r, :device),
-        as: :joined_device,
-        on: r.device_id == d.id,
-        select: map(r, ^__MODULE__.__schema__(:fields)),
-        select_merge: %{
-          device_name: d.name,
-          timezone: d.timezone,
-        }
-      )
+      join: d in assoc(r, :device),
+      as: :joined_device,
+      on: r.device_id == d.id,
+      select: map(r, ^__MODULE__.__schema__(:fields)),
+      select_merge: %{
+        device_name: d.name,
+        timezone: d.timezone
+      }
+    )
   end
 
   def filter(query \\ __MODULE__, params) do
@@ -79,5 +73,11 @@ defmodule ExNVR.Model.Recording do
       {:device_id, values}, q when is_list(values) -> where(q, [r], r.device_id in ^values)
       _, q -> q
     end)
+  end
+
+  def changeset(params) do
+    %__MODULE__{}
+    |> Changeset.cast(params, @required_fields)
+    |> Changeset.validate_required(@required_fields)
   end
 end
