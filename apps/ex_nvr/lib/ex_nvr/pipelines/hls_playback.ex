@@ -7,7 +7,7 @@ defmodule ExNVR.Pipelines.HlsPlayback do
 
   require Membrane.Logger
 
-  alias ExNVR.Elements.MP4
+  alias ExNVR.Elements
   alias ExNVR.Pipeline.Output
 
   @call_timeout 60_000
@@ -39,12 +39,12 @@ defmodule ExNVR.Pipelines.HlsPlayback do
     Membrane.Logger.info("Start playback pipeline with options: #{inspect(options)}")
 
     spec = [
-      child(:source, %MP4.Depayloader{
+      child(:source, %Elements.RecordingBin{
         device_id: options[:device_id],
         start_date: options[:start_date]
       })
+      |> via_out(:video)
       |> child(:realtimer, Membrane.Realtimer)
-      |> child(:parser, %Membrane.H264.Parser{framerate: {0, 0}})
       |> via_in(Pad.ref(:video, :playback), options: [resolution: options[:resolution]])
       |> child(:sink, %Output.HLS{
         location: options[:directory],
