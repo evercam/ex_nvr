@@ -21,7 +21,7 @@ defmodule ExNVR.MixProject do
   def application do
     [
       mod: {ExNVR.Application, []},
-      extra_applications: [:logger, :runtime_tools, :scrivener]
+      extra_applications: [:logger, :runtime_tools]
     ]
   end
 
@@ -61,7 +61,8 @@ defmodule ExNVR.MixProject do
       {:connection, "~> 1.1.0"},
       {:tzdata, "~> 1.1"},
       {:turbojpeg, github: "BinaryNoggin/elixir-turbojpeg", ref: "14e2b36"},
-      {:faker, "~> 0.17", only: :test}
+      {:faker, "~> 0.17", only: :test},
+      {:flop, "~> 0.22.1"}
     ]
   end
 

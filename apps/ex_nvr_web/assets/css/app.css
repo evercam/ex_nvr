@@ -17,9 +17,24 @@
 #timeline path {
     stroke: #0000;
 }
+
 video::-webkit-media-controls-timeline, 
 video::-webkit-media-controls-play-button,
 video::-webkit-media-controls-time-remaining-display, 
 video::-webkit-media-controls-current-time-display { 
     display: none 
+}
+::-webkit-calendar-picker-indicator {
+    filter: invert(0.7);
+}
+
+.popup-container {
+    z-index: 9999; /* Make sure the popup is above everything */
+}
+  
+.popup-close {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
 }
