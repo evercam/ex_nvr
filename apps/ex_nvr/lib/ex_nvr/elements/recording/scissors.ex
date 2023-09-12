@@ -70,12 +70,13 @@ defmodule ExNVR.Elements.Recording.Scissors do
   end
 
   @impl true
+  def handle_parent_notification(:end_of_stream, ctx, state) do
+    do_handle_end_of_stream(ctx, state)
+  end
+
+  @impl true
   def handle_end_of_stream(:input, ctx, state) do
-    if ctx.pads.output.end_of_stream? do
-      {[], state}
-    else
-      {[end_of_stream: :output], state}
-    end
+    do_handle_end_of_stream(ctx, state)
   end
 
   @impl true
@@ -118,6 +119,14 @@ defmodule ExNVR.Elements.Recording.Scissors do
   @impl true
   def handle_buffer(:input, _buffer, _ctx, state) do
     {[], state}
+  end
+
+  defp do_handle_end_of_stream(ctx, state) do
+    if ctx.pads.output.end_of_stream? do
+      {[], state}
+    else
+      {[end_of_stream: :output], state}
+    end
   end
 
   defp do_handle_buffer(buffer, %{strategy: :exact} = state)

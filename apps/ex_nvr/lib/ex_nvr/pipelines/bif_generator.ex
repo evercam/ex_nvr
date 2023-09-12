@@ -12,12 +12,12 @@ defmodule ExNVR.Pipelines.BifGenerator do
   @impl true
   def handle_init(_ctx, options) do
     spec = [
-      child(:source, %ExNVR.Elements.MP4.Depayloader{
+      child(:source, %ExNVR.Elements.RecordingBin{
         device_id: options[:device_id],
         start_date: options[:start_date],
         end_date: options[:end_date]
       })
-      |> child(:parser, Membrane.H264.Parser)
+      |> via_out(:video)
       |> child(:bif, %ExNVR.Pipeline.Output.Bif{
         location: options[:location]
       })
@@ -28,6 +28,6 @@ defmodule ExNVR.Pipelines.BifGenerator do
 
   @impl true
   def handle_child_notification(:end_of_stream, :bif, _ctx, state) do
-    {[terminate: :normal], state}
+    {[terminate: :shutdown], state}
   end
 end
