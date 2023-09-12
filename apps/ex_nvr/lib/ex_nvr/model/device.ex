@@ -16,14 +16,14 @@ defmodule ExNVR.Model.Device do
           name: binary(),
           type: binary(),
           timezone: binary(),
-          state: state(),
-          credentials: Credentials.t(),
+          state: :stopped | :recording | :failed,
+          credentials: DeviceCredentials.t(),
           stream_config: StreamConfig.t(),
           inserted_at: DateTime.t(),
           updated_at: DateTime.t()
         }
 
-  defmodule Credentials do
+  defmodule DeviceCredentials do
     use Ecto.Schema
 
     import Ecto.Changeset
@@ -63,18 +63,25 @@ defmodule ExNVR.Model.Device do
       field :location, :string
     end
 
-    @file_extension_whitelist ~w(.mp4 .flv .mkv)
+    @file_extension_whitelist ~w(.mp4 .webm)
 
-    def changeset(struct, params, device_type) do
+    def changeset(struct, params, type_of_device) do
       struct
       |> cast(params, [:stream_uri, :sub_stream_uri, :location])
-      |> validate_device_config(device_type)
+      |> validate_device_config(type_of_device)
     end
 
-    defp validate_device_config(changeset, :ip) do
-      validate_required(changeset, [:stream_uri])
-      |> Changeset.validate_change(:stream_uri, &validate_uri/2)
-      |> Changeset.validate_change(:sub_stream_uri, &validate_uri/2)
+    defp validate_device_config(changeset, type) do
+      case type do
+        :IP ->
+          validate_required(changeset, [:stream_uri])
+          |> Changeset.validate_change(:stream_uri, &validate_uri/2)
+          |> Changeset.validate_change(:sub_stream_uri, &validate_uri/2)
+
+        :FILE ->
+          validate_required(changeset, [:location])
+          |> Changeset.validate_change(:location, &validate_file_extension/2)
+      end
     end
 
     defp validate_device_config(changeset, :file) do
@@ -107,16 +114,36 @@ defmodule ExNVR.Model.Device do
           []
       end
     end
+
+    defp validate_file_extension(field, file_location) do
+      file_extension = get_ext(file_location)
+
+      is_valid =
+        @file_extension_whitelist
+        |> Enum.member?(file_extension)
+
+      if is_valid do
+        []
+      else
+        [{field, "invalid File location"}]
+      end
+    end
+
+    defp get_ext(file) do
+      file
+      |> Path.extname()
+      |> String.downcase()
+    end
   end
 
   @primary_key {:id, :binary_id, autogenerate: true}
   schema "devices" do
     field :name, :string
-    field :type, Ecto.Enum, values: [:ip, :file]
+    field :type, Ecto.Enum, values: [:IP, :FILE]
     field :timezone, :string, default: "UTC"
     field :state, Ecto.Enum, values: @states, default: :recording
 
-    embeds_one :credentials, Credentials, source: :credentials, on_replace: :update
+    embeds_one :credentials, DeviceCredentials, source: :credentials, on_replace: :update
     embeds_one :stream_config, StreamConfig, source: :config, on_replace: :update
 
     timestamps(type: :utc_datetime_usec)
@@ -124,8 +151,8 @@ defmodule ExNVR.Model.Device do
 
   def streams(%__MODULE__{} = device), do: build_stream_uri(device)
 
-  def config_updated(%{type: :ip, stream_config: config}, %{
-        type: :ip,
+  def config_updated(%{type: :IP, stream_config: config}, %{
+        type: :IP,
         stream_config: config
       }),
       do: false
@@ -173,6 +200,20 @@ defmodule ExNVR.Model.Device do
   defp validate_config(%Changeset{} = changeset) do
     type = Changeset.get_field(changeset, :type)
 
+    case type do
+      :IP ->
+        Changeset.cast_embed(changeset, :credentials)
+        |> Changeset.cast_embed(:stream_config,
+          required: true,
+          with: fn struct, params -> StreamConfig.changeset(struct, params, :IP) end
+        )
+
+      :FILE ->
+        Changeset.cast_embed(changeset, :stream_config,
+          required: true,
+          with: fn struct, params -> StreamConfig.changeset(struct, params, :FILE) end
+        )
+
     Changeset.cast_embed(changeset, :stream_config,
       required: true,
       with: &StreamConfig.changeset(&1, &2, type)
@@ -181,9 +222,8 @@ defmodule ExNVR.Model.Device do
 
   defp build_stream_uri(%__MODULE__{stream_config: config, credentials: credentials_config}) do
     userinfo =
-      if to_string(credentials_config.username) != "" and
-           to_string(credentials_config.password) != "" do
-        "#{credentials_config.username}:#{credentials_config.password}"
+      if to_string(credentials_config.username) != "" and to_string(credentials_config.password) != "" do
+            "#{credentials_config.username}:#{credentials_config.password}"
       end
 
     {do_build_uri(config.stream_uri, userinfo), do_build_uri(config.sub_stream_uri, userinfo)}
