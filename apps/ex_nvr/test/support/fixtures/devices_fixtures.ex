@@ -6,30 +6,53 @@ defmodule ExNVR.DevicesFixtures do
 
   def valid_rtsp_url(), do: "rtsp://example#{System.unique_integer()}:8541"
 
-  def valid_device_attributes(attrs \\ %{}) do
-    {camera_config, attrs} = Map.pop(attrs, :ip_camera_config, %{})
+  def valid_file_location(), do: "/Dir/data/recordings/exampe#{System.unique_integer()}.mp4"
 
-    ip_camera_config =
-      Enum.into(camera_config, %{
-        stream_uri: "rtsp://localhost:554/my_device_stream",
+  def valid_device_attributes(attrs \\ %{}, type \\ :IP) do
+    {camera_config, attrs} = Map.pop(attrs, :stream_config, %{})
+
+    if type == :IP do
+      credentials = %{
         username: "user",
         password: "pass"
-      })
+      }
 
-    Enum.into(attrs, %{
-      id: UUID.uuid4(),
-      name: "Device_#{System.unique_integer([:monotonic, :positive])}",
-      type: "IP",
-      timezone: "UTC",
-      state: :recording,
-      ip_camera_config: ip_camera_config
-    })
+      stream_config =
+        Enum.into(camera_config, %{
+          stream_uri: "rtsp://localhost:554/my_device_stream"
+        })
+
+      Enum.into(attrs, %{
+        id: UUID.uuid4(),
+        name: "Device_#{System.unique_integer([:monotonic, :positive])}",
+        type: "IP",
+        timezone: "UTC",
+        state: :recording,
+        stream_config: stream_config,
+        credentials: credentials
+      })
+    else
+      stream_config =
+        Enum.into(camera_config, %{
+          location:
+            "/ex_nvr/data/recordings/3f81d8b2-f288-4f61-8c71-404d228a5f6b/1693825914151636.mp4"
+        })
+
+      Enum.into(attrs, %{
+        id: UUID.uuid4(),
+        name: "Device_#{System.unique_integer([:monotonic, :positive])}",
+        type: "FILE",
+        timezone: "UTC",
+        state: :recording,
+        stream_config: stream_config
+      })
+    end
   end
 
-  def device_fixture(attrs \\ %{}) do
+  def device_fixture(attrs \\ %{}, device_type \\ :IP) do
     {:ok, device} =
       attrs
-      |> valid_device_attributes()
+      |> valid_device_attributes(device_type)
       |> ExNVR.Devices.create()
 
     device
