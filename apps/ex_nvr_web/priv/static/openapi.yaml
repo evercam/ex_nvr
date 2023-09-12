@@ -67,7 +67,7 @@ paths:
                   description: Device name
                 type:
                   type: string
-                  enum: [ip, file]
+                  enum: [IP, FILE]
                   description: Device type
                 timezone:
                   type: string
@@ -87,7 +87,7 @@ paths:
                 stream_config:
                   $ref: "#/components/schemas/StreamConfig"
                 credentials:
-                  $ref: "#/components/schemas/Credentials"
+                  $ref: "#/components/schemas/DeviceCredentials"
               required: [name, type]
       responses:
         '201':
@@ -137,7 +137,7 @@ paths:
                 stream_config:
                   $ref: "#/components/schemas/StreamConfig"
                 credentials:
-                  $ref: "#/components/schemas/Credentials"
+                  $ref: "#/components/schemas/DeviceCredentials"
       responses:
         '200':
           description: Success
@@ -460,7 +460,7 @@ components:
           description: Device name
         type:
           type: string
-          enum: [ip, file]
+          enum: [IP, FILE]
           description: Device type
         timezone:
           type: string
@@ -471,26 +471,26 @@ components:
         stream_config:
           $ref: "#/components/schemas/StreamConfig"
         credentials:
-          $ref: "#/components/schemas/Credentials"
+          $ref: "#/components/schemas/DeviceCredentials"
     StreamConfig:
       type: object
-      description: Device stream configuration
+      description: Streaming Device configuration
       properties:
         stream_uri:
           type: string
           format: uri
-          description: The RTSP URL where to get the video stream (Only when Device type is ip)
+          description: The RTSP URL where to get the video stream (Only when Device type is IP)
         substream_uri:
           type: string
           format: uri
-          description: The RTSP URL where to get the video sub-stream (Only when Device type is ip)
+          description: The RTSP URL where to get the video sub-stream (Only when Device type is IP)
         location: 
           type: string
           format: path
-          description: The Path of the file location to be used as a streaming source (Only when Device type is file)
-    Credentials:
+          description: The Path of the file location to be used as a streaming source (Only when Device type is FILE)
+    DeviceCredentials:
       type: object
-      description: Streaming Device credentials (Only when Device type is ip)
+      description: Streaming Device credentials (Only when Device type is IP)
       properties:
         username:
           type: string
