@@ -65,10 +65,10 @@ defmodule ExNVR.Model.Device do
 
     @file_extension_whitelist ~w(.mp4 .flv .mkv)
 
-    def changeset(struct, params, type_of_device) do
+    def changeset(struct, params, device_type) do
       struct
       |> cast(params, [:stream_uri, :sub_stream_uri, :location])
-      |> validate_device_config(type_of_device)
+      |> validate_device_config(device_type)
     end
 
     defp validate_device_config(changeset, type) do
