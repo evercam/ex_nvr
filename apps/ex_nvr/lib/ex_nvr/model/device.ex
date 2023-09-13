@@ -63,7 +63,7 @@ defmodule ExNVR.Model.Device do
       field :location, :string
     end
 
-    @file_extension_whitelist ~w(.mp4 .webm)
+    @file_extension_whitelist ~w(.mp4 .flv .mkv)
 
     def changeset(struct, params, type_of_device) do
       struct
