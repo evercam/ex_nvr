@@ -18,6 +18,7 @@ defmodule ExNVR.BifGeneratorServer do
   def init(options) do
     Process.send_after(self(), :tick, :timer.minutes(1))
     Logger.metadata(device_id: options[:device].id)
+    Logger.info("Start BIF generator server")
     {:ok, %{device: options[:device]}}
   end
 
