@@ -87,7 +87,7 @@ paths:
                 stream_config:
                   $ref: "#/components/schemas/StreamConfig"
                 credentials:
-                  $ref: "#/components/schemas/DeviceCredentials"
+                  $ref: "#/components/schemas/Credentials"
               required: [name, type]
       responses:
         '201':
@@ -137,7 +137,7 @@ paths:
                 stream_config:
                   $ref: "#/components/schemas/StreamConfig"
                 credentials:
-                  $ref: "#/components/schemas/DeviceCredentials"
+                  $ref: "#/components/schemas/Credentials"
       responses:
         '200':
           description: Success
@@ -437,7 +437,7 @@ components:
         stream_config:
           $ref: "#/components/schemas/StreamConfig"
         credentials:
-          $ref: "#/components/schemas/DeviceCredentials"
+          $ref: "#/components/schemas/Credentials"
     StreamConfig:
       type: object
       description: Streaming Device configuration
@@ -454,7 +454,7 @@ components:
           type: string
           format: path
           description: The Path of the file location to be used as a streaming source (Only when Device type is FILE)
-    DeviceCredentials:
+    Credentials:
       type: object
       description: Streaming Device credentials (Only when Device type is IP)
       properties:
