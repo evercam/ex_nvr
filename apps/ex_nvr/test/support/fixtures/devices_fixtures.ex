@@ -8,10 +8,10 @@ defmodule ExNVR.DevicesFixtures do
 
   def valid_file_location(), do: "/Dir/data/recordings/exampe#{System.unique_integer()}.mp4"
 
-  def valid_device_attributes(attrs \\ %{}, type \\ :IP) do
+  def valid_device_attributes(attrs \\ %{}, type \\ :ip) do
     {camera_config, attrs} = Map.pop(attrs, :stream_config, %{})
 
-    if type == :IP do
+    if type == :ip do
       credentials = %{
         username: "user",
         password: "pass"
@@ -25,7 +25,7 @@ defmodule ExNVR.DevicesFixtures do
       Enum.into(attrs, %{
         id: UUID.uuid4(),
         name: "Device_#{System.unique_integer([:monotonic, :positive])}",
-        type: "IP",
+        type: "ip",
         timezone: "UTC",
         state: :recording,
         stream_config: stream_config,
@@ -41,7 +41,7 @@ defmodule ExNVR.DevicesFixtures do
       Enum.into(attrs, %{
         id: UUID.uuid4(),
         name: "Device_#{System.unique_integer([:monotonic, :positive])}",
-        type: "FILE",
+        type: "file",
         timezone: "UTC",
         state: :recording,
         stream_config: stream_config
@@ -49,7 +49,7 @@ defmodule ExNVR.DevicesFixtures do
     end
   end
 
-  def device_fixture(attrs \\ %{}, device_type \\ :IP) do
+  def device_fixture(attrs \\ %{}, device_type \\ :ip) do
     {:ok, device} =
       attrs
       |> valid_device_attributes(device_type)

@@ -73,12 +73,12 @@ defmodule ExNVR.Model.Device do
 
     defp validate_device_config(changeset, type) do
       case type do
-        :IP ->
+        :ip ->
           validate_required(changeset, [:stream_uri])
           |> Changeset.validate_change(:stream_uri, &validate_uri/2)
           |> Changeset.validate_change(:sub_stream_uri, &validate_uri/2)
 
-        :FILE ->
+        :file ->
           validate_required(changeset, [:location])
           |> Changeset.validate_change(:location, &validate_file_extension/2)
       end
@@ -139,7 +139,7 @@ defmodule ExNVR.Model.Device do
   @primary_key {:id, :binary_id, autogenerate: true}
   schema "devices" do
     field :name, :string
-    field :type, Ecto.Enum, values: [:IP, :FILE]
+    field :type, Ecto.Enum, values: [:ip, :file]
     field :timezone, :string, default: "UTC"
     field :state, Ecto.Enum, values: @states, default: :recording
 
@@ -151,8 +151,8 @@ defmodule ExNVR.Model.Device do
 
   def streams(%__MODULE__{} = device), do: build_stream_uri(device)
 
-  def config_updated(%{type: :IP, stream_config: config}, %{
-        type: :IP,
+  def config_updated(%{type: :ip, stream_config: config}, %{
+        type: :ip,
         stream_config: config
       }),
       do: false
@@ -201,17 +201,17 @@ defmodule ExNVR.Model.Device do
     type = Changeset.get_field(changeset, :type)
 
     case type do
-      :IP ->
+      :ip ->
         Changeset.cast_embed(changeset, :credentials)
         |> Changeset.cast_embed(:stream_config,
           required: true,
-          with: fn struct, params -> StreamConfig.changeset(struct, params, :IP) end
+          with: fn struct, params -> StreamConfig.changeset(struct, params, :ip) end
         )
 
-      :FILE ->
+      :file ->
         Changeset.cast_embed(changeset, :stream_config,
           required: true,
-          with: fn struct, params -> StreamConfig.changeset(struct, params, :FILE) end
+          with: fn struct, params -> StreamConfig.changeset(struct, params, :file) end
         )
 
     Changeset.cast_embed(changeset, :stream_config,
