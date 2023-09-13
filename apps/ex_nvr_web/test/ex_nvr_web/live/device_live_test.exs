@@ -38,7 +38,7 @@ defmodule ExNVRWeb.DeviceLiveTest do
         |> form("#device_form", %{
           "device" => %{
             "name" => "My Device",
-            "type" => "FILE",
+            "type" => "file",
             "stream_config" => %{
               "location" => valid_file_location()
             }
@@ -58,7 +58,7 @@ defmodule ExNVRWeb.DeviceLiveTest do
         |> form("#device_form", %{
           "device" => %{
             "name" => "My Device",
-            "type" => "FILE",
+            "type" => "file",
             "stream_config" => %{"location" => "rtsp://"}
           }
         })
@@ -76,7 +76,7 @@ defmodule ExNVRWeb.DeviceLiveTest do
         |> form("#device_form", %{
           "device" => %{
             "name" => "My Device",
-            "type" => "IP",
+            "type" => "ip",
             "credentials" => %{
               "username" => "user",
               "password" => "pass"
@@ -100,7 +100,7 @@ defmodule ExNVRWeb.DeviceLiveTest do
         |> form("#device_form", %{
           "device" => %{
             "name" => "My Device",
-            "type" => "IP",
+            "type" => "ip",
             "stream_config" => %{"stream_uri" => "rtsp://"}
           }
         })
@@ -113,7 +113,7 @@ defmodule ExNVRWeb.DeviceLiveTest do
 
   describe "Update a device" do
     setup do
-      %{device: device_fixture(), file_device: device_fixture(%{}, device_type: "FILE")}
+      %{device: device_fixture(), file_device: device_fixture(%{}, device_type: "file")}
     end
 
     test "update an IP Camera device", %{conn: conn, device: device} do

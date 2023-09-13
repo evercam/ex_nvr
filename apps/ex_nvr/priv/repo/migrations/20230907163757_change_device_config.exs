@@ -19,10 +19,10 @@ defmodule ExNVR.Repo.Migrations.ChangeDeviceConfig do
     |> Enum.each(&migrate_to_old_schema/1)
   end
 
-  defp migrate_device(%ExNVR.Model.Device{type: :IP} = old_device) do
+  defp migrate_device(%ExNVR.Model.Device{type: :ip} = old_device) do
     new_device_params = %{
       name: old_device.name,
-      type: :IP,
+      type: :ip,
       timezone: old_device.timezone,
       state: old_device.state,
       credentials: %{
@@ -41,11 +41,11 @@ defmodule ExNVR.Repo.Migrations.ChangeDeviceConfig do
 
   defp migrate_device(_), do: nil
 
-  defp migrate_to_old_schema(%ExNVR.Model.Device{type: :IP} = old_device) do
-    # For devices with type "IP", create a new device with the old schema
+  defp migrate_to_old_schema(%ExNVR.Model.Device{type: :ip} = old_device) do
+    # For devices with type "ip", create a new device with the old schema
     new_device_params = %{
       name: old_device.name,
-      type: :IP,
+      type: :ip,
       timezone: old_device.timezone,
       state: old_device.state,
       ip_camera_config: %{
@@ -59,11 +59,11 @@ defmodule ExNVR.Repo.Migrations.ChangeDeviceConfig do
     Repo.update(Changeset.change(old_device, new_device_params))
   end
 
-  defp migrate_to_old_schema(%ExNVR.Model.Device{type: :FILE} = old_device) do
-    # For devices with type "FILE", create a new device with the old schema
+  defp migrate_to_old_schema(%ExNVR.Model.Device{type: :file} = old_device) do
+    # For devices with type "file", create a new device with the old schema
     new_device_params = %{
       name: old_device.name,
-      type: :IP,
+      type: :ip,
       timezone: old_device.timezone,
       state: old_device.state,
       ip_camera_config: %{
