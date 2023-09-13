@@ -16,14 +16,14 @@ defmodule ExNVR.Model.Device do
           name: binary(),
           type: binary(),
           timezone: binary(),
-          state: :stopped | :recording | :failed,
-          credentials: DeviceCredentials.t(),
+          state: state(),
+          credentials: Credentials.t(),
           stream_config: StreamConfig.t(),
           inserted_at: DateTime.t(),
           updated_at: DateTime.t()
         }
 
-  defmodule DeviceCredentials do
+  defmodule Credentials do
     use Ecto.Schema
 
     import Ecto.Changeset
@@ -143,7 +143,7 @@ defmodule ExNVR.Model.Device do
     field :timezone, :string, default: "UTC"
     field :state, Ecto.Enum, values: @states, default: :recording
 
-    embeds_one :credentials, DeviceCredentials, source: :credentials, on_replace: :update
+    embeds_one :credentials, Credentials, source: :credentials, on_replace: :update
     embeds_one :stream_config, StreamConfig, source: :config, on_replace: :update
 
     timestamps(type: :utc_datetime_usec)
