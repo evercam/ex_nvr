@@ -440,7 +440,7 @@ components:
           $ref: "#/components/schemas/Credentials"
     StreamConfig:
       type: object
-      description: Streaming Device configuration
+      description: Device stream configuration
       properties:
         stream_uri:
           type: string
