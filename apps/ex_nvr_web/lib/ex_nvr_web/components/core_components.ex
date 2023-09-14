@@ -579,6 +579,27 @@ defmodule ExNVRWeb.CoreComponents do
     """
   end
 
+  @doc """
+  Renders a simple form.
+
+  ## Examples
+
+      <.card>
+        <p>Hello World</p>
+      </.card>
+  """
+  attr :class, :any, default: "", doc: "the classes names to append"
+
+  slot :inner_block, required: true
+
+  def card(assigns) do
+    ~H"""
+    <div class={@class <> " p-4 bg-white border border-gray-200 rounded-lg shadow sm:p-6 md:p-8 dark:bg-gray-800 dark:border-gray-700"}>
+      <%= render_slot(@inner_block) %>
+    </div>
+    """
+  end
+
   ## JS Commands
 
   def show(js \\ %JS{}, selector) do
