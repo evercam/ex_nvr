@@ -30,7 +30,8 @@ defmodule ExNVRWeb.DeviceLive do
     case Devices.create(device_params) do
       {:ok, device} ->
         info = "Device created successfully"
-        if device.type == :ip, do: Pipelines.Supervisor.start_pipeline(device)
+
+        Pipelines.Supervisor.start_pipeline(device)
 
         socket
         |> put_flash(:info, info)
@@ -47,10 +48,8 @@ defmodule ExNVRWeb.DeviceLive do
       {:ok, updated_device} ->
         info = "Device updated successfully"
 
-        if device.type == :ip do
-          if Device.recording?(device) and Device.config_updated(device, updated_device),
-            do: Pipelines.Supervisor.restart_pipeline(updated_device)
-        end
+        if Device.recording?(device) and Device.config_updated(device, updated_device),
+          do: Pipelines.Supervisor.restart_pipeline(updated_device)
 
         socket
         |> put_flash(:info, info)
