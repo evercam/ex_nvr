@@ -42,6 +42,7 @@ defmodule ExNVR.Pipelines.Main do
   alias ExNVR.{Devices, Recordings, Utils}
   alias ExNVR.Model.Device
   alias ExNVR.Pipeline.{Output, Source}
+  alias Membrane
 
   @event_prefix [:ex_nvr, :main_pipeline]
 
@@ -118,16 +119,9 @@ defmodule ExNVR.Pipelines.Main do
   @impl true
   def handle_init(_ctx, options) do
     device = options[:device]
-    {stream_uri, sub_stream_uri} = Device.streams(device)
 
     Logger.metadata(device_id: device.id)
     Membrane.Logger.info("Starting main pipeline for device: #{device.id}")
-
-    Membrane.Logger.info("""
-    Start streaming for
-    main stream: #{stream_uri}
-    sub stream: #{sub_stream_uri}
-    """)
 
     state = %State{
       device: device,
@@ -140,8 +134,16 @@ defmodule ExNVR.Pipelines.Main do
       segment_name_prefix: "live"
     }
 
-    spec =
-      [
+    if device.type == :ip do
+      {stream_uri, sub_stream_uri} = Device.streams(device)
+
+      Membrane.Logger.info("""
+      Start streaming for
+      main stream: #{stream_uri}
+      sub stream: #{sub_stream_uri}
+      """)
+
+      spec = [
         child(:rtsp_source, %Source.RTSP{stream_uri: stream_uri}),
         {child(:hls_sink, hls_sink, get_if_exists: true), crash_group: {"hls", :temporary}},
         child(:snapshooter, ExNVR.Elements.SnapshotBin),
@@ -151,7 +153,32 @@ defmodule ExNVR.Pipelines.Main do
           do: [child({:rtsp_source, :sub_stream}, %Source.RTSP{stream_uri: sub_stream_uri})],
           else: []
 
-    {[spec: spec], state}
+      {[spec: spec], state}
+    else
+      location = Device.file_location(device)
+
+      Membrane.Logger.info("""
+      Start streaming for
+      file_pah: #{location}
+      File Exists?: #{File.exists?(location)}
+      """)
+      spec =
+        [
+          child(:source, %Source.File.MP4{
+            location: location,
+            loop: true,
+          })
+          |> child(:realtimer, Membrane.Realtimer)
+          |> child(:parser, %Membrane.H264.Parser{framerate: {0, 0}})
+          |> via_in(Pad.ref(:video, :playback), options: [resolution: options[:resolution]])
+          |> child(:sink, %Output.HLS{
+            location: Path.join(Utils.hls_dir(device.id), "live"),
+            segment_name_prefix: "live"
+          })
+        ]
+
+      {[spec: spec], state}
+    end
   end
 
   @impl true
@@ -160,6 +187,24 @@ defmodule ExNVR.Pipelines.Main do
     # may happens on application crash
     Recordings.deactivate_runs(state.device)
     {[], maybe_update_device_and_report(state, :failed)}
+  end
+
+  @impl true
+  def handle_child_notification({:started_streaming}, :source, _context, state) do
+    Membrane.Logger.info("""
+      File Streaming Started.
+      """)
+    state = maybe_update_device_and_report(state, :recording)
+    {[], state}
+  end
+
+  @impl true
+  def handle_child_notification({:finished_streaming}, :source, _context, state) do
+    Membrane.Logger.info("""
+      File Streaming Reached end of file.
+      """)
+    state = maybe_update_device_and_report(state, :stopped)
+    {[terminate: :normal], state}
   end
 
   @impl true
@@ -238,6 +283,17 @@ defmodule ExNVR.Pipelines.Main do
   @impl true
   def handle_child_notification(_notification, _element, _ctx, state) do
     {[], state}
+  end
+
+  @impl true
+  def handle_child_pad_removed(:source, Pad.ref(:output, _ssrc), _ctx, state) do
+    state = maybe_update_device_and_report(state, :failed)
+
+    unlink_actions = [
+      remove_link: {:sink, Pad.ref(:video, :main_stream)}
+    ]
+
+    {[remove_child: [:main_stream]] ++ unlink_actions, state}
   end
 
   @impl true
