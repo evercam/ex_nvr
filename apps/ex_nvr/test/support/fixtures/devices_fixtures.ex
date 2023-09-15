@@ -9,48 +9,27 @@ defmodule ExNVR.DevicesFixtures do
   def valid_file_location(), do: "../../fixtures/big_buck.mp4" |> Path.expand(__DIR__)
   def invalid_file_extenstion(), do: "../../fixtures/video-30-10s.h264" |> Path.expand(__DIR__)
 
-  def valid_device_attributes(attrs \\ %{}, type \\ :ip) do
-    {camera_config, attrs} = Map.pop(attrs, :stream_config, %{})
+  def valid_device_name(), do: "Device_#{System.unique_integer([:monotonic, :positive])}"
 
-    if type == :ip do
-      credentials = %{
-        username: "user",
-        password: "pass"
-      }
+  def valid_device_credentials(), do: %{username: "user", password: "pass"}
 
-      stream_config =
-        Enum.into(camera_config, %{
-          stream_uri: "rtsp://localhost:554/my_device_stream"
-        })
+  def valid_device_attributes(attrs \\ %{}, type \\ "ip") do
+    {stream_config, attrs} = Map.pop(attrs, :stream_config, %{})
+    credentials = valid_device_credentials()
+    stream_config = build_stream_config(stream_config, type)
 
-      Enum.into(attrs, %{
-        id: UUID.uuid4(),
-        name: "Device_#{System.unique_integer([:monotonic, :positive])}",
-        type: "ip",
-        timezone: "UTC",
-        state: :recording,
-        stream_config: stream_config,
-        credentials: credentials
-      })
-    else
-      stream_config =
-        Enum.into(camera_config, %{
-          location:
-            valid_file_location()
-        })
-
-      Enum.into(attrs, %{
-        id: UUID.uuid4(),
-        name: "Device_#{System.unique_integer([:monotonic, :positive])}",
-        type: "file",
-        timezone: "UTC",
-        state: :recording,
-        stream_config: stream_config
-      })
-    end
+    Enum.into(attrs, %{
+      id: UUID.uuid4(),
+      name: valid_device_name(),
+      type: type,
+      timezone: "UTC",
+      state: :recording,
+      stream_config: stream_config,
+      credentials: credentials
+    })
   end
 
-  def device_fixture(attrs \\ %{}, device_type \\ :ip) do
+  def device_fixture(attrs \\ %{}, device_type \\ "ip") do
     {:ok, device} =
       attrs
       |> valid_device_attributes(device_type)
@@ -67,7 +46,8 @@ defmodule ExNVR.DevicesFixtures do
 
   defp build_stream_config(stream_config, "file") do
     Enum.into(stream_config, %{
-      location: valid_file_location()
+      location:
+        valid_file_location()
     })
   end
 end

@@ -65,7 +65,7 @@ defmodule ExNVR.DevicesTest do
       file1_path = "../fixtures/video-30-10s.h264" |> Path.expand(__DIR__)
       {:error, changeset} =
         Devices.create(
-          valid_device_attributes(%{stream_config: %{location: file1_path}}, type: "file")
+          valid_device_attributes(%{stream_config: %{location: file1_path}}, "file")
         )
 
       assert %{
@@ -76,7 +76,7 @@ defmodule ExNVR.DevicesTest do
       file2_path = "../fixtures/non-existing.mp4" |> Path.expand(__DIR__)
       {:error, changeset} =
         Devices.create(
-          valid_device_attributes(%{stream_config: %{location: file2_path}}, type: "file")
+          valid_device_attributes(%{stream_config: %{location: file2_path}}, "file")
         )
 
       assert %{
