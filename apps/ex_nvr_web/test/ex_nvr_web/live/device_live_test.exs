@@ -113,7 +113,7 @@ defmodule ExNVRWeb.DeviceLiveTest do
 
   describe "Update a device" do
     setup do
-      %{device: device_fixture(), file_device: device_fixture(%{}, device_type: "file")}
+      %{device: device_fixture(), file_device: device_fixture(%{}, "file")}
     end
 
     test "update an IP Camera device", %{conn: conn, device: device} do
