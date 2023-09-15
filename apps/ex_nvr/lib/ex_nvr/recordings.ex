@@ -62,7 +62,7 @@ defmodule ExNVR.Recordings do
   end
 
   # Runs
-  @spec list_runs(map()) :: [Run.t()]
+  @spec list_runs(map() | Keyword.t()) :: [Run.t()]
   def list_runs(params) do
     Repo.all(Run.filter(params))
   end

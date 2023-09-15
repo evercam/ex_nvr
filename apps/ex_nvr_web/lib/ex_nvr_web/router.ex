@@ -38,6 +38,8 @@ defmodule ExNVRWeb.Router do
 
       get "/snapshot", API.DeviceStreamingController, :snapshot
       get "/footage", API.DeviceStreamingController, :footage
+
+      get "/bif/:hour", API.DeviceStreamingController, :bif
     end
   end
 

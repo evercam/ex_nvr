@@ -133,7 +133,7 @@ defmodule ExNVR.Elements.RecordingBin do
     if recordings != [] do
       handle_element_end_of_stream({:parser, id}, pad, ctx, %{state | recordings: recordings})
     else
-      {[remove_children: childs_to_delete(id)], state}
+      {[remove_children: childs_to_delete(id), notify_child: {:scissors, :end_of_stream}], state}
     end
   end
 

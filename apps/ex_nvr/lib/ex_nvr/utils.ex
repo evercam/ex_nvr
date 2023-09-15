@@ -13,6 +13,11 @@ defmodule ExNVR.Utils do
     if device_id, do: Path.join(dir, device_id), else: dir
   end
 
+  @spec bif_dir(binary()) :: Path.t()
+  def bif_dir(device_id) do
+    Path.join(recording_dir(device_id), "bif")
+  end
+
   @spec run_main_pipeline?() :: boolean()
   def run_main_pipeline?(), do: Application.get_env(:ex_nvr, :run_pipelines, true)
 
