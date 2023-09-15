@@ -80,7 +80,22 @@ defmodule ExNVR.Model.Device do
 
         :file ->
           validate_required(changeset, [:location])
-          |> Changeset.validate_change(:location, &validate_file_extension/2)
+          |> Changeset.validate_change(:location, fn :location, location ->
+            File.exists?(location)
+            |> case do
+                true -> []
+                false -> [location: "File does not exist"]
+              end
+            end)
+          |> Changeset.validate_change(:location, fn :location, location ->
+            Path.extname(location)
+            |> String.downcase()
+            |> Kernel.in(@file_extension_whitelist)
+            |> case do
+                true -> []
+                false -> [location: "Invalid file extension"]
+              end
+            end)
       end
     end
 
@@ -113,26 +128,6 @@ defmodule ExNVR.Model.Device do
         true ->
           []
       end
-    end
-
-    defp validate_file_extension(field, file_location) do
-      file_extension = get_ext(file_location)
-
-      is_valid =
-        @file_extension_whitelist
-        |> Enum.member?(file_extension)
-
-      if is_valid do
-        []
-      else
-        [{field, "invalid File location"}]
-      end
-    end
-
-    defp get_ext(file) do
-      file
-      |> Path.extname()
-      |> String.downcase()
     end
   end
 
