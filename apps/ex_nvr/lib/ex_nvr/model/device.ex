@@ -197,17 +197,10 @@ defmodule ExNVR.Model.Device do
 
     case type do
       :ip ->
-        Changeset.cast_embed(changeset, :credentials)
-        |> Changeset.cast_embed(:stream_config,
-          required: true,
-          with: fn struct, params -> StreamConfig.changeset(struct, params, :ip) end
-        )
+        Changeset.cast_embed(changeset, :stream_config, required: true, with: &StreamConfig.changeset(&1, &2, type))
 
       :file ->
-        Changeset.cast_embed(changeset, :stream_config,
-          required: true,
-          with: fn struct, params -> StreamConfig.changeset(struct, params, :file) end
-        )
+        Changeset.cast_embed(changeset, :stream_config, required: true, with: &StreamConfig.changeset(&1, &2, type))
 
     Changeset.cast_embed(changeset, :stream_config,
       required: true,
