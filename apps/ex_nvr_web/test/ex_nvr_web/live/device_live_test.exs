@@ -64,7 +64,7 @@ defmodule ExNVRWeb.DeviceLiveTest do
         })
         |> render_submit()
 
-      assert result =~ "invalid File location"
+      assert result =~ "File does not exist"
       assert Enum.empty?(Devices.list())
     end
 
@@ -154,6 +154,8 @@ defmodule ExNVRWeb.DeviceLiveTest do
     end
 
     test "update a File Source device", %{conn: conn, file_device: device} do
+      file1_path = valid_file_location()
+
       {:ok, lv, _} = live(conn, ~p"/devices/#{device.id}")
 
       view =
@@ -162,35 +164,57 @@ defmodule ExNVRWeb.DeviceLiveTest do
           "device" => %{
             "name" => "My Updated Device",
             "stream_config" => %{
-              "location" => "/Users/Recordings/my_stream.mp4"
+              "location" => file1_path
             }
           }
         })
         |> render_submit()
 
       assert view =~ "My Updated Device"
-      assert view =~ "/Users/Recordings/my_stream.mp4"
+      assert view =~ file1_path
 
       assert updated_device = Devices.get(device.id)
       assert updated_device.name == "My Updated Device"
     end
 
-    test "renders errors on invalid update params for a FILE type Device", %{
+    test "renders errors on invalid update params for a FILE type Device (Invalid file extension)", %{
       conn: conn,
       file_device: device
     } do
+      file1_path = invalid_file_extenstion()
+
       {:ok, lv, _} = live(conn, ~p"/devices/#{device.id}")
 
       result =
         lv
         |> form("#device_form", %{
           "device" => %{
-            "stream_config" => %{"location" => "/Users/Recordings/nothing.pdf"}
+            "stream_config" => %{"location" => file1_path}
           }
         })
         |> render_submit()
 
-      assert result =~ "invalid File location"
+      assert result =~ "Invalid file extension"
+    end
+
+    test "renders errors on invalid update params for a FILE type Device (File does not exist)", %{
+      conn: conn,
+      file_device: device
+    } do
+      file1_path = "/test/fixtures/falsy_file.mp4"
+
+      {:ok, lv, _} = live(conn, ~p"/devices/#{device.id}")
+
+      result =
+        lv
+        |> form("#device_form", %{
+          "device" => %{
+            "stream_config" => %{"location" => file1_path}
+          }
+        })
+        |> render_submit()
+
+      assert result =~ "File does not exist"
     end
   end
 end

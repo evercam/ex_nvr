@@ -6,7 +6,8 @@ defmodule ExNVR.DevicesFixtures do
 
   def valid_rtsp_url(), do: "rtsp://example#{System.unique_integer()}:8541"
 
-  def valid_file_location(), do: "/Dir/data/recordings/exampe#{System.unique_integer()}.mp4"
+  def valid_file_location(), do: "../../fixtures/big_buck.mp4" |> Path.expand(__DIR__)
+  def invalid_file_extenstion(), do: "../../fixtures/video-30-10s.h264" |> Path.expand(__DIR__)
 
   def valid_device_attributes(attrs \\ %{}, type \\ :ip) do
     {camera_config, attrs} = Map.pop(attrs, :stream_config, %{})
@@ -35,7 +36,7 @@ defmodule ExNVR.DevicesFixtures do
       stream_config =
         Enum.into(camera_config, %{
           location:
-            "/ex_nvr/data/recordings/3f81d8b2-f288-4f61-8c71-404d228a5f6b/1693825914151636.mp4"
+            valid_file_location()
         })
 
       Enum.into(attrs, %{
