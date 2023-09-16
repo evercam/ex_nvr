@@ -71,32 +71,26 @@ defmodule ExNVR.Model.Device do
       |> validate_device_config(device_type)
     end
 
-    defp validate_device_config(changeset, type) do
-      case type do
-        :ip ->
-          validate_required(changeset, [:stream_uri])
-          |> Changeset.validate_change(:stream_uri, &validate_uri/2)
-          |> Changeset.validate_change(:sub_stream_uri, &validate_uri/2)
+    defp validate_device_config(changeset, :ip) do
+      validate_required(changeset, [:stream_uri])
+      |> Changeset.validate_change(:stream_uri, &validate_uri/2)
+      |> Changeset.validate_change(:sub_stream_uri, &validate_uri/2)
+    end
 
-        :file ->
-          validate_required(changeset, [:location])
-          |> Changeset.validate_change(:location, fn :location, location ->
-            File.exists?(location)
-            |> case do
-                true -> []
-                false -> [location: "File does not exist"]
-              end
-            end)
-          |> Changeset.validate_change(:location, fn :location, location ->
-            Path.extname(location)
-            |> String.downcase()
-            |> Kernel.in(@file_extension_whitelist)
-            |> case do
-                true -> []
-                false -> [location: "Invalid file extension"]
-              end
-            end)
-      end
+    defp validate_device_config(changeset, :file) do
+      validate_required(changeset, [:location])
+      |> Changeset.validate_change(:location, fn :location, location ->
+        if File.exists?(location), do: [], else: [location: "File does not exist"]
+        end)
+      |> Changeset.validate_change(:location, fn :location, location ->
+        Path.extname(location)
+        |> String.downcase()
+        |> Kernel.in(@file_extension_whitelist)
+        |> case do
+            true -> []
+            false -> [location: "Invalid file extension"]
+          end
+        end)
     end
 
     defp validate_device_config(changeset, :file) do
@@ -194,18 +188,7 @@ defmodule ExNVR.Model.Device do
 
   defp validate_config(%Changeset{} = changeset) do
     type = Changeset.get_field(changeset, :type)
-
-    case type do
-      :ip ->
-        Changeset.cast_embed(changeset, :stream_config, required: true, with: &StreamConfig.changeset(&1, &2, type))
-
-      :file ->
-        Changeset.cast_embed(changeset, :stream_config, required: true, with: &StreamConfig.changeset(&1, &2, type))
-
-    Changeset.cast_embed(changeset, :stream_config,
-      required: true,
-      with: &StreamConfig.changeset(&1, &2, type)
-    )
+    Changeset.cast_embed(changeset, :stream_config, required: true, with: &StreamConfig.changeset(&1, &2, type))
   end
 
   defp build_stream_uri(%__MODULE__{stream_config: config, credentials: credentials_config}) do
