@@ -67,7 +67,7 @@ paths:
                   description: Device name
                 type:
                   type: string
-                  enum: [IP, FILE]
+                  enum: [ip, file]
                   description: Device type
                 timezone:
                   type: string
@@ -426,7 +426,7 @@ components:
           description: Device name
         type:
           type: string
-          enum: [IP, FILE]
+          enum: [ip, file]
           description: Device type
         timezone:
           type: string
@@ -445,18 +445,18 @@ components:
         stream_uri:
           type: string
           format: uri
-          description: The RTSP URL where to get the video stream (Only when Device type is IP)
+          description: The RTSP URL where to get the video stream (Only when Device type is ip)
         substream_uri:
           type: string
           format: uri
-          description: The RTSP URL where to get the video sub-stream (Only when Device type is IP)
+          description: The RTSP URL where to get the video sub-stream (Only when Device type is ip)
         location: 
           type: string
           format: path
-          description: The Path of the file location to be used as a streaming source (Only when Device type is FILE)
+          description: The Path of the file location to be used as a streaming source (Only when Device type is file)
     Credentials:
       type: object
-      description: Streaming Device credentials (Only when Device type is IP)
+      description: Streaming Device credentials (Only when Device type is ip)
       properties:
         username:
           type: string
