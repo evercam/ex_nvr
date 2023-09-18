@@ -88,14 +88,17 @@ defmodule ExNVR.OnvifTest do
   end
 
   describe "Operations" do
-    test "Get media profiles" do
+    test "call an operation" do
       ref_file = "../fixtures/onvif/GetProfilesResponse.xml" |> Path.expand(__DIR__)
       body = %{"Type" => "All"}
 
       mock_operation("GetProfiles", body, ref_file)
 
       assert {:ok, %{GetProfilesResponse: profiles}} =
-               Onvif.get_profiles(@default_media_uri, %{"Type" => "All"})
+               Onvif.call(@default_media_uri, :get_profiles, %{"Type" => "All"})
+
+      assert %{GetProfilesResponse: _profiles} =
+               Onvif.call!(@default_media_uri, :get_profiles, %{"Type" => "All"})
 
       assert length(profiles) == 2
 
@@ -105,14 +108,12 @@ defmodule ExNVR.OnvifTest do
              ]
     end
 
-    test "Get stream uri" do
-      ref_file = "../fixtures/onvif/GetStreamUriResponse.xml" |> Path.expand(__DIR__)
-      body = %{"ProfileToken" => "Profile_1", "Protocol" => ""}
+    test "call failed" do
+      ref_file = "../fixtures/onvif/GetProfilesResponse.xml" |> Path.expand(__DIR__)
+      mock_operation("GetProfiles", :error, ref_file)
 
-      mock_operation("GetStreamUri", body, ref_file)
-
-      assert {:ok, %{GetStreamUriResponse: %{Uri: "rtsp://192.168.8.101:9101/main"}}} =
-               Onvif.get_stream_uri(@default_media_uri, body)
+      assert {:error, :invalid_operation} = Onvif.call(@default_media_uri, :get_profiles, :error)
+      assert_raise RuntimeError, fn -> Onvif.call!(@default_media_uri, :get_profiles, :error) end
     end
   end
 
@@ -130,7 +131,13 @@ defmodule ExNVR.OnvifTest do
       Soap,
       [call: 3],
       fn _wsdl, ^operation, ^body ->
-        {:ok, %Soap.Response{status_code: 200, body: File.read!(reference_file)}}
+        case body do
+          :error ->
+            {:error, :invalid_operation}
+
+          _ ->
+            {:ok, %Soap.Response{status_code: 200, body: File.read!(reference_file)}}
+        end
       end
     )
   end

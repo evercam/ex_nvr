@@ -10,6 +10,15 @@ defmodule ExNVR.Onvif do
   @type url :: binary()
   @type opts :: Keyword.t()
 
+  @allowed_operations [
+    get_system_date_and_time: :device,
+    get_device_information: :device,
+    get_capabilities: :device,
+    get_network_interfaces: :device,
+    get_profiles: :media,
+    get_stream_uri: :media
+  ]
+
   @doc """
   Probe the network for IP cameras
   """
@@ -33,32 +42,28 @@ defmodule ExNVR.Onvif do
     end
   end
 
-  @spec get_device_information(url(), opts()) :: {:error, any} | {:ok, map}
-  def get_device_information(url, opts \\ []) do
+  @spec call(url(), atom(), map(), opts()) :: {:error, any} | {:ok, map}
+  def call(url, operation, body \\ %{}, opts \\ []) do
+    model = Keyword.fetch!(@allowed_operations, operation)
+    opts = Keyword.put(opts, :model, model)
+
     url
-    |> Http.call("GetDeviceInformation", %{}, opts)
+    |> Http.call(Macro.camelize(to_string(operation)), body, opts)
     |> handle_response(Keyword.get(opts, :parse, true))
   end
 
-  @spec get_capabilities(url(), opts()) :: {:error, any} | {:ok, map}
-  def get_capabilities(url, opts \\ []) do
-    url
-    |> Http.call("GetCapabilities", %{}, opts)
-    |> handle_response(Keyword.get(opts, :parse, true))
-  end
+  @spec call!(url(), atom(), map(), opts()) :: map
+  def call!(url, operation, body \\ %{}, opts \\ []) do
+    case call(url, operation, body, opts) do
+      {:ok, response} ->
+        response
 
-  @spec get_profiles(url(), map, opts()) :: {:error, any} | {:ok, map}
-  def get_profiles(url, body, opts \\ []) do
-    url
-    |> Http.call("GetProfiles", body, Keyword.put(opts, :model, :media))
-    |> handle_response(Keyword.get(opts, :parse, true))
-  end
-
-  @spec get_stream_uri(url(), map(), opts()) :: {:ok, map()} | {:error, term()}
-  def get_stream_uri(url, body, opts \\ []) do
-    url
-    |> Http.call("GetStreamUri", body, Keyword.put(opts, :model, :media))
-    |> handle_response(Keyword.get(opts, :parse, true))
+      {:error, error} ->
+        raise """
+        could not execute operation: #{operation}
+        #{inspect(error)}
+        """
+    end
   end
 
   defp check_connectivity?(address) do
@@ -76,6 +81,7 @@ defmodule ExNVR.Onvif do
      |> delete_namespaces()}
   end
 
+  defp handle_response({:ok, response}, _parse), do: {:error, response}
   defp handle_response(response, _parse), do: response
 
   defp delete_namespaces(response) when is_map(response) do

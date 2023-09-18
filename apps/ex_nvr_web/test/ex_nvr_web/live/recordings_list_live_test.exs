@@ -26,8 +26,8 @@ defmodule ExNVRWeb.RecordingListLiveTest do
     assert html =~ "#{expected_end_date}"
 
     assert lv
-            |> element(~s{[id="recording-#{recording.id}-link"]})
-            |> has_element?()
+           |> element(~s{[id="recording-#{recording.id}-link"]})
+           |> has_element?()
   end
 
   describe "Recording list page" do
