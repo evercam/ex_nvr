@@ -7,8 +7,6 @@ defmodule ExNVR.Recordings do
   alias ExNVR.Model.{Device, Recording, Run}
   alias ExNVR.{Repo, Utils}
 
-  import Ecto.Query
-
   @type error :: {:error, Ecto.Changeset.t() | File.posix()}
 
   @spec create(Run.t(), map()) :: {:ok, Recording.t(), Run.t()} | error()
@@ -40,19 +38,10 @@ defmodule ExNVR.Recordings do
     |> Repo.all()
   end
 
+  @spec list(map()) :: {:ok, {[map()], Flop.Meta.t()}} | {:error, Flop.Meta.t()}
   def list(params \\ %{}) do
-    params
-    |> Recording.filter()
-    |> order_by([r], desc: r.start_date)
-    |> preload([:device])
-    |> Repo.all()
-  end
-
-  def paginate_recordings(params \\ []) do
-    Recording.filter(params)
-    |> order_by([r], desc: r.start_date)
-    |> preload([:device])
-    |> Repo.paginate(params)
+    Recording.list_with_devices()
+    |> ExNVR.Flop.validate_and_run(params, for: Recording)
   end
 
   @spec get_recordings_between(binary(), DateTime.t(), DateTime.t(), Keyword.t()) :: [
@@ -73,7 +62,7 @@ defmodule ExNVR.Recordings do
   end
 
   # Runs
-  @spec list_runs(map()) :: [Run.t()]
+  @spec list_runs(map() | Keyword.t()) :: [Run.t()]
   def list_runs(params) do
     Repo.all(Run.filter(params))
   end

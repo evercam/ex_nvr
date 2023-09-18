@@ -8,10 +8,37 @@ defmodule ExNVRWeb.RecordingListLiveTest do
   @moduletag :tmp_dir
   @moduletag :device
 
+  defp assert_recording_info(lv, html, device, recording) do
+    assert html =~ "#{recording.id}"
+    assert html =~ device.name
+
+    expected_start_date =
+      recording.start_date
+      |> DateTime.shift_zone!(device.timezone)
+      |> Calendar.strftime("%b %d, %Y %H:%M:%S")
+
+    expected_end_date =
+      recording.end_date
+      |> DateTime.shift_zone!(device.timezone)
+      |> Calendar.strftime("%b %d, %Y %H:%M:%S")
+
+    assert html =~ "#{expected_start_date}"
+    assert html =~ "#{expected_end_date}"
+
+    assert lv
+           |> element(~s{[id="recording-#{recording.id}-link"]})
+           |> has_element?()
+  end
+
   describe "Recording list page" do
     setup %{device: device} do
       %{
-        recordings: Enum.map(1..5, fn _ -> recording_fixture(device) end)
+        recordings:
+          Enum.map(1..10, fn idx ->
+            recording_fixture(device,
+              start_date: DateTime.add(~U(2023-09-12 00:00:00Z), idx * 100)
+            )
+          end)
       }
     end
 
@@ -19,8 +46,9 @@ defmodule ExNVRWeb.RecordingListLiveTest do
       {:ok, lv, html} =
         conn
         |> log_in_user(user_fixture())
-        |> live(~p"/recordings")
+        |> live(~p"/recordings?page_size=1")
 
+      # check pagination
       assert lv
              |> element("a", "Previous")
              |> has_element?()
@@ -33,27 +61,28 @@ defmodule ExNVRWeb.RecordingListLiveTest do
              |> element("a", "1")
              |> has_element?()
 
-      for recording <- recordings do
-        assert html =~ "#{recording.id}"
-        assert html =~ device.name
-
-        expected_start_date =
-          recording.start_date
-          |> DateTime.shift_zone!(device.timezone)
-          |> Calendar.strftime("%b %d, %Y %H:%M:%S")
-
-        expected_end_date =
-          recording.end_date
-          |> DateTime.shift_zone!(device.timezone)
-          |> Calendar.strftime("%b %d, %Y %H:%M:%S")
-
-        assert html =~ "#{expected_start_date}"
-        assert html =~ "#{expected_end_date}"
-
-        assert lv
-               |> element(~s{[id="recording-#{recording.id}-link"]})
-               |> has_element?()
+      for page_label <- ["1", "2", "...", "4", "5", "6", "...", "9", "10"] do
+        assert html =~ page_label
       end
+
+      assert_recording_info(lv, html, device, List.last(recordings))
+    end
+
+    test "paginate through recordings", %{conn: conn, device: device, recordings: recordings} do
+      {:ok, lv, _html} =
+        conn
+        |> log_in_user(user_fixture())
+        |> live(~p"/recordings?page_size=1")
+
+      html = element(lv, "a", "2") |> render_click(%{page_size: 1})
+
+      for page_label <- ["1", "2", "...", "4", "5", "6", "...", "9", "10"] do
+        assert html =~ page_label
+      end
+
+      # check recording
+      recording = Enum.at(recordings, length(recordings) - 2)
+      assert_recording_info(lv, html, device, recording)
     end
 
     test "download recording", %{conn: conn, recordings: recordings} do

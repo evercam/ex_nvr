@@ -56,7 +56,7 @@ defmodule ExNVR.Pipelines.VideoAssemblerTest do
       pid =
         prepare_pipeline(device,
           start_date: ~U(2023-06-23 10:00:03Z),
-          duration: Membrane.Time.seconds(60),
+          duration: Membrane.Time.seconds(10),
           destination: destination
         )
 

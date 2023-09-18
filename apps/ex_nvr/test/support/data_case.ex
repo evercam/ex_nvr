@@ -24,6 +24,10 @@ defmodule ExNVR.DataCase do
       import Ecto.Changeset
       import Ecto.Query
       import ExNVR.DataCase
+
+      import ExNVR.DevicesFixtures
+      import ExNVR.RecordingsFixtures
+      import Membrane.Testing.Assertions
     end
   end
 

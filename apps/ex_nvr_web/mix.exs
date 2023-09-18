@@ -40,9 +40,9 @@ defmodule ExNVRWeb.MixProject do
       {:phoenix_ecto, "~> 4.4"},
       {:phoenix_html, "~> 3.3"},
       {:phoenix_live_reload, "~> 1.2", only: :dev},
-      {:phoenix_live_view, "~> 0.18.16"},
+      {:phoenix_live_view, "~> 0.19.0"},
       {:floki, ">= 0.30.0", only: :test},
-      {:phoenix_live_dashboard, "~> 0.7.2"},
+      {:phoenix_live_dashboard, "~> 0.8.1"},
       {:esbuild, "~> 0.7", runtime: Mix.env() == :dev},
       {:tailwind, "~> 0.2.0", runtime: Mix.env() == :dev},
       {:telemetry_metrics, "~> 0.6"},
@@ -53,7 +53,8 @@ defmodule ExNVRWeb.MixProject do
       {:plug_cowboy, "~> 2.5"},
       {:corsica, "~> 2.1"},
       {:logger_json, "~> 5.1"},
-      {:scrivener_ecto, "~> 2.0"}
+      {:flop_phoenix, "~> 0.21.1"},
+      {:mock, "~> 0.3", only: :test}
     ]
   end
 

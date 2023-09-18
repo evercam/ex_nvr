@@ -21,7 +21,7 @@ defmodule ExNVR.MixProject do
   def application do
     [
       mod: {ExNVR.Application, []},
-      extra_applications: [:logger, :runtime_tools, :scrivener]
+      extra_applications: [:logger, :runtime_tools]
     ]
   end
 
@@ -41,7 +41,7 @@ defmodule ExNVR.MixProject do
       {:jason, "~> 1.2"},
       {:swoosh, "~> 1.3"},
       {:finch, "~> 0.13"},
-      {:membrane_core, "~> 0.12.7"},
+      {:membrane_core, "~> 0.12.9"},
       {:membrane_rtsp, "~> 0.5.0"},
       {:membrane_rtp_plugin, "~> 0.23.0"},
       {:membrane_rtp_h264_plugin, "~> 0.16.0"},
@@ -61,6 +61,8 @@ defmodule ExNVR.MixProject do
       {:connection, "~> 1.1.0"},
       {:tzdata, "~> 1.1"},
       {:turbojpeg, github: "BinaryNoggin/elixir-turbojpeg", ref: "14e2b36"},
+      {:flop, "~> 0.22.1"},
+      {:soap, github: "gBillal/soap", branch: "parse-attributes"},
       {:faker, "~> 0.17", only: :test}
     ]
   end
