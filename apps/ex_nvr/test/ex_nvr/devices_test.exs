@@ -63,21 +63,18 @@ defmodule ExNVR.DevicesTest do
 
     test "validate File existence and extension when type is file" do
       file1_path = "../fixtures/video-30-10s.h264" |> Path.expand(__DIR__)
+
       {:error, changeset} =
-        Devices.create(
-          valid_device_attributes(%{stream_config: %{location: file1_path}}, "file")
-        )
+        Devices.create(valid_device_attributes(%{stream_config: %{location: file1_path}}, "file"))
 
       assert %{
                stream_config: %{location: ["Invalid file extension"]}
              } == errors_on(changeset)
 
-
       file2_path = "../fixtures/non-existing.mp4" |> Path.expand(__DIR__)
+
       {:error, changeset} =
-        Devices.create(
-          valid_device_attributes(%{stream_config: %{location: file2_path}}, "file")
-        )
+        Devices.create(valid_device_attributes(%{stream_config: %{location: file2_path}}, "file"))
 
       assert %{
                stream_config: %{location: ["File does not exist"]}

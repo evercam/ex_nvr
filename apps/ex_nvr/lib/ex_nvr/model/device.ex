@@ -81,16 +81,16 @@ defmodule ExNVR.Model.Device do
       validate_required(changeset, [:location])
       |> Changeset.validate_change(:location, fn :location, location ->
         if File.exists?(location), do: [], else: [location: "File does not exist"]
-        end)
+      end)
       |> Changeset.validate_change(:location, fn :location, location ->
         Path.extname(location)
         |> String.downcase()
         |> Kernel.in(@file_extension_whitelist)
         |> case do
-            true -> []
-            false -> [location: "Invalid file extension"]
-          end
-        end)
+          true -> []
+          false -> [location: "Invalid file extension"]
+        end
+      end)
     end
 
     defp validate_uri(field, rtsp_uri) do
@@ -172,7 +172,11 @@ defmodule ExNVR.Model.Device do
 
   defp validate_config(%Changeset{} = changeset) do
     type = Changeset.get_field(changeset, :type)
-    Changeset.cast_embed(changeset, :stream_config, required: true, with: &StreamConfig.changeset(&1, &2, type))
+
+    Changeset.cast_embed(changeset, :stream_config,
+      required: true,
+      with: &StreamConfig.changeset(&1, &2, type)
+    )
   end
 
   defp build_stream_uri(%__MODULE__{stream_config: config, credentials: credentials_config}) do

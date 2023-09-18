@@ -12,10 +12,10 @@ defmodule ExNVR.Repo.Migrations.AddDeviceCredentialsField do
       '$.password', json_extract(config, '$.password')),
       config = json_remove(config, '$.username', '$.password');
     """
+
     execute """
       UPDATE devices SET type=LOWER(type);
     """
-
   end
 
   def down do
@@ -27,13 +27,14 @@ defmodule ExNVR.Repo.Migrations.AddDeviceCredentialsField do
       '$.sub_stream_uri', json_extract(config, '$.password')
       );
     """
+
     execute """
       UPDATE devices SET type=UPPER(type);
     """
+
     execute """
       ALTER TABLE devices
       DROP COLUMN credentials;
     """
   end
-
 end
