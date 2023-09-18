@@ -94,6 +94,8 @@ defmodule ExNVRWeb.Router do
       live "/devices", DeviceListLive, :list
       live "/devices/:id", DeviceLive, :edit
 
+      live "/onvif-discovery", OnvifDiscoveryLive, :onvif_discovery
+
       live "/recordings", RecordingListLive, :list
 
       live "/users/settings", UserSettingsLive, :edit

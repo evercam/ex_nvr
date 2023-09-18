@@ -53,7 +53,8 @@ defmodule ExNVRWeb.MixProject do
       {:plug_cowboy, "~> 2.5"},
       {:corsica, "~> 2.1"},
       {:logger_json, "~> 5.1"},
-      {:flop_phoenix, "~> 0.21.1"}
+      {:flop_phoenix, "~> 0.21.1"},
+      {:mock, "~> 0.3", only: :test}
     ]
   end
 

@@ -38,3 +38,7 @@ video::-webkit-media-controls-current-time-display {
     font-size: 24px;
     cursor: pointer;
 }
+
+.card-shadow {
+    box-shadow: rgba(0, 0, 0, 0.2) 0px 8px 24px;
+}

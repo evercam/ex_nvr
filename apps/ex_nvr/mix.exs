@@ -61,8 +61,9 @@ defmodule ExNVR.MixProject do
       {:connection, "~> 1.1.0"},
       {:tzdata, "~> 1.1"},
       {:turbojpeg, github: "BinaryNoggin/elixir-turbojpeg", ref: "14e2b36"},
-      {:faker, "~> 0.17", only: :test},
-      {:flop, "~> 0.22.1"}
+      {:flop, "~> 0.22.1"},
+      {:soap, github: "gBillal/soap", branch: "parse-attributes"},
+      {:faker, "~> 0.17", only: :test}
     ]
   end
 
