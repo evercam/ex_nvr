@@ -56,7 +56,6 @@ defmodule ExNVRWeb.API.DeviceControllerTest do
         |> get("/api/devices/")
         |> json_response(200)
 
-      assert length(response) == 0
       assert response == []
     end
 
