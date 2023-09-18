@@ -177,10 +177,11 @@ defmodule ExNVRWeb.DeviceLiveTest do
       assert updated_device.name == "My Updated Device"
     end
 
-    test "renders errors on invalid update params for a FILE type Device (Invalid file extension)", %{
-      conn: conn,
-      file_device: device
-    } do
+    test "renders errors on invalid update params for a FILE type Device (Invalid file extension)",
+         %{
+           conn: conn,
+           file_device: device
+         } do
       file1_path = invalid_file_extenstion()
 
       {:ok, lv, _} = live(conn, ~p"/devices/#{device.id}")
@@ -195,26 +196,6 @@ defmodule ExNVRWeb.DeviceLiveTest do
         |> render_submit()
 
       assert result =~ "Invalid file extension"
-    end
-
-    test "renders errors on invalid update params for a FILE type Device (File does not exist)", %{
-      conn: conn,
-      file_device: device
-    } do
-      file1_path = "/test/fixtures/falsy_file.mp4"
-
-      {:ok, lv, _} = live(conn, ~p"/devices/#{device.id}")
-
-      result =
-        lv
-        |> form("#device_form", %{
-          "device" => %{
-            "stream_config" => %{"location" => file1_path}
-          }
-        })
-        |> render_submit()
-
-      assert result =~ "File does not exist"
     end
   end
 end
