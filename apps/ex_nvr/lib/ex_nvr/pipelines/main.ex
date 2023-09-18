@@ -143,15 +143,16 @@ defmodule ExNVR.Pipelines.Main do
       sub stream: #{sub_stream_uri}
       """)
 
-      spec = [
-        child(:rtsp_source, %Source.RTSP{stream_uri: stream_uri}),
-        {child(:hls_sink, hls_sink, get_if_exists: true), crash_group: {"hls", :temporary}},
-        child(:snapshooter, ExNVR.Elements.SnapshotBin),
-        child(:webrtc, %Output.WebRTC{stream_id: device.id})
-      ] ++
-        if sub_stream_uri,
-          do: [child({:rtsp_source, :sub_stream}, %Source.RTSP{stream_uri: sub_stream_uri})],
-          else: []
+      spec =
+        [
+          child(:rtsp_source, %Source.RTSP{stream_uri: stream_uri}),
+          {child(:hls_sink, hls_sink, get_if_exists: true), crash_group: {"hls", :temporary}},
+          child(:snapshooter, ExNVR.Elements.SnapshotBin),
+          child(:webrtc, %Output.WebRTC{stream_id: device.id})
+        ] ++
+          if sub_stream_uri,
+            do: [child({:rtsp_source, :sub_stream}, %Source.RTSP{stream_uri: sub_stream_uri})],
+            else: []
 
       {[spec: spec], state}
     else
@@ -162,11 +163,12 @@ defmodule ExNVR.Pipelines.Main do
       file_pah: #{location}
       File Exists?: #{File.exists?(location)}
       """)
+
       spec =
         [
           child(:source, %Source.File.MP4{
             location: location,
-            loop: true,
+            loop: true
           })
           |> child(:realtimer, Membrane.Realtimer)
           |> child(:parser, %Membrane.H264.Parser{framerate: {0, 0}})
@@ -192,8 +194,9 @@ defmodule ExNVR.Pipelines.Main do
   @impl true
   def handle_child_notification({:started_streaming}, :source, _context, state) do
     Membrane.Logger.info("""
-      File Streaming Started.
-      """)
+    File Streaming Started.
+    """)
+
     state = maybe_update_device_and_report(state, :recording)
     {[], state}
   end
@@ -201,8 +204,9 @@ defmodule ExNVR.Pipelines.Main do
   @impl true
   def handle_child_notification({:finished_streaming}, :source, _context, state) do
     Membrane.Logger.info("""
-      File Streaming Reached end of file.
-      """)
+    File Streaming Reached end of file.
+    """)
+
     state = maybe_update_device_and_report(state, :stopped)
     {[terminate: :normal], state}
   end

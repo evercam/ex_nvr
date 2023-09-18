@@ -53,7 +53,11 @@ defmodule ExNVR.Pipeline.Source.File.MP4 do
   @impl true
   def handle_playing(_ctx, state) do
     {actions, state} = maybe_loop_file(state, :play)
-    {[notify_parent: {:started_streaming}, stream_format: {:output, %H264.RemoteStream{alignment: :au}}] ++ actions, state}
+
+    {[
+       notify_parent: {:started_streaming},
+       stream_format: {:output, %H264.RemoteStream{alignment: :au}}
+     ] ++ actions, state}
   end
 
   @impl true
@@ -91,7 +95,7 @@ defmodule ExNVR.Pipeline.Source.File.MP4 do
          | buffer?: false,
            pending_buffers: [],
            last_access_unit_dts: last_dts - first_dts,
-           current_dts: -first_dts,
+           current_dts: -first_dts
        }}
     else
       {[],
@@ -134,6 +138,7 @@ defmodule ExNVR.Pipeline.Source.File.MP4 do
 
   defp maybe_loop_file(state, action) do
     Membrane.Logger.debug("Reached end of file of the current file")
+
     if state.loop or action == :play do
       state = %{
         state
