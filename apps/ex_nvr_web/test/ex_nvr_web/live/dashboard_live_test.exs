@@ -36,7 +36,7 @@ defmodule ExNVRWeb.DashboardTest do
   describe "switch device" do
     test "switch devices update available streams", %{conn: conn} do
       device_1 = device_fixture()
-      device_2 = device_fixture(%{ip_camera_config: %{sub_stream_uri: valid_rtsp_url()}})
+      device_2 = device_fixture(%{stream_config: %{sub_stream_uri: valid_rtsp_url()}})
 
       {:ok, lv, html} = live(conn, ~p"/dashboard")
 

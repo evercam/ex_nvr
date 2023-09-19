@@ -16,27 +16,25 @@ defmodule ExNVR.Model.Device do
           name: binary(),
           type: binary(),
           timezone: binary(),
-          state: :stopped | :recording | :failed,
-          ip_camera_config: IPCameraConfig.t(),
+          state: state(),
+          credentials: Credentials.t(),
+          stream_config: StreamConfig.t(),
           inserted_at: DateTime.t(),
           updated_at: DateTime.t()
         }
 
-  defmodule IPCameraConfig do
+  defmodule Credentials do
     use Ecto.Schema
 
     import Ecto.Changeset
 
     @type t :: %__MODULE__{
-            stream_uri: binary(),
             username: binary(),
             password: binary()
           }
 
     @primary_key false
     embedded_schema do
-      field :stream_uri, :string
-      field :sub_stream_uri, :string
       field :username, :string
       field :password, :string
     end
@@ -44,9 +42,55 @@ defmodule ExNVR.Model.Device do
     def changeset(struct, params) do
       struct
       |> cast(params, __MODULE__.__schema__(:fields))
-      |> validate_required([:stream_uri])
+    end
+  end
+
+  defmodule StreamConfig do
+    use Ecto.Schema
+
+    import Ecto.Changeset
+
+    @type t :: %__MODULE__{
+            location: binary(),
+            stream_uri: binary(),
+            sub_stream_uri: binary()
+          }
+
+    @primary_key false
+    embedded_schema do
+      field :stream_uri, :string
+      field :sub_stream_uri, :string
+      field :location, :string
+    end
+
+    @file_extension_whitelist ~w(.mp4 .flv .mkv)
+
+    def changeset(struct, params, device_type) do
+      struct
+      |> cast(params, [:stream_uri, :sub_stream_uri, :location])
+      |> validate_device_config(device_type)
+    end
+
+    defp validate_device_config(changeset, :ip) do
+      validate_required(changeset, [:stream_uri])
       |> Changeset.validate_change(:stream_uri, &validate_uri/2)
       |> Changeset.validate_change(:sub_stream_uri, &validate_uri/2)
+    end
+
+    defp validate_device_config(changeset, :file) do
+      validate_required(changeset, [:location])
+      |> Changeset.validate_change(:location, fn :location, location ->
+        if File.exists?(location), do: [], else: [location: "File does not exist"]
+      end)
+      |> Changeset.validate_change(:location, fn :location, location ->
+        Path.extname(location)
+        |> String.downcase()
+        |> Kernel.in(@file_extension_whitelist)
+        |> case do
+          true -> []
+          false -> [location: "Invalid file extension"]
+        end
+      end)
     end
 
     defp validate_uri(field, rtsp_uri) do
@@ -68,27 +112,28 @@ defmodule ExNVR.Model.Device do
   @primary_key {:id, :binary_id, autogenerate: true}
   schema "devices" do
     field :name, :string
-    field :type, Ecto.Enum, values: [:IP]
+    field :type, Ecto.Enum, values: [:ip, :file]
     field :timezone, :string, default: "UTC"
     field :state, Ecto.Enum, values: @states, default: :recording
 
-    embeds_one :ip_camera_config, IPCameraConfig, source: :config, on_replace: :update
+    embeds_one :credentials, Credentials, source: :credentials, on_replace: :update
+    embeds_one :stream_config, StreamConfig, source: :config, on_replace: :update
 
     timestamps(type: :utc_datetime_usec)
   end
 
   def streams(%__MODULE__{} = device), do: build_stream_uri(device)
 
-  def config_updated(%{type: :IP, ip_camera_config: config}, %{
-        type: :IP,
-        ip_camera_config: config
+  def config_updated(%{type: :ip, stream_config: config}, %{
+        type: :ip,
+        stream_config: config
       }),
       do: false
 
   def config_updated(_device, _updated_device), do: true
 
-  def has_sub_stream(%__MODULE__{ip_camera_config: nil}), do: false
-  def has_sub_stream(%__MODULE__{ip_camera_config: %{sub_stream_uri: nil}}), do: false
+  def has_sub_stream(%__MODULE__{stream_config: nil}), do: false
+  def has_sub_stream(%__MODULE__{stream_config: %StreamConfig{sub_stream_uri: nil}}), do: false
   def has_sub_stream(_), do: true
 
   def recording?(%__MODULE__{state: :stopped}), do: false
@@ -105,12 +150,14 @@ defmodule ExNVR.Model.Device do
   def create_changeset(device, params) do
     device
     |> Changeset.cast(params, [:name, :type, :timezone, :state])
+    |> Changeset.cast_embed(:credentials)
     |> common_config()
   end
 
   def update_changeset(device, params) do
     device
     |> Changeset.cast(params, [:name, :timezone, :state])
+    |> Changeset.cast_embed(:credentials)
     |> common_config()
   end
 
@@ -124,19 +171,19 @@ defmodule ExNVR.Model.Device do
   defp validate_config(%Changeset{valid?: false} = cs), do: cs
 
   defp validate_config(%Changeset{} = changeset) do
-    case Changeset.get_field(changeset, :type) do
-      :IP ->
-        Changeset.cast_embed(changeset, :ip_camera_config, required: true)
+    type = Changeset.get_field(changeset, :type)
 
-      _ ->
-        changeset
-    end
+    Changeset.cast_embed(changeset, :stream_config,
+      required: true,
+      with: &StreamConfig.changeset(&1, &2, type)
+    )
   end
 
-  defp build_stream_uri(%__MODULE__{ip_camera_config: config}) do
+  defp build_stream_uri(%__MODULE__{stream_config: config, credentials: credentials_config}) do
     userinfo =
-      if to_string(config.username) != "" and to_string(config.password) != "" do
-        "#{config.username}:#{config.password}"
+      if to_string(credentials_config.username) != "" and
+           to_string(credentials_config.password) != "" do
+        "#{credentials_config.username}:#{credentials_config.password}"
       end
 
     {do_build_uri(config.stream_uri, userinfo), do_build_uri(config.sub_stream_uri, userinfo)}

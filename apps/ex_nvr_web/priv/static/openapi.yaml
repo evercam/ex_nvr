@@ -67,11 +67,11 @@ paths:
                   description: Device name
                 type:
                   type: string
-                  enum: [IP]
+                  enum: [ip, file]
                   description: Device type
                 timezone:
                   type: string
-                  description: Device timezoned
+                  description: Device timezone
                   default: UTC
                 state:
                   type: string
@@ -84,8 +84,10 @@ paths:
                     on creation
                     * `stopped` - The device will be created and will not try to connect or record
                     videos.
-                ip_camera_config:
-                  $ref: "#/components/schemas/IPCameraConfig"
+                stream_config:
+                  $ref: "#/components/schemas/StreamConfig"
+                credentials:
+                  $ref: "#/components/schemas/Credentials"
               required: [name, type]
       responses:
         '201':
@@ -102,7 +104,7 @@ paths:
       description: |
         Update device details.
 
-        If the device config (e.g. `ip_camera_config`) is updated, the pipeline is restarted 
+        If the device config (e.g. `stream_config`) is updated, the pipeline is restarted 
         to pick up the new configuration.
       operationId: updateDevice
       tags:
@@ -132,8 +134,10 @@ paths:
                     on creation
                     * `stopped` - The device will be created and will not try to connect or record
                     videos.
-                ip_camera_config:
-                  $ref: "#/components/schemas/IPCameraConfig"
+                stream_config:
+                  $ref: "#/components/schemas/StreamConfig"
+                credentials:
+                  $ref: "#/components/schemas/Credentials"
       responses:
         '200':
           description: Success
@@ -456,7 +460,7 @@ components:
           description: Device name
         type:
           type: string
-          enum: [IP]
+          enum: [ip, file]
           description: Device type
         timezone:
           type: string
@@ -464,16 +468,30 @@ components:
           type: string
           enum: [recording, failed, stopped]
           description: Device state
-        ip_camera_config:
-          $ref: "#/components/schemas/IPCameraConfig"
-    IPCameraConfig:
+        stream_config:
+          $ref: "#/components/schemas/StreamConfig"
+        credentials:
+          $ref: "#/components/schemas/Credentials"
+    StreamConfig:
       type: object
-      description: IP Camera configuration
+      description: Device stream configuration
       properties:
         stream_uri:
           type: string
           format: uri
-          description: The RTSP URL where to get the video stream
+          description: The RTSP URL where to get the video stream (Only when Device type is ip)
+        substream_uri:
+          type: string
+          format: uri
+          description: The RTSP URL where to get the video sub-stream (Only when Device type is ip)
+        location: 
+          type: string
+          format: path
+          description: The Path of the file location to be used as a streaming source (Only when Device type is file)
+    Credentials:
+      type: object
+      description: Streaming Device credentials (Only when Device type is ip)
+      properties:
         username:
           type: string
           description: Username to authenticate

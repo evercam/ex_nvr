@@ -44,36 +44,73 @@ defmodule ExNVR.DevicesTest do
       assert %{type: ["is invalid"]} = errors_on(changeset)
     end
 
-    test "requires ip camera config when type is IP" do
-      {:error, changeset} = Devices.create(%{name: @valid_camera_name, type: "IP"})
+    test "requires stream config when type is file" do
+      {:error, changeset} = Devices.create(%{name: @valid_camera_name, type: "file"})
 
       assert %{
-               ip_camera_config: ["can't be blank"]
+               stream_config: ["can't be blank"]
+             } = errors_on(changeset)
+    end
+
+    test "requires File location when type is File" do
+      {:error, changeset} =
+        Devices.create(%{name: @valid_camera_name, type: "file", stream_config: %{}})
+
+      assert %{
+               stream_config: %{location: ["can't be blank"]}
+             } = errors_on(changeset)
+    end
+
+    test "validate File existence and extension when type is file" do
+      file1_path = "../fixtures/video-30-10s.h264" |> Path.expand(__DIR__)
+
+      {:error, changeset} =
+        Devices.create(valid_device_attributes(%{stream_config: %{location: file1_path}}, "file"))
+
+      assert %{
+               stream_config: %{location: ["Invalid file extension"]}
+             } == errors_on(changeset)
+
+      file2_path = "../fixtures/non-existing.mp4" |> Path.expand(__DIR__)
+
+      {:error, changeset} =
+        Devices.create(valid_device_attributes(%{stream_config: %{location: file2_path}}, "file"))
+
+      assert %{
+               stream_config: %{location: ["File does not exist"]}
+             } = errors_on(changeset)
+    end
+
+    test "requires stream config when type is ip" do
+      {:error, changeset} = Devices.create(%{name: @valid_camera_name, type: "ip"})
+
+      assert %{
+               stream_config: ["can't be blank"]
              } = errors_on(changeset)
     end
 
     test "requires stream_uri" do
       {:error, changeset} =
-        Devices.create(%{name: @valid_camera_name, type: "IP", ip_camera_config: %{}})
+        Devices.create(%{name: @valid_camera_name, type: "ip", stream_config: %{}})
 
       assert %{
-               ip_camera_config: %{stream_uri: ["can't be blank"]}
+               stream_config: %{stream_uri: ["can't be blank"]}
              } = errors_on(changeset)
     end
 
     test "validate (sub)stream uri" do
       {:error, changeset} =
-        Devices.create(valid_device_attributes(%{ip_camera_config: %{stream_uri: "localhost"}}))
+        Devices.create(valid_device_attributes(%{stream_config: %{stream_uri: "localhost"}}))
 
       assert %{
-               ip_camera_config: %{stream_uri: ["scheme should be rtsp"]}
+               stream_config: %{stream_uri: ["scheme should be rtsp"]}
              } = errors_on(changeset)
 
       {:error, changeset} =
-        Devices.create(valid_device_attributes(%{ip_camera_config: %{stream_uri: "rtsp://"}}))
+        Devices.create(valid_device_attributes(%{stream_config: %{stream_uri: "rtsp://"}}))
 
       assert %{
-               ip_camera_config: %{stream_uri: ["invalid rtsp uri"]}
+               stream_config: %{stream_uri: ["invalid rtsp uri"]}
              } = errors_on(changeset)
     end
 
@@ -102,11 +139,11 @@ defmodule ExNVR.DevicesTest do
       {:ok, device} =
         Devices.update(device, %{
           name: @valid_camera_name,
-          ip_camera_config: %{sub_stream_uri: stream_uri}
+          stream_config: %{sub_stream_uri: stream_uri}
         })
 
       assert device.name == @valid_camera_name
-      assert device.ip_camera_config.sub_stream_uri == stream_uri
+      assert device.stream_config.sub_stream_uri == stream_uri
     end
   end
 
@@ -131,23 +168,23 @@ defmodule ExNVR.DevicesTest do
       assert changeset.required == [:name, :type]
     end
 
-    test "requires IP camera config to be set when type is IP" do
+    test "requires Stream config (camera config) to be set when type is IP" do
       name = "Camera 1"
 
       assert %Ecto.Changeset{} =
                changeset =
                Devices.change_device_creation(
                  %Device{},
-                 valid_device_attributes(%{name: name, type: "IP"})
+                 valid_device_attributes(%{name: name, type: "ip"})
                )
 
-      assert changeset.required == [:ip_camera_config, :name, :type]
+      assert changeset.required == [:stream_config, :name, :type]
     end
 
-    test "allows fields to be set" do
+    test "allows fields to be set (Type: ip)" do
       name = "Camera 1"
 
-      ip_camera_config = %{
+      stream_config = %{
         stream_uri: valid_rtsp_url()
       }
 
@@ -157,17 +194,56 @@ defmodule ExNVR.DevicesTest do
                  %Device{},
                  valid_device_attributes(%{
                    name: name,
-                   type: "IP",
-                   ip_camera_config: ip_camera_config
+                   type: "ip",
+                   stream_config: stream_config
                  })
                )
 
       assert changeset.valid?
       assert get_change(changeset, :name) == name
-      assert get_change(changeset, :type) == :IP
+      assert get_change(changeset, :type) == :ip
 
-      assert %Ecto.Changeset{} = config_changeset = get_change(changeset, :ip_camera_config)
-      assert get_change(config_changeset, :stream_uri) == ip_camera_config.stream_uri
+      assert %Ecto.Changeset{} = config_changeset = get_change(changeset, :stream_config)
+      assert get_change(config_changeset, :stream_uri) == stream_config.stream_uri
+    end
+
+    test "requires Stream config to be set when type is file" do
+      name = "Camera 1"
+
+      assert %Ecto.Changeset{} =
+               changeset =
+               Devices.change_device_creation(
+                 %Device{},
+                 valid_device_attributes(%{name: name, type: "file"})
+               )
+
+      assert changeset.required == [:stream_config, :name, :type]
+    end
+
+    test "allows fields to be set (Type: file)" do
+      name = "Camera 1"
+
+      stream_config = %{
+        location: valid_file_location()
+      }
+
+      assert %Ecto.Changeset{} =
+               changeset =
+               Devices.change_device_creation(
+                 %Device{},
+                 valid_device_attributes(%{
+                   name: name,
+                   type: "file",
+                   stream_config: stream_config
+                 })
+               )
+
+      assert changeset.valid?
+      assert get_change(changeset, :name) == name
+      assert get_change(changeset, :type) == :file
+
+      assert %Ecto.Changeset{} = config_changeset = get_change(changeset, :stream_config)
+      assert get_change(config_changeset, :location) == stream_config.location
     end
   end
 end
