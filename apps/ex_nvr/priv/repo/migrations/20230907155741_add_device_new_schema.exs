@@ -32,7 +32,7 @@ defmodule ExNVR.Repo.Migrations.AddDeviceCredentialsField do
       UPDATE devices SET type=UPPER(type);
     """
 
-    alter table("devices")
+    alter table(:devices) do
       remove :credentials
     end
   end
