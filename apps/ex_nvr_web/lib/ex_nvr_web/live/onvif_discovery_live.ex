@@ -268,7 +268,6 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
   defp display_key(key) do
     to_string(key)
     |> String.split("_")
-    |> Enum.map(&Macro.camelize/1)
-    |> Enum.join(" ")
+    |> Enum.map_join(" ", &Macro.camelize/1)
   end
 end

@@ -1,6 +1,7 @@
 defmodule ExNVR.Onvif.Discovery do
   @moduledoc false
 
+  import ExNVR.Onvif.Utils, only: [delete_namespaces: 1]
   import Mockery.Macro
 
   @multicast_addr {239, 255, 255, 250}
@@ -34,6 +35,7 @@ defmodule ExNVR.Onvif.Discovery do
       |> Enum.map(&String.replace(&1, ["\r\n", "\r", "\n"], ""))
       |> Enum.map(&%Soap.Response{body: &1, status_code: 200})
       |> Enum.map(&Soap.Response.parse/1)
+      |> Enum.map(&delete_namespaces/1)
       |> Enum.map(&format_response/1)
       |> then(&{:ok, &1})
     end
@@ -51,12 +53,12 @@ defmodule ExNVR.Onvif.Discovery do
   end
 
   defp format_response(response) do
-    probe_match = get_in(response, [:"d:ProbeMatches", :"d:ProbeMatch"])
-    scopes = probe_match[:"d:Scopes"] |> String.split()
+    probe_match = get_in(response, [:ProbeMatches, :ProbeMatch])
+    scopes = probe_match[:Scopes] |> String.split()
 
     %{
-      types: probe_match[:"d:Types"] |> String.split(),
-      addresses: probe_match[:"d:XAddrs"] |> String.split()
+      types: probe_match[:Types] |> String.split(),
+      addresses: probe_match[:XAddrs] |> String.split()
     }
     |> Map.merge(parse_scopes(scopes))
   end
