@@ -3,6 +3,8 @@ defmodule ExNVR.Onvif do
   Onvif client
   """
 
+  import ExNVR.Onvif.Utils, only: [delete_namespaces: 1]
+
   alias ExNVR.Onvif.{Discovery, Http}
 
   @default_timeout 3_000
@@ -83,27 +85,4 @@ defmodule ExNVR.Onvif do
 
   defp handle_response({:ok, response}, _parse), do: {:error, response}
   defp handle_response(response, _parse), do: response
-
-  defp delete_namespaces(response) when is_map(response) do
-    Enum.reduce(response, %{}, fn {key, value}, acc ->
-      Map.put(acc, delete_namespace(key), delete_namespaces(value))
-    end)
-  end
-
-  defp delete_namespaces(response) when is_list(response) do
-    Enum.map(response, &delete_namespaces/1)
-  end
-
-  defp delete_namespaces({key, value}) do
-    {delete_namespace(key), delete_namespaces(value)}
-  end
-
-  defp delete_namespaces(response), do: response
-
-  defp delete_namespace(key) do
-    to_string(key)
-    |> String.split(":")
-    |> List.last()
-    |> String.to_atom()
-  end
 end
