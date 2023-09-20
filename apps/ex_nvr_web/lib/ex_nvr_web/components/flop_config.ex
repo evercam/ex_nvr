@@ -16,7 +16,10 @@ defmodule ExNVRWeb.FlopConfig do
       tbody_td_attrs: [class: "relative w-14 p-0 p-4 text-center"],
       symbol_attrs: [class: "text-xl"],
       th_wrapper_attrs: [class: "flex items-center justify-center space-x-1"],
-      no_results_content: content_tag(:p, "No results.", class: "px-6 py-3 w-[40rem] mt-4 text-xl text-left text-gray-500 dark:text-gray-400")
+      no_results_content:
+        content_tag(:p, "No results.",
+          class: "px-6 py-3 w-[40rem] mt-4 text-xl text-left text-gray-500 dark:text-gray-400"
+        )
     ]
   end
 end
