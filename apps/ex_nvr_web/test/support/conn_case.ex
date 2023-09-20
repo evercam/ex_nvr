@@ -77,13 +77,16 @@ defmodule ExNVRWeb.ConnCase do
   end
 
   def maybe_create_device(tags) do
-    if Map.has_key?(tags, :device) do
-      device = ExNVR.DevicesFixtures.device_fixture()
-      File.mkdir!(ExNVR.Utils.recording_dir(device.id))
-      File.mkdir!(ExNVR.Utils.bif_dir(device.id))
-      %{device: device}
-    else
-      %{}
+    cond do
+      Map.has_key?(tags, :device) ->
+        %{device: create_and_setup_device()}
+
+      Map.has_key?(tags, :devices) ->
+        nbr = Map.get(tags, :devices)
+        %{devices: Enum.map(1..nbr, fn _idx -> create_and_setup_device() end)}
+
+      true ->
+        %{}
     end
   end
 
@@ -92,5 +95,13 @@ defmodule ExNVRWeb.ConnCase do
       Application.put_env(:ex_nvr, :recording_directory, tags.tmp_dir)
       Application.put_env(:ex_nvr, :hls_directory, tags.tmp_dir)
     end
+  end
+
+  defp create_and_setup_device() do
+    device = ExNVR.DevicesFixtures.device_fixture()
+    File.mkdir!(ExNVR.Utils.recording_dir(device.id))
+    File.mkdir!(ExNVR.Utils.bif_dir(device.id))
+
+    device
   end
 end
