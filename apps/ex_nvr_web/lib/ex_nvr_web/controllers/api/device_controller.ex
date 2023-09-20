@@ -50,19 +50,11 @@ defmodule ExNVRWeb.API.DeviceController do
 
   @spec index(Conn.t(), map()) :: Conn.t() | {:error, Ecto.Changeset.t()}
   def index(%Conn{} = conn, params) do
-    devices = Devices.list(params)
-
-    conn
-    |> put_status(200)
-    |> render(:list, devices: devices)
+    render(conn, :list, devices: Devices.list(params))
   end
 
   @spec show(Conn.t(), map()) :: Conn.t() | {:error, Ecto.Changeset.t()}
-  def show(%Conn{} = conn, %{"id" => device_id}) do
-    device = Devices.get!(device_id)
-
-    conn
-    |> put_status(200)
-    |> render(:show, device: device)
+  def show(%Conn{} = conn, _params) do
+    render(conn, :show, device: conn.assigns.device)
   end
 end

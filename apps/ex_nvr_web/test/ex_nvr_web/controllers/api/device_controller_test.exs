@@ -80,16 +80,23 @@ defmodule ExNVRWeb.API.DeviceControllerTest do
       %{device: device_fixture()}
     end
 
-    test "get device by :id", %{conn: conn, device: device} do
+    test "get device", %{conn: conn, device: device} do
       response =
         conn
         |> get(~p"/api/devices/#{device.id}")
         |> json_response(200)
 
       assert device.id == response["id"]
+
+      assert device.stream_config.stream_uri == response["stream_config"]["stream_uri"]
+      assert device.stream_config.sub_stream_uri == response["stream_config"]["sub_stream_uri"]
+      assert device.stream_config.location == response["stream_config"]["location"]
+
+      assert device.credentials.username == response["credentials"]["username"]
+      assert device.credentials.password == response["credentials"]["password"]
     end
 
-    test "get device by :id (not found)", %{conn: conn} do
+    test "device not found", %{conn: conn} do
       conn
       |> get(~p"/api/devices/#{UUID.uuid4()}")
       |> response(404)
