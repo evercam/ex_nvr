@@ -110,22 +110,23 @@ window.addEventListener("phx:js-exec", ({ detail }) => {
     })
 })
 
-toggleInputs = (event) => {
+toggleDeviceConfigInputs = (event) => {
     event.preventDefault()
+
     var selectElement = document.getElementById("device_type");
     var ipConfigInputs = document.getElementById("ip_config_inputs");
     var ipStreamUriInput = document.getElementById("config_stream_uri")
-
     var fileConfigInputs = document.getElementById("file_config_inputs");
     var fileLocationInput = document.getElementById("config_file_location")
     
-    if (selectElement.value === "ip") {
+    var { device_type } = selectElement.value;
+    if (device_type === "ip") {
         ipConfigInputs.classList.remove("hidden");
         ipConfigInputs.required == true
 
         fileConfigInputs.classList.add("hidden");
         fileLocationInput.required = false
-    } else if (selectElement.value === "file") {
+    } else if (device_type === "file") {
         ipConfigInputs.classList.add("hidden");
         
         ipStreamUriInput.required = false
@@ -135,8 +136,6 @@ toggleInputs = (event) => {
     }
 }
 
-window.addEventListener("phx:toggle-inputs", (e) => {
-    toggleInputs(e)
-})
+window.addEventListener("phx:toggle-device-config-inputs", toggleDeviceConfigInputs)
 
 initDarkMode()
