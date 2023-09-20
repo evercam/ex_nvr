@@ -192,4 +192,23 @@ defmodule ExNVRWeb.API.DeviceStreamingControllerTest do
                "The duration should be at least 5 seconds and at most 2 hours"
     end
   end
+
+  describe "GET /api/devices/:device_id/bif/:hour" do
+    setup %{device: device} do
+      Path.join(ExNVR.Utils.bif_dir(device.id), "2023083110.bif") |> File.touch!()
+    end
+
+    test "Get bif file", %{conn: conn, device: device} do
+      conn = get(conn, "/api/devices/#{device.id}/bif/2023-08-31T10:00:03Z")
+
+      assert conn.status == 200
+      assert get_resp_header(conn, "content-type") == ["application/octet-stream"]
+    end
+
+    test "Resource doesn't exissts", %{conn: conn, device: device} do
+      conn
+      |> get("/api/devices/#{device.id}/bif/2023-08-31T12:00:03Z")
+      |> response(:not_found)
+    end
+  end
 end

@@ -29,7 +29,7 @@ defmodule ExNVR.RecordingsFixtures do
       attrs
       |> Enum.into(%{device_id: device.id})
       |> valid_recording_attributes()
-      |> then(&ExNVR.Recordings.create(run_fixture(device), &1))
+      |> then(&ExNVR.Recordings.create(attrs[:run] || run_fixture(device), &1))
 
     recording
   end

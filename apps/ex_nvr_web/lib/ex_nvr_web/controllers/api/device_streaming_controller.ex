@@ -67,33 +67,6 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
     end
   end
 
-  @spec footage(Plug.Conn.t(), map()) :: return_t()
-  def footage(conn, params) do
-    device = conn.assigns.device
-    destination = Path.join(System.tmp_dir!(), UUID.uuid4() <> ".mp4")
-
-    with {:ok, params} <- validate_footage_req_params(params) do
-      {:ok, pipeline_sup, _pipeline_pid} =
-        params
-        |> Map.merge(%{device_id: device.id, destination: destination})
-        |> Map.update(:duration, 0, &Membrane.Time.seconds/1)
-        |> Keyword.new()
-        |> VideoAssembler.start()
-
-      Process.monitor(pipeline_sup)
-
-      receive do
-        {:DOWN, _ref, :process, ^pipeline_sup, _reason} ->
-          send_download(conn, {:file, destination},
-            content_type: "video/mp4",
-            filename: "#{device.id}.mp4"
-          )
-      after
-        30_000 -> {:error, :not_found}
-      end
-    end
-  end
-
   defp serve_live_snapshot(conn, params) do
     device = conn.assigns.device
 
@@ -135,6 +108,47 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
         after
           10_000 -> {:error, :not_found}
         end
+    end
+  end
+
+  @spec footage(Plug.Conn.t(), map()) :: return_t()
+  def footage(conn, params) do
+    device = conn.assigns.device
+    destination = Path.join(System.tmp_dir!(), UUID.uuid4() <> ".mp4")
+
+    with {:ok, params} <- validate_footage_req_params(params) do
+      {:ok, pipeline_sup, _pipeline_pid} =
+        params
+        |> Map.merge(%{device_id: device.id, destination: destination})
+        |> Map.update(:duration, 0, &Membrane.Time.seconds/1)
+        |> Keyword.new()
+        |> VideoAssembler.start()
+
+      Process.monitor(pipeline_sup)
+
+      receive do
+        {:DOWN, _ref, :process, ^pipeline_sup, _reason} ->
+          send_download(conn, {:file, destination},
+            content_type: "video/mp4",
+            filename: "#{device.id}.mp4"
+          )
+      after
+        30_000 -> {:error, :not_found}
+      end
+    end
+  end
+
+  @spec bif(Plug.Conn.t(), map()) :: return_t()
+  def bif(conn, params) do
+    with {:ok, params} <- validate_bif_req_params(params) do
+      filename = Calendar.strftime(params.hour, "%Y%m%d%H.bif")
+      filepath = Path.join(Utils.bif_dir(conn.assigns.device.id), filename)
+
+      if File.exists?(filepath) do
+        send_download(conn, {:file, filepath}, filename: filename)
+      else
+        {:error, :not_found}
+      end
     end
   end
 
@@ -203,6 +217,15 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
       true ->
         changeset
     end
+  end
+
+  defp validate_bif_req_params(params) do
+    types = %{hour: :utc_datetime}
+
+    {%{}, types}
+    |> Changeset.cast(params, Map.keys(types))
+    |> Changeset.validate_required([:hour])
+    |> Changeset.apply_action(:create)
   end
 
   defp start_hls_pipeline(device, %{pos: nil}, stream_id) do

@@ -1,0 +1,146 @@
+<div class="container mx-auto p-4">
+  <div class="flex flex-wrap items-stretch justify-between content-between mb-4 gap-2">
+    <!-- Discover devices -->
+    <.card class="w-full md:w-1/3">
+      <h2 class="text-2xl font-bold mb-4 dark:text-white">Discover Devices</h2>
+      <.simple_form for={@discover_form} id="discover_form" phx-submit="discover">
+        <.input field={@discover_form[:username]} type="text" label="Username" />
+        <.input field={@discover_form[:password]} type="password" label="Password" />
+        <.input
+          field={@discover_form[:timeout]}
+          type="number"
+          min="1"
+          max="30"
+          label="Timeout (seconds)"
+        />
+
+        <:actions>
+          <.button phx-disable-with="Scanning...">Scan Network</.button>
+        </:actions>
+      </.simple_form>
+    </.card>
+    <!-- Found devices -->
+    <.card class="w-full md:w-3/5 p-4">
+      <h2 class="text-2xl font-bold mb-4 dark:text-white">Found Devices</h2>
+      <p :if={@discovered_devices == []} class="text-l dark:text-white">No devices found</p>
+
+      <ul class="bg-white dark:bg-gray-800 h-200 dark:text-white">
+        <li
+          :for={new_device <- @discovered_devices}
+          id={new_device.name}
+          class="mb-2 p-4 shadow-md rounded dark:bg-gray-700 cursor-pointer"
+          phx-click="device-details"
+          phx-value-name={new_device.name}
+        >
+          <span class="text-xl font-bold"><%= new_device.name %></span>
+          <br />
+          <span class="text-sm"><%= new_device.hardware %></span>
+          - <span class="text-sm"><%= new_device.url %></span>
+        </li>
+      </ul>
+    </.card>
+  </div>
+  <!-- Device details -->
+  <.card class="p-4">
+    <h2 class="text-2xl font-bold mb-4 gap-2 dark:text-white">Device Details</h2>
+    <div class="flex flex-wrap items-stretch justify-between content-between p-4 dark:text-white">
+      <!-- Device Information -->
+      <div class="md:w-1/3 p-5 card-shadow">
+        <h2 class="text-xl font-bold mb-4">Device Information</h2>
+        <p :if={!@device_details[:infos]}>N/A</p>
+        <div :if={@device_details[:infos]} class="mb-4 dark:text-gray-400">
+          <table class="w-full table-auto">
+            <tr :for={{key, value} <- @device_details[:infos]}>
+              <td class="font-bold"><%= display_key(key) %></td>
+              <td class="break-words"><%= value %></td>
+            </tr>
+          </table>
+        </div>
+      </div>
+      <!-- Time Settings -->
+      <div class="md:w-1/4 p-5 card-shadow">
+        <h2 class="text-xl font-bold mb-4">Time Settings</h2>
+        <p :if={!@device_details[:time_settings]}>N/A</p>
+        <div :if={@device_details[:time_settings]} class="dark:text-gray-400 mb-4">
+          <table class="w-full table-auto">
+            <tr :for={{key, value} <- @device_details[:time_settings]}>
+              <td class="font-bold"><%= display_key(key) %></td>
+              <td><%= value %></td>
+            </tr>
+          </table>
+        </div>
+      </div>
+      <!-- Network Interface -->
+      <div class="md:w-1/4 p-5 card-shadow">
+        <h2 class="text-xl font-bold mb-4">Network Interface</h2>
+        <p :if={!@device_details[:network_interface]}>N/A</p>
+        <div :if={@device_details[:network_interface]} class="dark:text-gray-400 mb-4">
+          <table class="w-full table-auto">
+            <tr :for={{key, value} <- @device_details[:network_interface]}>
+              <td class="font-bold"><%= display_key(key) %></td>
+              <td><%= value %></td>
+            </tr>
+          </table>
+        </div>
+      </div>
+    </div>
+    <!-- Media Profiles -->
+    <h2 class="text-2xl font-bold mb-4 dark:text-white">Media Profiles</h2>
+    <div class="flex flex-wrap p-4 dark:text-white">
+      <div
+        :for={profile <- @device_details[:media_profiles] || []}
+        class="w-full flex flex-wrap justify-between mb-5 p-5 card-shadow"
+      >
+        <h3 class="w-full font-bold text-xl"><%= profile.name %></h3>
+        <div class="md:w-2/5 p-5 dark:text-gray-400">
+          <table class="w-full table-auto">
+            <tr>
+              <td class="font-bold">Codec</td>
+              <td><%= profile.codec %></td>
+            </tr>
+            <tr>
+              <td class="font-bold">Profile</td>
+              <td><%= profile.profile %></td>
+            </tr>
+            <tr>
+              <td class="font-bold">Group of Pictures</td>
+              <td><%= profile.gov_length %></td>
+            </tr>
+            <tr>
+              <td class="font-bold">Image Quality</td>
+              <td><%= profile.quality %></td>
+            </tr>
+          </table>
+        </div>
+        <div class="md:w-2/5 p-5 dark:text-gray-400">
+          <table class="w-full table-auto">
+            <tr>
+              <td class="font-bold">Resolution</td>
+              <td><%= profile.resolution.width %>x<%= profile.resolution.height %></td>
+            </tr>
+            <tr>
+              <td class="font-bold">Constant Bitrate</td>
+              <td><%= String.upcase("#{profile.rate_control.constant_bit_rate}") %></td>
+            </tr>
+            <tr>
+              <td class="font-bold">Frame rate</td>
+              <td><%= profile.rate_control.frame_rate %> fps</td>
+            </tr>
+            <tr>
+              <td class="font-bold">Max Bitrate</td>
+              <td><%= profile.rate_control.max_bit_rate %> kbps</td>
+            </tr>
+          </table>
+        </div>
+        <div class="w-full p-5 dark:text-gray-400">
+          <table class="w-full table-auto">
+            <tr>
+              <td class="font-bold">Stream URI</td>
+              <td><%= profile.stream_uri %></td>
+            </tr>
+          </table>
+        </div>
+      </div>
+    </div>
+  </.card>
+</div>

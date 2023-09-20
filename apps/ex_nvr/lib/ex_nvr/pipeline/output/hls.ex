@@ -6,7 +6,7 @@ defmodule ExNVR.Pipeline.Output.HLS do
   use Membrane.Bin
 
   alias Membrane.{H264, ResourceGuard}
-  alias Membrane.HTTPAdaptiveStream.{Sink, Storages}
+  alias Membrane.HTTPAdaptiveStream.{SinkBin, Storages}
 
   @segment_duration Membrane.Time.seconds(5)
 
@@ -54,19 +54,13 @@ defmodule ExNVR.Pipeline.Output.HLS do
     end)
 
     spec = [
-      child(:sink, %Sink{
-        manifest_config: %Sink.ManifestConfig{
-          name: "index",
-          module: Membrane.HTTPAdaptiveStream.HLS
-        },
-        track_config: %Sink.TrackConfig{
-          mode: :live,
-          target_window_duration: Membrane.Time.seconds(40),
-          segment_naming_fun: fn track ->
-            "#{segment_prefix}_#{track.id}_#{track.next_segment_id}"
-          end
-        },
-        storage: %Storages.FileStorage{directory: options.location}
+      child(:sink, %SinkBin{
+        manifest_module: Membrane.HTTPAdaptiveStream.HLS,
+        storage: %Storages.FileStorage{directory: options.location},
+        mode: :live,
+        segment_naming_fun: fn track ->
+          "#{segment_prefix}_#{track.id}_#{track.next_segment_id}"
+        end
       })
     ]
 
@@ -78,12 +72,9 @@ defmodule ExNVR.Pipeline.Output.HLS do
     spec = [
       bin_input(pad)
       |> add_transcoding_spec(ref, ctx.options[:resolution])
-      |> child({:payloader, ref}, Membrane.MP4.Payloader.H264)
-      |> child({:muxer, ref}, %Membrane.MP4.Muxer.CMAF{
-        segment_min_duration: @segment_duration
-      })
       |> via_in(Pad.ref(:input, ref),
         options: [
+          encoding: :H264,
           track_name: track_name(state.segment_prefix, ref),
           segment_duration: @segment_duration
         ]

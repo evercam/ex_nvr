@@ -6,6 +6,7 @@ defmodule ExNVR do
   import ExNVR.Utils
 
   alias ExNVR.{Accounts, Devices, Pipelines}
+  alias ExNVR.Model.Device
 
   @first_name "Admin"
   @last_name "Admin"
@@ -52,8 +53,21 @@ defmodule ExNVR do
   end
 
   defp run_pipelines() do
-    for device <- Devices.list(%{state: [:recording, :failed]}) do
-      Pipelines.Supervisor.start_pipeline(device)
+    devices = Devices.list()
+
+    if Application.get_env(:ex_nvr, :generate_bif, true) do
+      Enum.each(devices, fn device ->
+        File.mkdir_p!(bif_dir(device.id))
+
+        DynamicSupervisor.start_child(
+          ExNVR.BifPipelineSupervisor,
+          {ExNVR.BifGeneratorServer, [device: device]}
+        )
+      end)
     end
+
+    devices
+    |> Enum.filter(&Device.recording?/1)
+    |> Enum.each(&Pipelines.Supervisor.start_pipeline/1)
   end
 end

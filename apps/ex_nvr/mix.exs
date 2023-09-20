@@ -21,7 +21,7 @@ defmodule ExNVR.MixProject do
   def application do
     [
       mod: {ExNVR.Application, []},
-      extra_applications: [:logger, :runtime_tools, :scrivener]
+      extra_applications: [:logger, :runtime_tools]
     ]
   end
 
@@ -41,7 +41,7 @@ defmodule ExNVR.MixProject do
       {:jason, "~> 1.2"},
       {:swoosh, "~> 1.3"},
       {:finch, "~> 0.13"},
-      {:membrane_core, "~> 0.12.7"},
+      {:membrane_core, "~> 0.12.9"},
       {:membrane_rtsp, "~> 0.5.0"},
       {:membrane_rtp_plugin, "~> 0.23.0"},
       {:membrane_rtp_h264_plugin, "~> 0.16.0"},
@@ -50,10 +50,9 @@ defmodule ExNVR.MixProject do
       {:membrane_file_plugin, "~> 0.15.0", override: true},
       {:membrane_http_adaptive_stream_plugin, "~> 0.16.0"},
       {:membrane_h264_ffmpeg_plugin, "~> 0.27.0"},
-      {:membrane_ffmpeg_swscale_plugin,
-       github: "gBillal/membrane_ffmpeg_swscale_plugin",
-       ref: "0e7a157ad1cd9d7aefa5e6607e0a0d5ad43eae3f"},
-      {:membrane_realtimer_plugin, "~> 0.7.0"},
+      {:membrane_ffmpeg_swscale_plugin, "~> 0.13.0"},
+      {:membrane_realtimer_plugin,
+       github: "membraneframework/membrane_realtimer_plugin", ref: "64db0ad"},
       {:membrane_rtc_engine, "~> 0.16.0"},
       {:membrane_rtc_engine_webrtc, "~> 0.1.0"},
       {:ex_libsrtp, "~> 0.6.0"},
@@ -61,6 +60,8 @@ defmodule ExNVR.MixProject do
       {:connection, "~> 1.1.0"},
       {:tzdata, "~> 1.1"},
       {:turbojpeg, github: "BinaryNoggin/elixir-turbojpeg", ref: "14e2b36"},
+      {:flop, "~> 0.22.1"},
+      {:soap, github: "gBillal/soap", branch: "parse-attributes"},
       {:faker, "~> 0.17", only: :test}
     ]
   end
