@@ -58,7 +58,8 @@ if config_env() == :prod do
     recording_directory: System.fetch_env!("EXNVR_RECORDING_DIRECTORY"),
     hls_directory: System.get_env("EXNVR_HLS_DIRECTORY", "./data/hls"),
     admin_username: System.get_env("EXNVR_ADMIN_USERNAME", "admin@localhost"),
-    admin_password: System.get_env("EXNVR_ADMIN_PASSWORD", "P@ssw0rd")
+    admin_password: System.get_env("EXNVR_ADMIN_PASSWORD", "P@ssw0rd"),
+    generate_bif: String.to_atom(System.get_env("EXNVR_GENERATE_BIF", "true"))
 
   config :ex_nvr,
     integrated_turn_ip:

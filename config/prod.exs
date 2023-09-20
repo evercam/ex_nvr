@@ -19,5 +19,8 @@ config :logger, :console,
   metadata: [:device_id, :user_id, :request_id],
   format: "$dateT$time $metadata[$level] $message\n"
 
+config :membrane_core,
+  enable_metrics: false
+
 # Runtime production configuration, including reading
 # of environment variables, is done on config/runtime.exs.

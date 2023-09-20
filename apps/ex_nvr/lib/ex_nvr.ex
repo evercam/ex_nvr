@@ -55,14 +55,16 @@ defmodule ExNVR do
   defp run_pipelines() do
     devices = Devices.list()
 
-    Enum.each(devices, fn device ->
-      File.mkdir_p!(bif_dir(device.id))
+    if Application.get_env(:ex_nvr, :generate_bif, true) do
+      Enum.each(devices, fn device ->
+        File.mkdir_p!(bif_dir(device.id))
 
-      DynamicSupervisor.start_child(
-        ExNVR.BifPipelineSupervisor,
-        {ExNVR.BifGeneratorServer, [device: device]}
-      )
-    end)
+        DynamicSupervisor.start_child(
+          ExNVR.BifPipelineSupervisor,
+          {ExNVR.BifGeneratorServer, [device: device]}
+        )
+      end)
+    end
 
     devices
     |> Enum.filter(&Device.recording?/1)

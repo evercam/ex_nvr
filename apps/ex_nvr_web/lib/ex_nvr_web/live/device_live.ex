@@ -47,7 +47,7 @@ defmodule ExNVRWeb.DeviceLive do
       {:ok, updated_device} ->
         info = "Device updated successfully"
 
-        if device.type == :ip do
+        if updated_device.type == :ip do
           if Device.recording?(device) and Device.config_updated(device, updated_device),
             do: Pipelines.Supervisor.restart_pipeline(updated_device)
         end
