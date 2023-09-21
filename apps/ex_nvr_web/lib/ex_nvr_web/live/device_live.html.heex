@@ -29,7 +29,7 @@
           label="Type"
           placeholder="Choose your device type"
           disabled={@device.id != nil}
-          phx-hook="toggleConfigInputs"
+          phx-change="change_device_type"
         />
 
         <.input
@@ -46,14 +46,21 @@
         </p>
         <div class="flex flex-col">
           <.inputs_for :let={config} field={@device_form[:stream_config]}>
-            <div id="ip_config_inputs">
+            <div
+              id="ip_config_inputs"
+              class={
+                if @device && @device.type == :file,
+                  do: ["hidden"],
+                  else: [""]
+              }
+            >
               <.input
                 field={config[:stream_uri]}
                 id="config_stream_uri"
                 type="text"
                 label="Main Stream"
                 placeholder="rtsp://camera1:554/video/stream1"
-                required
+                required={@device && @device.type == :ip}
               />
               <.input
                 field={config[:sub_stream_uri]}
@@ -63,14 +70,21 @@
                 placeholder="rtsp://camera1:554/video/stream2"
               />
             </div>
-            <div id="file_config_inputs" class="hidden">
+            <div
+              id="file_config_inputs"
+              class={
+                if @device && @device.type == :file,
+                  do: [""],
+                  else: ["hidden"]
+              }
+            >
               <.input
                 field={config[:location]}
                 id="config_file_location"
                 type="text"
                 label="File Location"
                 placeholder="/Users/me/Desktop/FileStreams/Stream1.mp4"
-                required
+                required={@device && @device.type == :file}
               />
             </div>
           </.inputs_for>
@@ -97,12 +111,7 @@
           Create
         </.button>
 
-        <.button
-          :if={@device.id}
-          class="w-full"
-          phx-disable-with="Updating..."
-          phx-hook="toggleConfigInputs"
-        >
+        <.button :if={@device.id} class="w-full" phx-disable-with="Updating...">
           Update
         </.button>
       </:actions>
