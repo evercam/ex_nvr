@@ -5,7 +5,7 @@ defmodule ExNVRWeb.API.DeviceController do
 
   action_fallback ExNVRWeb.API.FallbackController
 
-  plug ExNVRWeb.Plug.Device, [field_name: "id"] when action == :update
+  plug ExNVRWeb.Plug.Device, [field_name: "id"] when action in [:update, :show]
 
   alias ExNVR.{Devices, Pipelines}
   alias ExNVR.Model.Device
@@ -46,5 +46,15 @@ defmodule ExNVRWeb.API.DeviceController do
       Pipelines.Supervisor.restart_pipeline(device)
       render(conn, :show, device: device)
     end
+  end
+
+  @spec index(Conn.t(), map()) :: Conn.t() | {:error, Ecto.Changeset.t()}
+  def index(%Conn{} = conn, params) do
+    render(conn, :list, devices: Devices.list(params))
+  end
+
+  @spec show(Conn.t(), map()) :: Conn.t() | {:error, Ecto.Changeset.t()}
+  def show(%Conn{} = conn, _params) do
+    render(conn, :show, device: conn.assigns.device)
   end
 end

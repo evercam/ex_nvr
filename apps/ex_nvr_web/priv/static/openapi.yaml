@@ -45,6 +45,21 @@ paths:
         '400':
           $ref: "#/components/responses/BadArg"
   /api/devices:
+    get: 
+      summary: Get all devices.
+      description: Get all existing devices.
+      operationId: getDevices
+      tags:
+        - Device
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Device'
     post:
       summary: Create device
       description: |
@@ -99,6 +114,23 @@ paths:
         '400':
           $ref: "#/components/responses/BadArg"
   /api/devices/{device_id}:
+    get: 
+      summary: Get device
+      description: Get device by id.
+      operationId: getDevice
+      tags:
+        - Device
+      parameters:
+        - $ref: '#/components/parameters/device_id'
+      responses:
+        '200':
+            description: Success
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/Device'
+        '404':
+          $ref: "#/components/responses/NotFound"
     put:
       summary: Update device
       description: |
