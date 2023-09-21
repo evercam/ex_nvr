@@ -1,13 +1,13 @@
-defmodule ExNVR.Elements.StorageBin do
+defmodule ExNVR.Pipeline.Output.Storage do
   @moduledoc """
-  Element responsible for splitting the stream into segments and save them as MP4 chunks
+  Split the incoming streams into segments/chunks and save them on disk
   """
 
   use Membrane.Bin
 
   require Membrane.Logger
 
-  alias ExNVR.Elements.Segmenter.Segment
+  alias __MODULE__.{Segmenter, Segmenter.Segment}
   alias ExNVR.Model.Run
   alias Membrane.H264
 
@@ -20,6 +20,10 @@ defmodule ExNVR.Elements.StorageBin do
   def_options device_id: [
                 spec: binary(),
                 description: "The id of the device where this video belongs"
+              ],
+              directory: [
+                spec: Path.t(),
+                description: "The directory where to store the video segments"
               ],
               target_segment_duration: [
                 spec: non_neg_integer(),
@@ -36,14 +40,14 @@ defmodule ExNVR.Elements.StorageBin do
   def handle_init(_ctx, opts) do
     spec = [
       bin_input(:input)
-      |> child(:segmenter, %ExNVR.Elements.Segmenter{
+      |> child(:segmenter, %Segmenter{
         target_duration: opts.target_segment_duration
       })
     ]
 
     state = %{
       device_id: opts.device_id,
-      recordings_temp_dir: System.tmp_dir!(),
+      directory: opts.directory,
       pending_segments: %{},
       segment_extension: ".mp4",
       run: nil,
@@ -68,7 +72,7 @@ defmodule ExNVR.Elements.StorageBin do
       |> child({:h264_mp4_payloader, segment_ref}, Membrane.MP4.Payloader.H264)
       |> child({:mp4_muxer, segment_ref}, %Membrane.MP4.Muxer.ISOM{fast_start: true})
       |> child({:sink, segment_ref}, %Membrane.File.Sink{
-        location: Path.join(state.recordings_temp_dir, "#{segment_ref}.mp4")
+        location: Path.join(state.directory, "#{segment_ref}.mp4")
       })
     ]
 
@@ -114,11 +118,11 @@ defmodule ExNVR.Elements.StorageBin do
     recording = %{
       start_date: Membrane.Time.to_datetime(segment.start_date),
       end_date: Membrane.Time.to_datetime(segment.end_date),
-      path: Path.join(state.recordings_temp_dir, "#{recording_ref}#{state.segment_extension}"),
+      path: Path.join(state.directory, "#{recording_ref}#{state.segment_extension}"),
       device_id: state.device_id
     }
 
-    case ExNVR.Recordings.create(state.run, recording) do
+    case ExNVR.Recordings.create(state.run, recording, false) do
       {:ok, _, run} ->
         Membrane.Logger.info("""
         Segment saved successfully
@@ -126,9 +130,10 @@ defmodule ExNVR.Elements.StorageBin do
           Realtime (monotonic) duration: #{Membrane.Time.round_to_milliseconds(Segment.realtime_duration(segment))} ms
           Wallclock duration: #{Membrane.Time.round_to_milliseconds(Segment.wall_clock_duration(segment))} ms
           Size: #{div(Segment.size(segment), 1024)} KiB
+          Segment end date: #{recording.end_date}
+          Current date time: #{Membrane.Time.to_datetime(segment.wallclock_end_date)}
         """)
 
-        File.rm(recording.path)
         {maybe_new_run(state, run), recording}
 
       {:error, error} ->
@@ -141,26 +146,26 @@ defmodule ExNVR.Elements.StorageBin do
     end
   end
 
-  defp run_from_segment(state, segment, end_run?) do
-    if is_nil(state.run) do
-      run = %Run{
-        start_date: Membrane.Time.to_datetime(segment.start_date),
-        end_date: Membrane.Time.to_datetime(segment.end_date),
-        device_id: state.device_id,
-        active: !end_run?
-      }
+  defp run_from_segment(%{run: nil} = state, segment, end_run?) do
+    run = %Run{
+      start_date: Membrane.Time.to_datetime(segment.start_date),
+      end_date: Membrane.Time.to_datetime(segment.end_date),
+      device_id: state.device_id,
+      active: !end_run?
+    }
 
-      %{state | run: run}
-    else
-      %{
-        state
-        | run: %Run{
-            state.run
-            | end_date: Membrane.Time.to_datetime(segment.end_date),
-              active: not end_run?
-          }
-      }
-    end
+    %{state | run: run}
+  end
+
+  defp run_from_segment(state, segment, end_run?) do
+    %{
+      state
+      | run: %Run{
+          state.run
+          | end_date: Membrane.Time.to_datetime(segment.end_date),
+            active: not end_run?
+        }
+    }
   end
 
   defp maybe_new_run(state, run) when not is_nil(run) and run.active, do: %{state | run: run}

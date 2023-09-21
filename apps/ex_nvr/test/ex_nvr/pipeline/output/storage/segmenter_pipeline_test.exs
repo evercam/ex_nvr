@@ -6,7 +6,7 @@ defmodule ExNvr.Elements.SegmenterPipelineTest do
   import Membrane.ChildrenSpec
   import Membrane.Testing.Assertions
 
-  alias ExNVR.Elements.Segmenter
+  alias ExNVR.Pipeline.Output.Storage.Segmenter
   alias Membrane.{Buffer, H264, Realtimer}
   alias Membrane.Testing.{Pipeline, Sink, Source}
 

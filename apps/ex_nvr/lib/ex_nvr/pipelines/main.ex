@@ -185,8 +185,9 @@ defmodule ExNVR.Pipelines.Main do
         |> via_out(Pad.ref(:output, ssrc))
         |> child(:video_tee, Membrane.Tee.Master)
         |> via_out(:master)
-        |> child({:storage_bin, ssrc}, %ExNVR.Elements.StorageBin{
+        |> child({:storage_bin, ssrc}, %Output.Storage{
           device_id: state.device.id,
+          directory: Utils.recording_dir(state.device.id),
           target_segment_duration: state.segment_duration
         }),
         get_child(:video_tee)
