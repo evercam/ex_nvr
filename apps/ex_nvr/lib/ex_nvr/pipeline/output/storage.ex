@@ -51,7 +51,8 @@ defmodule ExNVR.Pipeline.Output.Storage do
       pending_segments: %{},
       segment_extension: ".mp4",
       run: nil,
-      terminating?: false
+      terminating?: false,
+      end_of_stream?: false
     }
 
     {[spec: spec], state}
@@ -72,7 +73,7 @@ defmodule ExNVR.Pipeline.Output.Storage do
       |> child({:h264_mp4_payloader, segment_ref}, Membrane.MP4.Payloader.H264)
       |> child({:mp4_muxer, segment_ref}, %Membrane.MP4.Muxer.ISOM{fast_start: true})
       |> child({:sink, segment_ref}, %Membrane.File.Sink{
-        location: Path.join(state.directory, "#{segment_ref}.mp4")
+        location: recording_path(state, segment_ref)
       })
     ]
 
@@ -103,13 +104,22 @@ defmodule ExNVR.Pipeline.Output.Storage do
   end
 
   @impl true
+  def handle_element_end_of_stream(:segmenter, _pad, _ctx, state) do
+    {[], %{state | end_of_stream?: true}}
+  end
+
+  @impl true
   def handle_element_end_of_stream(_element, _pad, _ctx, state) do
     {[], state}
   end
 
   @impl true
   def handle_terminate_request(_ctx, state) do
-    {[], %{state | terminating?: true}}
+    if state.end_of_stream? do
+      {[terminate: :normal], state}
+    else
+      {[], %{state | terminating?: true}}
+    end
   end
 
   defp do_save_recording(state, recording_ref) do
@@ -118,9 +128,17 @@ defmodule ExNVR.Pipeline.Output.Storage do
     recording = %{
       start_date: Membrane.Time.to_datetime(segment.start_date),
       end_date: Membrane.Time.to_datetime(segment.end_date),
-      path: Path.join(state.directory, "#{recording_ref}#{state.segment_extension}"),
+      path: recording_path(state, segment.start_date),
       device_id: state.device_id
     }
+
+    # first segment has its start date adjusted
+    if is_nil(state.run.id) do
+      File.rename!(
+        recording_path(state, recording_ref),
+        recording_path(state, segment.start_date)
+      )
+    end
 
     case ExNVR.Recordings.create(state.run, recording, false) do
       {:ok, _, run} ->
@@ -168,6 +186,10 @@ defmodule ExNVR.Pipeline.Output.Storage do
     }
   end
 
-  defp maybe_new_run(state, run) when not is_nil(run) and run.active, do: %{state | run: run}
+  defp maybe_new_run(state, %Run{active: true} = run), do: %{state | run: run}
   defp maybe_new_run(state, _run), do: %{state | run: nil}
+
+  defp recording_path(state, start_date) do
+    Path.join(state.directory, "#{div(start_date, 1_000)}#{state.segment_extension}")
+  end
 end

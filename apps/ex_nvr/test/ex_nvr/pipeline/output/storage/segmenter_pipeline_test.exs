@@ -1,4 +1,4 @@
-defmodule ExNvr.Elements.SegmenterPipelineTest do
+defmodule ExNVR.Pipeline.Output.Storage.SegmenterPipelineTest do
   use ExUnit.Case
 
   require Membrane.Pad

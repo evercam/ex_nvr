@@ -1,4 +1,4 @@
-defmodule ExNVR.Elements.SegmenterTest do
+defmodule ExNVR.Pipeline.Output.Storage.SegmenterTest do
   @moduledoc false
   use ExUnit.Case
 
