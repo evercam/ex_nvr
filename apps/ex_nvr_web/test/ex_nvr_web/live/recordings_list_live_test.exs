@@ -154,7 +154,7 @@ defmodule ExNVRWeb.RecordingListLiveTest do
           do: refute_recording_info(lv, recording)
     end
 
-    test "Filter recordings by non-existing device", %{conn: conn} do
+    test "Filter recordings by device with no recordings", %{conn: conn} do
       new_device = device_fixture()
       create_device_directories(new_device)
 
