@@ -2,11 +2,22 @@ defmodule ExNVRWeb.RecordingListLiveTest do
   @moduledoc false
   use ExNVRWeb.ConnCase
 
-  import ExNVR.{AccountsFixtures, RecordingsFixtures}
+  import ExNVR.{AccountsFixtures, RecordingsFixtures, DevicesFixtures}
   import Phoenix.LiveViewTest
 
   @moduletag :tmp_dir
-  @moduletag devices: 3
+  @moduletag :device
+
+  defp create_device_directories(device) do
+    File.mkdir!(ExNVR.Utils.recording_dir(device.id))
+    File.mkdir!(ExNVR.Utils.bif_dir(device.id))
+  end
+
+  defp refute_recording_info(lv, recording) do
+    refute lv
+           |> element(~s{[id="recording-#{recording.id}-link"]})
+           |> has_element?()
+  end
 
   defp assert_recording_info(lv, html, device, recording) do
     assert html =~ "#{recording.id}"
@@ -31,25 +42,26 @@ defmodule ExNVRWeb.RecordingListLiveTest do
   end
 
   describe "Recording list page" do
-    setup %{devices: devices} do
-      [first_device, second_device, third_device] = devices
+    setup %{device: device} do
+      new_device = device_fixture(%{name: "Device_yxz"})
+      create_device_directories(new_device)
 
       %{
-        device: first_device,
         recordings:
           Enum.map(1..10, fn idx ->
-            recording_fixture(first_device,
-              start_date: DateTime.add(~U(2023-09-12 00:00:00Z), idx * 100)
+            recording_fixture(device,
+              start_date: DateTime.add(~U(2023-09-12 00:00:00Z), idx * 100),
+              end_date: DateTime.add(~U(2023-09-14 00:00:00Z), idx * 100)
             )
           end),
-        second_device: second_device,
-        second_recordings:
+        new_device: new_device,
+        new_recordings:
           Enum.map(1..5, fn idx ->
-            recording_fixture(second_device,
-              start_date: DateTime.add(~U(2023-09-11 00:00:00Z), idx * 100)
+            recording_fixture(new_device,
+              start_date: DateTime.add(~U(2023-09-01 00:00:00Z), idx * 100),
+              end_date: DateTime.add(~U(2024-09-01 00:00:00Z), idx * 100)
             )
-          end),
-        third_device: third_device
+          end)
       }
     end
 
@@ -117,8 +129,9 @@ defmodule ExNVRWeb.RecordingListLiveTest do
 
     test "Filter recordings by device", %{
       conn: conn,
-      second_device: new_device,
-      second_recordings: new_recordings
+      recordings: recordings,
+      new_device: new_device,
+      new_recordings: new_recordings
     } do
       {:ok, lv, _html} =
         conn
@@ -134,11 +147,17 @@ defmodule ExNVRWeb.RecordingListLiveTest do
 
       assert result =~ "1"
 
-      for recording <- new_recordings,
-          do: assert_recording_info(lv, result, new_device, recording)
+      for new_recording <- new_recordings,
+          do: assert_recording_info(lv, result, new_device, new_recording)
+
+      for recording <- recordings,
+          do: refute_recording_info(lv, recording)
     end
 
-    test "Filter recordings by non-existing device", %{conn: conn, third_device: third_device} do
+    test "Filter recordings by non-existing device", %{conn: conn} do
+      new_device = device_fixture()
+      create_device_directories(new_device)
+
       {:ok, lv, _html} =
         conn
         |> log_in_user(user_fixture())
@@ -147,7 +166,7 @@ defmodule ExNVRWeb.RecordingListLiveTest do
       result =
         lv
         |> form("#recording-filter-form", %{
-          "filters[0][value]" => "#{third_device.id}"
+          "filters[0][value]" => "#{new_device.id}"
         })
         |> render_change()
 
@@ -157,25 +176,42 @@ defmodule ExNVRWeb.RecordingListLiveTest do
 
     test "Filter recordings by start date and end date", %{
       conn: conn,
+      new_recordings: new_recordings,
       recordings: recordings,
       device: device
     } do
-      {:ok, lv, _html} =
+      logged_in_conn =
         conn
         |> log_in_user(user_fixture())
+
+      {:ok, lv, _html} =
+        logged_in_conn
         |> live(~p"/recordings")
 
       result =
         lv
         |> form("#recording-filter-form", %{
-          "filters[1][value]" => ~U(2023-09-12 00:00:00Z),
-          "filters[2][value]" => ~U(2024-09-12 00:00:00Z)
+          "filters[1][value]" => ~U(2023-09-12 00:00:00Z)
         })
         |> render_change()
 
-      assert result =~ "phx-click=\"nav\" phx-value-page=\"1\" "
+      for recording <- recordings, do: assert_recording_info(lv, result, device, recording)
+      for new_recording <- new_recordings, do: refute_recording_info(lv, new_recording)
+
+      # Filter by End Date
+      {:ok, lv, _html} =
+        logged_in_conn
+        |> live(~p"/recordings")
+
+      result =
+        lv
+        |> form("#recording-filter-form", %{
+          "filters[2][value]" => ~U(2023-09-16 00:00:00Z)
+        })
+        |> render_change()
 
       for recording <- recordings, do: assert_recording_info(lv, result, device, recording)
+      for new_recording <- new_recordings, do: refute_recording_info(lv, new_recording)
     end
 
     test "Filter recordings by start date and end date (No results)", %{conn: conn} do
@@ -196,117 +232,43 @@ defmodule ExNVRWeb.RecordingListLiveTest do
       assert result =~ "No results."
     end
 
-    test "Sort recordings by Device Name", %{
+    test "Sort recordings by Device Name, Start Date and End Date", %{
       conn: conn,
       device: device,
-      second_device: second_device,
-      second_recordings: second_recordings,
-      recordings: recordings
+      recordings: recordings,
+      new_device: new_device,
+      new_recordings: new_recordings
     } do
-      {latest_recording, asc_device} =
-        cond do
-          device.name > second_device.name -> {List.last(second_recordings), second_device}
-          device.name < second_device.name -> {List.last(recordings), device}
-          true -> {List.last(recordings), device}
-        end
-
-      {:ok, lv, html} =
+      logged_in_conn =
         conn
         |> log_in_user(user_fixture())
+
+      # Sort by Device Name ASC
+      {:ok, lv, html} =
+        logged_in_conn
         |> live(
           ~p"/recordings?page_size=1&order_by[]=device_name&order_by[]=start_date&order_by[]=end_date&order_directions[]=asc&order_directions[]=desc"
         )
 
-      assert_recording_info(lv, html, asc_device, latest_recording)
-    end
+      assert_recording_info(lv, html, device, List.last(recordings))
 
-    test "Sort recordings by Start Date (ASC)", %{
-      conn: conn,
-      device: device,
-      second_device: second_device,
-      second_recordings: second_recordings,
-      recordings: recordings
-    } do
-      first_new_recording = List.first(second_recordings)
-      first_old_recording = List.first(recordings)
-
-      {earliest_recording, device_obj} =
-        cond do
-          first_new_recording.start_date == first_old_recording.start_date ->
-            if device.name < second_device.name,
-              do: {first_old_recording, device},
-              else: {first_new_recording, second_device}
-
-          first_new_recording.start_date > first_old_recording.start_date ->
-            {first_old_recording, device}
-
-          first_new_recording.start_date < first_old_recording.start_date ->
-            {first_new_recording, second_device}
-
-          true ->
-            {first_new_recording, second_device}
-        end
-
+      # Sort by Start date ASC
       {:ok, lv, html} =
-        conn
-        |> log_in_user(user_fixture())
+        logged_in_conn
         |> live(
           ~p"/recordings?page_size=1&order_by[]=start_date&order_by[]=device_name&order_directions[]=asc&order_directions[]=asc"
         )
 
-      assert_recording_info(lv, html, device_obj, earliest_recording)
-    end
+      assert_recording_info(lv, html, new_device, List.first(new_recordings))
 
-    test "Sort recordings by End Date (DESC)", %{
-      conn: conn,
-      device: device,
-      recordings: recordings,
-      second_device: second_device,
-      second_recordings: second_recordings
-    } do
-      first_new_recording =
-        Enum.sort(second_recordings, fn r1, r2 ->
-          case DateTime.compare(r1.end_date, r2.end_date) do
-            :gt -> true
-            _ -> false
-          end
-        end)
-        |> List.first()
-
-      first_old_recording =
-        Enum.sort(recordings, fn r1, r2 ->
-          case DateTime.compare(r1.end_date, r2.end_date) do
-            :gt -> true
-            _ -> false
-          end
-        end)
-        |> List.first()
-
-      {recording, device_obj} =
-        cond do
-          first_new_recording.end_date > first_old_recording.end_date ->
-            {first_new_recording, second_device}
-
-          first_new_recording.end_date < first_old_recording.end_date ->
-            {first_old_recording, device}
-
-          first_new_recording.end_date == first_old_recording.end_date ->
-            if device.name > second_device.name,
-              do: {first_old_recording, device},
-              else: {first_new_recording, second_device}
-
-          true ->
-            {first_old_recording, device}
-        end
-
+      # Sort by End date DESC
       {:ok, lv, html} =
-        conn
-        |> log_in_user(user_fixture())
+        logged_in_conn
         |> live(
           ~p"/recordings?page_size=1&order_by[]=end_date&order_by[]=device_name&order_directions[]=desc&order_directions[]=desc"
         )
 
-      assert_recording_info(lv, html, device_obj, recording)
+      assert_recording_info(lv, html, new_device, List.last(new_recordings))
     end
   end
 end

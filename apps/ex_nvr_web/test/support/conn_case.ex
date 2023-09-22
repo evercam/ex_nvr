@@ -2,11 +2,9 @@ defmodule ExNVRWeb.ConnCase do
   @moduledoc """
   This module defines the test case to be used by
   tests that require setting up a connection.
-
   Such tests rely on `Phoenix.ConnTest` and also
   import other functionality to make it easier
   to build common data structures and query the data layer.
-
   Finally, if the test case interacts with the database,
   we enable the SQL sandbox, so changes done to the database
   are reverted at the end of every test. If you are using
@@ -14,16 +12,13 @@ defmodule ExNVRWeb.ConnCase do
   by setting `use ExNVRWeb.ConnCase, async: true`, although
   this option is not recommended for other databases.
   """
-
   use ExUnit.CaseTemplate
 
   using do
     quote do
       # The default endpoint for testing
       @endpoint ExNVRWeb.Endpoint
-
       use ExNVRWeb, :verified_routes
-
       # Import conveniences for testing with connections
       import Plug.Conn
       import Phoenix.ConnTest
@@ -44,9 +39,7 @@ defmodule ExNVRWeb.ConnCase do
 
   @doc """
   Setup helper that registers and logs in users.
-
       setup :register_and_log_in_user
-
   It stores an updated connection and a registered user in the
   test context.
   """
@@ -57,7 +50,6 @@ defmodule ExNVRWeb.ConnCase do
 
   @doc """
   Logs the given `user` into the `conn`.
-
   It returns an updated `conn`.
   """
   def log_in_user(conn, user) do
@@ -77,16 +69,13 @@ defmodule ExNVRWeb.ConnCase do
   end
 
   def maybe_create_device(tags) do
-    cond do
-      Map.has_key?(tags, :device) ->
-        %{device: create_and_setup_device()}
-
-      Map.has_key?(tags, :devices) ->
-        nbr = Map.get(tags, :devices)
-        %{devices: Enum.map(1..nbr, fn _idx -> create_and_setup_device() end)}
-
-      true ->
-        %{}
+    if Map.has_key?(tags, :device) do
+      device = ExNVR.DevicesFixtures.device_fixture()
+      File.mkdir!(ExNVR.Utils.recording_dir(device.id))
+      File.mkdir!(ExNVR.Utils.bif_dir(device.id))
+      %{device: device}
+    else
+      %{}
     end
   end
 
@@ -95,13 +84,5 @@ defmodule ExNVRWeb.ConnCase do
       Application.put_env(:ex_nvr, :recording_directory, tags.tmp_dir)
       Application.put_env(:ex_nvr, :hls_directory, tags.tmp_dir)
     end
-  end
-
-  defp create_and_setup_device() do
-    device = ExNVR.DevicesFixtures.device_fixture()
-    File.mkdir!(ExNVR.Utils.recording_dir(device.id))
-    File.mkdir!(ExNVR.Utils.bif_dir(device.id))
-
-    device
   end
 end
