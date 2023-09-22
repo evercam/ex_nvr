@@ -1,4 +1,4 @@
-defmodule ExNVR.Elements.Segmenter.SegmentMetadata do
+defmodule ExNVR.Pipeline.Output.Storage.Segmenter.SegmentMetadata do
   @moduledoc """
   A struct representing metadata about a segment
   """

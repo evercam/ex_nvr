@@ -148,8 +148,10 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
   defp fetch_stream_uris(%{media_profiles: profiles} = device_details, url, opts) do
     profiles =
       Enum.map(profiles, fn profile ->
+        body = %{"ProfileToken" => profile.id, "Protocol" => ""}
+
         stream_uri =
-          get_in(Onvif.call!(url, :get_stream_uri, %{"ProfileToken" => profile.id}, opts), [
+          get_in(Onvif.call!(url, :get_stream_uri, body, opts), [
             :GetStreamUriResponse,
             :Uri
           ])

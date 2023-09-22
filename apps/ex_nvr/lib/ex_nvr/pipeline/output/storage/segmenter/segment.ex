@@ -1,9 +1,9 @@
-defmodule ExNVR.Elements.Segmenter.Segment do
+defmodule ExNVR.Pipeline.Output.Storage.Segmenter.Segment do
   @moduledoc """
   A struct describing a segment (video chunk)
   """
 
-  alias ExNVR.Elements.Segmenter.SegmentMetadata
+  alias ExNVR.Pipeline.Output.Storage.Segmenter.SegmentMetadata
 
   @type t :: %__MODULE__{
           start_date: Membrane.Time.t(),
@@ -11,7 +11,8 @@ defmodule ExNVR.Elements.Segmenter.Segment do
           duration: Membrane.Time.t(),
           path: Path.t() | nil,
           device_id: binary() | nil,
-          metadata: SegmentMetadata.t()
+          metadata: SegmentMetadata.t(),
+          wallclock_end_date: Membrane.Time.t() | nil
         }
 
   @enforce_keys [:start_date]
@@ -21,7 +22,8 @@ defmodule ExNVR.Elements.Segmenter.Segment do
                 duration: 0,
                 path: nil,
                 device_id: nil,
-                metadata: %SegmentMetadata{}
+                metadata: %SegmentMetadata{},
+                wallclock_end_date: nil
               ]
 
   @spec new(Membrane.Time.t()) :: t()
@@ -32,6 +34,12 @@ defmodule ExNVR.Elements.Segmenter.Segment do
       duration: 0
     }
   end
+
+  @spec start_date(t()) :: Membrane.Time.t()
+  def start_date(segment), do: segment.start_date
+
+  @spec end_date(t()) :: Membrane.Time.t()
+  def end_date(segment), do: segment.end_date
 
   @spec duration(t()) :: Membrane.Time.t()
   def duration(segment), do: segment.duration

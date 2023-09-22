@@ -1,4 +1,4 @@
-defmodule ExNvr.Elements.SegmenterPipelineTest do
+defmodule ExNVR.Pipeline.Output.Storage.SegmenterPipelineTest do
   use ExUnit.Case
 
   require Membrane.Pad
@@ -6,7 +6,7 @@ defmodule ExNvr.Elements.SegmenterPipelineTest do
   import Membrane.ChildrenSpec
   import Membrane.Testing.Assertions
 
-  alias ExNVR.Elements.Segmenter
+  alias ExNVR.Pipeline.Output.Storage.Segmenter
   alias Membrane.{Buffer, H264, Realtimer}
   alias Membrane.Testing.{Pipeline, Sink, Source}
 

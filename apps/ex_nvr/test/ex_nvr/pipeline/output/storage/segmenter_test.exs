@@ -1,9 +1,9 @@
-defmodule ExNVR.Elements.SegmenterTest do
+defmodule ExNVR.Pipeline.Output.Storage.SegmenterTest do
   @moduledoc false
   use ExUnit.Case
 
-  alias ExNVR.Elements.Segmenter
-  alias ExNVR.Elements.Segmenter.Segment
+  alias ExNVR.Pipeline.Output.Storage.Segmenter
+  alias ExNVR.Pipeline.Output.Storage.Segmenter.Segment
   alias Membrane.{Buffer, Event, H264, Pad}
 
   require Membrane.Pad

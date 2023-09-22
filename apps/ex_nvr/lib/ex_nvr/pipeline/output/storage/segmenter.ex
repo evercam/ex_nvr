@@ -1,4 +1,4 @@
-defmodule ExNVR.Elements.Segmenter do
+defmodule ExNVR.Pipeline.Output.Storage.Segmenter do
   @moduledoc """
   Element responsible for splitting the stream into segments of fixed duration.
 
@@ -14,8 +14,10 @@ defmodule ExNVR.Elements.Segmenter do
 
   require Membrane.Logger
 
-  alias ExNVR.Elements.Segmenter.Segment
-  alias Membrane.{Buffer, Event, H264}
+  require ExNVR.Utils
+  alias __MODULE__.Segment
+  alias ExNVR.Utils
+  alias Membrane.{Buffer, Event, H264, Time}
 
   def_options target_duration: [
                 spec: non_neg_integer(),
@@ -45,7 +47,7 @@ defmodule ExNVR.Elements.Segmenter do
     state =
       Map.merge(init_state(), %{
         stream_format: nil,
-        target_duration: Membrane.Time.seconds(options.target_duration)
+        target_duration: Time.seconds(options.target_duration)
       })
 
     {[], state}
@@ -68,27 +70,19 @@ defmodule ExNVR.Elements.Segmenter do
   end
 
   @impl true
-  def handle_process(
-        :input,
-        %Buffer{metadata: %{h264: %{key_frame?: false}}},
-        _ctx,
-        %{start_time: nil} = state
-      ) do
+  def handle_process(:input, buffer, _ctx, %{start_time: nil} = state)
+      when not Utils.keyframe(buffer) do
     # ignore, we need to start recording from a keyframe
     {[], state}
   end
 
   @impl true
-  def handle_process(
-        :input,
-        %Buffer{metadata: %{h264: %{key_frame?: true}}} = buffer,
-        _ctx,
-        %{start_time: nil} = state
-      ) do
+  def handle_process(:input, buffer, _ctx, %{start_time: nil} = state)
+      when Utils.keyframe(buffer) do
     # we chose the os_time instead of vm_time since the
     # VM will not adjust the time when the the system is suspended
     # check https://erlangforums.com/t/why-is-there-a-discrepancy-between-values-returned-by-os-system-time-1-and-erlang-system-time-1/2050/2
-    start_time = Membrane.Time.os_time()
+    start_time = Time.os_time()
 
     state =
       %{
@@ -127,13 +121,13 @@ defmodule ExNVR.Elements.Segmenter do
   end
 
   defp handle_buffer(state, %Buffer{} = buffer) do
-    key_frame? = buffer.metadata.h264.key_frame?
+    if Utils.keyframe(buffer) and Segment.duration(state.segment) >= state.target_duration do
+      state = finalize_segment(state)
 
-    if key_frame? and Segment.duration(state.segment) >= state.target_duration do
       actions =
         [end_of_stream: Pad.ref(:output, state.start_time)] ++ completed_segment_action(state)
 
-      start_time = state.start_time + Segment.duration(state.segment)
+      start_time = Segment.end_date(state.segment)
 
       state =
         %{
@@ -142,7 +136,8 @@ defmodule ExNVR.Elements.Segmenter do
             segment: Segment.new(start_time),
             buffer?: true,
             buffer: [buffer],
-            monotonic_start_time: System.monotonic_time()
+            monotonic_start_time: System.monotonic_time(),
+            first_segment?: false
         }
         |> update_segment_size(buffer)
 
@@ -158,6 +153,8 @@ defmodule ExNVR.Elements.Segmenter do
   end
 
   defp do_handle_end_of_stream(state) do
+    state = finalize_segment(state)
+
     {[end_of_stream: Pad.ref(:output, state.start_time)] ++ completed_segment_action(state, true),
      Map.merge(state, init_state())}
   end
@@ -184,19 +181,29 @@ defmodule ExNVR.Elements.Segmenter do
       buffer: [],
       buffer?: true,
       start_time: nil,
-      monotonic_start_time: 0
+      monotonic_start_time: 0,
+      first_segment?: true
     }
   end
 
-  defp completed_segment_action(state, discontinuity \\ false) do
-    monotonic_duration = System.monotonic_time() - state.monotonic_start_time
-    wall_clock_duration = Membrane.Time.os_time() - state.start_time
+  defp finalize_segment(%{segment: segment} = state) do
+    end_date = Time.os_time()
 
     segment =
-      state.segment
-      |> Segment.with_realtime_duration(Membrane.Time.native_units(monotonic_duration))
-      |> Segment.with_wall_clock_duration(wall_clock_duration)
+      segment
+      |> maybe_adjust_start_date(state, end_date)
+      |> Segment.with_realtime_duration(Time.monotonic_time() - state.monotonic_start_time)
+      |> then(&Segment.with_wall_clock_duration(&1, end_date - &1.start_date))
 
-    [notify_parent: {:completed_segment, {state.start_time, segment, discontinuity}}]
+    %{state | segment: %{segment | wallclock_end_date: end_date}}
+  end
+
+  defp maybe_adjust_start_date(segment, %{first_segment?: false}, _end_date), do: segment
+
+  defp maybe_adjust_start_date(segment, _state, end_date),
+    do: %{segment | start_date: end_date - Segment.duration(segment), end_date: end_date}
+
+  defp completed_segment_action(state, discontinuity \\ false) do
+    [notify_parent: {:completed_segment, {state.start_time, state.segment, discontinuity}}]
   end
 end

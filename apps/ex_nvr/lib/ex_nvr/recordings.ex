@@ -9,11 +9,11 @@ defmodule ExNVR.Recordings do
 
   @type error :: {:error, Ecto.Changeset.t() | File.posix()}
 
-  @spec create(Run.t(), map()) :: {:ok, Recording.t(), Run.t()} | error()
-  def create(%Run{} = run, %{path: path} = params) do
+  @spec create(Run.t(), map(), boolean()) :: {:ok, Recording.t(), Run.t()} | error()
+  def create(%Run{} = run, params, copy_file? \\ true) do
     params = if is_struct(params), do: Map.from_struct(params), else: params
 
-    with :ok <- File.cp(path, recording_path(params)) do
+    with :ok <- copy_file(params, copy_file?) do
       recording_changeset =
         params
         |> Map.put(:filename, recording_path(params) |> Path.basename())
@@ -69,6 +69,12 @@ defmodule ExNVR.Recordings do
 
   def deactivate_runs(%Device{id: device_id}) do
     Repo.update_all(Run.deactivate_query(device_id), set: [active: false])
+  end
+
+  defp copy_file(_params, false), do: :ok
+
+  defp copy_file(params, true) do
+    File.cp(params.path, recording_path(params))
   end
 
   defp recording_path(%{device_id: device_id, start_date: start_date}) do
