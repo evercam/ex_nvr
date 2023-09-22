@@ -13,7 +13,7 @@ defmodule ExNVR.MixProject do
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
-      compilers: [:unifex, :bundlex] ++ Mix.compilers(),
+      compilers: Mix.compilers(),
       deps: deps()
     ]
   end
