@@ -153,6 +153,8 @@ defmodule ExNVR.Pipeline.Output.Storage.Segmenter do
   end
 
   defp do_handle_end_of_stream(state) do
+    state = finalize_segment(state)
+
     {[end_of_stream: Pad.ref(:output, state.start_time)] ++ completed_segment_action(state, true),
      Map.merge(state, init_state())}
   end
