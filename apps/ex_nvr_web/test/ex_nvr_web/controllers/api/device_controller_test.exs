@@ -64,6 +64,7 @@ defmodule ExNVRWeb.API.DeviceControllerTest do
         Enum.map(1..10, fn _ ->
           device_fixture()
         end)
+
       total_devices = devices |> length()
 
       response =

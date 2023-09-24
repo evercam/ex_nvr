@@ -43,7 +43,9 @@ defmodule ExNVRWeb.DeviceLive do
 
       {:error, changeset} ->
         {:noreply,
-         assign(push_event(socket, "toggle-device-config-inputs", %{}), device_form: to_form(changeset))}
+         assign(push_event(socket, "toggle-device-config-inputs", %{}),
+           device_form: to_form(changeset)
+         )}
     end
   end
 
@@ -67,7 +69,9 @@ defmodule ExNVRWeb.DeviceLive do
 
       {:error, changeset} ->
         {:noreply,
-         assign(push_event(socket, "toggle-device-config-inputs", %{}), device_form: to_form(changeset))}
+         assign(push_event(socket, "toggle-device-config-inputs", %{}),
+           device_form: to_form(changeset)
+         )}
     end
   end
 end

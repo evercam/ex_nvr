@@ -135,20 +135,19 @@ defmodule ExNVR.Pipelines.Main do
       rtc_engine: options[:rtc_engine]
     }
 
-    hls_sink = %Output.HLS{
-      location: Path.join(Utils.hls_dir(device.id), "live"),
-      segment_name_prefix: "live"
-    }
-
     spec =
       [
         child(:rtsp_source, %Source.RTSP{stream_uri: stream_uri}),
-        {child(:hls_sink, hls_sink, get_if_exists: true), crash_group: {"hls", :temporary}},
+        child(:hls_sink, %Output.HLS{
+          location: Path.join(Utils.hls_dir(device.id), "live"),
+          segment_name_prefix: "live"
+        }),
         child(:snapshooter, ExNVR.Elements.SnapshotBin),
         child(:webrtc, %Output.WebRTC{stream_id: device.id})
       ] ++
+        build_main_stream_spec(state) ++
         if sub_stream_uri,
-          do: [child({:rtsp_source, :sub_stream}, %Source.RTSP{stream_uri: sub_stream_uri})],
+          do: build_sub_stream_spec(sub_stream_uri),
           else: []
 
     {[spec: spec], state}
@@ -183,20 +182,8 @@ defmodule ExNVR.Pipelines.Main do
       spec = [
         get_child(:rtsp_source)
         |> via_out(Pad.ref(:output, ssrc))
-        |> child(:video_tee, Membrane.Tee.Master)
-        |> via_out(:master)
-        |> child({:storage_bin, ssrc}, %Output.Storage{
-          device_id: state.device.id,
-          directory: Utils.recording_dir(state.device.id),
-          target_segment_duration: state.segment_duration
-        }),
-        get_child(:video_tee)
-        |> via_out(:copy)
-        |> via_in(Pad.ref(:video, :main_stream))
-        |> get_child(:hls_sink),
-        get_child(:video_tee)
-        |> via_out(:copy)
-        |> child({:cvs_bufferer, ssrc}, ExNVR.Elements.CVSBufferer),
+        |> via_in(Pad.ref(:input, make_ref()))
+        |> get_child(:funnel),
         get_child(:video_tee)
         |> via_out(:copy)
         |> via_in(Pad.ref(:input, :main_stream), options: [media_track: track])
@@ -221,8 +208,7 @@ defmodule ExNVR.Pipelines.Main do
       spec = [
         get_child({:rtsp_source, :sub_stream})
         |> via_out(Pad.ref(:output, ssrc))
-        |> via_in(Pad.ref(:video, :sub_stream))
-        |> get_child(:hls_sink)
+        |> get_child({:funnel, :sub_stream})
       ]
 
       {[spec: spec], state}
@@ -244,13 +230,7 @@ defmodule ExNVR.Pipelines.Main do
   @impl true
   def handle_child_pad_removed(:rtsp_source, Pad.ref(:output, _ssrc), _ctx, state) do
     state = maybe_update_device_and_report(state, :failed)
-
-    unlink_actions = [
-      remove_link: {:webrtc, Pad.ref(:input, :main_stream)},
-      remove_link: {:hls_sink, Pad.ref(:video, :main_stream)}
-    ]
-
-    {[remove_child: [:main_stream]] ++ unlink_actions, state}
+    {[remove_link: {:webrtc, Pad.ref(:input, :main_stream)}], state}
   end
 
   @impl true
@@ -261,12 +241,6 @@ defmodule ExNVR.Pipelines.Main do
   @impl true
   def handle_child_pad_removed(_child, _pad, _ctx, state) do
     {[], state}
-  end
-
-  @impl true
-  def handle_crash_group_down(group, ctx, state) do
-    Membrane.Logger.error("Group '#{group}' crashed")
-    {[remove_children: ctx.members], state}
   end
 
   @impl true
@@ -283,7 +257,7 @@ defmodule ExNVR.Pipelines.Main do
   def handle_call({:live_snapshot, image_format}, ctx, state) do
     case state.live_snapshot_waiting_pids do
       [] ->
-        {[spec: link_live_snapshot_elements(ctx, image_format)],
+        {[spec: link_live_snapshot_elements(image_format)],
          %{state | live_snapshot_waiting_pids: [ctx.from]}}
 
       pids ->
@@ -316,16 +290,40 @@ defmodule ExNVR.Pipelines.Main do
     {[terminate: :normal], state}
   end
 
-  defp link_live_snapshot_elements(ctx, image_format) do
+  defp build_main_stream_spec(state) do
+    [
+      child(:funnel, %Membrane.Funnel{end_of_stream: :never})
+      |> child(:video_tee, Membrane.Tee.Master)
+      |> via_out(:master)
+      |> child({:storage_bin, :main_stream}, %Output.Storage{
+        device_id: state.device.id,
+        directory: Utils.recording_dir(state.device.id),
+        target_segment_duration: state.segment_duration
+      }),
+      get_child(:video_tee)
+      |> via_out(:copy)
+      |> via_in(Pad.ref(:video, :main_stream))
+      |> get_child(:hls_sink),
+      get_child(:video_tee)
+      |> via_out(:copy)
+      |> child({:cvs_bufferer, :main_stream}, ExNVR.Elements.CVSBufferer)
+    ]
+  end
+
+  defp build_sub_stream_spec(sub_stream_uri) do
+    [
+      child({:rtsp_source, :sub_stream}, %Source.RTSP{stream_uri: sub_stream_uri}),
+      child({:funnel, :sub_stream}, %Membrane.Funnel{end_of_stream: :never})
+      |> via_in(Pad.ref(:video, :sub_stream))
+      |> get_child(:hls_sink)
+    ]
+  end
+
+  defp link_live_snapshot_elements(image_format) do
     ref = make_ref()
 
-    cvs_bufferer =
-      ctx.children
-      |> Map.keys()
-      |> Enum.find(&(is_tuple(&1) and elem(&1, 0) == :cvs_bufferer))
-
     [
-      get_child(cvs_bufferer)
+      get_child({:cvs_bufferer, :main_stream})
       |> via_out(Pad.ref(:output, ref))
       |> via_in(Pad.ref(:input, ref), options: [format: image_format])
       |> get_child(:snapshooter)
