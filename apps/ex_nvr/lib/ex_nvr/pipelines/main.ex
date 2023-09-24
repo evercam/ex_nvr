@@ -208,6 +208,7 @@ defmodule ExNVR.Pipelines.Main do
       spec = [
         get_child({:rtsp_source, :sub_stream})
         |> via_out(Pad.ref(:output, ssrc))
+        |> via_in(Pad.ref(:input, make_ref()))
         |> get_child({:funnel, :sub_stream})
       ]
 
