@@ -82,12 +82,20 @@ defmodule ExNVR.Pipeline.Output.HLS do
       |> get_child(:sink)
     ]
 
-    {[spec: {spec, group: ref}], state}
+    {[spec: spec], state}
   end
 
   @impl true
-  def handle_pad_removed(Pad.ref(:video, ref), _ctx, state) do
-    {[remove_children: ref], state}
+  def handle_pad_removed(Pad.ref(:video, ref), ctx, state) do
+    childs_to_remove =
+      ctx.children
+      |> Map.keys()
+      |> Enum.filter(fn
+        {_name, ^ref} -> true
+        _other -> false
+      end)
+
+    {[remove_children: childs_to_remove], state}
   end
 
   @impl true
