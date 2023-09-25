@@ -113,6 +113,29 @@ defmodule ExNVRWeb.RecordingListLive do
               </svg>
             </a>
           </li>
+          <%= if @meta.total_pages == 0 do %>
+            <li>
+              <a
+                href="#"
+                phx-click="nav"
+                phx-value-page={0}
+                class={
+                  [
+                    "flex items-center justify-center px-3 h-8 leading-tight border dark:border-gray-700"
+                  ] ++
+                    if @meta.current_page == 0,
+                      do: [
+                        "z-10 pointer-events-none text-blue-600 bg-blue-50 border-blue-300 hover:bg-blue-100 hover:text-blue-700 dark:bg-gray-700 dark:text-white"
+                      ],
+                      else: [
+                        "text-gray-500 bg-white border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
+                      ]
+                }
+              >
+                <%= 0 %>
+              </a>
+            </li>
+          <% end %>
           <%= if @meta.total_pages > 6 do %>
             <%= for page <- [1,2] do %>
               <li>
