@@ -25,18 +25,19 @@ defmodule ExNVR.Pipeline.Source.File do
               ]
 
   def_output_pad :video,
-  demand_unit: :buffers,
-  accepted_format: %Membrane.H264{alignment: :au}
+    demand_unit: :buffers,
+    accepted_format: %Membrane.H264{alignment: :au}
 
   @impl true
   def handle_init(_ctx, options) do
     Membrane.Logger.debug("Initialize the file source bin: #{inspect(options)}")
 
-    state = Map.from_struct(options)
-            |> Map.merge(%{
-              file_duration: 0,
-              file_creation_time: DateTime.utc_now()
-            })
+    state =
+      Map.from_struct(options)
+      |> Map.merge(%{
+        file_duration: 0,
+        file_creation_time: DateTime.utc_now()
+      })
 
     {spec, state} = read_file_spec(state)
 
@@ -76,7 +77,7 @@ defmodule ExNVR.Pipeline.Source.File do
       |> add_depayloader(track, id)
       |> child({:timestamper, id}, %Timestamper{
         offset: Membrane.Time.as_nanoseconds(state.file_duration),
-        start_date: Membrane.Time.from_datetime(state.file_creation_time) #DateTime.utc_now())
+        start_date: Membrane.Time.from_datetime(state.file_creation_time)
       })
       |> get_child(:funnel)
     ]
@@ -87,6 +88,7 @@ defmodule ExNVR.Pipeline.Source.File do
   @impl true
   def handle_element_end_of_stream({:parser, id}, _pad, _ctx, %{loop: -1} = state) do
     IO.inspect("Looop Reached end '-1' ")
+
     {[remove_children: childs_to_delete(id), notify_child: {:scissors, :end_of_stream}], state}
     |> IO.inspect()
   end
@@ -96,6 +98,12 @@ defmodule ExNVR.Pipeline.Source.File do
     IO.inspect("Looop Reached Last rep '1' ")
     {_, state} = read_file_spec(state)
     handle_element_end_of_stream({:parser, id}, pad, ctx, %{state | loop: -1})
+  end
+
+  @impl true
+  def handle_element_end_of_stream({:parser, id}, pad, ctx, %{loop: 0} = state) do
+    {_, state} = read_file_spec(state)
+    handle_element_end_of_stream({:parser, id}, pad, ctx, %{state | loop: 1000})
   end
 
   @impl true
@@ -117,14 +125,18 @@ defmodule ExNVR.Pipeline.Source.File do
 
   defp read_file_spec(%{location: file_path} = state) do
     Membrane.Logger.debug("Start reading file: #{file_path}")
+
     {_creation_time, _modification_time, _timescale, duration, _next_track_id} =
       File.open!(file_path)
       |> IO.binread(112)
       |> extract_meta()
 
-    state = %{state | file_duration: state.file_duration + duration}
-            |> IO.inspect()
+    state =
+      %{state | file_duration: state.file_duration + duration}
+      |> IO.inspect()
+
     id = UUID.uuid4()
+
     spec = [
       child({:source, id}, %Membrane.File.Source{location: file_path})
       |> child({:demuxer, id}, MP4.Demuxer.ISOM)
@@ -161,7 +173,7 @@ defmodule ExNVR.Pipeline.Source.File do
     {creation_time, modification_time, timescale, duration, next_track_id}
   end
 
-  defp extract_meta(<<_version::integer-32-big, rest::binary >>) do
+  defp extract_meta(<<_version::integer-32-big, rest::binary>>) do
     <<
       creation_time::integer-64-big,
       modification_time::integer-64-big,
