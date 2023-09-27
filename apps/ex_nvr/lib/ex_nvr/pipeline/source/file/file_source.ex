@@ -46,7 +46,7 @@ defmodule ExNVR.Pipeline.Source.File do
         child(:funnel, %Membrane.Funnel{end_of_stream: :never})
         |> child(:scissors, %ExNVR.Elements.Recording.Scissors{
           start_date: Membrane.Time.from_datetime(state.file_creation_time),
-          duration: Membrane.Time.as_nanoseconds(state.file_duration),
+          duration: state.file_duration,
           strategy: :exact
         })
         |> bin_output(:video)
@@ -100,11 +100,11 @@ defmodule ExNVR.Pipeline.Source.File do
     handle_element_end_of_stream({:parser, id}, pad, ctx, %{state | loop: -1})
   end
 
-  @impl true
-  def handle_element_end_of_stream({:parser, id}, pad, ctx, %{loop: 0} = state) do
-    {_, state} = read_file_spec(state)
-    handle_element_end_of_stream({:parser, id}, pad, ctx, %{state | loop: 1000})
-  end
+  # @impl true
+  # def handle_element_end_of_stream({:parser, id}, pad, ctx, %{loop: 0} = state) do
+  #   {_, state} = read_file_spec(state)
+  #   handle_element_end_of_stream({:parser, id}, pad, ctx, %{state | loop: 1000})
+  # end
 
   @impl true
   def handle_element_end_of_stream({:parser, id}, pad, ctx, state) do
@@ -136,7 +136,7 @@ defmodule ExNVR.Pipeline.Source.File do
       |> IO.inspect()
 
     id = UUID.uuid4()
-
+    IO.inspect("Source with id #{id}")
     spec = [
       child({:source, id}, %Membrane.File.Source{location: file_path})
       |> child({:demuxer, id}, MP4.Demuxer.ISOM)
