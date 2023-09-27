@@ -124,6 +124,8 @@ defmodule ExNVR.Model.Device do
 
   def streams(%__MODULE__{} = device), do: build_stream_uri(device)
 
+  def file_location(%__MODULE__{stream_config: config} = _device), do: config.location
+
   def config_updated(%{type: :ip, stream_config: config}, %{
         type: :ip,
         stream_config: config
