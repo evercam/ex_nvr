@@ -118,16 +118,9 @@ defmodule ExNVR.Pipelines.Main do
   @impl true
   def handle_init(_ctx, options) do
     device = options[:device]
-    {stream_uri, sub_stream_uri} = Device.streams(device)
 
     Logger.metadata(device_id: device.id)
     Membrane.Logger.info("Starting main pipeline for device: #{device.id}")
-
-    Membrane.Logger.info("""
-    Start streaming for
-    main stream: #{stream_uri}
-    sub stream: #{sub_stream_uri}
-    """)
 
     state = %State{
       device: device,
@@ -135,30 +128,51 @@ defmodule ExNVR.Pipelines.Main do
       rtc_engine: options[:rtc_engine]
     }
 
-    spec =
-      [
-        child(:rtsp_source, %Source.RTSP{stream_uri: stream_uri}),
-        child(:hls_sink, %Output.HLS{
-          location: Path.join(Utils.hls_dir(device.id), "live"),
-          segment_name_prefix: "live"
-        }),
-        child(:snapshooter, ExNVR.Elements.SnapshotBin),
-        child(:webrtc, %Output.WebRTC{stream_id: device.id})
-      ] ++
-        build_main_stream_spec(state) ++
-        if sub_stream_uri,
-          do: build_sub_stream_spec(sub_stream_uri),
-          else: []
+    common_spec = [
+      child(:hls_sink, %Output.HLS{
+        location: Path.join(Utils.hls_dir(device.id), "live"),
+        segment_name_prefix: "live"
+      }),
+      child(:snapshooter, ExNVR.Elements.SnapshotBin),
+      child(:webrtc, %Output.WebRTC{stream_id: device.id})
+    ]
 
-    {[spec: spec], state}
+    if device.type == :ip do
+      {stream_uri, sub_stream_uri} = Device.streams(device)
+
+      Membrane.Logger.info("""
+      Start streaming for
+      main stream: #{stream_uri}
+      sub stream: #{sub_stream_uri}
+      """)
+
+      spec =
+        common_spec ++
+          build_main_stream_spec(state, stream_uri) ++
+          if sub_stream_uri,
+            do: build_sub_stream_spec(sub_stream_uri),
+            else: []
+
+      {[spec: spec], state}
+    else
+      location = Device.file_location(device)
+
+      Membrane.Logger.info("""
+      Start streaming for
+      location: #{location}
+      """)
+
+      {[spec: common_spec ++ build_file_stream_spec(location)], state}
+    end
   end
 
   @impl true
   def handle_setup(_ctx, state) do
-    # Set the device to failed state and make last active run inactive
+    # Set device state and make last active run inactive
     # may happens on application crash
+    device_state = if state.device.type == :file, do: :recording, else: :failed
     Recordings.deactivate_runs(state.device)
-    {[], maybe_update_device_and_report(state, :failed)}
+    {[], maybe_update_device_and_report(state, device_state)}
   end
 
   @impl true
@@ -291,8 +305,9 @@ defmodule ExNVR.Pipelines.Main do
     {[terminate: :normal], state}
   end
 
-  defp build_main_stream_spec(state) do
+  defp build_main_stream_spec(state, stream_uri) do
     [
+      child(:rtsp_source, %Source.RTSP{stream_uri: stream_uri}),
       child(:funnel, %Membrane.Funnel{end_of_stream: :never})
       |> child(:video_tee, Membrane.Tee.Master)
       |> via_out(:master)
@@ -303,6 +318,22 @@ defmodule ExNVR.Pipelines.Main do
       }),
       get_child(:video_tee)
       |> via_out(:copy)
+      |> via_in(Pad.ref(:video, :main_stream))
+      |> get_child(:hls_sink),
+      get_child(:video_tee)
+      |> via_out(:copy)
+      |> child({:cvs_bufferer, :main_stream}, ExNVR.Elements.CVSBufferer)
+    ]
+  end
+
+  defp build_file_stream_spec(location) do
+    [
+      child(:source, %Source.File{
+        location: location
+      })
+      |> via_out(:video)
+      |> child(:video_tee, Membrane.Tee.Master)
+      |> via_out(:master)
       |> via_in(Pad.ref(:video, :main_stream))
       |> get_child(:hls_sink),
       get_child(:video_tee)
