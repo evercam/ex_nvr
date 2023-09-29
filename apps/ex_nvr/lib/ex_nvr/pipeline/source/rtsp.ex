@@ -40,31 +40,27 @@ defmodule ExNVR.Pipeline.Source.RTSP do
       })
     ]
 
-    {[spec: spec], %{tracks: [], ssrc_to_track: %{}}}
+    {[spec: spec], %{tracks: [], ssrc_to_track: %{}, link_source?: false}}
   end
 
   @impl true
-  def handle_child_notification({:rtsp_setup_complete, tracks}, _element, _ctx, state) do
+  def handle_playing(_ctx, state) do
+    if state.link_source? do
+      {[spec: link_source(state)], %{state | link_source?: false}}
+    else
+      {[], state}
+    end
+  end
+
+  @impl true
+  def handle_child_notification({:rtsp_setup_complete, tracks}, _element, ctx, state) do
     Membrane.Logger.info("Received rtsp setup complete notification with #{inspect(tracks)}")
 
-    fmt_mapping =
-      Enum.map(tracks, fn %{rtpmap: rtpmap} = track ->
-        {rtpmap.payload_type, {track.encoding, rtpmap.clock_rate}}
-      end)
-      |> Enum.into(%{})
-
-    ref = make_ref()
-
-    spec = [
-      get_child(:source)
-      |> via_out(Pad.ref(:output, ref))
-      |> via_in(Pad.ref(:rtp_input, ref))
-      |> child(:rtp_session, %Membrane.RTP.SessionBin{
-        fmt_mapping: fmt_mapping
-      })
-    ]
-
-    {[spec: spec], %{state | tracks: tracks}}
+    if ctx.playback == :playing do
+      {[spec: link_source(state)], %{state | tracks: tracks}}
+    else
+      {[], %{state | tracks: tracks, link_source?: true}}
+    end
   end
 
   @impl true
@@ -110,6 +106,25 @@ defmodule ExNVR.Pipeline.Source.RTSP do
     track = Map.fetch!(state.ssrc_to_track, ssrc)
     spec = [get_specs(track, ssrc) |> bin_output(pad)]
     {[spec: spec], state}
+  end
+
+  defp link_source(state) do
+    ref = make_ref()
+
+    fmt_mapping =
+      Enum.map(state.tracks, fn %{rtpmap: rtpmap} = track ->
+        {rtpmap.payload_type, {track.encoding, rtpmap.clock_rate}}
+      end)
+      |> Enum.into(%{})
+
+    [
+      get_child(:source)
+      |> via_out(Pad.ref(:output, ref))
+      |> via_in(Pad.ref(:rtp_input, ref))
+      |> child(:rtp_session, %Membrane.RTP.SessionBin{
+        fmt_mapping: fmt_mapping
+      })
+    ]
   end
 
   defp get_specs(%Track{type: :video} = track, ssrc) do
