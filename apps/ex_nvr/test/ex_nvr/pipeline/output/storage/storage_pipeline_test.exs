@@ -45,8 +45,9 @@ defmodule ExNVR.Pipeline.Output.StoragePipelineTest do
   defp start_pipeline(device_id) do
     structure = [
       child(:source, %Source{output: chunk_file()})
-      |> child(:parser, Membrane.H264.Parser)
-      |> child(:timestamper, %ExNVR.Support.Timestamper{framerate: {20, 1}})
+      |> child(:parser, %Membrane.H264.Parser{
+        generate_best_effort_timestamps: %{framerate: {20, 1}}
+      })
       |> child(:storage, %Storage{
         device_id: device_id,
         directory: ExNVR.Utils.recording_dir(device_id),
@@ -60,7 +61,7 @@ defmodule ExNVR.Pipeline.Output.StoragePipelineTest do
   defp chunk_file() do
     File.read!(@fixture_path)
     |> :binary.bin_to_list()
-    |> Enum.chunk_every(1_000)
+    |> Enum.chunk_every(500)
     |> Enum.map(&:binary.list_to_bin/1)
   end
 

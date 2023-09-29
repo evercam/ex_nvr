@@ -16,7 +16,7 @@ defmodule ExNVR.Elements.RecordingBin do
 
   alias ExNVR.Recordings
   alias ExNVR.Elements.Recording.Timestamper
-  alias Membrane.{File, MP4}
+  alias Membrane.{File, H264, MP4}
 
   def_options device_id: [
                 spec: binary(),
@@ -122,7 +122,7 @@ defmodule ExNVR.Elements.RecordingBin do
   end
 
   @impl true
-  def handle_element_end_of_stream({:parser, id}, pad, ctx, %{recordings: []} = state) do
+  def handle_element_end_of_stream({:timestamper, id}, pad, ctx, %{recordings: []} = state) do
     recordings =
       Recordings.get_recordings_between(
         state.device_id,
@@ -131,14 +131,14 @@ defmodule ExNVR.Elements.RecordingBin do
       )
 
     if recordings != [] do
-      handle_element_end_of_stream({:parser, id}, pad, ctx, %{state | recordings: recordings})
+      handle_element_end_of_stream({:timestamper, id}, pad, ctx, %{state | recordings: recordings})
     else
       {[remove_children: childs_to_delete(id), notify_child: {:scissors, :end_of_stream}], state}
     end
   end
 
   @impl true
-  def handle_element_end_of_stream({:parser, id}, _pad, _ctx, state) do
+  def handle_element_end_of_stream({:timestamper, id}, _pad, _ctx, state) do
     {spec, state} = read_file_spec(state)
     {[remove_children: childs_to_delete(id), spec: spec], state}
   end
@@ -184,13 +184,12 @@ defmodule ExNVR.Elements.RecordingBin do
   end
 
   defp childs_to_delete(id),
-    do: [:source, :demuxer, :depayloader, :parser, :timestamper] |> Enum.map(&{&1, id})
+    do: [:source, :demuxer, :parser, :timestamper] |> Enum.map(&{&1, id})
 
-  defp add_depayloader(link_builder, %Membrane.MP4.Payload.AVC1{} = _track, id) do
-    link_builder
-    |> child({:depayloader, id}, Membrane.MP4.Depayloader.H264)
-    |> child({:parser, id}, %Membrane.H264.Parser{
-      repeat_parameter_sets: true
+  defp add_depayloader(link_builder, %H264{} = _track, id) do
+    child(link_builder, {:parser, id}, %H264.Parser{
+      repeat_parameter_sets: true,
+      output_stream_structure: :annexb
     })
   end
 
