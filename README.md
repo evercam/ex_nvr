@@ -71,6 +71,7 @@ The main feature of this project is to store video streams retrieved from `devic
    - [ ] USB / Webcams
    - [ ] Raspberry Cameras
    - [x] Plain RTSP stream
+   - [ ] File Upload (Helpful for debug, benchmarking & demos)
 
 * **Camera Streams**: save and playback
    - [x] Main stream
