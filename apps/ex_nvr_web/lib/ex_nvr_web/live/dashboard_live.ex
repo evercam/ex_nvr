@@ -210,7 +210,6 @@ defmodule ExNVRWeb.DashboardLive do
   end
 
   def handle_event("update_end_date_visibility", %{"duration" => duration}, socket) do
-    IO.inspect(duration)
     if duration == "custom", do: {:noreply, assign(socket, custom_duration: true)}, else:  {:noreply, assign(socket, custom_duration: false)}
   end
 
@@ -223,19 +222,17 @@ defmodule ExNVRWeb.DashboardLive do
   end
 
   def handle_event("download_footage", %{"start_date" => start_date, "device" => device_id, "end_date" => end_date, "duration" => duration}, socket) do
-    IO.inspect("Duration: #{duration}")
-
     duration = convert_duration(duration)
-    IO.inspect("Duration: #{duration}")
     if end_date == "" and duration == "" do
       {:noreply, put_flash(socket, :error, "Either End date or Duration must be provided!"), show_footage_popup: false}
     else
       end_date = if end_date != "", do: format_to_datetime(end_date, socket.assigns.timezone), else: end_date
       start_date = format_to_datetime(start_date, socket.assigns.timezone)
+
       {:noreply,
         socket
-        |> put_flash(:info, "Downloading..")
-        |> redirect(to: "/api/devices/#{device_id}/footage/?start_date=#{start_date}&end_date=#{end_date}&duration=#{duration}")}
+        |> assign(show_footage_popup: false)
+        |> redirect(to: "/api/devices/#{device_id}/footage/?start_date=#{start_date}&end_date=#{end_date}&duration=#{duration}", session: %{return_to: ~p"/dashboard"})}
     end
   end
 
