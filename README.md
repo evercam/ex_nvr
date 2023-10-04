@@ -2,6 +2,8 @@
 
 NVR (Network Video Recorder) for Elixir using [Membrane Framework](https://github.com/membraneframework)
 
+![ExNVR dashboard](/screenshots/ex_nvr.png)
+
 ## Installation
 
 To get started with `ex_nvr` it's preferrable and easy to run a docker image:
@@ -78,7 +80,7 @@ The main feature of this project is to store video streams retrieved from `devic
    - [ ] Sub-stream
 
 * **Device Discovery**: discover devices
-   - [ ] Onvif discovery
+   - [x] Onvif discovery
 
 * **Video Codecs**: allow storing and streaming videos with following codecs
    - [x] H264
