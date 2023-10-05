@@ -41,7 +41,7 @@ defmodule ExNVR.Pipelines.Main do
 
   alias ExNVR.{Devices, Recordings, Utils}
   alias ExNVR.Model.Device
-  alias ExNVR.Pipeline.{Output, Source}
+  alias ExNVR.Pipeline.{Output, Source, UnixSocketServer}
 
   @event_prefix [:ex_nvr, :main_pipeline]
 
@@ -121,6 +121,15 @@ defmodule ExNVR.Pipelines.Main do
 
     Logger.metadata(device_id: device.id)
     Membrane.Logger.info("Starting main pipeline for device: #{device.id}")
+
+    {:ok, _unix_socket_server} =
+      case :os.type() do
+        {:unix, _name} ->
+          UnixSocketServer.start_link(path: options[:unix_socket_path])
+
+        _other ->
+          {:ok, nil}
+      end
 
     state = %State{
       device: device,
@@ -238,6 +247,12 @@ defmodule ExNVR.Pipelines.Main do
   end
 
   @impl true
+  def handle_child_notification(:no_sockets, :unix_socket, _ctx, state) do
+    Membrane.Logger.info("All unix sockets are disconnected, remove unix socket bin element")
+    {[remove_children: [:unix_socket]], state}
+  end
+
+  @impl true
   def handle_child_notification(_notification, _element, _ctx, state) do
     {[], state}
   end
@@ -261,6 +276,31 @@ defmodule ExNVR.Pipelines.Main do
   @impl true
   def handle_info({:pipeline_supervisor, pid}, _ctx, state) do
     {[], %{state | supervisor_pid: pid}}
+  end
+
+  @impl true
+  def handle_info({:new_socket, unix_socket}, ctx, state) do
+    childs = Map.keys(ctx.children)
+    notify_action = [notify_child: {:unix_socket, {:new_socket, unix_socket}}]
+
+    if Enum.member?(childs, :unix_socket) do
+      {notify_action, state}
+    else
+      source =
+        if Enum.member?(childs, {:tee, :sub_stream}) do
+          get_child({:tee, :sub_stream})
+        else
+          get_child(:video_tee)
+        end
+
+      spec = [
+        source
+        |> via_out(:copy)
+        |> child(:unix_socket, ExNVR.Pipeline.Output.Socket)
+      ]
+
+      {[spec: spec] ++ notify_action, state}
+    end
   end
 
   @impl true
@@ -347,6 +387,8 @@ defmodule ExNVR.Pipelines.Main do
     [
       child({:rtsp_source, :sub_stream}, %Source.RTSP{stream_uri: sub_stream_uri}),
       child({:funnel, :sub_stream}, %Membrane.Funnel{end_of_stream: :never})
+      |> child({:tee, :sub_stream}, Membrane.Tee.Master)
+      |> via_out(:master)
       |> via_in(Pad.ref(:video, :sub_stream))
       |> get_child(:hls_sink)
     ]
