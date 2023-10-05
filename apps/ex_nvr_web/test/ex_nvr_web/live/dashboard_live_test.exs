@@ -14,6 +14,7 @@ defmodule ExNVRWeb.DashboardTest do
       {:ok, lv, html} = live(conn, ~p"/dashboard")
 
       assert html =~ "You have no devices"
+      refute html =~ "Download"
 
       {:error, redirect} = lv |> element("a", "here") |> render_click()
 
@@ -28,7 +29,11 @@ defmodule ExNVRWeb.DashboardTest do
 
       assert html =~ "Device"
       assert html =~ "Stream"
+      assert html =~ "Download"
+
       assert has_element?(lv, "#timeline")
+      assert has_element?(lv, "#download-footage-btn")
+
       refute has_element?(lv, "#live-video")
     end
   end
@@ -52,6 +57,16 @@ defmodule ExNVRWeb.DashboardTest do
 
       assert html =~ "main_stream"
       assert html =~ "sub_stream"
+    end
+  end
+
+  describe "download footage" do
+    test "show footage-download popup on clicked button", %{conn: conn} do
+      {:ok, lv, html} = live(conn, ~p"/dashboard")
+
+      assert lv
+       |> element("#download-footage-btn")
+       |> render_click() =~ "Download Footage"
     end
   end
 end
