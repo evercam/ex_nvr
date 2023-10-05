@@ -228,11 +228,12 @@ defmodule ExNVRWeb.DashboardLive do
     else
       end_date = if end_date != "", do: format_to_datetime(end_date, socket.assigns.timezone), else: end_date
       start_date = format_to_datetime(start_date, socket.assigns.timezone)
+      url = "/api/devices/#{device_id}/footage/?start_date=#{start_date}&end_date=#{end_date}&duration=#{duration}"
 
       {:noreply,
         socket
         |> assign(show_footage_popup: false)
-        |> redirect(to: "/api/devices/#{device_id}/footage/?start_date=#{start_date}&end_date=#{end_date}&duration=#{duration}", session: %{return_to: ~p"/dashboard"})}
+        |> push_event("download-footage", %{url: url})}
     end
   end
 
