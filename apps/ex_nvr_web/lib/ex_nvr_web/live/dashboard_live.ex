@@ -1,10 +1,21 @@
 defmodule ExNVRWeb.DashboardLive do
   use ExNVRWeb, :live_view
-  alias ExNVRWeb.TimelineComponent
 
+  alias Ecto.Changeset
   alias ExNVR.Devices
   alias ExNVR.Recordings
   alias ExNVR.Model.Device
+  alias ExNVRWeb.TimelineComponent
+
+  @durations [
+    {"2 Minutes", "120"},
+    {"5 Minutes", "300"},
+    {"10 Minutes", "600"},
+    {"30 Minutes", "1800"},
+    {"1 Hour", "3600"},
+    {"2 Hours", "7200"},
+    {"Custom", ""}
+  ]
 
   def render(assigns) do
     ~H"""
@@ -104,7 +115,7 @@ defmodule ExNVRWeb.DashboardLive do
             <div class="space-y-2">
               <div class="mr-4 w-full p-2 rounded">
                 <.input
-                  field={@footage_form[:device]}
+                  field={@footage_form[:device_id]}
                   id="footage_device_id"
                   type="select"
                   label="Device"
@@ -128,20 +139,20 @@ defmodule ExNVRWeb.DashboardLive do
                   id="footage_duration"
                   type="select"
                   label="Duration"
-                  options={Enum.map(@durations, &{&1.label, &1.id})}
-                  phx-change="update_end_date_visibility"
+                  options={durations()}
+                  phx-change="footage_duration"
                   required
                 />
               </div>
 
-              <div id="custom-end-date" class={if not @custom_duration, do: ["hidden"], else: [""]}>
+              <div :if={@custom_duration}>
                 <div class="mr-4 w-full p-2 rounded">
                   <.input
                     field={@footage_form[:end_date]}
                     id="footage_end_date"
                     type="datetime-local"
                     label="End Date"
-                    required={@custom_duration}
+                    required
                   />
                 </div>
               </div>
@@ -165,7 +176,6 @@ defmodule ExNVRWeb.DashboardLive do
   def mount(_params, _session, socket) do
     socket =
       socket
-      |> assign_footage_durations()
       |> assign_devices()
       |> assign_current_device()
       |> assign_streams()
@@ -224,57 +234,32 @@ defmodule ExNVRWeb.DashboardLive do
     {:noreply, socket}
   end
 
-  def handle_event("update_end_date_visibility", %{"duration" => duration}, socket) do
-    if duration == "custom",
+  def handle_event("footage_duration", %{"footage" => params}, socket) do
+    if params["duration"] == "",
       do: {:noreply, assign(socket, custom_duration: true)},
       else: {:noreply, assign(socket, custom_duration: false)}
   end
 
-  def handle_event(
-        "download_footage",
-        %{
-          "start_date" => start_date,
-          "device" => device_id,
-          "end_date" => end_date,
-          "duration" => duration
-        },
+  def handle_event("download_footage", %{"footage" => params}, socket) do
+    device = Enum.find(socket.assigns.devices, &(&1.id == params["device_id"]))
+
+    case validate_footage_req_params(params, device.timezone) do
+      {:ok, params} ->
+        query_params = %{
+          start_date: format_date(params[:start_date]),
+          end_date: format_date(params[:end_date]),
+          duration: params[:duration]
+        }
+
         socket
-      ) do
-    duration = convert_duration(duration)
+        |> push_event("download-footage", %{
+          url: ~p"/api/devices/#{device.id}/footage/?#{query_params}"
+        })
+        |> then(&{:noreply, &1})
 
-    if end_date == "" and duration == "" do
-      {:noreply, put_flash(socket, :error, "Either End date or Duration must be provided!"),
-       show_footage_popup: false}
-    else
-      end_date =
-        if end_date != "",
-          do: format_to_datetime(end_date, socket.assigns.timezone),
-          else: end_date
-
-      start_date = format_to_datetime(start_date, socket.assigns.timezone)
-
-      url =
-        "/api/devices/#{device_id}/footage/?start_date=#{start_date}&end_date=#{end_date}&duration=#{duration}"
-
-      {:noreply,
-       socket
-       |> assign(show_footage_popup: false)
-       |> push_event("download-footage", %{url: url})}
+      {:error, changeset} ->
+        {:noreply, assign_footage_form(socket, changeset)}
     end
-  end
-
-  defp assign_footage_durations(socket) do
-    durations = [
-      %{label: "2 Minutes", id: "2_mins"},
-      %{label: "5 Minutes", id: "5_mins"},
-      %{label: "10 Minutes", id: "10_mins"},
-      %{label: "30 Minutes", id: "30_mins"},
-      %{label: "1 Hour", id: "1_hour"},
-      %{label: "2 Hours", id: "2_hour"},
-      %{label: "Custom", id: "custom"}
-    ]
-
-    assign(socket, durations: durations)
   end
 
   defp assign_devices(socket) do
@@ -334,7 +319,7 @@ defmodule ExNVRWeb.DashboardLive do
   end
 
   defp assign_footage_form(socket, params) do
-    assign(socket, footage_form: to_form(params))
+    assign(socket, footage_form: to_form(params, as: "footage"))
   end
 
   defp maybe_push_stream_event(socket, datetime) do
@@ -390,31 +375,84 @@ defmodule ExNVRWeb.DashboardLive do
     end
   end
 
-  defp convert_timezone(datetime, timezone) do
-    DateTime.new!(DateTime.to_date(datetime), DateTime.to_time(datetime), timezone)
-    |> DateTime.shift_zone!("Etc/UTC")
-    |> DateTime.to_iso8601()
-  end
-
-  defp format_to_datetime(datetime, timezone) do
-    {:ok, new_format, _} = DateTime.from_iso8601("#{datetime}:00Z")
-
-    new_format
-    |> convert_timezone(timezone)
-  end
-
   defp format_date(nil), do: nil
   defp format_date(datetime), do: DateTime.to_iso8601(datetime)
 
-  defp convert_duration(duration) do
-    case duration do
-      "2_mins" -> 2 * 60
-      "5_mins" -> 5 * 60
-      "10_mins" -> 10 * 60
-      "30_mins" -> 30 * 60
-      "1_hour" -> 60 * 60
-      "2_hour" -> 120 * 60
-      "custom" -> ""
+  defp durations(), do: @durations
+
+  def validate_footage_req_params(params, timezone) do
+    types = %{
+      device_id: :string,
+      start_date: :naive_datetime,
+      end_date: :native_datetime,
+      duration: :integer
+    }
+
+    {%{}, types}
+    |> Changeset.cast(params, Map.keys(types))
+    |> Changeset.validate_required([:device_id, :start_date])
+    |> Changeset.validate_number(:duration, greater_than: 5, less_than_or_equal_to: 7200)
+    |> validate_end_date_or_duration()
+    |> recording_exists?(timezone)
+    |> Changeset.apply_action(:create)
+    |> case do
+      {:ok, params} ->
+        params
+        |> Map.update!(:start_date, &DateTime.from_naive!(&1, timezone))
+        |> Map.update(:end_date, nil, fn datetime ->
+          datetime && DateTime.from_naive!(datetime, timezone)
+        end)
+        |> then(&{:ok, &1})
+
+      error ->
+        error
+    end
+  end
+
+  defp validate_end_date_or_duration(%{valid?: false} = changeset), do: changeset
+
+  defp validate_end_date_or_duration(changeset) do
+    start_date = Changeset.get_change(changeset, :start_date)
+    end_date = Changeset.get_change(changeset, :end_date)
+    duration = Changeset.get_change(changeset, :duration)
+
+    cond do
+      is_nil(end_date) and is_nil(duration) ->
+        Changeset.add_error(
+          changeset,
+          :end_date,
+          "At least one field should be provided: end_date or duration",
+          validation: :required
+        )
+
+      not is_nil(end_date) and
+          (NaiveDateTime.diff(start_date, end_date) < 5 or
+             NaiveDateTime.diff(start_date, end_date) > 7200) ->
+        Changeset.add_error(
+          changeset,
+          :end_date,
+          "The duration should be at least 5 seconds and at most 2 hours",
+          validation: :format
+        )
+
+      true ->
+        changeset
+    end
+  end
+
+  defp recording_exists?(%{valid?: false} = changeset, _timezone), do: changeset
+
+  defp recording_exists?(changeset, timezone) do
+    device_id = Changeset.get_field(changeset, :device_id)
+
+    start_date =
+      changeset
+      |> Changeset.get_field(:start_date)
+      |> DateTime.from_naive!(timezone)
+
+    case Recordings.get_recordings_between(device_id, start_date, start_date) do
+      [] -> Changeset.add_error(changeset, :start_date, "No recordings found")
+      _recordings -> changeset
     end
   end
 end
