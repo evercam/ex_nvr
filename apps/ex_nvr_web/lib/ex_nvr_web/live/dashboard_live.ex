@@ -41,82 +41,30 @@ defmodule ExNVRWeb.DashboardLive do
           </.simple_form>
 
           <div class="mt-20 mb-2">
-            <.button id="download-footage-btn" class="bg-blue-500 text-white px-4 py-2 rounded flex items-center" phx-click="show_footage_popup">
+            <.button
+              id="download-footage-btn"
+              class="bg-blue-500 text-white px-4 py-2 rounded flex items-center"
+              phx-click={show_modal("download-modal")}
+            >
               <span title="Download footage" class="mr-2">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="w-5 h-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="1.5"
+                    d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"
+                  />
                 </svg>
               </span>
               Download
             </.button>
           </div>
-          <%= if @show_footage_popup do %>
-            <div class="fixed inset-0 flex items-center justify-center z-50">
-              <div class="bg-white dark:bg-gray-800 p-8 rounded w-96 border">
-                <h2 class="text-xl text-white font-bold mb-4">Download Footage</h2>
-                <.simple_form for={@footage_form} id="footage_form" class="w-full space-y-4" phx-submit="download_footage">
-                  <div class="space-y-2">
-                    <div class="mr-4 w-full p-2 rounded">
-                      <.input
-                        field={@footage_form[:device]}
-                        id="footage_device_id"
-                        type="select"
-                        label="Device"
-                        options={Enum.map(@devices, &{&1.name, &1.id})}
-                        required
-                      />
-                    </div>
-                    <div class="mr-4 w-full p-2 rounded">
-                      <.input
-                        field={@footage_form[:start_date]}
-                        id="footage_start_date"
-                        type="datetime-local"
-                        label="Start Date"
-                        required
-                      />
-                    </div>
-
-                    <div class="mr-4 w-full p-2 rounded">
-                      <.input
-                        field={@footage_form[:duration]}
-                        id="footage_duration"
-                        type="select"
-                        label="Duration"
-                        options={Enum.map(@durations, &{&1.label, &1.id})}
-                        phx-change="update_end_date_visibility"
-                        required
-                      />
-                    </div>
-
-                    <div id="custom-end-date" class={if not @custom_duration, do: ["hidden"], else: [""]}>
-                      <div class="mr-4 w-full p-2 rounded">
-                        <.input
-                          field={@footage_form[:end_date]}
-                          id="footage_end_date"
-                          type="datetime-local"
-                          label="End Date"
-                          required={@custom_duration}
-                        />
-                      </div>
-                    </div>
-
-                    <div class="mr-4 w-full p-2 rounded flex justify-center space-x-4">
-                      <button id="close-popup-button" phx-click="hide_footage_popup" class="bg-red-500 text-white px-4 py-2 rounded flex items-center">
-                        Cancel
-                      </button>
-                      <.button
-                        class="bg-blue-500 text-white px-4 py-2 rounded flex items-center"
-                        phx-submit="download_footage"
-                        phx-disable-with="Downloading.."
-                        >
-                        Download
-                      </.button>
-                    </div>
-                  </div>
-                </.simple_form>
-              </div>
-            </div>
-          <% end %>
         </div>
 
         <div class="relative mt-4">
@@ -143,6 +91,73 @@ defmodule ExNVRWeb.DashboardLive do
           />
         </div>
       </div>
+
+      <.modal id="download-modal">
+        <div class="bg-white dark:bg-gray-800 p-8 rounded">
+          <h2 class="text-xl text-white font-bold mb-4">Download Footage</h2>
+          <.simple_form
+            for={@footage_form}
+            id="footage_form"
+            class="w-full space-y-4"
+            phx-submit="download_footage"
+          >
+            <div class="space-y-2">
+              <div class="mr-4 w-full p-2 rounded">
+                <.input
+                  field={@footage_form[:device]}
+                  id="footage_device_id"
+                  type="select"
+                  label="Device"
+                  options={Enum.map(@devices, &{&1.name, &1.id})}
+                  required
+                />
+              </div>
+              <div class="mr-4 w-full p-2 rounded">
+                <.input
+                  field={@footage_form[:start_date]}
+                  id="footage_start_date"
+                  type="datetime-local"
+                  label="Start Date"
+                  required
+                />
+              </div>
+
+              <div class="mr-4 w-full p-2 rounded">
+                <.input
+                  field={@footage_form[:duration]}
+                  id="footage_duration"
+                  type="select"
+                  label="Duration"
+                  options={Enum.map(@durations, &{&1.label, &1.id})}
+                  phx-change="update_end_date_visibility"
+                  required
+                />
+              </div>
+
+              <div id="custom-end-date" class={if not @custom_duration, do: ["hidden"], else: [""]}>
+                <div class="mr-4 w-full p-2 rounded">
+                  <.input
+                    field={@footage_form[:end_date]}
+                    id="footage_end_date"
+                    type="datetime-local"
+                    label="End Date"
+                    required={@custom_duration}
+                  />
+                </div>
+              </div>
+
+              <div class="mr-4 w-full p-2 rounded flex justify-center space-x-4">
+                <.button
+                  class="bg-blue-500 text-white px-4 py-2 rounded flex items-center"
+                  phx-disable-with="Downloading..."
+                >
+                  Download
+                </.button>
+              </div>
+            </div>
+          </.simple_form>
+        </div>
+      </.modal>
     </div>
     """
   end
@@ -162,7 +177,7 @@ defmodule ExNVRWeb.DashboardLive do
       |> assign_timezone()
       |> maybe_push_stream_event(nil)
 
-    {:ok, assign(socket, start_date: nil, show_footage_popup: false, custom_duration: false)}
+    {:ok, assign(socket, start_date: nil, custom_duration: false)}
   end
 
   def handle_event("switch_device", %{"device" => device_id}, socket) do
@@ -210,30 +225,41 @@ defmodule ExNVRWeb.DashboardLive do
   end
 
   def handle_event("update_end_date_visibility", %{"duration" => duration}, socket) do
-    if duration == "custom", do: {:noreply, assign(socket, custom_duration: true)}, else:  {:noreply, assign(socket, custom_duration: false)}
+    if duration == "custom",
+      do: {:noreply, assign(socket, custom_duration: true)},
+      else: {:noreply, assign(socket, custom_duration: false)}
   end
 
-  def handle_event("show_footage_popup",_params, socket) do
-    {:noreply, assign(socket, show_footage_popup: true)}
-  end
-
-  def handle_event("hide_footage_popup", _params, socket) do
-    {:noreply, assign(socket, show_footage_popup: false)}
-  end
-
-  def handle_event("download_footage", %{"start_date" => start_date, "device" => device_id, "end_date" => end_date, "duration" => duration}, socket) do
+  def handle_event(
+        "download_footage",
+        %{
+          "start_date" => start_date,
+          "device" => device_id,
+          "end_date" => end_date,
+          "duration" => duration
+        },
+        socket
+      ) do
     duration = convert_duration(duration)
+
     if end_date == "" and duration == "" do
-      {:noreply, put_flash(socket, :error, "Either End date or Duration must be provided!"), show_footage_popup: false}
+      {:noreply, put_flash(socket, :error, "Either End date or Duration must be provided!"),
+       show_footage_popup: false}
     else
-      end_date = if end_date != "", do: format_to_datetime(end_date, socket.assigns.timezone), else: end_date
+      end_date =
+        if end_date != "",
+          do: format_to_datetime(end_date, socket.assigns.timezone),
+          else: end_date
+
       start_date = format_to_datetime(start_date, socket.assigns.timezone)
-      url = "/api/devices/#{device_id}/footage/?start_date=#{start_date}&end_date=#{end_date}&duration=#{duration}"
+
+      url =
+        "/api/devices/#{device_id}/footage/?start_date=#{start_date}&end_date=#{end_date}&duration=#{duration}"
 
       {:noreply,
-        socket
-        |> assign(show_footage_popup: false)
-        |> push_event("download-footage", %{url: url})}
+       socket
+       |> assign(show_footage_popup: false)
+       |> push_event("download-footage", %{url: url})}
     end
   end
 
@@ -247,6 +273,7 @@ defmodule ExNVRWeb.DashboardLive do
       %{label: "2 Hours", id: "2_hour"},
       %{label: "Custom", id: "custom"}
     ]
+
     assign(socket, durations: durations)
   end
 
@@ -371,6 +398,7 @@ defmodule ExNVRWeb.DashboardLive do
 
   defp format_to_datetime(datetime, timezone) do
     {:ok, new_format, _} = DateTime.from_iso8601("#{datetime}:00Z")
+
     new_format
     |> convert_timezone(timezone)
   end
