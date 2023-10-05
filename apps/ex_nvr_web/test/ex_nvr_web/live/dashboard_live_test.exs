@@ -2,7 +2,7 @@ defmodule ExNVRWeb.DashboardTest do
   @moduledoc false
   use ExNVRWeb.ConnCase
 
-  import ExNVR.{AccountsFixtures, DevicesFixtures}
+  import ExNVR.{AccountsFixtures, DevicesFixtures, RecordingsFixtures}
   import Phoenix.LiveViewTest
 
   setup %{conn: conn} do
@@ -56,6 +56,50 @@ defmodule ExNVRWeb.DashboardTest do
 
       assert html =~ "main_stream"
       assert html =~ "sub_stream"
+    end
+  end
+
+  describe "download footage" do
+    test "end date field is shown if custom duration selected", %{conn: conn} do
+      device_fixture()
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard")
+
+      html =
+        lv
+        |> element("#footage_duration")
+        |> render_change(%{footage: %{duration: ""}})
+
+      assert html =~ "End Date"
+    end
+
+    test "no footage", %{conn: conn} do
+      device_fixture()
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard")
+
+      html =
+        lv
+        |> form("#footage_form")
+        |> render_submit(%{footage: %{start_date: "2023-10-05T10:00"}})
+
+      assert html =~ "No recordings found"
+      refute html =~ "End Date"
+    end
+
+    @tag :device
+    @tag :tmp_dir
+    test "no errors", %{conn: conn, device: device} do
+      recording_fixture(device, start_date: ~U(2023-10-05T10:00:00Z))
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard")
+
+      html =
+        lv
+        |> form("#footage_form")
+        |> render_submit(%{footage: %{start_date: "2023-10-05T10:00"}})
+
+      refute html =~ "No recordings found"
     end
   end
 end

@@ -139,10 +139,7 @@ window.addEventListener("phx:toggle-device-config-inputs", toggleDeviceConfigInp
 function downloadFile(url) {
     const anchor = document.createElement("a");
     anchor.style.display = "none";
-  
-    anchor.href = url;
-  
-    anchor.download = "";
+    anchor.href = url;  
   
     document.body.appendChild(anchor);
     anchor.click();

@@ -7,11 +7,11 @@ defmodule ExNVR.RecordingsFixtures do
   alias ExNVR.Repo
 
   def valid_recording_attributes(attrs \\ %{}) do
-    start_date = Faker.DateTime.backward(1)
+    start_date = attrs[:start_date] || Faker.DateTime.backward(1)
 
     Enum.into(attrs, %{
       start_date: start_date,
-      end_date: DateTime.add(start_date, :rand.uniform(10) + 60),
+      end_date: DateTime.add(start_date, :rand.uniform(10) * 60),
       path: "../../fixtures/big_buck.mp4" |> Path.expand(__DIR__)
     })
   end
