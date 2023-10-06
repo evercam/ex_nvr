@@ -20,7 +20,7 @@ defmodule ExNVR.Pipelines.VideoAssembler do
     spec = [
       child(:source, struct(Elements.RecordingBin, options))
       |> via_out(:video)
-      |> child(:paylaoder, %Membrane.H264.Parser{output_stream_structure: :avc3})
+      |> child(:paylaoder, %Membrane.H264.Parser{output_stream_structure: :avc1})
       |> via_in(Pad.ref(:input, :video_track))
       |> child(:muxer, Membrane.MP4.Muxer.ISOM)
       |> child(:sink, %Membrane.File.Sink{
