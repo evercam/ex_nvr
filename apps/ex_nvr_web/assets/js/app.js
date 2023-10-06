@@ -136,4 +136,19 @@ toggleDeviceConfigInputs = (event) => {
 
 window.addEventListener("phx:toggle-device-config-inputs", toggleDeviceConfigInputs)
 
+function downloadFile(url) {
+    const anchor = document.createElement("a");
+    anchor.style.display = "none";
+    anchor.href = url;  
+  
+    document.body.appendChild(anchor);
+    anchor.click();
+  
+    document.body.removeChild(anchor);
+}
+
+window.addEventListener("phx:download-footage", (e) => {
+    downloadFile(e.detail.url)
+})
+
 initDarkMode()
