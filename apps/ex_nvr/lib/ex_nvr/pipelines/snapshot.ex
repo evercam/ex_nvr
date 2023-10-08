@@ -42,6 +42,6 @@ defmodule ExNVR.Pipelines.Snapshot do
   def handle_child_notification({:snapshot, snapshot}, :sink, _ctx, state) do
     Membrane.Logger.info("Got snapshot")
     send(state.caller, {:snapshot, snapshot})
-    {[terminate: :normal], %{state | caller: nil}}
+    {[terminate: :shutdown], %{state | caller: nil}}
   end
 end
