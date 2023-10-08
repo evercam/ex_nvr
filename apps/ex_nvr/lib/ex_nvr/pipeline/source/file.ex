@@ -57,12 +57,12 @@ defmodule ExNVR.Pipeline.Source.File do
     spec =
       Enum.map(tracks, fn {track_id, track} ->
         case track do
-          %Membrane.MP4.Payload.AVC1{} ->
+          %Membrane.H264{} ->
             get_child({:demuxer, id})
             |> via_out(Pad.ref(:output, track_id))
-            |> child({:depayloader, id}, Membrane.MP4.Depayloader.H264)
             |> child({:parser, id}, %Membrane.H264.Parser{
-              repeat_parameter_sets: true
+              repeat_parameter_sets: true,
+              output_stream_structure: :annexb
             })
             |> child({:timestamper, id}, %Timestamper{
               offset: state.iteration * state.duration,

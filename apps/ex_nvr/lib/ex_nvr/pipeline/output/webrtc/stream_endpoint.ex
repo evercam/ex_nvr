@@ -72,7 +72,7 @@ defmodule ExNVR.Pipeline.Output.WebRTC.StreamEndpoint do
       when track_id == state.track.id do
     spec = [
       child(:source, Output.WebRTC.Source)
-      |> child(:parser, %Membrane.H264.FFmpeg.Parser{alignment: :nal})
+      |> child(:parser, %Membrane.H264.Parser{output_alignment: :nalu})
       |> child(:rtp_payloader, %Membrane.RTP.PayloaderBin{
         payloader: Membrane.RTP.H264.Payloader,
         clock_rate: state.track.clock_rate,

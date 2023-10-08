@@ -133,7 +133,7 @@ defmodule ExNVR.Pipeline.Source.RTSP do
 
     get_child(:rtp_session)
     |> via_out(Pad.ref(:output, ssrc), options: [depayloader: get_depayloader(track)])
-    |> child({:rtp_parser, ssrc}, %Membrane.H264.Parser{sps: sps, pps: pps})
+    |> child({:rtp_parser, ssrc}, %Membrane.H264.Parser{spss: [sps], ppss: [pps]})
   end
 
   defp get_specs(%Track{type: type}, _ssrc) do

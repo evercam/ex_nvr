@@ -19,7 +19,9 @@ defmodule ExNVR.Elements.HLSPipelineTest do
         segment_name_prefix: UUID.uuid4()
       }),
       child(:source, %Membrane.File.Source{location: in_file})
-      |> child(:parser, %Membrane.H264.Parser{framerate: {30, 1}})
+      |> child(:parser, %Membrane.H264.Parser{
+        generate_best_effort_timestamps: %{framerate: {30, 1}}
+      })
       |> via_in(Pad.ref(:video, :main_stream), options: [resolution: resolution])
       |> get_child(:sink)
     ]
@@ -29,7 +31,9 @@ defmodule ExNVR.Elements.HLSPipelineTest do
         structure ++
           [
             child(:source2, %Membrane.File.Source{location: in_file})
-            |> child(:parser2, %Membrane.H264.Parser{framerate: {30, 1}})
+            |> child(:parser2, %Membrane.H264.Parser{
+              generate_best_effort_timestamps: %{framerate: {30, 1}}
+            })
             |> via_in(Pad.ref(:video, :sub_stream))
             |> get_child(:sink)
           ]

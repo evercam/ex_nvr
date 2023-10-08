@@ -70,7 +70,9 @@ defmodule ExNVR.Pipeline.Output.Storage do
     spec = [
       get_child(:segmenter)
       |> via_out(Pad.ref(:output, segment_ref))
-      |> child({:h264_mp4_payloader, segment_ref}, Membrane.MP4.Payloader.H264)
+      |> child({:h264_mp4_payloader, segment_ref}, %Membrane.H264.Parser{
+        output_stream_structure: :avc1
+      })
       |> child({:mp4_muxer, segment_ref}, %Membrane.MP4.Muxer.ISOM{fast_start: true})
       |> child({:sink, segment_ref}, %Membrane.File.Sink{
         location: recording_path(state, segment_ref)

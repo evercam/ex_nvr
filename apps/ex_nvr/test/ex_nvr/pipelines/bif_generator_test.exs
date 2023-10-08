@@ -22,6 +22,11 @@ defmodule ExNVR.Pipelines.BifGeneratorTest do
       end_date: ~U(2023-06-23 10:00:10Z)
     )
 
+    recording_fixture(device,
+      start_date: ~U(2023-06-23 10:00:10Z),
+      end_date: ~U(2023-06-23 10:00:15Z)
+    )
+
     {:ok, device: device}
   end
 
