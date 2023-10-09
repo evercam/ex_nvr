@@ -19,6 +19,8 @@ defmodule ExNVR.Pipeline.Output.Storage.Segmenter do
   alias ExNVR.Utils
   alias Membrane.{Buffer, Event, H264, Time}
 
+  @time_error Time.milliseconds(30)
+
   def_options target_duration: [
                 spec: non_neg_integer(),
                 default: 60,
@@ -122,7 +124,7 @@ defmodule ExNVR.Pipeline.Output.Storage.Segmenter do
 
   defp handle_buffer(state, %Buffer{} = buffer) do
     if Utils.keyframe(buffer) and Segment.duration(state.segment) >= state.target_duration do
-      state = finalize_segment(state)
+      state = finalize_segment(state, true)
 
       actions =
         [end_of_stream: Pad.ref(:output, state.start_time)] ++ completed_segment_action(state)
@@ -186,21 +188,28 @@ defmodule ExNVR.Pipeline.Output.Storage.Segmenter do
     }
   end
 
-  defp finalize_segment(%{segment: segment} = state) do
+  defp finalize_segment(%{segment: segment} = state, correct_timestamp \\ false) do
     end_date = Time.os_time()
 
     segment =
       segment
-      |> maybe_adjust_start_date(state, end_date)
+      |> maybe_correct_timestamp(correct_timestamp, state, end_date)
       |> Segment.with_realtime_duration(Time.monotonic_time() - state.monotonic_start_time)
       |> then(&Segment.with_wall_clock_duration(&1, end_date - &1.start_date))
 
     %{state | segment: %{segment | wallclock_end_date: end_date}}
   end
 
-  defp maybe_adjust_start_date(segment, %{first_segment?: false}, _end_date), do: segment
+  defp maybe_correct_timestamp(segment, false, %{first_segment?: false}, _end_date), do: segment
 
-  defp maybe_adjust_start_date(segment, _state, end_date),
+  defp maybe_correct_timestamp(segment, true, %{first_segment?: false}, end_date) do
+    # clap the time diff between -@time_error and @time_error
+    time_diff = Segment.end_date(segment) - end_date
+    diff = time_diff |> max(-@time_error) |> min(@time_error)
+    Segment.add_duration(segment, diff)
+  end
+
+  defp maybe_correct_timestamp(segment, _correct_timestamp, _state, end_date),
     do: %{segment | start_date: end_date - Segment.duration(segment), end_date: end_date}
 
   defp completed_segment_action(state, discontinuity \\ false) do
