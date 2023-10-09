@@ -204,7 +204,7 @@ defmodule ExNVR.Pipeline.Output.Storage.Segmenter do
 
   defp maybe_correct_timestamp(segment, true, %{first_segment?: false}, end_date) do
     # clap the time diff between -@time_error and @time_error
-    time_diff = Segment.end_date(segment) - end_date
+    time_diff = end_date - Segment.end_date(segment)
     diff = time_diff |> max(-@time_error) |> min(@time_error)
     Segment.add_duration(segment, diff)
   end
