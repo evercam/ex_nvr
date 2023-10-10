@@ -10,8 +10,8 @@ defmodule ExNVR.Pipelines.Snapshot do
   alias ExNVR.Elements
   alias ExNVR.Elements.RecordingBin
 
-  def start_link(options) do
-    Pipeline.start_link(__MODULE__, Keyword.put(options, :caller, self()))
+  def start(options) do
+    Pipeline.start(__MODULE__, Keyword.put(options, :caller, self()))
   end
 
   @impl true

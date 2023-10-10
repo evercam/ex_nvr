@@ -98,7 +98,7 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
           format: params.format
         ]
 
-        Snapshot.start_link(options)
+        Snapshot.start(options)
 
         receive do
           {:snapshot, snapshot} ->

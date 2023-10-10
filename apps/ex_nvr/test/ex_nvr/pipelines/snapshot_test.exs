@@ -26,7 +26,7 @@ defmodule ExNVR.Pipelines.SnapshotTest do
 
   defp perform_test(device, recording, ref_path, method \\ :before) do
     assert {:ok, _sup_pid, _pid} =
-             Pipelines.Snapshot.start_link(
+             Pipelines.Snapshot.start(
                device_id: device.id,
                date: DateTime.add(recording.start_date, 3),
                method: method
