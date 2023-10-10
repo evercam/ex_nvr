@@ -49,7 +49,7 @@ defmodule ExNVR.MixProject do
       {:membrane_mp4_plugin, "~> 0.30.0", override: true},
       {:membrane_file_plugin, "~> 0.15.0"},
       {:membrane_http_adaptive_stream_plugin, "~> 0.17.0"},
-      {:membrane_h264_ffmpeg_plugin, "~> 0.29.0"},
+      {:membrane_h264_ffmpeg_plugin, "~> 0.30.0"},
       {:membrane_ffmpeg_swscale_plugin, "~> 0.13.0"},
       {:membrane_realtimer_plugin, "~> 0.8.0"},
       {:membrane_rtc_engine, "~> 0.17.0"},
