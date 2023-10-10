@@ -13,8 +13,8 @@ defmodule ExNVR.Pipeline.Output.Storage.Segmenter do
   use Membrane.Filter
 
   require Membrane.Logger
-
   require ExNVR.Utils
+
   alias __MODULE__.Segment
   alias ExNVR.Utils
   alias Membrane.{Buffer, Event, H264, Time}

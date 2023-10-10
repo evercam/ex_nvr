@@ -1,4 +1,4 @@
-defmodule ExNVR.Elements.HLSPipelineTest do
+defmodule ExNVR.Pipeline.Output.HLSPipelineTest do
   @moduledoc false
   use ExUnit.Case, async: true
 
@@ -11,6 +11,7 @@ defmodule ExNVR.Elements.HLSPipelineTest do
   alias Membrane.{Pad, Testing}
 
   @moduletag :tmp_dir
+  @in_file "../../../../fixtures/video-30-10s.h264" |> Path.expand(__DIR__)
 
   defp start_pipeline(in_file, out_dir, nb_streams \\ 1, resolution \\ nil) do
     structure = [
@@ -46,9 +47,7 @@ defmodule ExNVR.Elements.HLSPipelineTest do
 
   describe "hls output element" do
     test "creates hls stream from single (h264) stream", %{tmp_dir: out_dir} do
-      in_file = "../../fixtures/video-30-10s.h264" |> Path.expand(__DIR__)
-
-      pid = start_pipeline(in_file, out_dir)
+      pid = start_pipeline(@in_file, out_dir)
 
       assert_pipeline_play(pid)
       assert_pipeline_notified(pid, :sink, {:track_playable, :main_stream})
@@ -60,9 +59,7 @@ defmodule ExNVR.Elements.HLSPipelineTest do
     end
 
     test "creates hls stream from single (h264) stream with transcoding", %{tmp_dir: out_dir} do
-      in_file = "../../fixtures/video-30-10s.h264" |> Path.expand(__DIR__)
-
-      pid = start_pipeline(in_file, out_dir, 1, 320)
+      pid = start_pipeline(@in_file, out_dir, 1, 320)
 
       assert_pipeline_play(pid)
       assert_pipeline_notified(pid, :sink, {:track_playable, :main_stream}, 5_000)
@@ -74,9 +71,7 @@ defmodule ExNVR.Elements.HLSPipelineTest do
     end
 
     test "creates hls stream from two (h264) streams", %{tmp_dir: out_dir} do
-      in_file = "../../fixtures/video-30-10s.h264" |> Path.expand(__DIR__)
-
-      pid = start_pipeline(in_file, out_dir, 2)
+      pid = start_pipeline(@in_file, out_dir, 2)
 
       assert_pipeline_play(pid)
 

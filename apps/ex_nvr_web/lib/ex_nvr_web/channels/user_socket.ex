@@ -8,7 +8,7 @@ defmodule ExNVRWeb.UserSocket do
   @impl true
   def connect(params, socket, _connect_info) do
     with access_token <- params["access_token"] || "",
-         {:ok, decodec_token} <- Base.decode64(access_token),
+         {:ok, decodec_token} <- Base.url_decode64(access_token),
          user when not is_nil(user) <- Accounts.get_user_by_access_token(decodec_token) do
       {:ok, assign(socket, current_user: user)}
     else

@@ -10,6 +10,9 @@ defmodule ExNVR.Elements.CVSBufferer do
 
   use Membrane.Filter
 
+  require ExNVR.Utils
+
+  alias ExNVR.Utils
   alias Membrane.H264
 
   def_input_pad :input,
@@ -34,12 +37,7 @@ defmodule ExNVR.Elements.CVSBufferer do
   end
 
   @impl true
-  def handle_process(
-        :input,
-        %Membrane.Buffer{metadata: %{h264: %{key_frame?: true}}} = buffer,
-        _ctx,
-        state
-      ) do
+  def handle_process(:input, buffer, _ctx, state) when Utils.keyframe(buffer) do
     {[], %{state | cvs: [buffer]}}
   end
 
