@@ -31,6 +31,18 @@ defmodule ExNVR.Pipeline.Output.Storage.Segmenter do
                 segment must start from a keyframe. The real segment duration may be
                 slightly bigger
                 """
+              ],
+              correct_timestamp: [
+                spec: boolean(),
+                default: false,
+                description: """
+                Segment duration are calculated using the frame duration from RTP timestamps.
+
+                Camera clocks are not accurate, in a long run it'll drift from the NVR time.
+                Setting this to `true` will correct the segment end date towards the wall clock of the server.
+
+                The max error the date will be adjusted are in the range #{-@time_error} and #{@time_error} nano seconds.
+                """
               ]
 
   def_input_pad :input,
@@ -49,7 +61,8 @@ defmodule ExNVR.Pipeline.Output.Storage.Segmenter do
     state =
       Map.merge(init_state(), %{
         stream_format: nil,
-        target_duration: Time.seconds(options.target_duration)
+        target_duration: Time.seconds(options.target_duration),
+        correct_timestamp: options.correct_timestamp
       })
 
     {[], state}
@@ -124,7 +137,7 @@ defmodule ExNVR.Pipeline.Output.Storage.Segmenter do
 
   defp handle_buffer(state, %Buffer{} = buffer) do
     if Utils.keyframe(buffer) and Segment.duration(state.segment) >= state.target_duration do
-      state = finalize_segment(state, true)
+      state = finalize_segment(state, state.correct_timestamp)
 
       actions =
         [end_of_stream: Pad.ref(:output, state.start_time)] ++ completed_segment_action(state)
