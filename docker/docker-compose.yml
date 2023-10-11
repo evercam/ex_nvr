@@ -2,7 +2,7 @@ version: '3'
 services:
   ex_nvr:
     container_name: ex_nvr
-    image: ghcr.io/evercam/ex_nvr:v0.2.0
+    image: ghcr.io/evercam/ex_nvr:v0.4.0
     restart: always
     env_file:
       - .env
@@ -10,6 +10,8 @@ services:
       - 4000:4000
       - 8100:443
     volumes:
+      - "/dev/shm:/dev/shm"
       - "/data/ex_nvr/database:/home/app/data/database"
       - "/data/ex_nvr/recordings:/home/app/data/recordings"
       - "/data/ex_nvr/cert:/home/app/data/cert"
+      - "/tmp:/tmp/sockets"

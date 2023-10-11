@@ -68,7 +68,7 @@ variables needed to configure `ex_nvr` are:
 
 The main feature of this project is to store video streams retrieved from `devices` to local file system and allow users to stream back those recorded videos.  
 
- * **Devices**: read video streams from
+* **Devices**: read video streams from
    - [x] IP Cameras
    - [ ] USB / Webcams
    - [ ] Raspberry Cameras
@@ -93,6 +93,10 @@ The main feature of this project is to store video streams retrieved from `devic
    - [ ] RTSP
    - [ ] RTMP
 
+* **Integration**: Integrate with third party software
+   - [ ] Web Hooks: Notify external services of new recorded videos
+   - [x] Unix-domain Socket: Send snapshots via unix domain web socket 
+
 * **Other**: other interesting features
    - [ ] Support audio
    - [x] Support multiple devices in same instance
@@ -103,6 +107,5 @@ The main feature of this project is to store video streams retrieved from `devic
    - [ ] Gather metrics
    - [ ] Run machine learning models on video streams (live video / stored footages)
    - [ ] Sync recorded videos to cloud storage
-   - [ ] Notify external services of new recorded videos
    - [ ] Application for management of multiple NVRs
    - [x] Support HTTPS
