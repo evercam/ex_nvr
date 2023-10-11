@@ -32,7 +32,7 @@ defmodule ExNVR.Pipeline.Output.Socket.Sink do
 
   @impl true
   def handle_write(:input, buffer, _ctx, state) do
-    message = <<state.width::16, state.height::16, buffer.payload::binary>>
+    message = <<state.width::16, state.height::16, 3::8, buffer.payload::binary>>
 
     sockets =
       Enum.reduce(state.sockets, [], fn socket, open_sockets ->
