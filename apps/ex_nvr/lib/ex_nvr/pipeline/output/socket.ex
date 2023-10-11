@@ -46,7 +46,7 @@ defmodule ExNVR.Pipeline.Output.Socket do
     {[notify_parent: notification], state}
   end
 
-  defp get_parser(:H264), do: %Membrane.H264.Parser{skip_until_keyframe?: true}
+  defp get_parser(:H264), do: %Membrane.H264.Parser{skip_until_keyframe: true}
 
   defp get_decoder(:H264), do: %Membrane.H264.FFmpeg.Decoder{use_shm?: true}
 end
