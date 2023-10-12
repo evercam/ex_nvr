@@ -1,7 +1,6 @@
 defmodule ExNVRWeb.ImageProcessingLive do
   use ExNVRWeb, :live_view
 
-  require Logger
   alias ExNVR.Devices
   alias ExNVR.Pipelines.Main
   alias ExNVR.ImageProcessor
