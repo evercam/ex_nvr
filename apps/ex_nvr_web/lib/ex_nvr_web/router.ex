@@ -91,6 +91,8 @@ defmodule ExNVRWeb.Router do
       on_mount: [{ExNVRWeb.UserAuth, :ensure_authenticated}] do
       live "/dashboard", DashboardLive, :new
 
+      live "/processing", ImageProcessingLive, :new
+
       live "/devices", DeviceListLive, :list
       live "/devices/:id", DeviceLive, :edit
 
