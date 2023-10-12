@@ -7,7 +7,7 @@ defmodule ExNVRWeb.API.DeviceController do
 
   plug ExNVRWeb.Plug.Device, [field_name: "id"] when action in [:update, :show]
 
-  alias ExNVR.{Devices, Pipelines}
+  alias ExNVR.{Devices, DeviceSupervisor}
   alias ExNVR.Model.Device
   alias Plug.Conn
 
@@ -15,7 +15,7 @@ defmodule ExNVRWeb.API.DeviceController do
   def create(%Conn{} = conn, params) do
     with {:ok, device} <- Devices.create(params) do
       if Device.recording?(device) do
-        Pipelines.Supervisor.start_pipeline(device)
+        DeviceSupervisor.start(device)
       end
 
       conn
@@ -31,19 +31,18 @@ defmodule ExNVRWeb.API.DeviceController do
     with {:ok, updated_device} <- Devices.update(device, params) do
       cond do
         device.state != updated_device.state and not Device.recording?(updated_device.state) ->
-          Pipelines.Supervisor.stop_pipeline(updated_device)
+          DeviceSupervisor.stop(updated_device)
 
         device.state != updated_device.state and Device.recording?(updated_device.state) ->
-          Pipelines.Supervisor.start_pipeline(updated_device)
+          DeviceSupervisor.start(updated_device)
 
         Device.config_updated(device, updated_device) and Device.recording?(updated_device.state) ->
-          Pipelines.Supervisor.restart_pipeline(updated_device)
+          DeviceSupervisor.restart(updated_device)
 
         true ->
           :ok
       end
 
-      Pipelines.Supervisor.restart_pipeline(device)
       render(conn, :show, device: device)
     end
   end

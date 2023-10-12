@@ -19,9 +19,7 @@ defmodule ExNVR.Application do
       ExNVR.TokenPruner,
       {Phoenix.PubSub, name: ExNVR.PubSub},
       {Finch, name: ExNVR.Finch},
-      {DynamicSupervisor,
-       [name: ExNVR.PipelineSupervisor, strategy: :one_for_one, max_restarts: 1_000]},
-      {DynamicSupervisor, [name: ExNVR.BifPipelineSupervisor, strategy: :one_for_one]},
+      {DynamicSupervisor, [name: ExNVR.PipelineSupervisor, strategy: :one_for_one]},
       Task.child_spec(fn -> ExNVR.start() end)
     ]
 

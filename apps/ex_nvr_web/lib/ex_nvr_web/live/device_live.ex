@@ -3,7 +3,7 @@ defmodule ExNVRWeb.DeviceLive do
 
   use ExNVRWeb, :live_view
 
-  alias ExNVR.{Devices, Pipelines}
+  alias ExNVR.{Devices, DeviceSupervisor}
   alias ExNVR.Model.Device
 
   def mount(%{"id" => "new"}, _session, socket) do
@@ -34,7 +34,7 @@ defmodule ExNVRWeb.DeviceLive do
     case Devices.create(device_params) do
       {:ok, device} ->
         info = "Device created successfully"
-        Pipelines.Supervisor.start_pipeline(device)
+        DeviceSupervisor.start(device)
 
         socket
         |> put_flash(:info, info)
@@ -55,7 +55,7 @@ defmodule ExNVRWeb.DeviceLive do
         info = "Device updated successfully"
 
         if Device.recording?(device) and Device.config_updated(device, updated_device),
-          do: Pipelines.Supervisor.restart_pipeline(updated_device)
+          do: DeviceSupervisor.restart(updated_device)
 
         socket
         |> put_flash(:info, info)
