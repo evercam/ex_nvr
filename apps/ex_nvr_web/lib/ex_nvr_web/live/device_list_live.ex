@@ -4,7 +4,7 @@ defmodule ExNVRWeb.DeviceListLive do
   use ExNVRWeb, :live_view
 
   alias ExNVR.Model.Device
-  alias ExNVR.{Devices, Pipelines}
+  alias ExNVR.{Devices, DeviceSupervisor}
 
   def render(assigns) do
     ~H"""
@@ -111,8 +111,8 @@ defmodule ExNVRWeb.DeviceListLive do
     with %Device{} = device <- Enum.find(devices, &(&1.id == device_id)),
          {:ok, device} <- Devices.update_state(device, new_state) do
       if new_state == :recording,
-        do: Pipelines.Supervisor.start_pipeline(device),
-        else: Pipelines.Supervisor.stop_pipeline(device)
+        do: DeviceSupervisor.start(device),
+        else: DeviceSupervisor.stop(device)
 
       {:noreply, assign(socket, devices: Devices.list())}
     else
