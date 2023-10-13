@@ -3,7 +3,6 @@ defmodule ExNVRWeb.RecordingListLive do
 
   use ExNVRWeb, :live_view
 
-  alias ExNVRWeb.Router.Helpers, as: Routes
   alias ExNVR.{Recordings, Devices}
 
   def render(assigns) do
