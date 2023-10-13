@@ -222,7 +222,8 @@ defmodule ExNVRWeb.RecordingListLive do
                 </a>
               </li>
             <% end %>
-          <% else %>
+          <% end %>
+          <%= if @meta.total_pages in Enum.to_list(1..6) do %>
             <%= for idx <-  Enum.to_list(1..@meta.total_pages) do %>
               <li>
                 <a
@@ -350,14 +351,16 @@ defmodule ExNVRWeb.RecordingListLive do
     {:noreply, push_patch(socket, to: ~p"/recordings?#{params}")}
   end
 
-  def handle_event("nav", params, socket) do
-    route =
-      Routes.recording_list_path(socket, :list,
-        page: params["page"],
-        page_size: params["page_size"]
-      )
+  def handle_event("nav", %{"page" => page}, socket) do
+    flop = Flop.set_page(socket.assigns.meta.flop, page)
 
-    {:noreply, push_patch(socket, to: route)}
+    case Recordings.list(flop) do
+      {:ok, {recordings, meta}} ->
+        {:noreply, assign(socket, recordings: recordings, meta: meta)}
+
+      {:error, _meta} ->
+        {:noreply, push_navigate(socket, to: ~p"/recordings")}
+    end
   end
 
   def handle_params(params, _uri, socket) do
