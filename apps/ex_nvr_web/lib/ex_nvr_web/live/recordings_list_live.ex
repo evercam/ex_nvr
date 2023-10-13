@@ -347,6 +347,34 @@ defmodule ExNVRWeb.RecordingListLive do
 
   def handle_event("update-filter", params, socket) do
     params = Map.delete(params, "_target")
+
+    timezone =
+      params["filters"]["0"]["value"]
+      |> get_device_timezone(socket)
+
+    start_date_formatted =
+      params["filters"]["1"]["value"]
+      |> convert_string_to_datetime_with_tz(timezone)
+    start_date_map =
+      params["filters"]["1"]
+      |> Map.put("value", start_date_formatted)
+
+    end_date_formatted =
+      params["filters"]["2"]["value"]
+      |> convert_string_to_datetime_with_tz(timezone)
+    end_date_map =
+      params["filters"]["2"]
+      |> Map.put("value", end_date_formatted)
+
+    filters_map =
+      params["filters"]
+      |> Map.put("1", start_date_map)
+      |> Map.put("2", end_date_map)
+
+    params =
+      params
+      |> Map.put("filters", filters_map)
+
     {:noreply, push_patch(socket, to: ~p"/recordings?#{params}")}
   end
 
@@ -374,5 +402,26 @@ defmodule ExNVRWeb.RecordingListLive do
     date
     |> DateTime.shift_zone!(timezone)
     |> Calendar.strftime("%b %d, %Y %H:%M:%S")
+  end
+
+  defp convert_string_to_datetime_with_tz(datetime_string, timezone) do
+    if datetime_string != "" do
+      {:ok, datetime_format, _} = "#{datetime_string}:00Z"
+                                  |> DateTime.from_iso8601()
+
+      datetime_format
+      |> DateTime.from_naive!(timezone)
+      |> DateTime.to_iso8601()
+    else
+      datetime_string
+    end
+  end
+
+  defp get_device_timezone(device_id, socket) do
+    device = socket.assigns.devices
+            |> Enum.filter(fn device -> device.id == device_id end)
+            |> List.first()
+
+    device.timezone
   end
 end
