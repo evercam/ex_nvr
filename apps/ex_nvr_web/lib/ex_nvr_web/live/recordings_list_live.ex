@@ -355,6 +355,7 @@ defmodule ExNVRWeb.RecordingListLive do
     start_date_formatted =
       params["filters"]["1"]["value"]
       |> convert_string_to_datetime_with_tz(timezone)
+
     start_date_map =
       params["filters"]["1"]
       |> Map.put("value", start_date_formatted)
@@ -362,6 +363,7 @@ defmodule ExNVRWeb.RecordingListLive do
     end_date_formatted =
       params["filters"]["2"]["value"]
       |> convert_string_to_datetime_with_tz(timezone)
+
     end_date_map =
       params["filters"]["2"]
       |> Map.put("value", end_date_formatted)
@@ -406,8 +408,9 @@ defmodule ExNVRWeb.RecordingListLive do
 
   defp convert_string_to_datetime_with_tz(datetime_string, timezone) do
     if datetime_string != "" do
-      {:ok, datetime_format, _} = "#{datetime_string}:00Z"
-                                  |> DateTime.from_iso8601()
+      {:ok, datetime_format, _} =
+        "#{datetime_string}:00Z"
+        |> DateTime.from_iso8601()
 
       datetime_format
       |> DateTime.from_naive!(timezone)
@@ -418,9 +421,10 @@ defmodule ExNVRWeb.RecordingListLive do
   end
 
   defp get_device_timezone(device_id, socket) do
-    device = socket.assigns.devices
-            |> Enum.filter(fn device -> device.id == device_id end)
-            |> List.first()
+    device =
+      socket.assigns.devices
+      |> Enum.filter(fn device -> device.id == device_id end)
+      |> List.first()
 
     device.timezone
   end
