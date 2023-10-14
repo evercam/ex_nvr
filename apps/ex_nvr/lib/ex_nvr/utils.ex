@@ -29,9 +29,6 @@ defmodule ExNVR.Utils do
   def generate_token(token_len \\ 16),
     do: :crypto.strong_rand_bytes(token_len) |> Base.url_encode64()
 
-  # Streaming & Codecs utilities
-  defguard keyframe(buffer) when buffer.metadata.h264.key_frame?
-
   @spec date_components(DateTime.t()) :: [binary()]
   def date_components(%DateTime{} = datetime) do
     [
@@ -43,4 +40,9 @@ defmodule ExNVR.Utils do
   end
 
   defp pad_number(number), do: String.pad_leading("#{number}", 2, "0")
+
+  # Streaming & Codecs utilities
+  defguard keyframe(buffer)
+           when (is_map_key(buffer.metadata, :h264) and buffer.metadata.h264.key_frame?) or
+                  (is_map_key(buffer.metadata, :h265) and buffer.metadata.h265.key_frame?)
 end

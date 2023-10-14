@@ -12,7 +12,8 @@ defmodule ExNVR.Pipeline.Output.StoragePipelineTest do
 
   @moduletag :tmp_dir
 
-  @fixture_path "../../../../fixtures/video-30-10s.h264" |> Path.expand(__DIR__)
+  @h264_fixtures "../../../../fixtures/video-30-10s.h264" |> Path.expand(__DIR__)
+  @h265_fixtures "../../../../fixtures/video-30-10s.h265" |> Path.expand(__DIR__)
 
   setup %{tmp_dir: tmp_dir} do
     device = device_fixture(%{settings: %{storage_address: tmp_dir}})
@@ -20,8 +21,16 @@ defmodule ExNVR.Pipeline.Output.StoragePipelineTest do
     %{device: device}
   end
 
-  test "Segment a stream and save recordings", %{device: device} do
-    pid = start_pipeline(device)
+  test "Segment H264 stream and save recordings", %{device: device} do
+    perform_test(device, @h264_fixtures)
+  end
+
+  test "Segment H265 stream and save recordings", %{device: device} do
+    perform_test(device, @h265_fixtures)
+  end
+
+  defp perform_test(device, fixture) do
+    pid = start_pipeline(device.id, fixture)
 
     assert_pipeline_notified(pid, :storage, {:segment_stored, segment1})
     assert_pipeline_notified(pid, :storage, {:segment_stored, segment2})
@@ -41,12 +50,16 @@ defmodule ExNVR.Pipeline.Output.StoragePipelineTest do
     Pipeline.terminate(pid)
   end
 
-  defp start_pipeline(device) do
+  defp start_pipeline(device, filename) do
+    parser =
+      case Path.extname(filename) do
+        ".h264" -> %Membrane.H264.Parser{generate_best_effort_timestamps: %{framerate: {20, 1}}}
+        ".h265" -> %Membrane.H265.Parser{generate_best_effort_timestamps: %{framerate: {20, 1}}}
+      end
+
     structure = [
-      child(:source, %Source{output: chunk_file()})
-      |> child(:parser, %Membrane.H264.Parser{
-        generate_best_effort_timestamps: %{framerate: {20, 1}}
-      })
+      child(:source, %Source{output: chunk_file(filename)})
+      |> child(:parser, parser)
       |> child(:storage, %Storage{
         device: device,
         target_segment_duration: 4
@@ -56,10 +69,10 @@ defmodule ExNVR.Pipeline.Output.StoragePipelineTest do
     Pipeline.start_supervised!(structure: structure)
   end
 
-  defp chunk_file() do
-    File.read!(@fixture_path)
+  defp chunk_file(file) do
+    File.read!(file)
     |> :binary.bin_to_list()
-    |> Enum.chunk_every(500)
+    |> Enum.chunk_every(100)
     |> Enum.map(&:binary.list_to_bin/1)
   end
 end

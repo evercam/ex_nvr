@@ -22,7 +22,7 @@ defmodule ExNVR.Pipeline.Output.Storage.SegmenterTest do
 
       buffer = build_buffer(10, true, 1_000)
 
-      assert {[notify_parent: {:new_media_segment, _}], %{buffer: [^buffer]}} =
+      assert {[notify_parent: {:new_media_segment, _, :H264}], %{buffer: [^buffer]}} =
                Segmenter.handle_process(:input, buffer, %{}, state)
     end
 
@@ -32,7 +32,7 @@ defmodule ExNVR.Pipeline.Output.Storage.SegmenterTest do
       buffer1 = build_buffer(10, true, 1_000)
       buffer2 = build_buffer(10, false, 2_000)
 
-      assert {[notify_parent: {:new_media_segment, _}], %{buffer: [^buffer1]} = state} =
+      assert {[notify_parent: {:new_media_segment, _, :H264}], %{buffer: [^buffer1]} = state} =
                Segmenter.handle_process(:input, buffer1, %{}, state)
 
       assert {[], %{buffer: [^buffer2, ^buffer1]}} =
@@ -92,7 +92,7 @@ defmodule ExNVR.Pipeline.Output.Storage.SegmenterTest do
                Segmenter.handle_process(:input, buffer2, %{}, state)
 
       assert {[
-                notify_parent: {:new_media_segment, _},
+                notify_parent: {:new_media_segment, _, :H264},
                 end_of_stream: ^pad,
                 notify_parent: {:completed_segment, {_, %Segment{}, false}}
               ], %{buffer: [^buffer3]}} = Segmenter.handle_process(:input, buffer3, %{}, state)

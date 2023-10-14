@@ -17,7 +17,7 @@ defmodule ExNVR.Pipeline.Output.Storage.Segmenter do
 
   alias __MODULE__.Segment
   alias ExNVR.Utils
-  alias Membrane.{Buffer, Event, H264, Time}
+  alias Membrane.{Buffer, Event, H264, H265, Time}
 
   @time_error Time.milliseconds(30)
 
@@ -41,12 +41,20 @@ defmodule ExNVR.Pipeline.Output.Storage.Segmenter do
   def_input_pad :input,
     demand_unit: :buffers,
     demand_mode: :auto,
-    accepted_format: %H264{alignment: :au},
+    accepted_format:
+      any_of(
+        %H264{alignment: :au},
+        %H265{alignment: :au}
+      ),
     availability: :always
 
   def_output_pad :output,
     demand_mode: :auto,
-    accepted_format: %H264{alignment: :au},
+    accepted_format:
+      any_of(
+        %H264{alignment: :au},
+        %H265{alignment: :au}
+      ),
     availability: :on_request
 
   @impl true
@@ -55,7 +63,8 @@ defmodule ExNVR.Pipeline.Output.Storage.Segmenter do
       Map.merge(init_state(), %{
         stream_format: nil,
         target_duration: Time.seconds(options.target_duration),
-        correct_timestamp: options.correct_timestamp
+        correct_timestamp: options.correct_timestamp,
+        codec: nil
       })
 
     {[], state}
@@ -63,17 +72,23 @@ defmodule ExNVR.Pipeline.Output.Storage.Segmenter do
 
   @impl true
   def handle_stream_format(:input, stream_format, _ctx, state) do
-    {[], %{state | stream_format: stream_format}}
+    codec =
+      case stream_format do
+        %H264{} -> :H264
+        %H265{} -> :H265
+      end
+
+    {[], %{state | stream_format: stream_format, codec: codec}}
   end
 
   @impl true
-  def handle_pad_added(Pad.ref(:output, ref), _ctx, %{start_time: ref} = state) do
+  def handle_pad_added(Pad.ref(:output, ref) = pad, _ctx, %{start_time: ref} = state) do
     buffered_actions =
       state.buffer
       |> Enum.reverse()
-      |> Enum.map(&{:buffer, {Pad.ref(:output, ref), &1}})
+      |> Enum.map(&{:buffer, {pad, &1}})
 
-    {[stream_format: {Pad.ref(:output, ref), state.stream_format}] ++ buffered_actions,
+    {[stream_format: {pad, state.stream_format}] ++ buffered_actions,
      %{state | buffer?: false, buffer: []}}
   end
 
@@ -103,7 +118,7 @@ defmodule ExNVR.Pipeline.Output.Storage.Segmenter do
       }
       |> update_segment_size(buffer)
 
-    {[notify_parent: {:new_media_segment, state.start_time}], state}
+    {[notify_parent: {:new_media_segment, state.start_time, state.codec}], state}
   end
 
   @impl true
@@ -149,7 +164,7 @@ defmodule ExNVR.Pipeline.Output.Storage.Segmenter do
         }
         |> update_segment_size(buffer)
 
-      {[notify_parent: {:new_media_segment, start_time}] ++ actions, state}
+      {[notify_parent: {:new_media_segment, start_time, state.codec}] ++ actions, state}
     else
       state = update_segment_size(state, buffer)
       {[buffer: {Pad.ref(:output, state.start_time), buffer}], state}
