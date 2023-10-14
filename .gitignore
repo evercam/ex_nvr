@@ -41,6 +41,7 @@ erl_crash.dump
 *.so
 *.so.*
 *.dylib
+*.env
 
 # python
 /env

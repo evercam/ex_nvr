@@ -60,8 +60,8 @@ def get_with_defaults(a, xx, yy, nodata):
 
 
 def from_base64(img_str):
-    im_bytes = base64.b64decode(str(img_str, 'utf-8'))
-    im_arr = np.frombuffer(im_bytes, dtype=np.uint8)
+    # im_bytes = base64.b64decode(str(img_str, 'utf-8'))
+    im_arr = np.frombuffer(img_str, dtype=np.uint8)
     return cv2.imdecode(im_arr, flags=cv2.IMREAD_COLOR)
 
 

@@ -64,6 +64,8 @@ defmodule ExNVR.MixProject do
       {:soap, github: "gBillal/soap", branch: "parse-attributes"},
       {:faker, "~> 0.17", only: :test},
       {:export, "~> 0.1.1"},
+      {:evision, "~> 0.1"},
+      {:nx, "~> 0.5"},
     ]
   end
 

@@ -1,13 +1,14 @@
 defmodule ExNVRWeb.ImageProcessingLive do
   use ExNVRWeb, :live_view
 
+  require Logger
   alias ExNVR.Devices
   alias ExNVR.Pipelines.Main
   alias ExNVR.ImageProcessor
 
   def render(assigns) do
     ~H"""
-      <div class="bg-white sm:w-7/8 dark:bg-gray-800">
+      <div class="bg-white w-full dark:bg-gray-800">
         <%= if @devices == [] do %>
           <div class="grid tracking-wide text-lg text-center dark:text-gray-200">
             You have no devices, you can create one
@@ -149,9 +150,10 @@ defmodule ExNVRWeb.ImageProcessingLive do
       socket,
       :current_snapshot,
       fn ->
-        with {:ok, snapshot} <- Main.live_snapshot(current_device, :png),
-            image <- ImageProcessor.undistort_snapshot(Base.encode64(snapshot)) do
-          {:ok, %{current_snapshot: %{before: Base.encode64(snapshot), after: image}}}
+        with {:ok, snapshot_byte} <- Main.live_snapshot(current_device, :png),
+            processed_image <- ImageProcessor.undistort_snapshot(snapshot_byte),
+            snapshot <- Base.encode64(snapshot_byte) do
+          {:ok, %{current_snapshot: %{before: snapshot, after: processed_image}}}
         else
           _ -> {:failed, "couldn't get the message"}
         end
