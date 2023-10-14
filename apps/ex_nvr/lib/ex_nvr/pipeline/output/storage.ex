@@ -34,6 +34,18 @@ defmodule ExNVR.Pipeline.Output.Storage do
                 segment must start from a keyframe. The real segment duration may be
                 slightly bigger
                 """
+              ],
+              correct_timestamp: [
+                spec: boolean(),
+                default: false,
+                description: """
+                Segment duration are calculated from the frame duration usin RTP timestamps.
+
+                Camera clocks are not accurate, in a long run it'll drift from the NVR time.
+                Setting this to `true` will correct the segment end date towards the wall clock of the server.
+
+                The max error the date will be adjusted is in the range #{-@time_error} and #{@time_error} nano seconds.
+                """
               ]
 
   @impl true
@@ -41,7 +53,8 @@ defmodule ExNVR.Pipeline.Output.Storage do
     spec = [
       bin_input(:input)
       |> child(:segmenter, %Segmenter{
-        target_duration: opts.target_segment_duration
+        target_duration: opts.target_segment_duration,
+        correct_timestamp: opts.correct_timestamp
       })
     ]
 

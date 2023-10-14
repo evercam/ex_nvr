@@ -314,7 +314,8 @@ defmodule ExNVR.Pipelines.Main do
       |> child({:storage_bin, :main_stream}, %Output.Storage{
         device_id: state.device.id,
         directory: Utils.recording_dir(state.device.id),
-        target_segment_duration: state.segment_duration
+        target_segment_duration: state.segment_duration,
+        correct_timestamp: true
       }),
       get_child(:video_tee)
       |> via_out(:copy)

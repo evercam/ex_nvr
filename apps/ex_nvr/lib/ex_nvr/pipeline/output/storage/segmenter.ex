@@ -35,14 +35,7 @@ defmodule ExNVR.Pipeline.Output.Storage.Segmenter do
               correct_timestamp: [
                 spec: boolean(),
                 default: false,
-                description: """
-                Segment duration are calculated using the frame duration from RTP timestamps.
-
-                Camera clocks are not accurate, in a long run it'll drift from the NVR time.
-                Setting this to `true` will correct the segment end date towards the wall clock of the server.
-
-                The max error the date will be adjusted are in the range #{-@time_error} and #{@time_error} nano seconds.
-                """
+                description: "See `ExNVR.Pipeline.Output.Storage`"
               ]
 
   def_input_pad :input,
@@ -203,11 +196,12 @@ defmodule ExNVR.Pipeline.Output.Storage.Segmenter do
 
   defp finalize_segment(%{segment: segment} = state, correct_timestamp \\ false) do
     end_date = Time.os_time()
+    monotonic_end_date = Time.monotonic_time()
 
     segment =
       segment
       |> maybe_correct_timestamp(correct_timestamp, state, end_date)
-      |> Segment.with_realtime_duration(Time.monotonic_time() - state.monotonic_start_time)
+      |> Segment.with_realtime_duration(monotonic_end_date - state.monotonic_start_time)
       |> then(&Segment.with_wall_clock_duration(&1, end_date - &1.start_date))
 
     %{state | segment: %{segment | wallclock_end_date: end_date}}
