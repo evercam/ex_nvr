@@ -228,7 +228,7 @@ defmodule ExNVRWeb.RecordingListLiveTest do
         })
         |> render_change()
 
-      assert result =~ "phx-click=\"nav\" phx-value-page=\"0\" "
+      refute result =~ "phx-click=\"nav\" phx-value-page=\"0\" "
       assert result =~ "No results."
     end
 

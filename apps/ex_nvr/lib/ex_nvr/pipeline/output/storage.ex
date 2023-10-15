@@ -44,7 +44,7 @@ defmodule ExNVR.Pipeline.Output.Storage do
                 Camera clocks are not accurate, in a long run it'll drift from the NVR time.
                 Setting this to `true` will correct the segment end date towards the wall clock of the server.
 
-                The max error the date will be adjusted is in the range #{-@time_error} and #{@time_error} nano seconds.
+                The max error the date will be adjusted is in the range ± 30 ms.
                 """
               ]
 

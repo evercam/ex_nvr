@@ -77,212 +77,7 @@ defmodule ExNVRWeb.RecordingListLive do
         </:action>
       </Flop.Phoenix.table>
 
-      <nav aria-label="Page navigation" class="flex justify-end mt-4">
-        <ul class="flex items-center -space-x-px h-8 text-sm">
-          <li>
-            <a
-              href="#"
-              phx-click="nav"
-              phx-value-page={@meta.previous_page}
-              class={
-                [
-                  "flex items-center justify-center px-3 h-8 ml-0 leading-tight bg-white border border-gray-300 rounded-l-lg"
-                ] ++
-                  if not @meta.has_previous_page?,
-                    do: ["pointer-events-none text-gray-300"],
-                    else: [
-                      "text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
-                    ]
-              }
-            >
-              <span class="sr-only">Previous</span>
-              <svg
-                class="w-2.5 h-2.5"
-                aria-hidden="true"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 6 10"
-              >
-                <path
-                  stroke="currentColor"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M5 1 1 5l4 4"
-                />
-              </svg>
-            </a>
-          </li>
-          <%= if @meta.total_pages == 0 do %>
-            <li>
-              <a
-                href="#"
-                phx-click="nav"
-                phx-value-page={0}
-                class={
-                  [
-                    "flex items-center justify-center px-3 h-8 leading-tight border dark:border-gray-700"
-                  ] ++
-                    if @meta.current_page == 0,
-                      do: [
-                        "z-10 pointer-events-none text-blue-600 bg-blue-50 border-blue-300 hover:bg-blue-100 hover:text-blue-700 dark:bg-gray-700 dark:text-white"
-                      ],
-                      else: [
-                        "text-gray-500 bg-white border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
-                      ]
-                }
-              >
-                <%= 0 %>
-              </a>
-            </li>
-          <% end %>
-          <%= if @meta.total_pages > 6 do %>
-            <%= for page <- [1,2] do %>
-              <li>
-                <a
-                  href="#"
-                  phx-click="nav"
-                  phx-value-page={page}
-                  class={
-                    [
-                      "flex items-center justify-center px-3 h-8 leading-tight border dark:border-gray-700"
-                    ] ++
-                      if @meta.current_page == page,
-                        do: [
-                          "z-10 pointer-events-none text-blue-600 bg-blue-50 border-blue-300 hover:bg-blue-100 hover:text-blue-700 dark:bg-gray-700 dark:text-white"
-                        ],
-                        else: [
-                          "text-gray-500 bg-white border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
-                        ]
-                  }
-                >
-                  <%= page %>
-                </a>
-              </li>
-            <% end %>
-            <%= if @meta.current_page > 4 do %>
-              <li>
-                <span class="flex items-center justify-center px-3 h-8 leading-tight text-gray-500">
-                  ...
-                </span>
-              </li>
-            <% end %>
-            <%= for idx <-  Enum.to_list(3..@meta.total_pages-2) do %>
-              <%= if abs(@meta.current_page - idx) <= 1 do %>
-                <li>
-                  <a
-                    href="#"
-                    phx-click="nav"
-                    phx-value-page={idx}
-                    class={
-                      [
-                        "flex items-center justify-center px-3 h-8 leading-tight border dark:border-gray-700"
-                      ] ++
-                        if @meta.current_page == idx,
-                          do: [
-                            "z-10 pointer-events-none text-blue-600 bg-blue-50 border-blue-300 hover:bg-blue-100 hover:text-blue-700 dark:bg-gray-700 dark:text-white"
-                          ],
-                          else: [
-                            "text-gray-500 bg-white border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
-                          ]
-                    }
-                  >
-                    <%= idx %>
-                  </a>
-                </li>
-              <% end %>
-            <% end %>
-            <%= if @meta.current_page < @meta.total_pages - 3 do %>
-              <li>
-                <span class="flex items-center justify-center px-3 h-8 leading-tight text-gray-500">
-                  ...
-                </span>
-              </li>
-            <% end %>
-            <%= for page <- [@meta.total_pages-1, @meta.total_pages] do %>
-              <li>
-                <a
-                  href="#"
-                  phx-click="nav"
-                  phx-value-page={page}
-                  class={
-                    [
-                      "flex items-center justify-center px-3 h-8 leading-tight border dark:border-gray-700"
-                    ] ++
-                      if @meta.current_page == page,
-                        do: [
-                          "z-10 pointer-events-none text-blue-600 bg-blue-50 border-blue-300 hover:bg-blue-100 hover:text-blue-700 dark:bg-gray-700 dark:text-white"
-                        ],
-                        else: [
-                          "text-gray-500 bg-white border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
-                        ]
-                  }
-                >
-                  <%= page %>
-                </a>
-              </li>
-            <% end %>
-          <% else %>
-            <%= for idx <-  Enum.to_list(1..@meta.total_pages) do %>
-              <li>
-                <a
-                  href="#"
-                  phx-click="nav"
-                  phx-value-page={idx}
-                  class={
-                    [
-                      "flex items-center justify-center px-3 h-8 leading-tight border dark:border-gray-700"
-                    ] ++
-                      if @meta.current_page == idx,
-                        do: [
-                          "z-10 pointer-events-none text-blue-600 bg-blue-50 border-blue-300 hover:bg-blue-100 hover:text-blue-700 dark:bg-gray-700 dark:text-white"
-                        ],
-                        else: [
-                          "text-gray-500 bg-white border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
-                        ]
-                  }
-                >
-                  <%= idx %>
-                </a>
-              </li>
-            <% end %>
-          <% end %>
-          <li>
-            <a
-              href="#"
-              phx-click="nav"
-              phx-value-page={@meta.next_page}
-              class={
-                [
-                  "flex items-center justify-center px-3 h-8 leading-tight border border-gray-300 bg-white rounded-r-lg"
-                ] ++
-                  if not @meta.has_next_page?,
-                    do: ["pointer-events-none text-gray-300"],
-                    else: [
-                      "text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
-                    ]
-              }
-            >
-              <span class="sr-only">Next</span>
-              <svg
-                class="w-2.5 h-2.5"
-                aria-hidden="true"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 6 10"
-              >
-                <path
-                  stroke="currentColor"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="m1 9 4-4-4-4"
-                />
-              </svg>
-            </a>
-          </li>
-        </ul>
-      </nav>
+      <.pagination meta={@meta} />
     </div>
     <!-- Popup container -->
     <div
@@ -346,6 +141,7 @@ defmodule ExNVRWeb.RecordingListLive do
        pagination_params: %{}
      )}
   end
+
   def handle_params(params, _uri, socket) do
     case Recordings.list(params) do
       {:ok, {recordings, meta}} ->
@@ -379,7 +175,7 @@ defmodule ExNVRWeb.RecordingListLive do
      |> push_patch(to: Routes.recording_list_path(socket, :list, params))}
   end
 
-  def handle_event("nav", pagination_params, socket) do
+  def handle_event("paginate", pagination_params, socket) do
     pagination_params = Map.merge(socket.assigns.pagination_params, pagination_params)
     params = Map.merge(socket.assigns.filter_params, pagination_params)
 
