@@ -303,11 +303,11 @@ defmodule ExNVRWeb.RecordingListLive do
   end
 
   def filter_form(%{meta: meta, devices: devices} = assigns) do
-    assigns = assign(assigns, form: Phoenix.Component.to_form(meta), meta: meta, devices: devices)
+    assigns = assign(assigns, form: to_form(meta), meta: meta, devices: devices)
 
     ~H"""
     <div class="flex justify-between">
-      <.form for={@form} id={@id} phx-change="update-filter" class="flex items-baseline space-x-4">
+      <.form for={@form} id={@id} phx-change="filter-recordings" class="flex items-baseline space-x-4">
         <Flop.Phoenix.filter_fields
           :let={f}
           form={@form}
@@ -337,37 +337,56 @@ defmodule ExNVRWeb.RecordingListLive do
     """
   end
 
-  def mount(_params, _session, socket) do
-    {:ok, assign(socket, devices: Devices.list(), popup_open: false)}
+  def mount(params, _session, socket) do
+    {:ok,
+     assign(socket,
+       devices: Devices.list(),
+       popup_open: false,
+       filter_params: params,
+       pagination_params: %{}
+     )}
   end
-
-  def handle_event("close-popup", _params, socket) do
-    {:noreply, push_navigate(socket, to: ~p"/recordings")}
-  end
-
-  def handle_event("update-filter", params, socket) do
-    params = Map.delete(params, "_target")
-    {:noreply, push_patch(socket, to: ~p"/recordings?#{params}")}
-  end
-
-  def handle_event("nav", params, socket) do
-    route =
-      Routes.recording_list_path(socket, :list,
-        page: params["page"],
-        page_size: params["page_size"]
-      )
-
-    {:noreply, push_patch(socket, to: route)}
-  end
-
   def handle_params(params, _uri, socket) do
     case Recordings.list(params) do
       {:ok, {recordings, meta}} ->
-        {:noreply, assign(socket, %{recordings: recordings, meta: meta, form: nil})}
+        {:noreply, assign(socket, meta: meta, recordings: recordings)}
 
-      {:error, _meta} ->
-        {:noreply, push_navigate(socket, to: ~p"/recordings")}
+      {:error, meta} ->
+        {:noreply, assign(socket, meta: meta)}
     end
+  end
+
+  def handle_event("close-popup", _params, socket) do
+    params =
+      Map.merge(
+        socket.assigns.filter_params,
+        socket.assigns.pagination_params
+      )
+
+    {:noreply, push_navigate(socket, to: Routes.recording_list_path(socket, :list, params))}
+  end
+
+  def handle_event("filter-recordings", filter_params, socket) do
+    params =
+      Map.merge(
+        filter_params,
+        socket.assigns.pagination_params
+      )
+
+    {:noreply,
+     socket
+     |> assign(:filter_params, filter_params)
+     |> push_patch(to: Routes.recording_list_path(socket, :list, params))}
+  end
+
+  def handle_event("nav", pagination_params, socket) do
+    pagination_params = Map.merge(socket.assigns.pagination_params, pagination_params)
+    params = Map.merge(socket.assigns.filter_params, pagination_params)
+
+    {:noreply,
+     socket
+     |> assign(pagination_params: pagination_params)
+     |> push_patch(to: Routes.recording_list_path(socket, :list, params))}
   end
 
   defp format_date(date, timezone) do
