@@ -6,6 +6,7 @@ defmodule ExNVRWeb.RecordingListLive do
   alias ExNVRWeb.Router.Helpers, as: Routes
   alias ExNVR.{Recordings, Devices}
 
+  @impl true
   def render(assigns) do
     ~H"""
     <div class="grow">
@@ -111,6 +112,7 @@ defmodule ExNVRWeb.RecordingListLive do
               op: :==,
               type: "select",
               options: Enum.map(@devices, &{&1.name, &1.id}),
+              prompt: "Choose your device",
               label: "Device"
             ],
             start_date: [op: :>=, type: "datetime-local", label: "Start Date"],
@@ -132,6 +134,7 @@ defmodule ExNVRWeb.RecordingListLive do
     """
   end
 
+  @impl true
   def mount(params, _session, socket) do
     {:ok,
      assign(socket,
@@ -142,6 +145,7 @@ defmodule ExNVRWeb.RecordingListLive do
      )}
   end
 
+  @impl true
   def handle_params(params, _uri, socket) do
     case Recordings.list(params) do
       {:ok, {recordings, meta}} ->
@@ -152,6 +156,7 @@ defmodule ExNVRWeb.RecordingListLive do
     end
   end
 
+  @impl true
   def handle_event("close-popup", _params, socket) do
     params =
       Map.merge(
@@ -162,6 +167,7 @@ defmodule ExNVRWeb.RecordingListLive do
     {:noreply, push_navigate(socket, to: Routes.recording_list_path(socket, :list, params))}
   end
 
+  @impl true
   def handle_event("filter-recordings", filter_params, socket) do
     params =
       Map.merge(
@@ -175,6 +181,7 @@ defmodule ExNVRWeb.RecordingListLive do
      |> push_patch(to: Routes.recording_list_path(socket, :list, params))}
   end
 
+  @impl true
   def handle_event("paginate", pagination_params, socket) do
     pagination_params = Map.merge(socket.assigns.pagination_params, pagination_params)
     params = Map.merge(socket.assigns.filter_params, pagination_params)
