@@ -600,6 +600,128 @@ defmodule ExNVRWeb.CoreComponents do
     """
   end
 
+  def pagination(assigns) do
+    ~H"""
+     <div aria-label="Pagination" class="flex justify-end mt-4">
+        <ul :if={@meta.total_pages > 0} class="flex items-center -space-x-px h-8 text-sm">
+          <li>
+            <a
+              href="#"
+              phx-click="paginate"
+              phx-value-page={@meta.previous_page}
+              class={
+                [
+                  "flex items-center justify-center px-3 h-8 ml-0 leading-tight bg-white border border-gray-300 rounded-l-lg"
+                ] ++
+                  if not @meta.has_previous_page?,
+                    do: ["pointer-events-none text-gray-400"],
+                    else: [
+                      "text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
+                    ]
+              }
+            >
+              <span class="sr-only">Previous</span>
+              <svg
+                class="w-2.5 h-2.5"
+                aria-hidden="true"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 6 10"
+              >
+                <path
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M5 1 1 5l4 4"
+                />
+              </svg>
+            </a>
+          </li>
+          <li :for={page <- 1..2} :if={@meta.total_pages > 6}>
+            <.pagination_link current_page={@meta.current_page} page={page} />
+          </li>
+          <li :if={@meta.total_pages > 6 && @meta.current_page > 4}>
+            <span class="px-3 h-8 text-gray-500">...</span>
+          </li>
+          <li
+            :for={idx <- 3..(@meta.total_pages - 2)}
+            :if={@meta.total_pages > 6 && abs(@meta.current_page - idx) <= 1}
+          >
+            <.pagination_link current_page={@meta.current_page} page={idx} />
+          </li>
+          <li :if={@meta.total_pages > 6 && @meta.current_page < @meta.total_pages - 3}>
+            <span class="px-3 h-8 text-gray-500">...</span>
+          </li>
+          <li :for={page <- [@meta.total_pages - 1, @meta.total_pages]} :if={@meta.total_pages > 6}>
+            <.pagination_link current_page={@meta.current_page} page={page} />
+          </li>
+          <li :for={idx <- 1..@meta.total_pages} :if={@meta.total_pages <= 6}>
+            <.pagination_link current_page={@meta.current_page} page={idx} />
+          </li>
+          <li>
+            <a
+              href="#"
+              phx-click="paginate"
+              phx-value-page={@meta.next_page}
+              class={
+                [
+                  "flex items-center justify-center px-3 h-8 leading-tight border border-gray-300 bg-white rounded-r-lg"
+                ] ++
+                  if not @meta.has_next_page?,
+                    do: ["pointer-events-none text-gray-300"],
+                    else: [
+                      "text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
+                    ]
+              }
+            >
+              <span class="sr-only">Next</span>
+              <svg
+                class="w-2.5 h-2.5"
+                aria-hidden="true"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 6 10"
+              >
+                <path
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="m1 9 4-4-4-4"
+                />
+              </svg>
+            </a>
+          </li>
+        </ul>
+      </div>
+    """
+  end
+
+  defp pagination_link(assigns) do
+    ~H"""
+    <.link
+      href="#"
+      phx-click="paginate"
+      phx-value-page={@page}
+      class={
+        [
+          "flex items-center justify-center px-3 h-8 leading-tight border dark:border-gray-700"
+        ] ++
+          if @current_page == @page,
+            do: [
+              "z-10 pointer-events-none text-blue-600 bg-blue-50 border-blue-300 hover:bg-blue-100 hover:text-blue-700 dark:bg-gray-700 dark:text-white"
+            ],
+            else: [
+              "text-gray-500 bg-white border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
+            ]
+      }
+    >
+      <%= @page %>
+    </.link>
+    """
+  end
+
   ## JS Commands
 
   def show(js \\ %JS{}, selector) do
