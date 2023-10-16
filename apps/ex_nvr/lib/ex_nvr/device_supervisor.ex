@@ -29,14 +29,18 @@ defmodule ExNVR.DeviceSupervisor do
     File.mkdir_p!(hls_dir(device.id))
     File.mkdir_p!(bif_dir(device.id))
 
-    params = [
-      device: device
-    ]
+    params = [device: device]
 
     children = [
       {Main, params},
       {ExNVR.BifGeneratorServer, params}
     ]
+
+    children =
+      case :os.type() do
+        {:unix, _name} -> children ++ [{ExNVR.UnixSocketServer, params}]
+        _other -> children
+      end
 
     Supervisor.init(children, strategy: :one_for_one, max_restarts: 1_000)
   end

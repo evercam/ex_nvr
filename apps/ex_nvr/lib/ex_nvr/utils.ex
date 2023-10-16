@@ -30,6 +30,9 @@ defmodule ExNVR.Utils do
     Path.join(@unix_socket_dir, "ex_nvr.#{device_id}.sock")
   end
 
+  @spec pipeline_name(Device.t()) :: atom()
+  def pipeline_name(device), do: :"pipeline_#{device.id}"
+
   @spec run_main_pipeline?() :: boolean()
   def run_main_pipeline?(), do: Application.get_env(:ex_nvr, :run_pipelines, true)
 

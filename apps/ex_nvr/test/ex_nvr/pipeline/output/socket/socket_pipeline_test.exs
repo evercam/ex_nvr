@@ -1,12 +1,13 @@
 defmodule ExNVR.Pipeline.Output.SocketPipelineTest do
   @moduledoc false
 
-  use ExUnit.Case
+  use ExNVR.DataCase
 
+  import ExNVR.DevicesFixtures
   import Membrane.ChildrenSpec
   import Membrane.Testing.Assertions
 
-  alias ExNVR.Pipeline.UnixSocketServer
+  alias ExNVR.{UnixSocketServer, Utils}
   alias Membrane.Testing.Pipeline
 
   @fixture_path "../../../../fixtures/video-30-10s.h264" |> Path.expand(__DIR__)
@@ -14,20 +15,17 @@ defmodule ExNVR.Pipeline.Output.SocketPipelineTest do
   @moduletag :tmp_dir
 
   if :os.type() |> elem(0) == :unix do
-    setup do
-      path = Path.join(System.tmp_dir!(), "ex_nvr.sock")
-      on_exit(fn -> File.rm!(path) end)
-
-      %{path: path}
-    end
-
-    test "snapshots are sent to unix socket", %{path: socket_path} do
-      {:ok, _server} = UnixSocketServer.start_link(path: socket_path)
+    test "snapshots are sent to unix socket" do
+      device = device_fixture()
+      Process.register(self(), Utils.pipeline_name(device))
+      {:ok, _server} = UnixSocketServer.start_link(device: device)
 
       pid = start_pipeline()
       assert_pipeline_play(pid)
 
-      {:ok, client_socket} = :gen_tcp.connect({:local, socket_path}, 0, [:binary, active: false])
+      {:ok, client_socket} =
+        :gen_tcp.connect({:local, Utils.unix_socket_path(device.id)}, 0, [:binary, active: false])
+
       assert_receive {:new_socket, server_socket}
 
       send_buffer_actions =
@@ -38,7 +36,9 @@ defmodule ExNVR.Pipeline.Output.SocketPipelineTest do
       assert_end_of_stream(pid, :parser)
 
       for _idx <- 1..300 do
-        assert {:ok, <<width::16, height::16, channels::8>>} = :gen_tcp.recv(client_socket, 5)
+        assert {:ok, <<_timestamp_ms::64, width::16, height::16, channels::8>>} =
+                 :gen_tcp.recv(client_socket, 13)
+
         assert width == 640
         assert height == 480
         assert channels == 3

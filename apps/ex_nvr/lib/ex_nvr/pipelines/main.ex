@@ -41,7 +41,7 @@ defmodule ExNVR.Pipelines.Main do
 
   alias ExNVR.{Devices, Recordings, Utils}
   alias ExNVR.Model.Device
-  alias ExNVR.Pipeline.{Output, Source, UnixSocketServer}
+  alias ExNVR.Pipeline.{Output, Source}
 
   @type encoding :: :H264
 
@@ -90,7 +90,7 @@ defmodule ExNVR.Pipelines.Main do
   def start_link(options \\ []) do
     with {:ok, sup_pid, pid} = res <-
            Membrane.Pipeline.start_link(__MODULE__, options,
-             name: pipeline_name(options[:device])
+             name: Utils.pipeline_name(options[:device])
            ) do
       send(pid, {:pipeline_supervisor, sup_pid})
       res
@@ -126,15 +126,6 @@ defmodule ExNVR.Pipelines.Main do
 
     Logger.metadata(device_id: device.id)
     Membrane.Logger.info("Starting main pipeline for device: #{device.id}")
-
-    {:ok, _unix_socket_server} =
-      case :os.type() do
-        {:unix, _name} ->
-          UnixSocketServer.start_link(path: options[:unix_socket_path])
-
-        _other ->
-          {:ok, nil}
-      end
 
     state = %State{
       device: device,
@@ -428,10 +419,7 @@ defmodule ExNVR.Pipelines.Main do
   end
 
   # Pipeline process details
-
-  defp pipeline_name(%{id: device_id}), do: :"pipeline_#{device_id}"
-
-  defp pipeline_pid(device), do: Process.whereis(pipeline_name(device))
+  defp pipeline_pid(device), do: Process.whereis(Utils.pipeline_name(device))
 
   def child_spec(arg) do
     %{

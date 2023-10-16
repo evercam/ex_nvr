@@ -1,4 +1,4 @@
-defmodule ExNVR.Pipeline.UnixSocketServer do
+defmodule ExNVR.UnixSocketServer do
   @moduledoc """
   A unix socket server that serves snapshots over unix socket.
 
@@ -9,15 +9,17 @@ defmodule ExNVR.Pipeline.UnixSocketServer do
 
   require Logger
 
+  alias ExNVR.Utils
+
   def start_link(opts) do
-    opts = Keyword.put(opts, :parent, self())
     GenServer.start_link(__MODULE__, opts)
   end
 
   @impl true
   def init(opts) do
     Process.send_after(self(), :connect, 0)
-    {:ok, %{parent: opts[:parent], path: opts[:path], socket: nil}}
+    device = opts[:device]
+    {:ok, %{path: Utils.unix_socket_path(device.id), device: device, socket: nil}}
   end
 
   @impl true
@@ -42,7 +44,7 @@ defmodule ExNVR.Pipeline.UnixSocketServer do
   @impl true
   def handle_info(:listen, state) do
     with {:ok, client_socket} <- :gen_tcp.accept(state.socket) do
-      send(state.parent, {:new_socket, client_socket})
+      send(Utils.pipeline_name(state.device), {:new_socket, client_socket})
     end
 
     Process.send_after(self(), :listen, 0)
