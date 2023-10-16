@@ -43,6 +43,8 @@ defmodule ExNVR.Pipelines.Main do
   alias ExNVR.Model.Device
   alias ExNVR.Pipeline.{Output, Source}
 
+  @type encoding :: :H264
+
   @event_prefix [:ex_nvr, :main_pipeline]
 
   defmodule State do
@@ -50,6 +52,7 @@ defmodule ExNVR.Pipelines.Main do
 
     use Bunch.Access
 
+    alias ExNVR.Media.Track
     alias ExNVR.Model.Device
 
     @default_segment_duration 60
@@ -61,14 +64,15 @@ defmodule ExNVR.Pipelines.Main do
     `segment_duration` - The duration of each video chunk saved by the storage bin.
     `supervisor_pid` - The supervisor pid of this pipeline (needed to stop a pipeline)
     `live_snapshot_waiting_pids` - List of pid waiting for live snapshot request to be completed
-
+    `video_tracks` - Tuple denoting the main stream and sub stream video tracks.
     """
     @type t :: %__MODULE__{
             device: Device.t(),
             segment_duration: non_neg_integer(),
             supervisor_pid: pid(),
             live_snapshot_waiting_pids: list(),
-            rtc_engine: pid() | atom()
+            rtc_engine: pid() | atom(),
+            video_tracks: {Track.t(), Track.t()}
           }
 
     @enforce_keys [:device]
@@ -78,14 +82,15 @@ defmodule ExNVR.Pipelines.Main do
                   segment_duration: @default_segment_duration,
                   supervisor_pid: nil,
                   live_snapshot_waiting_pids: [],
-                  rtc_engine: nil
+                  rtc_engine: nil,
+                  video_tracks: {nil, nil}
                 ]
   end
 
   def start_link(options \\ []) do
     with {:ok, sup_pid, pid} = res <-
            Membrane.Pipeline.start_link(__MODULE__, options,
-             name: pipeline_name(options[:device])
+             name: Utils.pipeline_name(options[:device])
            ) do
       send(pid, {:pipeline_supervisor, sup_pid})
       res
@@ -204,7 +209,8 @@ defmodule ExNVR.Pipelines.Main do
         |> get_child(:webrtc)
       ]
 
-      {[spec: {spec, group: :main_stream}], state}
+      video_tracks = put_elem(state.video_tracks, 0, track)
+      {[spec: {spec, group: :main_stream}], %{state | video_tracks: video_tracks}}
     end
   end
 
@@ -226,7 +232,8 @@ defmodule ExNVR.Pipelines.Main do
         |> get_child({:funnel, :sub_stream})
       ]
 
-      {[spec: spec], state}
+      video_tracks = put_elem(state.video_tracks, 1, track)
+      {[spec: spec], %{state | video_tracks: video_tracks}}
     end
   end
 
@@ -235,6 +242,12 @@ defmodule ExNVR.Pipelines.Main do
     state.live_snapshot_waiting_pids
     |> Enum.map(&{:reply_to, {&1, {:ok, snapshot}}})
     |> then(&{&1, %{state | live_snapshot_waiting_pids: []}})
+  end
+
+  @impl true
+  def handle_child_notification(:no_sockets, :unix_socket, _ctx, state) do
+    Membrane.Logger.info("All unix sockets are disconnected, remove unix socket bin element")
+    {[remove_children: [:unix_socket]], state}
   end
 
   @impl true
@@ -261,6 +274,31 @@ defmodule ExNVR.Pipelines.Main do
   @impl true
   def handle_info({:pipeline_supervisor, pid}, _ctx, state) do
     {[], %{state | supervisor_pid: pid}}
+  end
+
+  @impl true
+  def handle_info({:new_socket, unix_socket}, ctx, state) do
+    childs = Map.keys(ctx.children)
+    notify_action = [notify_child: {:unix_socket, {:new_socket, unix_socket}}]
+
+    if Enum.member?(childs, :unix_socket) do
+      {notify_action, state}
+    else
+      {source, track} =
+        if Enum.member?(childs, {:tee, :sub_stream}) do
+          {get_child({:tee, :sub_stream}), elem(state.video_tracks, 1)}
+        else
+          {get_child(:video_tee), elem(state.video_tracks, 0)}
+        end
+
+      spec = [
+        source
+        |> via_out(:copy)
+        |> child(:unix_socket, %ExNVR.Pipeline.Output.Socket{encoding: track.encoding})
+      ]
+
+      {[spec: spec] ++ notify_action, state}
+    end
   end
 
   @impl true
@@ -347,6 +385,8 @@ defmodule ExNVR.Pipelines.Main do
     [
       child({:rtsp_source, :sub_stream}, %Source.RTSP{stream_uri: sub_stream_uri}),
       child({:funnel, :sub_stream}, %Membrane.Funnel{end_of_stream: :never})
+      |> child({:tee, :sub_stream}, Membrane.Tee.Master)
+      |> via_out(:master)
       |> via_in(Pad.ref(:video, :sub_stream))
       |> get_child(:hls_sink)
     ]
@@ -379,10 +419,7 @@ defmodule ExNVR.Pipelines.Main do
   end
 
   # Pipeline process details
-
-  defp pipeline_name(%{id: device_id}), do: :"pipeline_#{device_id}"
-
-  defp pipeline_pid(device), do: Process.whereis(pipeline_name(device))
+  defp pipeline_pid(device), do: Process.whereis(Utils.pipeline_name(device))
 
   def child_spec(arg) do
     %{

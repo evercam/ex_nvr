@@ -10,9 +10,10 @@ defmodule ExNVR.Model.Device do
   @states [:stopped, :recording, :failed]
 
   @type state :: :stopped | :recording | :failed
+  @type id :: binary()
 
   @type t :: %__MODULE__{
-          id: binary(),
+          id: id(),
           name: binary(),
           type: binary(),
           timezone: binary(),

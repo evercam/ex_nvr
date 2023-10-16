@@ -26,6 +26,7 @@ defmodule ExNVR do
   defp create_directories() do
     File.mkdir_p!(recording_dir())
     File.mkdir_p!(hls_dir())
+    File.mkdir_p!(unix_socket_dir())
   end
 
   defp create_admin_user() do
