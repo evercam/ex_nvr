@@ -95,7 +95,7 @@ The main feature of this project is to store video streams retrieved from `devic
 
 * **Integration**: Integrate with third party software
    - [ ] Web Hooks: Notify external services of new recorded videos
-   - [x] Unix-domain Socket: Send snapshots via unix domain web socket 
+   - [x] Unix-domain Socket: Send snapshots via unix-domain socket 
 
 * **Other**: other interesting features
    - [ ] Support audio
