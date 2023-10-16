@@ -42,7 +42,7 @@ defmodule ExNVR.DeviceSupervisor do
         _other -> children
       end
 
-    Supervisor.init(children, strategy: :one_for_one, max_restarts: 1_000)
+    Supervisor.init(children, strategy: :rest_for_one, max_restarts: 1_000)
   end
 
   @spec stop(Device.t()) :: :ok
