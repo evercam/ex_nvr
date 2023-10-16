@@ -2,7 +2,25 @@ defmodule ExNVR.Pipeline.Output.Socket do
   @moduledoc """
   Send snapshots through socket
 
-  The format of the message is: |width: 2bytes|height: 2bytes|channel: 1byte|data: height * width * channel bytes|
+  The format of the message is:
+  ```
+     0                   1                   2                   3
+     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    |                      Unix Timestamp                           |
+    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    |                      Unix Timestamp                           |
+    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    |           Width               |         Height                |
+    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    |   Channels    |                                               |
+    +-+-+-+-+-+-+-+-+                                               +
+    |                       Snapshot Data                           |
+    :                                                               :
+    |                                                               +
+    |                                                               |
+    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+  ```
   """
 
   use Membrane.Bin
