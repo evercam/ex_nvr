@@ -16,7 +16,9 @@ defmodule ExNVR.Elements.RecordingBin do
 
   alias ExNVR.Recordings
   alias ExNVR.Elements.Recording.Timestamper
-  alias Membrane.{File, H264, MP4}
+  alias Membrane.{File, H264, H265, MP4}
+
+  @childs_to_delete [:source, :demuxer, :parser, :timestamper]
 
   def_options device: [
                 spec: ExNVR.Model.Device.t(),
@@ -61,7 +63,12 @@ defmodule ExNVR.Elements.RecordingBin do
 
   def_output_pad :video,
     demand_unit: :buffers,
-    accepted_format: %Membrane.H264{alignment: :au}
+    accepted_format:
+      any_of(
+        %Membrane.H264{alignment: :au},
+        %Membrane.H265{alignment: :au}
+      ),
+    availability: :on_request
 
   @impl true
   def handle_init(_ctx, options) do
@@ -75,23 +82,11 @@ defmodule ExNVR.Elements.RecordingBin do
       |> Map.merge(%{
         recordings: recordings,
         current_recording: nil,
-        recording_duration: 0
+        recording_duration: 0,
+        track: nil
       })
 
     {spec, state} = read_file_spec(state)
-
-    spec =
-      [
-        child(:funnel, %Membrane.Funnel{end_of_stream: :never})
-        |> child(:scissors, %ExNVR.Elements.Recording.Scissors{
-          start_date: Membrane.Time.from_datetime(state.start_date),
-          end_date: Membrane.Time.from_datetime(state.end_date),
-          duration: state.duration,
-          strategy: state.strategy
-        })
-        |> bin_output(:video)
-      ] ++ spec
-
     {[spec: spec], state}
   end
 
@@ -106,19 +101,57 @@ defmodule ExNVR.Elements.RecordingBin do
   end
 
   @impl true
-  def handle_child_notification({:new_tracks, [{track_id, track}]}, {:demuxer, id}, _ctx, state) do
+  def handle_pad_added(Pad.ref(:video, _ref) = pad, _ctx, state) do
+    track = state.track
+    id = state.current_recording.id
+
     spec = [
       get_child({:demuxer, id})
-      |> via_out(Pad.ref(:output, track_id))
+      |> via_out(Pad.ref(:output, 1))
       |> add_depayloader(track, id)
       |> child({:timestamper, id}, %Timestamper{
         offset: state.recording_duration,
         start_date: Membrane.Time.from_datetime(state.current_recording.start_date)
       })
-      |> get_child(:funnel)
+      |> child(:funnel, %Membrane.Funnel{end_of_stream: :never})
+      |> child(:scissors, %ExNVR.Elements.Recording.Scissors{
+        start_date: Membrane.Time.from_datetime(state.start_date),
+        end_date: Membrane.Time.from_datetime(state.end_date),
+        duration: state.duration,
+        strategy: state.strategy
+      })
+      |> bin_output(pad)
     ]
 
     {[spec: spec], state}
+  end
+
+  @impl true
+  def handle_child_notification({:new_tracks, [{track_id, track}]}, {:demuxer, id}, ctx, state) do
+    cond do
+      is_nil(state.track) ->
+        {[notify_parent: {:track, track}], %{state | track: track}}
+
+      state.track != track ->
+        # recordings have different codecs or configuration
+        # send an end of stream
+        {[remove_children: childs_to_delete(ctx), notify_child: {:scissors, :end_of_stream}],
+         state}
+
+      true ->
+        spec = [
+          get_child({:demuxer, id})
+          |> via_out(Pad.ref(:output, track_id))
+          |> add_depayloader(track, id)
+          |> child({:timestamper, id}, %Timestamper{
+            offset: state.recording_duration,
+            start_date: Membrane.Time.from_datetime(state.current_recording.start_date)
+          })
+          |> get_child(:funnel)
+        ]
+
+        {[spec: spec], state}
+    end
   end
 
   @impl true
@@ -133,14 +166,14 @@ defmodule ExNVR.Elements.RecordingBin do
     if recordings != [] do
       handle_element_end_of_stream({:timestamper, id}, pad, ctx, %{state | recordings: recordings})
     else
-      {[remove_children: childs_to_delete(id), notify_child: {:scissors, :end_of_stream}], state}
+      {[remove_children: childs_to_delete(ctx), notify_child: {:scissors, :end_of_stream}], state}
     end
   end
 
   @impl true
-  def handle_element_end_of_stream({:timestamper, id}, _pad, _ctx, state) do
+  def handle_element_end_of_stream({:timestamper, _id}, _pad, ctx, state) do
     {spec, state} = read_file_spec(state)
-    {[remove_children: childs_to_delete(id), spec: spec], state}
+    {[remove_children: childs_to_delete(ctx), spec: spec], state}
   end
 
   @impl true
@@ -179,11 +212,24 @@ defmodule ExNVR.Elements.RecordingBin do
     %{state | recording_duration: duration}
   end
 
-  defp childs_to_delete(id),
-    do: [:source, :demuxer, :parser, :timestamper] |> Enum.map(&{&1, id})
+  defp childs_to_delete(ctx) do
+    ctx.children
+    |> Map.keys()
+    |> Enum.filter(fn
+      {name, _id} when name in @childs_to_delete -> true
+      _other -> false
+    end)
+  end
 
   defp add_depayloader(link_builder, %H264{} = _track, id) do
     child(link_builder, {:parser, id}, %H264.Parser{
+      repeat_parameter_sets: true,
+      output_stream_structure: :annexb
+    })
+  end
+
+  defp add_depayloader(link_builder, %H265{} = _track, id) do
+    child(link_builder, {:parser, id}, %H265.Parser{
       repeat_parameter_sets: true,
       output_stream_structure: :annexb
     })
