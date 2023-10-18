@@ -14,7 +14,7 @@ defmodule ExNVRWeb.Router do
   end
 
   pipeline :api do
-    plug :accepts, ["json"]
+    plug :accepts, ["json", "jpg", "mp4"]
     plug :fetch_session
     plug :fetch_current_user
   end

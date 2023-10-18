@@ -4,7 +4,15 @@ info:
   description: Manage ExNVR via API endpoints
   version: 0.4.0
 servers:
-  - url: 'http://localhost:4000'
+  - url: '{protocol}://{host}:{port}'
+    variables:
+      protocol:
+        enum: [http, https]
+        default: http
+      host:
+        default: localhost
+      port:
+        default: 4000
 paths:
   /api/users/login:
     post:
@@ -114,14 +122,14 @@ paths:
         '400':
           $ref: "#/components/responses/BadArg"
   /api/devices/{device_id}:
+    parameters:
+      - $ref: '#/components/parameters/device_id'
     get: 
       summary: Get device
       description: Get device by id.
       operationId: getDevice
       tags:
         - Device
-      parameters:
-        - $ref: '#/components/parameters/device_id'
       responses:
         '200':
             description: Success
@@ -322,6 +330,7 @@ paths:
       parameters:
         - $ref: '#/components/parameters/device_id'
         - name: time
+          in: query
           required: false
           description: |
             Timestamp of the requested snapshot.
@@ -330,9 +339,10 @@ paths:
           schema:
             type: string
             format: date-time
+          example: '2023-10-10T10:00:00Z'
         - name: method
+          in: query
           required: false
-          default: before
           description: |
             Getting a snapshot at the exact timestamp is costly, so, it can be rounded 
             to the nearest keyframe, thus, the default value is "before".
@@ -344,8 +354,8 @@ paths:
             type: string
             enum: [before, precise]
         - name: format
+          in: query
           required: false
-          default: jpg
           description: Image format
           schema:
             type: string
@@ -354,7 +364,7 @@ paths:
         '200':
           description: success
           content:
-            image/jpg:
+            image/jpeg:
               schema:
                 type: string
                 format: byte
@@ -402,6 +412,7 @@ paths:
       parameters:
         - $ref: '#/components/parameters/device_id'
         - name: start_date
+          in: query
           required: true
           description: |
             Start date of the footage.
@@ -409,6 +420,7 @@ paths:
             type: string
             format: date-time
         - name: end_date
+          in: query
           required: false
           description: |
             The end date of the footage.
@@ -419,6 +431,7 @@ paths:
             type: string
             format: date-time
         - name: duration
+          in: query
           required: false
           description: | 
             The duration of the footage in seconds.
