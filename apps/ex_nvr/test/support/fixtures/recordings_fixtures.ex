@@ -9,8 +9,8 @@ defmodule ExNVR.RecordingsFixtures do
 
   @typep attr :: map() | keyword()
 
-  @avc1_file "../../fixtures/big_buck.mp4" |> Path.expand(__DIR__)
-  @hvc1_file "../../fixtures/big_buck_hevc.mp4" |> Path.expand(__DIR__)
+  @avc1_file "../../fixtures/mp4/big_buck_avc.mp4" |> Path.expand(__DIR__)
+  @hvc1_file "../../fixtures/mp4/big_buck_hevc.mp4" |> Path.expand(__DIR__)
 
   @spec valid_recording_attributes(attr()) :: map()
   def valid_recording_attributes(attrs \\ %{}) do

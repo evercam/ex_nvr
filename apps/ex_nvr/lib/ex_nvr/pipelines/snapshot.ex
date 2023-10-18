@@ -9,6 +9,7 @@ defmodule ExNVR.Pipelines.Snapshot do
 
   alias ExNVR.Elements
   alias ExNVR.Elements.RecordingBin
+  alias Membrane.{H264, H265}
 
   def start(options) do
     Pipeline.start(__MODULE__, Keyword.put(options, :caller, self()))
@@ -28,14 +29,29 @@ defmodule ExNVR.Pipelines.Snapshot do
         end_date: options[:date],
         strategy: :keyframe_before
       })
+    ]
+
+    {[spec: spec], %{caller: options[:caller], rank: rank, format: options[:format] || :jpeg}}
+  end
+
+  @impl true
+  def handle_child_notification({:track, track}, :source, _ctx, state) do
+    encoding =
+      case track do
+        %H264{} -> :H264
+        %H265{} -> :H265
+      end
+
+    spec = [
+      get_child(:source)
       |> via_out(:video)
       |> via_in(Pad.ref(:input, make_ref()),
-        options: [format: options[:format] || :jpeg, rank: rank]
+        options: [format: state.format, rank: state.rank, encoding: encoding]
       )
       |> child(:sink, Elements.SnapshotBin)
     ]
 
-    {[spec: spec], %{caller: options[:caller]}}
+    {[spec: spec], state}
   end
 
   @impl true
