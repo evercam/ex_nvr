@@ -66,6 +66,7 @@ defmodule ExNVR.MixProject do
       {:export, "~> 0.1.1"},
       {:evision, "~> 0.1"},
       {:nx, "~> 0.5"},
+      {:torchx, "~> 0.5"}
     ]
   end
 

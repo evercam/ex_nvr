@@ -10,7 +10,7 @@ config :ex_nvr, ExNVR.Repo,
 config :ex_nvr,
   recording_directory: Path.expand("../data/recordings", Path.dirname(__ENV__.file)),
   hls_directory: Path.expand("../data/hls", Path.dirname(__ENV__.file)),
-  run_pipelines: false
+  run_pipelines: true
 
 config :ex_nvr,
   integrated_turn_ip: {127, 0, 0, 1},

@@ -2,12 +2,11 @@ defmodule ExNVR.ImageProcessor do
   use Export.Python
   alias Evision, as: Cv
   require Nx
-  import Nx.Defn
 
   require Logger
 
   @pfov 100
-  @fov 180
+  @fov 140
 
   def undistort_snapshot(image_binary) do
     distorted_img = Cv.imdecode(image_binary, Cv.Constant.cv_IMREAD_ANYCOLOR())
@@ -24,41 +23,66 @@ defmodule ExNVR.ImageProcessor do
     j = Nx.iota({height, width}, axis: 0)
     |> Nx.add(-y_center)
 
-    hypot = Nx.sum(Nx.pow(i, 2), Nx.pow(j, 2))
+    hypot = Nx.add(Nx.pow(i, 2), Nx.pow(j, 2))
     |> Nx.sqrt()
+
+    IO.puts "0"
 
     rr = hypot
     |> Nx.multiply(ofoc_inv)
     |> Nx.atan()
     |> typed_undistort(@fov, dimension, "orthographic")
 
+    IO.puts "1"
 
-    Cv.Mat.to_nx(distorted_img)
+    xs = rr
+    |> Nx.divide(hypot)
+    |> Nx.multiply(i)
+    |> Nx.add(x_center)
+    |> Nx.clip(0, width - 1)
+    |> Nx.as_type(:s32)
 
-    # with image <- Cv.imdecode(binary, Cv.Constant.cv_IMREAD_ANYCOLOR()),
-    #      decoded_img <- Cv.imencode(".png", image) do
-    #   Base.encode64(decoded_img)
-    # else
-    #   error ->
-    #     error
-    # end
+    IO.puts "2.5"
+
+    ys = rr
+    |> Nx.divide(hypot)
+    |> Nx.multiply(j)
+    |> Nx.multiply(0.9)
+    |> Nx.add(y_center)
+    |> Nx.clip(0, height - 1)
+    |> Nx.as_type(:s32)
+
+    IO.inspect Nx.reduce_max(ys)
+    IO.inspect Nx.reduce_min(ys)
+
+    target_indices = Enum.zip(Nx.to_flat_list(ys), Nx.to_flat_list(xs))
+    |> Enum.flat_map(fn {a, b} -> Enum.map(0..2, fn enum -> [a, b, enum] end) end)
+    |> Nx.tensor()
+
+    input_indices = Enum.zip(Nx.to_flat_list(Nx.add(j, y_center)), Nx.to_flat_list(Nx.add(i, x_center)))
+    |> Enum.flat_map(fn {a, b} -> Enum.map(0..2, fn enum -> [a, b, enum] end) end)
+    |> Nx.tensor()
+
+    IO.puts "3"
+
+    Cv.Mat.to_nx(distorted_img, Torchx.Backend)
+    |> then(&Nx.indexed_put(&1, input_indices, Nx.gather(&1, target_indices)))
+    |> Nx.as_type(:u8)
+    |> Cv.Mat.from_nx_2d()
+    |> then(&Cv.imencode(".png", &1))
+    |> Base.encode64()
+
     # run(
     #   "image_processing",
     #   "undistort_image",
-    #   [image]
+    #   [image_binary]
     # )
   end
 
   defp typed_undistort(phiang, fov, dimension, "orthographic") do
     phiang
     |> Nx.sin()
-    |> Nx.multiply(dimension / (2.0 * :math.sin(fov * :math.pi() / 720)))
-  end
-
-  defpn safe_divide(a, b) do
-    while {tensor, acc = 0}, i <- 0..Nx.axis_size(tensor, 0)-1 do
-      acc + tensor[i]
-    end
+    |> Nx.multiply(dimension / (2.0 * :math.sin(fov * :math.pi() / 360)))
   end
 
   defp run(module, function, args) do
