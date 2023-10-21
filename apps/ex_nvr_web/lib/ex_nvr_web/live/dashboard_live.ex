@@ -1,5 +1,8 @@
 defmodule ExNVRWeb.DashboardLive do
   use ExNVRWeb, :live_view
+  use Permit.Phoenix.LiveView,
+    authorization_module: ExNVR.Authorization,
+    resource_module: ExNVR.Model.Device
 
   alias Ecto.Changeset
   alias ExNVR.Devices
@@ -16,6 +19,18 @@ defmodule ExNVRWeb.DashboardLive do
     {"2 Hours", "7200"},
     {"Custom", ""}
   ]
+
+  @impl true
+  def fetch_subject(_socket, session) do
+    ExNVR.Accounts.get_user_by_session_token(session["user_token"])
+  end
+
+  @impl true
+  def handle_unauthorized(_action, conn) do
+    conn
+    |> put_flash(:error, "You do not have permission to perform this action.")
+    |> redirect(to: "/")
+  end
 
   def render(assigns) do
     ~H"""
