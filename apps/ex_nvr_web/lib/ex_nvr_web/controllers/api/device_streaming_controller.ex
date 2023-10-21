@@ -2,6 +2,9 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
   @moduledoc false
 
   use ExNVRWeb, :controller
+  use Permit.Phoenix.Controller,
+    authorization_module: ExNVR.Authorization,
+    resource_module: ExNVR.Model.Device
 
   action_fallback ExNVRWeb.API.FallbackController
 
@@ -12,6 +15,13 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
   alias ExNVR.{HLS, Utils}
 
   @type return_t :: Plug.Conn.t() | {:error, Changeset.t()}
+
+  @impl true
+  def handle_unauthorized(_action, conn) do
+    conn
+    |> put_status(401)
+    |> json(%{message: "You do not have permission to perform this action."})
+  end
 
   @spec hls_stream(Plug.Conn.t(), map()) :: return_t()
   def hls_stream(conn, params) do

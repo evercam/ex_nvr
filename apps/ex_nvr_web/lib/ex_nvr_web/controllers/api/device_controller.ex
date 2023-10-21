@@ -2,6 +2,9 @@ defmodule ExNVRWeb.API.DeviceController do
   @moduledoc false
 
   use ExNVRWeb, :controller
+  use Permit.Phoenix.Controller,
+    authorization_module: ExNVR.Authorization,
+    resource_module: ExNVR.Model.Device
 
   action_fallback ExNVRWeb.API.FallbackController
 
@@ -10,6 +13,13 @@ defmodule ExNVRWeb.API.DeviceController do
   alias ExNVR.{Devices, DeviceSupervisor}
   alias ExNVR.Model.Device
   alias Plug.Conn
+
+  @impl true
+  def handle_unauthorized(_action, conn) do
+    conn
+    |> put_status(401)
+    |> json(%{message: "You do not have permission to perform this action."})
+  end
 
   @spec create(Conn.t(), map()) :: Conn.t() | {:error, Ecto.Changeset.t()}
   def create(%Conn{} = conn, params) do
