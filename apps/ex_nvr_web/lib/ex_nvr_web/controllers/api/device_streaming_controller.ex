@@ -84,38 +84,31 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
   end
 
   defp serve_snapshot_from_recorded_videos(conn, _params) do
-    {:ok, snapshot} =
-      ExNVR.MP4.Reader.new("/home/ghilas/2fc4a3ad-ed46-4358-b2a7-24884891c858.mp4")
+    device = conn.assigns.device
 
-    conn
-    |> put_resp_content_type("image/jpeg")
-    |> send_resp(:ok, snapshot)
+    case ExNVR.Recordings.get_recordings_between(device.id, params.time, params.time) do
+      [] ->
+        {:error, :not_found}
 
-    # device = conn.assigns.device
+      _ ->
+        options = [
+          device_id: device.id,
+          date: params.time,
+          method: params.method,
+          format: params.format
+        ]
 
-    # case ExNVR.Recordings.get_recordings_between(device.id, params.time, params.time) do
-    #   [] ->
-    #     {:error, :not_found}
+        Snapshot.start(options)
 
-    #   _ ->
-    #     options = [
-    #       device_id: device.id,
-    #       date: params.time,
-    #       method: params.method,
-    #       format: params.format
-    #     ]
-
-    #     Snapshot.start(options)
-
-    #     receive do
-    #       {:snapshot, snapshot} ->
-    #         conn
-    #         |> put_resp_content_type("image/#{params.format}")
-    #         |> send_resp(:ok, snapshot)
-    #     after
-    #       10_000 -> {:error, :not_found}
-    #     end
-    # end
+        receive do
+          {:snapshot, snapshot} ->
+            conn
+            |> put_resp_content_type("image/#{params.format}")
+            |> send_resp(:ok, snapshot)
+        after
+          10_000 -> {:error, :not_found}
+        end
+    end
   end
 
   @spec footage(Plug.Conn.t(), map()) :: return_t()

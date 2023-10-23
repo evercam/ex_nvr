@@ -49,9 +49,6 @@ UNIFEX_TERM assemble_recordings(UnifexEnv *env, recording *recordings, unsigned 
       goto exit_assemble_files;
     }
 
-    int64_t recording_start_date = av_rescale(recordings[i].start_date, time_base.den, 1000 * time_base.num);
-    int64_t recording_duration = 0;
-
     int stream_index;
     const AVCodec *codec;
     if ((stream_index = av_find_best_stream(read_ctx, AVMEDIA_TYPE_VIDEO, -1, -1, &codec, 0)) < 0)
