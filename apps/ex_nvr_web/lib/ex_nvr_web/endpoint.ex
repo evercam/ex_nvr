@@ -29,7 +29,7 @@ defmodule ExNVRWeb.Endpoint do
     allow_credentials: true,
     allow_methods: :all,
     allow_headers: ~w(content-type authorization),
-    expose_headers: ~w(x-request-id)
+    expose_headers: ~w(x-request-id x-start-date)
 
   # Serve at "/" the static files from "priv/static" directory.
   #
