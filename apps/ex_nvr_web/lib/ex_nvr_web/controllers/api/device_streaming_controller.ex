@@ -118,7 +118,18 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
 
     with {:ok, params} <- validate_footage_req_params(params),
          {:ok, recordings} <- get_recordings(device, params) do
-      :ok =
+      {_adapter, adapter_data} = conn.adapter
+
+      # delete created file
+      spawn(fn ->
+        ref = Process.monitor(adapter_data.pid)
+
+        receive do
+          {:DOWN, ^ref, :process, _, _} -> :ok = File.rm!(destination)
+        end
+      end)
+
+      {:ok, start_date} =
         VideoAssembler.Native.assemble_recordings(
           recordings,
           DateTime.to_unix(params.start_date, :millisecond),
@@ -127,8 +138,14 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
           destination
         )
 
-      filename = Calendar.strftime(params.start_date, "%Y%m%d%H%M%S.mp4")
-      send_download(conn, {:file, destination}, content_type: "video/mp4", filename: filename)
+      filename =
+        start_date
+        |> DateTime.from_unix!(:millisecond)
+        |> Calendar.strftime("%Y%m%d%H%M%S.mp4")
+
+      conn
+      |> put_resp_header("x-start-date", "#{start_date}")
+      |> send_download({:file, destination}, content_type: "video/mp4", filename: filename)
     end
   end
 

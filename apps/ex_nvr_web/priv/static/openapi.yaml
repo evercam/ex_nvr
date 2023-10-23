@@ -12,7 +12,7 @@ servers:
       host:
         default: localhost
       port:
-        default: 4000
+        default: "4000"
 paths:
   /api/users/login:
     post:
@@ -445,11 +445,19 @@ paths:
       responses:
         '200':
           description: success
+          headers:
+            x-start-date:
+              schema: 
+                type: integer
+              description: |
+                Since the video must start from the nearest keyframe before the requested start date. 
+                
+                This header reports the actual start date in milliseconds unix timestamp.
           content:
             video/mp4:
               schema:
                 type: string
-                format: byte
+                format: binary
         '400':
           $ref: '#/components/responses/BadArg'
   /api/devices/{device_id}/bif/{hour}:

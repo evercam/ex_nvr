@@ -23,6 +23,7 @@ UNIFEX_TERM assemble_recordings(UnifexEnv* env, recording* recordings, unsigned 
 
   int64_t last_dts = -1;
   int64_t duration = 0, offset = 0;
+  AVRational time_base = {1, 1};
 
   // init write context
   if (avformat_alloc_output_context2(&write_ctx, NULL, "mp4", NULL) < 0) {
@@ -49,7 +50,7 @@ UNIFEX_TERM assemble_recordings(UnifexEnv* env, recording* recordings, unsigned 
     }
 
     if (i == 0) {
-      AVRational time_base = read_ctx->streams[stream_index]->time_base;
+      time_base = read_ctx->streams[stream_index]->time_base;
       offset = av_rescale(start_date - recordings[0].start_date, time_base.den, 1000 * time_base.num);
       avformat_seek_file(read_ctx, stream_index, INT64_MIN, offset, INT64_MAX, AVSEEK_FLAG_BACKWARD);
      
@@ -92,7 +93,8 @@ UNIFEX_TERM assemble_recordings(UnifexEnv* env, recording* recordings, unsigned 
 
 exit_loop:
   av_write_trailer(write_ctx);
-  res = assemble_recordings_result(env);
+  start_date = av_rescale(start_date, 1000 * time_base.num, time_base.den);
+  res = assemble_recordings_result_ok(env, start_date);
 
 exit_assemble_files:
   av_packet_unref(packet);
