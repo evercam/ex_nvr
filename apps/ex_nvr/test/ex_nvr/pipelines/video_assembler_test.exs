@@ -7,6 +7,7 @@ defmodule ExNVR.Pipelines.VideoAssemblerTest do
   import ExNVR.RecordingsFixtures
   import Membrane.Testing.Assertions
 
+  alias ExNVR.Model.Recording
   alias Membrane.Testing
 
   @moduletag :tmp_dir
@@ -16,22 +17,25 @@ defmodule ExNVR.Pipelines.VideoAssemblerTest do
 
     File.mkdir!(ExNVR.Utils.recording_dir(device.id))
 
-    recording_fixture(device,
-      start_date: ~U(2023-06-23 10:00:00Z),
-      end_date: ~U(2023-06-23 10:00:05Z)
-    )
+    recording1 =
+      recording_fixture(device,
+        start_date: ~U(2023-06-23 10:00:00Z),
+        end_date: ~U(2023-06-23 10:00:05Z)
+      )
 
-    recording_fixture(device,
-      start_date: ~U(2023-06-23 10:00:05Z),
-      end_date: ~U(2023-06-23 10:00:10Z)
-    )
+    recording2 =
+      recording_fixture(device,
+        start_date: ~U(2023-06-23 10:00:05Z),
+        end_date: ~U(2023-06-23 10:00:10Z)
+      )
 
-    recording_fixture(device,
-      start_date: ~U(2023-06-23 10:00:13Z),
-      end_date: ~U(2023-06-23 10:00:18Z)
-    )
+    recording3 =
+      recording_fixture(device,
+        start_date: ~U(2023-06-23 10:00:13Z),
+        end_date: ~U(2023-06-23 10:00:18Z)
+      )
 
-    {:ok, device: device}
+    {:ok, device: device, recordings: [recording1, recording2, recording3]}
   end
 
   describe "Assemble video files when" do
@@ -63,6 +67,30 @@ defmodule ExNVR.Pipelines.VideoAssemblerTest do
       assert_pipeline_play(pid)
       assert_end_of_stream(pid, :sink)
       assert File.exists?(destination)
+    end
+
+    test "using native assembler", %{device: device, recordings: recordings, tmp_dir: tmp_dir} do
+      rec =
+        Enum.map(
+          recordings,
+          &Recording.Download.new(&1, ExNVR.Utils.recording_dir(device.id))
+        )
+
+      start_date = DateTime.to_unix(~U(2023-06-23 10:00:03Z), :millisecond)
+      end_date = DateTime.to_unix(~U(2023-06-23 10:00:15Z), :millisecond)
+      destination = Path.join(tmp_dir, "output.mp4")
+
+      assert {:ok, real_start_date} =
+               ExNVR.VideoAssembler.Native.assemble_recordings(
+                 rec,
+                 start_date,
+                 end_date,
+                 0,
+                 destination
+               )
+
+      assert File.exists?(destination)
+      assert_in_delta(real_start_date, start_date, 1100)
     end
   end
 
