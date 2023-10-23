@@ -60,9 +60,13 @@ UNIFEX_TERM assemble_recordings(UnifexEnv *env, recording *recordings, unsigned 
       goto exit_assemble_files;
     }
 
+    // videos created using the NVR have the same time base
+    time_base = read_ctx->streams[stream_index]->time_base;
+    int64_t recording_start_date = av_rescale(recordings[i].start_date, time_base.den, 1000 * time_base.num); 
+    int64_t recording_duration = 0;
+
     if (i == 0)
     {
-      time_base = read_ctx->streams[stream_index]->time_base;
       offset = av_rescale(start_date - recordings[0].start_date, time_base.den, 1000 * time_base.num);
       avformat_seek_file(read_ctx, stream_index, INT64_MIN, offset, INT64_MAX, AVSEEK_FLAG_BACKWARD);
 
@@ -89,6 +93,7 @@ UNIFEX_TERM assemble_recordings(UnifexEnv *env, recording *recordings, unsigned 
       if (target_duration != 0)
         target_duration += offset;
       start_date -= offset;
+      recording_start_date = start_date;
     }
 
     do

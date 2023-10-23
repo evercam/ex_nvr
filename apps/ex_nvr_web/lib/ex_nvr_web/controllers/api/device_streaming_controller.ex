@@ -9,7 +9,7 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
 
   alias Ecto.Changeset
   alias ExNVR.Pipelines.{HlsPlayback, Main, Snapshot}
-  alias ExNVR.{HLS, Model.Recording, Recordings, Utils, VideoAssembler}
+  alias ExNVR.{HLS, Model.Recording, Recordings, Utils}
 
   @type return_t :: Plug.Conn.t() | {:error, Changeset.t()}
 
@@ -83,32 +83,39 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
     end
   end
 
-  defp serve_snapshot_from_recorded_videos(conn, params) do
-    device = conn.assigns.device
+  defp serve_snapshot_from_recorded_videos(conn, _params) do
+    {:ok, snapshot} =
+      ExNVR.MP4.Reader.new("/home/ghilas/2fc4a3ad-ed46-4358-b2a7-24884891c858.mp4")
 
-    case ExNVR.Recordings.get_recordings_between(device.id, params.time, params.time) do
-      [] ->
-        {:error, :not_found}
+    conn
+    |> put_resp_content_type("image/jpeg")
+    |> send_resp(:ok, snapshot)
 
-      _ ->
-        options = [
-          device_id: device.id,
-          date: params.time,
-          method: params.method,
-          format: params.format
-        ]
+    # device = conn.assigns.device
 
-        Snapshot.start(options)
+    # case ExNVR.Recordings.get_recordings_between(device.id, params.time, params.time) do
+    #   [] ->
+    #     {:error, :not_found}
 
-        receive do
-          {:snapshot, snapshot} ->
-            conn
-            |> put_resp_content_type("image/#{params.format}")
-            |> send_resp(:ok, snapshot)
-        after
-          10_000 -> {:error, :not_found}
-        end
-    end
+    #   _ ->
+    #     options = [
+    #       device_id: device.id,
+    #       date: params.time,
+    #       method: params.method,
+    #       format: params.format
+    #     ]
+
+    #     Snapshot.start(options)
+
+    #     receive do
+    #       {:snapshot, snapshot} ->
+    #         conn
+    #         |> put_resp_content_type("image/#{params.format}")
+    #         |> send_resp(:ok, snapshot)
+    #     after
+    #       10_000 -> {:error, :not_found}
+    #     end
+    # end
   end
 
   @spec footage(Plug.Conn.t(), map()) :: return_t()
@@ -130,7 +137,7 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
       end)
 
       {:ok, start_date} =
-        VideoAssembler.Native.assemble_recordings(
+        Recordings.VideoAssembler.Native.assemble_recordings(
           recordings,
           DateTime.to_unix(params.start_date, :millisecond),
           DateTime.to_unix(params.end_date, :millisecond),

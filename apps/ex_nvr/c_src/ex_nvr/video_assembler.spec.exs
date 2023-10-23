@@ -1,4 +1,4 @@
-module ExNVR.VideoAssembler.Native
+module ExNVR.Recordings.VideoAssembler.Native
 
 state_type "State"
 

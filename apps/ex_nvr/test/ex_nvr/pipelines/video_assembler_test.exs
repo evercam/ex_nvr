@@ -81,7 +81,7 @@ defmodule ExNVR.Pipelines.VideoAssemblerTest do
       destination = Path.join(tmp_dir, "output.mp4")
 
       assert {:ok, real_start_date} =
-               ExNVR.VideoAssembler.Native.assemble_recordings(
+               ExNVR.Recordings.VideoAssembler.Native.assemble_recordings(
                  rec,
                  start_date,
                  end_date,
