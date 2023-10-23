@@ -8,7 +8,7 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
   require Logger
 
   alias Ecto.Changeset
-  alias ExNVR.Pipelines.{HlsPlayback, Main, Snapshot}
+  alias ExNVR.Pipelines.{HlsPlayback, Main}
   alias ExNVR.{HLS, Model.Recording, Recordings, Utils}
 
   @type return_t :: Plug.Conn.t() | {:error, Changeset.t()}
@@ -90,24 +90,18 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
       [] ->
         {:error, :not_found}
 
-      _ ->
-        options = [
-          device_id: device.id,
-          date: params.time,
-          method: params.method,
-          format: params.format
-        ]
+      [recording] ->
+        {:ok, snapshot} =
+          ExNVR.Recordings.Snapshooter.snapshot(
+            recording,
+            ExNVR.Utils.recording_dir(device.id),
+            params.time,
+            method: params.method
+          )
 
-        Snapshot.start(options)
-
-        receive do
-          {:snapshot, snapshot} ->
-            conn
-            |> put_resp_content_type("image/#{params.format}")
-            |> send_resp(:ok, snapshot)
-        after
-          10_000 -> {:error, :not_found}
-        end
+        conn
+        |> put_resp_content_type("image/#{params.format}")
+        |> send_resp(:ok, snapshot)
     end
   end
 
