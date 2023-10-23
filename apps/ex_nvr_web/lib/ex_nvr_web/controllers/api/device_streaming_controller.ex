@@ -83,7 +83,7 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
     end
   end
 
-  defp serve_snapshot_from_recorded_videos(conn, _params) do
+  defp serve_snapshot_from_recorded_videos(conn, params) do
     device = conn.assigns.device
 
     case ExNVR.Recordings.get_recordings_between(device.id, params.time, params.time) do
