@@ -8,8 +8,8 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
   require Logger
 
   alias Ecto.Changeset
-  alias ExNVR.Pipelines.{HlsPlayback, Main, Snapshot, VideoAssembler}
-  alias ExNVR.{HLS, Utils}
+  alias ExNVR.Pipelines.{HlsPlayback, Main, Snapshot}
+  alias ExNVR.{HLS, Model.Recording, Recordings, Utils, VideoAssembler}
 
   @type return_t :: Plug.Conn.t() | {:error, Changeset.t()}
 
@@ -116,25 +116,35 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
     device = conn.assigns.device
     destination = Path.join(System.tmp_dir!(), UUID.uuid4() <> ".mp4")
 
-    with {:ok, params} <- validate_footage_req_params(params) do
-      {:ok, pipeline_sup, _pipeline_pid} =
-        params
-        |> Map.merge(%{device_id: device.id, destination: destination})
-        |> Map.update(:duration, 0, &Membrane.Time.seconds/1)
-        |> Keyword.new()
-        |> VideoAssembler.start()
+    with {:ok, params} <- validate_footage_req_params(params),
+         {:ok, recordings} <- get_recordings(device, params) do
+      :ok =
+        VideoAssembler.Native.assemble_recordings(
+          recordings,
+          DateTime.to_unix(params.start_date, :millisecond),
+          DateTime.to_unix(params.end_date, :millisecond),
+          params.duration,
+          destination
+        )
 
-      Process.monitor(pipeline_sup)
+      filename = Calendar.strftime(params.start_date, "%Y%m%d%H%M%S.mp4")
+      send_download(conn, {:file, destination}, content_type: "video/mp4", filename: filename)
+    end
+  end
 
-      receive do
-        {:DOWN, _ref, :process, ^pipeline_sup, _reason} ->
-          send_download(conn, {:file, destination},
-            content_type: "video/mp4",
-            filename: "#{device.id}.mp4"
-          )
-      after
-        30_000 -> {:error, :not_found}
-      end
+  defp get_recordings(device, params) do
+    case Recordings.get_recordings_between(device.id, params.start_date, params.end_date,
+           limit: 120
+         ) do
+      [] ->
+        {:error, :not_found}
+
+      recordings ->
+        {:ok,
+         Enum.map(
+           recordings,
+           &Recording.Download.new(&1, ExNVR.Utils.recording_dir(device.id))
+         )}
     end
   end
 
@@ -181,7 +191,7 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
       duration: :integer
     }
 
-    {%{}, types}
+    {%{duration: 0, end_date: ~U(2099-01-01 00:00:00Z)}, types}
     |> Changeset.cast(params, Map.keys(types))
     |> Changeset.validate_required([:start_date])
     |> Changeset.validate_number(:duration, greater_than: 5, less_than_or_equal_to: 7200)
