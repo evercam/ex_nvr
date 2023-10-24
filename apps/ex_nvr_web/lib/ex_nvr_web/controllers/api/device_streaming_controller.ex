@@ -83,25 +83,19 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
     end
   end
 
-  defp serve_snapshot_from_recorded_videos(conn, params) do
+  defp serve_snapshot_from_recorded_videos(conn, %{time: time} = params) do
     device = conn.assigns.device
+    recording_dir = ExNVR.Utils.recording_dir(device.id)
 
-    case ExNVR.Recordings.get_recordings_between(device.id, params.time, params.time) do
-      [] ->
-        {:error, :not_found}
-
-      [recording] ->
-        {:ok, snapshot} =
-          ExNVR.Recordings.Snapshooter.snapshot(
-            recording,
-            ExNVR.Utils.recording_dir(device.id),
-            params.time,
-            method: params.method
-          )
-
-        conn
-        |> put_resp_content_type("image/#{params.format}")
-        |> send_resp(:ok, snapshot)
+    with [recording] <- Recordings.get_recordings_between(device.id, time, time),
+         {:ok, timestamp, snapshot} <-
+           Recordings.Snapshooter.snapshot(recording, recording_dir, time, method: params.method) do
+      conn
+      |> put_resp_header("x-timestamp", "#{DateTime.to_unix(timestamp, :millisecond)}")
+      |> put_resp_content_type("image/jpeg")
+      |> send_resp(:ok, snapshot)
+    else
+      [] -> {:error, :not_found}
     end
   end
 

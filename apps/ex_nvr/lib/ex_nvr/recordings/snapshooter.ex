@@ -9,7 +9,8 @@ defmodule ExNVR.Recordings.Snapshooter do
   alias Membrane.H264.FFmpeg.Decoder
   alias Membrane.Time
 
-  @spec snapshot(Recording.t(), DateTime.t(), Keyword.t()) :: {:ok, binary()} | {:error, term()}
+  @spec snapshot(Recording.t(), Path.t(), DateTime.t(), Keyword.t()) ::
+          {:ok, binary()} | {:error, term()}
   def snapshot(%Recording{} = recording, recording_dir, datetime, opts \\ []) do
     method = Keyword.get(opts, :method, :before)
     path = Path.join(recording_dir, recording.filename)
@@ -18,13 +19,25 @@ defmodule ExNVR.Recordings.Snapshooter do
     with {:ok, mp4_reader} <- Reader.new(path),
          {track_id, track} <- Reader.get_video_track(mp4_reader),
          mp4_reader <- Reader.seek_file(mp4_reader, track_id, seek_time),
-         {_reader, frames} <- read_frames(mp4_reader, track_id, method, seek_time) do
-      result = do_get_snapshot(frames, track)
+         {_reader, frames} <- read_frames(mp4_reader, track_id, method, seek_time),
+         {:ok, snapshot} <- do_get_snapshot(frames, track) do
       Reader.close(mp4_reader)
 
-      result
+      start_date =
+        if method == :before do
+          DateTime.add(
+            recording.start_date,
+            Time.as_milliseconds(List.first(frames).dts, :round),
+            :millisecond
+          )
+        else
+          datetime
+        end
+
+      {:ok, start_date, snapshot}
     else
       nil -> {:error, :no_video_track}
+      other -> other
     end
   end
 
