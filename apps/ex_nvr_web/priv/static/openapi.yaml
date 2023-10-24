@@ -363,12 +363,13 @@ paths:
       responses:
         '200':
           description: success
+          headers:
+            x-timestamp:
+              schema: 
+                type: integer
+              description: Timestamp of the snapshot in milliseconds since unix epoch.
           content:
             image/jpeg:
-              schema:
-                type: string
-                format: byte
-            image/png:
               schema:
                 type: string
                 format: byte

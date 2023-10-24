@@ -8,7 +8,7 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
   require Logger
 
   alias Ecto.Changeset
-  alias ExNVR.Pipelines.{HlsPlayback, Main, Snapshot}
+  alias ExNVR.Pipelines.{HlsPlayback, Main}
   alias ExNVR.{HLS, Model.Recording, Recordings, Utils}
 
   @type return_t :: Plug.Conn.t() | {:error, Changeset.t()}
@@ -83,31 +83,19 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
     end
   end
 
-  defp serve_snapshot_from_recorded_videos(conn, params) do
+  defp serve_snapshot_from_recorded_videos(conn, %{time: time} = params) do
     device = conn.assigns.device
+    recording_dir = ExNVR.Utils.recording_dir(device.id)
 
-    case ExNVR.Recordings.get_recordings_between(device.id, params.time, params.time) do
-      [] ->
-        {:error, :not_found}
-
-      _ ->
-        options = [
-          device_id: device.id,
-          date: params.time,
-          method: params.method,
-          format: params.format
-        ]
-
-        Snapshot.start(options)
-
-        receive do
-          {:snapshot, snapshot} ->
-            conn
-            |> put_resp_content_type("image/#{params.format}")
-            |> send_resp(:ok, snapshot)
-        after
-          10_000 -> {:error, :not_found}
-        end
+    with [recording] <- Recordings.get_recordings_between(device.id, time, time),
+         {:ok, timestamp, snapshot} <-
+           Recordings.Snapshooter.snapshot(recording, recording_dir, time, method: params.method) do
+      conn
+      |> put_resp_header("x-timestamp", "#{DateTime.to_unix(timestamp, :millisecond)}")
+      |> put_resp_content_type("image/jpeg")
+      |> send_resp(:ok, snapshot)
+    else
+      [] -> {:error, :not_found}
     end
   end
 
