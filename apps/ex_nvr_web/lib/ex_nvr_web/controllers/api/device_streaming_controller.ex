@@ -13,6 +13,8 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
 
   @type return_t :: Plug.Conn.t() | {:error, Changeset.t()}
 
+  @default_end_date ~U(2099-01-01 00:00:00Z)
+
   @spec hls_stream(Plug.Conn.t(), map()) :: return_t()
   def hls_stream(conn, params) do
     with {:ok, params} <- validate_hls_stream_params(params) do
@@ -121,8 +123,8 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
         Recordings.VideoAssembler.Native.assemble_recordings(
           recordings,
           DateTime.to_unix(params.start_date, :millisecond),
-          DateTime.to_unix(params.end_date, :millisecond),
-          params.duration,
+          DateTime.to_unix(params.end_date || @default_end_date, :millisecond),
+          params.duration || 0,
           destination
         )
 
@@ -138,7 +140,10 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
   end
 
   defp get_recordings(device, params) do
-    case Recordings.get_recordings_between(device.id, params.start_date, params.end_date,
+    case Recordings.get_recordings_between(
+           device.id,
+           params.start_date,
+           params.end_date || @default_end_date,
            limit: 120
          ) do
       [] ->

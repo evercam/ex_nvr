@@ -10,7 +10,7 @@ defmodule ExNVR.Recordings.Snapshooter do
   alias Membrane.Time
 
   @spec snapshot(Recording.t(), Path.t(), DateTime.t(), Keyword.t()) ::
-          {:ok, binary()} | {:error, term()}
+          {:ok, DateTime.t(), binary()} | {:error, term()}
   def snapshot(%Recording{} = recording, recording_dir, datetime, opts \\ []) do
     method = Keyword.get(opts, :method, :before)
     path = Path.join(recording_dir, recording.filename)
