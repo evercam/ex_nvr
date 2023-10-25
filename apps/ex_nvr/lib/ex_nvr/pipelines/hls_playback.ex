@@ -43,21 +43,37 @@ defmodule ExNVR.Pipelines.HlsPlayback do
         device: options[:device],
         start_date: options[:start_date]
       })
-      |> via_out(:video)
-      |> child(:realtimer, ExNVR.Elements.Realtimer)
-      |> via_in(Pad.ref(:video, :playback), options: [resolution: options[:resolution]])
-      |> child(:sink, %Output.HLS{
-        location: options[:directory],
-        segment_name_prefix: options[:segment_name_prefix]
-      })
     ]
 
-    {[spec: spec], %{caller: nil}}
+    state = %{
+      directory: options[:directory],
+      segment_name_prefix: options[:segment_name_prefix],
+      resolution: options[:resolution],
+      caller: nil
+    }
+
+    {[spec: spec], state}
   end
 
   @impl true
   def handle_setup(_ctx, state) do
     {[setup: :incomplete], state}
+  end
+
+  @impl true
+  def handle_child_notification({:track, _track}, :source, _ctx, state) do
+    spec = [
+      get_child(:source)
+      |> via_out(:video)
+      |> child(:realtimer, Membrane.Realtimer)
+      |> via_in(Pad.ref(:video, :playback), options: [resolution: state.resolution])
+      |> child(:sink, %Output.HLS{
+        location: state.directory,
+        segment_name_prefix: state.segment_name_prefix
+      })
+    ]
+
+    {[spec: spec], state}
   end
 
   @impl true

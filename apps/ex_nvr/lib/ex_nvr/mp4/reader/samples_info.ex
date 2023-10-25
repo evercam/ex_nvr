@@ -2,6 +2,7 @@ defmodule ExNVR.MP4.Reader.SamplesInfo do
   @moduledoc false
 
   alias Membrane.Time
+  alias Membrane.{H264, H265}
   alias Membrane.MP4.Container
   alias Membrane.MP4.MovieBox.SampleTableBox
   alias Membrane.MP4.Track.SampleTable
@@ -40,12 +41,12 @@ defmodule ExNVR.MP4.Reader.SamplesInfo do
           sample_tables: %{(track_id :: pos_integer()) => SampleTable.t()}
         }
 
-  @spec get_video_track(t()) :: {non_neg_integer(), Membrane.H264.t()} | nil
+  @spec get_video_track(t()) :: {non_neg_integer(), Membrane.H264.t() | Membrane.H265.t()} | nil
   def get_video_track(samples_info) do
     Enum.find_value(samples_info.sample_tables, nil, fn {track_id, sample_table} ->
       case sample_table.sample_description do
-        %Membrane.H264{} = h264 ->
-          {track_id, h264}
+        %module{} = h26x when module in [H264, H265] ->
+          {track_id, h26x}
 
         _other ->
           nil

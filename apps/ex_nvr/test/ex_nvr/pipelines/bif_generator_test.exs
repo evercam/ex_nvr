@@ -10,25 +10,30 @@ defmodule ExNVR.Pipelines.BifGeneratorTest do
   setup ctx do
     device = device_fixture(%{settings: %{storage_address: ctx.tmp_dir}})
 
-    recording_fixture(device,
-      start_date: ~U(2023-06-23 10:00:00Z),
-      end_date: ~U(2023-06-23 10:00:05Z)
-    )
-
-    recording_fixture(device,
-      start_date: ~U(2023-06-23 10:00:05Z),
-      end_date: ~U(2023-06-23 10:00:10Z)
-    )
-
-    recording_fixture(device,
-      start_date: ~U(2023-06-23 10:00:10Z),
-      end_date: ~U(2023-06-23 10:00:15Z)
-    )
-
     {:ok, device: device}
   end
 
-  test "generate BIF files", %{device: device, tmp_dir: tmp_dir} do
+  test "generate BIF files for H264 compressed video", %{device: device, tmp_dir: tmp_dir} do
+    generate_recordings(device, :H264)
+    perform_test(device, tmp_dir)
+  end
+
+  test "generate BIF files for H265 compressed video", %{device: device, tmp_dir: tmp_dir} do
+    generate_recordings(device, :H265)
+    perform_test(device, tmp_dir)
+  end
+
+  defp generate_recordings(device, encoding) do
+    for i <- 0..2 do
+      recording_fixture(device,
+        start_date: DateTime.add(~U(2023-06-23 10:00:00Z), i * 5),
+        end_date: DateTime.add(~U(2023-06-23 10:00:05Z), i * 5),
+        encoding: encoding
+      )
+    end
+  end
+
+  defp perform_test(device, tmp_dir) do
     out_file = Path.join(tmp_dir, "generated.bif")
 
     pid =

@@ -12,7 +12,7 @@ defmodule ExNVR.Pipeline.Output.Bif do
   use Membrane.Bin
 
   alias ExNVR.Pipeline.Output.Bif.{Archiver, KeyFrameSelector}
-  alias Membrane.{FFmpeg, File, H264}
+  alias Membrane.{FFmpeg, File, H264, H265}
 
   def_options location: [
                 spec: Path.t(),
@@ -27,11 +27,15 @@ defmodule ExNVR.Pipeline.Output.Bif do
                 spec: non_neg_integer(),
                 default: 320,
                 description: "The width of the generated thumbnails"
+              ],
+              encoding: [
+                spec: :H264 | :H265,
+                description: "The codec used to compress the frames"
               ]
 
   def_input_pad :input,
     demand_unit: :buffers,
-    accepted_format: %H264{alignment: :au},
+    accepted_format: any_of(%H264{alignment: :au}, %H265{alignment: :au}),
     availability: :always
 
   @impl true
@@ -40,7 +44,7 @@ defmodule ExNVR.Pipeline.Output.Bif do
       bin_input()
       |> child(:key_frame_filter, %KeyFrameSelector{interval: options.interval})
       |> via_in(:input, auto_demand_size: 10)
-      |> child(:decoder, %H264.FFmpeg.Decoder{use_shm?: true})
+      |> child(:decoder, get_decoder(options.encoding))
       |> child(:scaler, %FFmpeg.SWScale.Scaler{output_width: options.image_width, use_shm?: true})
       |> child(:image_encoder, Turbojpeg.Filter)
       |> child(:archiver, Archiver)
@@ -59,4 +63,7 @@ defmodule ExNVR.Pipeline.Output.Bif do
   def handle_element_end_of_stream(_element, _pad, _ctx, state) do
     {[], state}
   end
+
+  defp get_decoder(:H264), do: %H264.FFmpeg.Decoder{use_shm?: true}
+  defp get_decoder(:H265), do: %H265.FFmpeg.Decoder{use_shm?: true}
 end
