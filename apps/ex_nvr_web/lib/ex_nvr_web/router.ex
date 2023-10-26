@@ -90,9 +90,10 @@ defmodule ExNVRWeb.Router do
     live_dashboard "/live-dashboard", metrics: ExNVRWeb.Telemetry
 
     live_session :require_authenticated_user,
-      on_mount: [
-        {ExNVRWeb.UserAuth, :ensure_authenticated}
-      ] do
+      on_mount: [{ExNVRWeb.UserAuth, :ensure_authenticated}] do
+      live "/users", UserListLive, :list
+      live "/users/:id", UserLive, :edit
+
       live "/dashboard", DashboardLive, :new
 
       live "/devices", DeviceListLive, :list
