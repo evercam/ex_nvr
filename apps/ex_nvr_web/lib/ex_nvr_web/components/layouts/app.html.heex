@@ -113,6 +113,7 @@
               <span class="ml-3">Dashboard</span>
             </.link>
           </li>
+          <%= if @current_user.role == :admin do %>
           <li>
             <.link
               href={~p"/users"}
@@ -132,6 +133,7 @@
               <span class="ml-3">Users </span>
             </.link>
           </li>
+          <%= end %>
           <li>
             <.link
               href={~p"/recordings"}
