@@ -14,60 +14,43 @@ defmodule ExNVR.Pipelines.VideoAssemblerTest do
 
   setup ctx do
     device = device_fixture(%{settings: %{storage_address: ctx.tmp_dir}})
+    device2 = device_fixture(%{settings: %{storage_address: ctx.tmp_dir}})
 
-    recording1 =
-      recording_fixture(device,
-        start_date: ~U(2023-06-23 10:00:00Z),
-        end_date: ~U(2023-06-23 10:00:05Z)
-      )
+    dates = [
+      {~U(2023-06-23 10:00:00Z), ~U(2023-06-23 10:00:05Z)},
+      {~U(2023-06-23 10:00:05Z), ~U(2023-06-23 10:00:10Z)},
+      {~U(2023-06-23 10:00:13Z), ~U(2023-06-23 10:00:18Z)}
+    ]
 
-    recording2 =
-      recording_fixture(device,
-        start_date: ~U(2023-06-23 10:00:05Z),
-        end_date: ~U(2023-06-23 10:00:10Z)
-      )
+    recordings =
+      for {start_date, end_date} <- dates do
+        recording_fixture(device, start_date: start_date, end_date: end_date)
+      end
 
-    recording3 =
-      recording_fixture(device,
-        start_date: ~U(2023-06-23 10:00:13Z),
-        end_date: ~U(2023-06-23 10:00:18Z)
-      )
+    hevc_recordings =
+      for {start_date, end_date} <- dates do
+        recording_fixture(device2, start_date: start_date, end_date: end_date, encoding: :H265)
+      end
 
-    {:ok, device: device, recordings: [recording1, recording2, recording3]}
+    {:ok, devices: {device, device2}, recordings: recordings, hevc_recordings: hevc_recordings}
   end
 
   describe "Assemble video files when" do
-    test "providing start date and end date", %{device: device, tmp_dir: tmp_dir} do
-      destination = Path.join(tmp_dir, "output.mp4")
-
-      pid =
-        prepare_pipeline(device,
-          start_date: ~U(2023-06-23 10:00:02Z),
-          end_date: ~U(2023-06-23 10:00:15Z),
-          destination: destination
-        )
-
-      assert_pipeline_play(pid)
-      assert_end_of_stream(pid, :sink)
-      assert File.exists?(destination)
+    test "providing start date and end date", %{devices: {device, device2}, tmp_dir: tmp_dir} do
+      perform_test(device, tmp_dir, ~U(2023-06-23 10:00:15Z), 0)
+      perform_test(device2, tmp_dir, ~U(2023-06-23 10:00:15Z), 0)
     end
 
-    test "providing start date and duration", %{device: device, tmp_dir: tmp_dir} do
-      destination = Path.join(tmp_dir, "output.mp4")
-
-      pid =
-        prepare_pipeline(device,
-          start_date: ~U(2023-06-23 10:00:03Z),
-          duration: Membrane.Time.seconds(10),
-          destination: destination
-        )
-
-      assert_pipeline_play(pid)
-      assert_end_of_stream(pid, :sink)
-      assert File.exists?(destination)
+    test "providing start date and duration", %{devices: {device, device2}, tmp_dir: tmp_dir} do
+      perform_test(device, tmp_dir, ~U(2099-01-01 00:00:00Z), Membrane.Time.seconds(10))
+      perform_test(device2, tmp_dir, ~U(2099-01-01 00:00:00Z), Membrane.Time.seconds(10))
     end
 
-    test "using native assembler", %{device: device, recordings: recordings, tmp_dir: tmp_dir} do
+    test "using native assembler", %{
+      devices: {device, _},
+      recordings: recordings,
+      tmp_dir: tmp_dir
+    } do
       rec =
         Enum.map(
           recordings,
@@ -90,6 +73,22 @@ defmodule ExNVR.Pipelines.VideoAssemblerTest do
       assert File.exists?(destination)
       assert_in_delta(real_start_date, start_date, 1100)
     end
+  end
+
+  defp perform_test(device, tmp_dir, end_date, duration) do
+    destination = Path.join(tmp_dir, "output.mp4")
+
+    pid =
+      prepare_pipeline(device,
+        start_date: ~U(2023-06-23 10:00:03Z),
+        end_date: end_date,
+        duration: duration,
+        destination: destination
+      )
+
+    assert_pipeline_play(pid)
+    assert_end_of_stream(pid, :sink)
+    assert File.exists?(destination)
   end
 
   defp prepare_pipeline(device, options) do
