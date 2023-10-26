@@ -52,6 +52,15 @@ defmodule ExNVR.Accounts.User do
     |> validate_password(opts)
   end
 
+  def update_changeset(user, attrs, opts \\ []) do
+    user
+    |> cast(attrs, [:email, :password, :first_name, :last_name, :language, :role])
+    |> validate_user_full_name(opts)
+    |> validate_email(opts)
+    |> validate_user_language(opts)
+    |> validate_password(opts)
+  end
+
   @doc """
   A user changeset for changing the email.
 
