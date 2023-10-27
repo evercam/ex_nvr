@@ -100,7 +100,7 @@ defmodule ExNVRWeb.Router do
 
       live "/recordings", RecordingListLive, :list
 
-      live "/users/settings", UserSettingsLive, :edit
+      live "/me/settings", UserSettingsLive, :edit
       live "/users/settings/confirm-email/:token", UserSettingsLive, :confirm_email
     end
   end
@@ -121,7 +121,7 @@ defmodule ExNVRWeb.Router do
   scope "/", ExNVRWeb do
     pipe_through [:browser]
 
-    delete "/users/logout", UserSessionController, :delete
+    delete "/me/logout", UserSessionController, :delete
 
     live_session :current_user,
       on_mount: [{ExNVRWeb.UserAuth, :mount_current_user}] do
