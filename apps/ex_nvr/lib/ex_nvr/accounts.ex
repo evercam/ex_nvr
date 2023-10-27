@@ -35,6 +35,13 @@ defmodule ExNVR.Accounts do
     |> Repo.update()
   end
 
+  def delete_user(%User{} = user) do
+    Ecto.Multi.new()
+    |> Ecto.Multi.delete_all(:tokens, UserToken.user_and_contexts_query(user, :all))
+    |> Ecto.Multi.delete(:users, user)
+    |> Repo.transaction()
+  end
+
   def change_user_registration(%User{} = user, attrs \\ %{}) do
     User.registration_changeset(user, attrs)
   end
