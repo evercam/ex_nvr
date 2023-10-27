@@ -3,7 +3,6 @@ defmodule ExNVRWeb.UserListLive do
 
   use ExNVRWeb, :live_view
 
-  alias ExNVR.Accounts.User
   alias ExNVR.Accounts
 
   def render(assigns) do
@@ -101,9 +100,10 @@ defmodule ExNVRWeb.UserListLive do
 
   def handle_event("delete", %{"id" => id}, socket) do
     user = Accounts.get_user!(id)
+    email = user.email
     case Accounts.delete_user(user) do
       {:ok, _deleted_user} ->
-        info = "User has been deleted"
+        info = "User: '#{email}' has been deleted"
 
         socket
         |> assign(confirm_delete: false)
