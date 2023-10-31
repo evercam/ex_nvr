@@ -1,0 +1,603 @@
+openapi: 3.0.0
+info:
+  title: ExNVR API
+  description: Manage ExNVR via API endpoints
+  version: 0.5.0
+servers:
+  - url: '{protocol}://{host}:{port}'
+    variables:
+      protocol:
+        enum: [http, https]
+        default: http
+      host:
+        default: localhost
+      port:
+        default: "4000"
+paths:
+  /api/users/login:
+    post:
+      summary: Login user
+      description: |
+        Login the user into the system
+
+        The issued access token has a validity of `2 days`.
+      operationId: login
+      tags:
+        - User
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+              required: [username, password]
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                    description: An access token to use to authorize subsequent requests
+        '400':
+          $ref: "#/components/responses/BadArg"
+  /api/devices:
+    get: 
+      summary: Get all devices.
+      description: Get all existing devices.
+      operationId: getDevices
+      tags:
+        - Device
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Device'
+    post:
+      summary: Create device
+      description: |
+        Create a new device.
+
+        Once the device is created, a pipeline will be started and will attempt to connect and 
+        retrieve a stream from it.
+      operationId: createDevice
+      tags:
+        - Device
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: Device name
+                type:
+                  type: string
+                  enum: [ip, file]
+                  description: Device type
+                timezone:
+                  type: string
+                  description: Device timezone
+                  default: UTC
+                state:
+                  type: string
+                  enum: ["recording", "stopped"]
+                  default: recording
+                  description: |
+                    Initial state of the device.
+
+                    * `recording` - The device will attempt connecting and recording videos
+                    on creation
+                    * `stopped` - The device will be created and will not try to connect or record
+                    videos.
+                stream_config:
+                  $ref: "#/components/schemas/StreamConfig"
+                credentials:
+                  $ref: "#/components/schemas/Credentials"
+              required: [name, type]
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Device'
+        '400':
+          $ref: "#/components/responses/BadArg"
+  /api/devices/{device_id}:
+    parameters:
+      - $ref: '#/components/parameters/device_id'
+    get: 
+      summary: Get device
+      description: Get device by id.
+      operationId: getDevice
+      tags:
+        - Device
+      responses:
+        '200':
+            description: Success
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/Device'
+        '404':
+          $ref: "#/components/responses/NotFound"
+    put:
+      summary: Update device
+      description: |
+        Update device details.
+
+        If the device config (e.g. `stream_config`) is updated, the pipeline is restarted 
+        to pick up the new configuration.
+      operationId: updateDevice
+      tags:
+        - Device
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: Device name
+                timezone:
+                  type: string
+                  description: Device timezoned
+                  default: UTC
+                state:
+                  type: string
+                  enum: ["recording", "stopped"]
+                  default: recording
+                  description: |
+                    Initial state of the device.
+
+                    * `recording` - The device will attempt connecting and recording videos
+                    on creation
+                    * `stopped` - The device will be created and will not try to connect or record
+                    videos.
+                stream_config:
+                  $ref: "#/components/schemas/StreamConfig"
+                credentials:
+                  $ref: "#/components/schemas/Credentials"
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Device'
+        '400':
+          $ref: "#/components/responses/BadArg"
+  /api/devices/{device_id}/recordings:
+    get:
+      summary: Get recordings
+      description: Get all dates where there's available footages
+      operationId: getRecordings
+      tags:
+        - Recording
+      parameters:
+        - $ref: '#/components/parameters/device_id'
+        - name: start_date
+          in: query
+          required: false
+          description: Filter by start date
+          schema:
+            type: string
+            format: date-time
+          example: 2023-01-15T10:00:01Z
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    start_date:
+                      type: string
+                      format: date-time
+                      description: The start date of the run
+                    end_date:
+                      type: string
+                      format: date-time
+                      description: The end date of the run
+                    active:
+                      type: boolean
+                      description: |
+                        `true` if this an active run (still recording), `false` otherwise
+        '400':
+          $ref: "#/components/responses/BadArg"
+  /api/devices/{device_id}/recordings/{recording_id}/blob:
+    get:
+      summary: Get recording blob
+      description: | 
+        Download the video chunk with the specified `recording id` in the specified `device`
+      operationId: getRecordingBlob
+      tags:
+        - Recording
+      parameters:
+        - $ref: '#/components/parameters/device_id'
+        - $ref: '#/components/parameters/recording_id'
+      responses:
+        '200':
+          description: Success
+          content:
+            video/mp4:
+              schema:
+                type: string
+                format: binary
+        '400':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: The error message
+  /api/devices/{device_id}/hls/index.m3u8:
+    get:
+      summary: Start HLS streaming
+      description: | 
+        Start HLS live view streaming or playback of recorded videos.
+
+        By default, there'll be no transcoding since we currently only support H264, the stream is 
+        muxed as it is into fMP4 files.
+
+        If the device has sub stream provided, the manifest will also contain the lower resolution.
+
+        For playback, only the high resolution stream can be provided, since we don't support storing
+        sub-streams to file system.
+
+        ## Stream Selection
+
+        if the `stream` query parameter is provided, only the requested stream will be included in the 
+        manifest. 
+        
+        Note that we don't do any checks on the existence of the requested stream (e.g. if you 
+        request the sub stream and the device has no sub stream, then you'll get an empty manifest).
+      operationId: startHlsStreaming
+      tags:
+        - Media Streaming
+      parameters:
+        - $ref: '#/components/parameters/device_id'
+        - name: pos
+          in: query
+          description: |
+            Start streaming from the given date time.
+
+            If this `param` is provided, only high quality is enabled 
+          schema:
+            type: string
+            format: date-time
+        - name: stream
+          in: query
+          description: |
+            Request the main/sub stream.
+
+            `0` will return only the main stream, `1` will return only the sub-stream
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 1
+        - name: resolution
+          in: query
+          description: |
+            The resolution (height) of the video, defaults to `nil`. If provided the video will be
+            trancoded.
+
+            Transcoding is a CPU intensive operation.
+          schema:
+            type: integer
+            enum: [240, 480, 640, 720, 1080] 
+      responses:
+        '200':
+          description: Success
+          content:
+            application/vnd.apple.mpegurl:
+              schema:
+                type: string
+  /api/devices/{device_id}/snapshot:
+    get:
+      summary: Get snapshot
+      description: |
+        Get a snapshot from live feed or the recorded videos
+      operationId: getSnapshot
+      tags:
+        - Media Streaming
+      parameters:
+        - $ref: '#/components/parameters/device_id'
+        - name: time
+          in: query
+          required: false
+          description: |
+            Timestamp of the requested snapshot.
+
+            A missing or `null` value means `now`, the latest snapshot from the live feed. 
+          schema:
+            type: string
+            format: date-time
+          example: '2023-10-10T10:00:00Z'
+        - name: method
+          in: query
+          required: false
+          description: |
+            Getting a snapshot at the exact timestamp is costly, so, it can be rounded 
+            to the nearest keyframe, thus, the default value is "before".
+
+            Possible values are:
+              * `before` - Get the snapshot from the nearest keyframe before the requested timestamp.
+              * `precise` - Get the snapshot as near as possible from the requested timestamp.
+          schema:
+            type: string
+            enum: [before, precise]
+        - name: format
+          in: query
+          required: false
+          description: Image format
+          schema:
+            type: string
+            enum: [jpeg]
+      responses:
+        '200':
+          description: success
+          headers:
+            x-timestamp:
+              schema: 
+                type: integer
+              description: Timestamp of the snapshot in milliseconds since unix epoch.
+          content:
+            image/jpeg:
+              schema:
+                type: string
+                format: byte
+        '400':
+          $ref: '#/components/responses/NotFound'
+  /api/devices/{device_id}/footage:
+    get:
+      summary: Download video footage
+      description: |
+        Download footages in the `mp4` format up to a maximum of 2 hours.
+
+        ### Duration and End date
+        
+        In addition to the query parameter `start_date` which is required, either `end_date` 
+        or `duration` should be provided.
+
+        If the `end_date` is provided, the total time between `start_date` and `end_date` should be within 
+        2 hours.
+
+        ### Downloaded Footage Start Date
+        
+        Note that for this endpoint to be efficient, there's no transcoding done 
+        to the recorded footage. So the start date of the downloaded video may not
+        be the same as the requested one through `start_date` since we need to 
+        start the footage from the nearest keyframe before the provided start date.
+
+        ### Recording Discontinuity
+
+        A discontinuity in the recorded videos may be present due to several reasons (e.g. lost 
+        connection to the camera, NVR reboot, ...etc.). In this case the video duration may not be 
+        the one expected.
+
+        In the case `end_date` is provided, the interval between `start_date` and `end_date` will be greater
+        or equal to the duration of the downloaded video
+
+        In the case `duration` is provided, the end date reported in the downloaded video may be far from 
+        the `start_date + duration`.
+      operationId: downloadFootage
+      tags:
+        - Media Streaming
+      parameters:
+        - $ref: '#/components/parameters/device_id'
+        - name: start_date
+          in: query
+          required: true
+          description: |
+            Start date of the footage.
+          schema:
+            type: string
+            format: date-time
+        - name: end_date
+          in: query
+          required: false
+          description: |
+            The end date of the footage.
+
+            If `end_date` and `duration` is provided, the first condition
+            that's met will end the video footage.
+          schema:
+            type: string
+            format: date-time
+        - name: duration
+          in: query
+          required: false
+          description: | 
+            The duration of the footage in seconds.
+
+            If `end_date` and `duration` is provided, the first condition
+            that's met will end the video footage.
+          schema:
+            type: integer
+            minimum: 5
+            maximum: 7200
+      responses:
+        '200':
+          description: success
+          headers:
+            x-start-date:
+              schema: 
+                type: integer
+              description: |
+                Since the video must start from the nearest keyframe before the requested start date. 
+                
+                This header reports the actual start date in milliseconds unix timestamp.
+          content:
+            video/mp4:
+              schema:
+                type: string
+                format: binary
+        '400':
+          $ref: '#/components/responses/BadArg'
+  /api/devices/{device_id}/bif/{hour}:
+    get:
+      summary: Download BIF file
+      description: |
+        Download [BIF](https://developer.roku.com/en-gb/docs/developer-program/media-playback/trick-mode/bif-file-creation.md) (Base Index Frames) files.
+
+        `BIF` files are used for trick mode (play) and generated perdiocally on a 1-hour increments, therefore
+        they're not available for live content or content that's not older than one hour.
+      operationId: downloadBif
+      tags:
+        - Media Streaming
+      parameters:
+        - $ref: '#/components/parameters/device_id'
+        - name: hour
+          in: path
+          required: true
+          description: |
+            The hour of the BIF file.
+          schema:
+            type: string
+            format: date-time
+            example: 2023-08-31T13:00:00Z
+      responses:
+        '200':
+          description: success
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: byte
+        '400':
+          $ref: '#/components/responses/BadArg'
+        '404':
+          $ref: '#/components/responses/NotFound'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: opaque
+  schemas:
+    Device:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Device ID
+        name:
+          type: string
+          description: Device name
+        type:
+          type: string
+          enum: [ip, file]
+          description: Device type
+        timezone:
+          type: string
+        state:
+          type: string
+          enum: [recording, failed, stopped]
+          description: Device state
+        stream_config:
+          $ref: "#/components/schemas/StreamConfig"
+        credentials:
+          $ref: "#/components/schemas/Credentials"
+    StreamConfig:
+      type: object
+      description: Device stream configuration
+      properties:
+        stream_uri:
+          type: string
+          format: uri
+          description: The RTSP URL where to get the video stream (Only when Device type is ip)
+        substream_uri:
+          type: string
+          format: uri
+          description: The RTSP URL where to get the video sub-stream (Only when Device type is ip)
+        location: 
+          type: string
+          format: path
+          description: The Path of the file location to be used as a streaming source (Only when Device type is file)
+    Credentials:
+      type: object
+      description: Streaming Device credentials (Only when Device type is ip)
+      properties:
+        username:
+          type: string
+          description: Username to authenticate
+        password:
+          type: string
+          format: password
+          description: Password to authenticate
+    Error:
+      type: object
+      properties:
+        code:
+          type: string
+          description: A unique error code
+        description:
+          type: string
+          description: The description of the error
+        details:
+          type: object
+          description: Other details related to the error.
+  parameters:
+    device_id:
+      name: device_id
+      description: The id of the device
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      example: d0d83123-b3af-48b0-b9ea-2569179a7517
+    recording_id:
+      name: recording_id
+      description: The filename of the recording
+      in: path
+      required: true
+      schema:
+        type: string
+      example: 11236565645.mp4
+  responses:
+    BadArg:
+      description: Bad Arguments
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    NotFound:
+        description: Not Found
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+security:
+  - bearerAuth: []
