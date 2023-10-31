@@ -17,6 +17,7 @@ defmodule ExNVRWeb.DeviceListLive do
 
       <.table id="devices" rows={@devices}>
         <:col :let={device} label="Id"><%= device.id %></:col>
+        <:col :let={device} label="Type"><%= get_type_label(device.type) %></:col>
         <:col :let={device} label="Name"><%= device.name %></:col>
         <:col :let={device} label="Timezone"><%= device.timezone %></:col>
         <:col :let={device} label="State">
@@ -119,4 +120,7 @@ defmodule ExNVRWeb.DeviceListLive do
       _other -> {:noreply, put_flash(socket, :error, "could not update device state")}
     end
   end
+
+  defp get_type_label(:ip), do: "IP Camera"
+  defp get_type_label(:file), do: "File"
 end
