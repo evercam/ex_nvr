@@ -12,10 +12,15 @@ defmodule ExNVRWeb.DeviceLive do
     changeset = Devices.change_device_creation(%Device{})
 
     {:ok,
-     assign(socket,
+     socket
+     |> assign(
        device: %Device{},
        disks_data: get_disks_data(),
        device_form: to_form(changeset)
+     )
+     |> allow_upload(:file_to_upload,
+       accept: ~w(video/mp4),
+       max_file_size: 1_000_000_000
      )}
   end
 

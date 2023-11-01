@@ -12,7 +12,7 @@
     >
       Update a device
     </h3>
-    <.simple_form id="device_form" for={@device_form} class="space-y-6" phx-submit="save_device">
+    <.simple_form id="device_form" for={@device_form} class="space-y-6" phx-submit="save_device" phx-change="validate">
       <.input
         field={@device_form[:name]}
         type="text"
@@ -78,13 +78,12 @@
                   else: ["hidden"]
               }
             >
-              <.input
-                field={config[:location]}
-                id="config_file_location"
-                type="text"
-                label="File Location"
-                placeholder="/Users/me/Desktop/FileStreams/Stream1.mp4"
-                required={@device && @device.type == :file}
+              <label for={@uploads.file_to_upload.ref} class="block text-gray-800 dark:text-white font-medium">
+              File
+              </label>
+              <.live_file_input
+                class="w-full dark:text-white dark:bg-gray-700 rounded-lg"
+                upload={@uploads.file_to_upload}
               />
             </div>
           </.inputs_for>
