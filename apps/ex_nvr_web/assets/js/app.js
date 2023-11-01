@@ -117,10 +117,13 @@ toggleDeviceConfigInputs = (event) => {
     var ipStreamUriInput = document.getElementById("config_stream_uri")
     var fileConfigInputs = document.getElementById("file_config_inputs");
     var fileLocationInput = document.getElementById("config_file_location")
+    var credentialsInputs = document.getElementById("credentials_inputs");
     
     if (selectElement.value === "ip") {
         ipConfigInputs.classList.remove("hidden");
         ipConfigInputs.required == true
+
+        credentialsInputs.classList.remove("hidden");
 
         fileConfigInputs.classList.add("hidden");
         fileLocationInput.required = false
@@ -128,6 +131,8 @@ toggleDeviceConfigInputs = (event) => {
         ipConfigInputs.classList.add("hidden");
         
         ipStreamUriInput.required = false
+
+        credentialsInputs.classList.add("hidden");
 
         fileConfigInputs.classList.remove("hidden");
         fileConfigInputs.required = true
