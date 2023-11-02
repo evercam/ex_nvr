@@ -35,8 +35,11 @@ defmodule ExNVRWeb.DeviceLive do
      )}
   end
 
-  def handle_event("change_device_type", _params, socket) do
-    {:noreply, push_event(socket, "toggle-device-config-inputs", %{})}
+  def handle_event("validate", %{"device" => device_params}, socket) do
+    %Device{}
+    |> Devices.change_device_creation(device_params)
+    |> then(&assign(socket, device_form: to_form(&1)))
+    |> then(&{:noreply, push_event(&1, "device-form-change", %{})})
   end
 
   def handle_event("save_device", %{"device" => device_params}, socket) do
@@ -48,7 +51,10 @@ defmodule ExNVRWeb.DeviceLive do
   end
 
   defp do_save_device(socket, device_params) do
-    case Devices.create(device_params) do
+    socket
+    |> handle_uploaded_file(device_params)
+    |> Devices.create()
+    |> case do
       {:ok, device} ->
         info = "Device created successfully"
         DeviceSupervisor.start(device)
@@ -60,10 +66,21 @@ defmodule ExNVRWeb.DeviceLive do
 
       {:error, changeset} ->
         {:noreply,
-         assign(push_event(socket, "toggle-device-config-inputs", %{}),
+         assign(push_event(socket, "device-form-change", %{}),
            device_form: to_form(changeset)
          )}
     end
+  end
+
+  defp handle_uploaded_file(socket, device_params) do
+    [file_path] =
+      consume_uploaded_entries(socket, :file_to_upload, fn %{path: path}, entry ->
+        dest = Path.join("/home/sid/Desktop", Path.basename(entry.client_name))
+        File.cp!(path, dest)
+        {:ok, dest}
+      end)
+
+    Kernel.put_in(device_params, ["stream_config", "location"], file_path)
   end
 
   defp do_update_device(socket, device, device_params) do
@@ -84,7 +101,7 @@ defmodule ExNVRWeb.DeviceLive do
 
       {:error, changeset} ->
         {:noreply,
-         assign(push_event(socket, "toggle-device-config-inputs", %{}),
+         assign(push_event(socket, "device-form-change", %{}),
            device_form: to_form(changeset)
          )}
     end

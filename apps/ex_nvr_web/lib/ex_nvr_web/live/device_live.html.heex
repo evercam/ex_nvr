@@ -12,7 +12,7 @@
     >
       Update a device
     </h3>
-    <.simple_form id="device_form" for={@device_form} class="space-y-6" phx-submit="save_device" phx-change="validate">
+    <.simple_form id="device_form" for={@device_form} class="space-y-6" phx-change="validate" phx-submit="save_device">
       <.input
         field={@device_form[:name]}
         type="text"
@@ -29,7 +29,6 @@
           label="Type"
           placeholder="Choose your device type"
           disabled={@device.id != nil}
-          phx-change="change_device_type"
         />
 
         <.input
