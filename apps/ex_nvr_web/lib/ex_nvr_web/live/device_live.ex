@@ -20,7 +20,8 @@ defmodule ExNVRWeb.DeviceLive do
      )
      |> allow_upload(:file_to_upload,
        accept: ~w(video/mp4),
-       max_file_size: 1_000_000_000
+       max_file_size: 1_000_000_000,
+       progress: &handle_progress/3
      )}
   end
 
@@ -70,6 +71,10 @@ defmodule ExNVRWeb.DeviceLive do
            device_form: to_form(changeset)
          )}
     end
+  end
+
+  defp handle_progress(:file_to_upload, entry, socket) do
+    {:noreply, push_event(socket, "device-form-change", %{})}
   end
 
   defp handle_uploaded_file(socket, device_params) do
