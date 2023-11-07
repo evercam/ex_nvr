@@ -206,12 +206,22 @@ defmodule ExNVR.Pipelines.Main do
         get_child(:video_tee)
         |> via_out(:copy)
         |> via_in(Pad.ref(:input, :main_stream), options: [media_track: track])
-        |> get_child(:webrtc)
+        |> get_child(:webrtc),
+        get_child(:video_tee)
+        |> via_out(:copy)
+        |> child({:object_detector, ssrc}, ExNVR.Elements.ObjectDetectionBin)
       ]
 
       video_tracks = put_elem(state.video_tracks, 0, track)
       {[spec: {spec, group: :main_stream}], %{state | video_tracks: video_tracks}}
     end
+  end
+
+  @impl true
+  def handle_child_notification({:detection, prediction}, _element, _ctx, state) do
+    IO.inspect("Main PIPELINE ============= #{prediction}")
+    Phoenix.PubSub.broadcast(ExNVR.PubSub, "detection", {:prediction, prediction})
+    {[], state}
   end
 
   @impl true

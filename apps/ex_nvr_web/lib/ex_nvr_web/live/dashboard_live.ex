@@ -1,4 +1,5 @@
 defmodule ExNVRWeb.DashboardLive do
+  require Membrane.Logger
   use ExNVRWeb, :live_view
 
   alias Ecto.Changeset
@@ -101,6 +102,12 @@ defmodule ExNVRWeb.DashboardLive do
             timezone={@timezone}
           />
         </div>
+
+        <div :if={@prediction} id="detection-container" class="text-center text-green-500">
+          <div class="bg-white inline-block px-2">
+            <p><%= @prediction %></p>
+          </div>
+        </div>
       </div>
 
       <.modal id="download-modal">
@@ -186,8 +193,18 @@ defmodule ExNVRWeb.DashboardLive do
       |> assign_runs()
       |> assign_timezone()
       |> maybe_push_stream_event(nil)
+      |> assign_prediction(nil)
+
+    if connected?(socket) do
+      Enum.each(socket.assigns.devices, fn device -> Phoenix.PubSub.subscribe(ExNVR.PubSub, "detection-#{device.id}") end)
+    end
 
     {:ok, assign(socket, start_date: nil, custom_duration: false)}
+  end
+
+  def handle_info({:prediction, prediction, _device_id}, socket) do
+    Membrane.Logger.error(prediction)
+    {:noreply, assign_prediction(socket, prediction)}
   end
 
   def handle_event("switch_device", %{"device" => device_id}, socket) do
@@ -454,5 +471,10 @@ defmodule ExNVRWeb.DashboardLive do
       [] -> Changeset.add_error(changeset, :start_date, "No recordings found")
       _recordings -> changeset
     end
+  end
+
+  defp assign_prediction(socket, prediction) do
+    socket
+    |> assign(prediction: prediction)
   end
 end
