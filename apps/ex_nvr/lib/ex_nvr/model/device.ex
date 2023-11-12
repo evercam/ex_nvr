@@ -66,7 +66,6 @@ defmodule ExNVR.Model.Device do
       field :duration, :integer
     end
 
-    @file_extension_whitelist ~w(.mp4 .flv .mkv)
 
     def changeset(struct, params, device_type) do
       struct
