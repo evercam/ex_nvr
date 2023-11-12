@@ -77,12 +77,20 @@
                   else: ["hidden"]
               }
             >
-              <label for={@uploads.file_to_upload.ref} class="block text-gray-800 dark:text-white font-medium">
+              <label :if={is_nil(@device.id)} for={@uploads.file_to_upload.ref} class="block text-gray-800 dark:text-white font-medium">
               File
               </label>
               <.live_file_input
+                :if={is_nil(@device.id)}
                 class="w-full dark:text-white dark:bg-gray-700 rounded-lg"
                 upload={@uploads.file_to_upload}
+              />
+              <.input
+                :if={@device.id}
+                field={config[:location]}
+                type="text"
+                label="File"
+                readonly
               />
             </div>
           </.inputs_for>

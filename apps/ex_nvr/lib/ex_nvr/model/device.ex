@@ -53,6 +53,7 @@ defmodule ExNVR.Model.Device do
 
     @type t :: %__MODULE__{
             location: binary(),
+            duration: Membrane.Time.t(),
             stream_uri: binary(),
             sub_stream_uri: binary()
           }
@@ -62,13 +63,14 @@ defmodule ExNVR.Model.Device do
       field :stream_uri, :string
       field :sub_stream_uri, :string
       field :location, :string
+      field :duration, :integer
     end
 
     @file_extension_whitelist ~w(.mp4 .flv .mkv)
 
     def changeset(struct, params, device_type) do
       struct
-      |> cast(params, [:stream_uri, :sub_stream_uri, :location])
+      |> cast(params, [:stream_uri, :sub_stream_uri, :location, :duration])
       |> validate_device_config(device_type)
     end
 
@@ -79,19 +81,7 @@ defmodule ExNVR.Model.Device do
     end
 
     defp validate_device_config(changeset, :file) do
-      validate_required(changeset, [:location])
-      |> Changeset.validate_change(:location, fn :location, location ->
-        if File.exists?(location), do: [], else: [location: "File does not exist"]
-      end)
-      |> Changeset.validate_change(:location, fn :location, location ->
-        Path.extname(location)
-        |> String.downcase()
-        |> Kernel.in(@file_extension_whitelist)
-        |> case do
-          true -> []
-          false -> [location: "Invalid file extension"]
-        end
-      end)
+      validate_required(changeset, [:location, :duration])
     end
 
     defp validate_uri(field, rtsp_uri) do

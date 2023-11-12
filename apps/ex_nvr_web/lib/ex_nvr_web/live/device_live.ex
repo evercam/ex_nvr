@@ -5,6 +5,7 @@ defmodule ExNVRWeb.DeviceLive do
 
   alias ExNVR.{Devices, DeviceSupervisor}
   alias ExNVR.Model.Device
+  alias Membrane.MP4
 
   @env Mix.env()
 
@@ -37,8 +38,9 @@ defmodule ExNVRWeb.DeviceLive do
   end
 
   def handle_event("validate", %{"device" => device_params}, socket) do
+
     %Device{}
-    |> Devices.change_device_creation(device_params)
+    |> Devices.change_device_creation(add_type_to_params(device_params, socket))
     |> then(&assign(socket, device_form: to_form(&1)))
     |> then(&{:noreply, push_event(&1, "device-form-change", %{})})
   end
@@ -49,6 +51,14 @@ defmodule ExNVRWeb.DeviceLive do
     if device.id,
       do: do_update_device(socket, device, device_params),
       else: do_save_device(socket, device_params)
+  end
+
+  defp add_type_to_params(%{"type" => _type} = params, _socket) do
+    params
+  end
+
+  defp add_type_to_params(params, %{assigns: %{device: %{type: type}}}) do
+    Map.put(params, "type", type)
   end
 
   defp do_save_device(socket, device_params) do
@@ -73,7 +83,7 @@ defmodule ExNVRWeb.DeviceLive do
     end
   end
 
-  defp handle_progress(:file_to_upload, entry, socket) do
+  defp handle_progress(:file_to_upload, _entry, socket) do
     {:noreply, push_event(socket, "device-form-change", %{})}
   end
 
@@ -85,7 +95,20 @@ defmodule ExNVRWeb.DeviceLive do
         {:ok, dest}
       end)
 
-    Kernel.put_in(device_params, ["stream_config", "location"], file_path)
+    duration = calculate_video_duration(file_path)
+
+    device_params
+    |> Kernel.put_in(["stream_config", "location"], file_path)
+    |> Kernel.put_in(["stream_config", "duration"], duration)
+  end
+
+  defp calculate_video_duration(file_location) do
+    {content, _remainder} = MP4.Container.parse!(File.read!(file_location))
+
+    %{fields: %{duration: duration, timescale: _timescale}} =
+      MP4.Container.get_box(content, [:moov, :mvhd])
+
+    duration
   end
 
   defp do_update_device(socket, device, device_params) do
