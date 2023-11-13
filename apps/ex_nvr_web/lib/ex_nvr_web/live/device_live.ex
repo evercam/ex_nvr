@@ -83,18 +83,20 @@ defmodule ExNVRWeb.DeviceLive do
   end
 
   defp handle_uploaded_file(socket, device_params) do
-    [file_path] =
-      consume_uploaded_entries(socket, :file_to_upload, fn %{path: path}, entry ->
-        dest = Path.join("/home/sid/Desktop", Path.basename(entry.client_name))
-        File.cp!(path, dest)
-        {:ok, dest}
-      end)
+    with [file_path] <- consume_uploaded_file(socket),
+         duration <- calculate_video_duration(file_path) do
+      device_params
+      |> Kernel.put_in(["stream_config", "location"], file_path)
+      |> Kernel.put_in(["stream_config", "duration"], duration)
+    end
+  end
 
-    duration = calculate_video_duration(file_path)
-
-    device_params
-    |> Kernel.put_in(["stream_config", "location"], file_path)
-    |> Kernel.put_in(["stream_config", "duration"], duration)
+  defp consume_uploaded_file(socket) do
+    consume_uploaded_entries(socket, :file_to_upload, fn %{path: path}, entry ->
+      dest = Path.join("/home/sid/Desktop", Path.basename(entry.client_name))
+      File.cp!(path, dest)
+      {:ok, dest}
+    end)
   end
 
   defp calculate_video_duration(file_location) do

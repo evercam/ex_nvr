@@ -117,6 +117,7 @@ handleDeviceFormChange = (event) => {
     var ipStreamUriInput = document.getElementById("config_stream_uri")
     var fileConfigInputs = document.getElementById("file_config_inputs");
     var credentialsInputs = document.getElementById("credentials_inputs");
+    var upload_field = document.getElementsByName('file_to_upload')[0];
 
     if (selectElement.value === "ip") {
         ipConfigInputs.classList.remove("hidden");
@@ -126,6 +127,9 @@ handleDeviceFormChange = (event) => {
 
         fileConfigInputs.classList.add("hidden");
         fileConfigInputs.required = false
+        if (upload_field) {
+            upload_field.required = false
+        }
     } else if (selectElement.value === "file") {
         ipConfigInputs.classList.add("hidden");
 
@@ -135,6 +139,9 @@ handleDeviceFormChange = (event) => {
 
         fileConfigInputs.classList.remove("hidden");
         fileConfigInputs.required = true
+        if (upload_field) {
+            upload_field.required = true
+        }
     }
 }
 

@@ -66,7 +66,6 @@ defmodule ExNVR.Model.Device do
       field :duration, :integer
     end
 
-
     def changeset(struct, params, device_type) do
       struct
       |> cast(params, [:stream_uri, :sub_stream_uri, :location, :duration])
