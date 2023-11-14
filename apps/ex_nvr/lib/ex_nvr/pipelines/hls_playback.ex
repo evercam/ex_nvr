@@ -9,6 +9,7 @@ defmodule ExNVR.Pipelines.HlsPlayback do
 
   alias ExNVR.Elements
   alias ExNVR.Pipeline.Output
+  alias Membrane.{H264, H265}
 
   @call_timeout :timer.seconds(10)
 
@@ -61,12 +62,20 @@ defmodule ExNVR.Pipelines.HlsPlayback do
   end
 
   @impl true
-  def handle_child_notification({:track, _track}, :source, _ctx, state) do
+  def handle_child_notification({:track, track}, :source, _ctx, state) do
+    encoding =
+      case track do
+        %H264{} -> :H264
+        %H265{} -> :H265
+      end
+
     spec = [
       get_child(:source)
       |> via_out(:video)
       |> child(:realtimer, Membrane.Realtimer)
-      |> via_in(Pad.ref(:video, :playback), options: [resolution: state.resolution])
+      |> via_in(Pad.ref(:video, :playback),
+        options: [resolution: state.resolution, encoding: encoding]
+      )
       |> child(:sink, %Output.HLS{
         location: state.directory,
         segment_name_prefix: state.segment_name_prefix

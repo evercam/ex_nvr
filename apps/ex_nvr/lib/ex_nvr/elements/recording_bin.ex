@@ -133,8 +133,13 @@ defmodule ExNVR.Elements.RecordingBin do
         {[notify_parent: {:track, track}], %{state | track: track}}
 
       state.track != track ->
-        # recordings have different codecs or configuration
-        # send an end of stream
+        Membrane.Logger.warning("""
+        Recordings have different codecs or configuration
+        Current track: "#{inspect(state.track)}"
+        New track: "#{inspect(track)}"
+        Send an end of stream
+        """)
+
         {[remove_children: childs_to_delete(ctx), notify_child: {:scissors, :end_of_stream}],
          state}
 

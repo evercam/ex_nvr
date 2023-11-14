@@ -5,7 +5,7 @@ defmodule ExNVR.Pipeline.Output.HLS do
 
   use Membrane.Bin
 
-  alias Membrane.{H264, ResourceGuard}
+  alias Membrane.{H264, H265, ResourceGuard}
   alias Membrane.HTTPAdaptiveStream.{SinkBin, Storages}
 
   @segment_duration Membrane.Time.seconds(5)
@@ -13,7 +13,7 @@ defmodule ExNVR.Pipeline.Output.HLS do
   def_input_pad :video,
     demand_unit: :buffers,
     demand_mode: :auto,
-    accepted_format: %H264{alignment: :au},
+    accepted_format: any_of(%H264{alignment: :au}, %H265{alignment: :au}),
     availability: :on_request,
     options: [
       resolution: [
@@ -24,6 +24,10 @@ defmodule ExNVR.Pipeline.Output.HLS do
 
         The resolution denotes the height of the video. e.g. 720p
         """
+      ],
+      encoding: [
+        spec: atom(),
+        description: "The encoding of the video stream"
       ]
     ]
 
@@ -71,7 +75,7 @@ defmodule ExNVR.Pipeline.Output.HLS do
   def handle_pad_added(Pad.ref(:video, ref) = pad, ctx, state) do
     spec = [
       bin_input(pad)
-      |> add_transcoding_spec(ref, ctx.options[:resolution])
+      |> add_transcoding_spec(ctx.options[:encoding], ref, ctx.options[:resolution])
       |> via_in(Pad.ref(:input, ref),
         options: [
           encoding: :H264,
@@ -108,18 +112,22 @@ defmodule ExNVR.Pipeline.Output.HLS do
     {[], state}
   end
 
-  defp add_transcoding_spec(link_builder, _ref, nil), do: link_builder
+  defp add_transcoding_spec(link_builder, :H264, _ref, nil), do: link_builder
 
-  defp add_transcoding_spec(link_builder, ref, resolution) do
+  defp add_transcoding_spec(link_builder, encoding, ref, resolution) do
     link_builder
-    |> child({:decoder, ref}, Membrane.H264.FFmpeg.Decoder)
-    |> child({:scaler, ref}, %Membrane.FFmpeg.SWScale.Scaler{output_height: resolution})
+    |> child({:decoder, ref}, get_decoder(encoding))
+    |> child({:scaler, ref}, %Membrane.FFmpeg.SWScale.Scaler{output_height: resolution || 480})
     |> child({:encoder, ref}, %Membrane.H264.FFmpeg.Encoder{
       profile: :baseline,
-      tune: :zerolatency
+      tune: :zerolatency,
+      gop_size: 50
     })
     |> child({:parser, ref}, Membrane.H264.Parser)
   end
 
   defp track_name(prefix, ref), do: "#{prefix}_#{ref}"
+
+  defp get_decoder(:H264), do: %Membrane.H264.FFmpeg.Decoder{use_shm?: true}
+  defp get_decoder(:H265), do: %Membrane.H265.FFmpeg.Decoder{use_shm?: true}
 end
