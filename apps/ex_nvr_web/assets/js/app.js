@@ -100,8 +100,30 @@ startStreaming = (src, poster_url) => {
     }
 }
 
+drawRois = (rois) => {
+    const video = document.getElementById("live-video")
+    const canvas = document.getElementById("video-overlay")
+    const ctx = canvas.getContext('2d')
+    ctx.clearRect(0, 0, canvas.width, canvas.height)
+
+    rois.forEach(function({dimentions}) {
+        ctx.lineWidth = 0.4
+        ctx.strokeStyle = "red"
+        ctx.strokeRect(
+            dimentions.x * canvas.width / video.videoWidth, 
+            dimentions.y * canvas.height / video.videoHeight, 
+            dimentions.width * canvas.width / video.videoWidth, 
+            dimentions.height * canvas.height / video.videoHeight
+        )
+    })
+}
+
 window.addEventListener("phx:stream", (e) => {
     startStreaming(e.detail.src, e.detail.poster)
+})
+
+window.addEventListener("phx:motion", (e) => {
+    drawRois(e.detail.motions)
 })
 
 window.addEventListener("phx:js-exec", ({ detail }) => {

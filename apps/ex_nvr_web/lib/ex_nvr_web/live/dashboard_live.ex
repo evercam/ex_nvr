@@ -80,13 +80,16 @@ defmodule ExNVRWeb.DashboardLive do
 
         <div class="relative mt-4">
           <div :if={@live_view_enabled?} class="relative">
-            <video
-              id="live-video"
-              class="w-full h-auto dark:bg-gray-500 rounded-tr rounded-tl"
-              autoplay
-              controls
-              muted
-            />
+            <div id="video-container">
+              <video
+                id="live-video"
+                class="w-full h-auto dark:bg-gray-500 rounded-tr rounded-tl"
+                autoplay
+                controls
+                muted
+              />
+              <canvas id="video-overlay"/>
+            </div>
           </div>
           <div
             :if={not @live_view_enabled?}
@@ -100,6 +103,13 @@ defmodule ExNVRWeb.DashboardLive do
             segments={@segments}
             timezone={@timezone}
           />
+          <div class="text-white">
+            <.table id="predictions" rows={@predictions}>
+              <:col :let={prediction} label="Label"><%= prediction.label %></:col>
+              <:col :let={prediction} label="time"><%= prediction.time %></:col>
+              <:col :let={prediction} label="R.O.I"><%= Jason.encode!(prediction.dimentions) %></:col>
+            </.table>
+          </div>
         </div>
       </div>
 
@@ -186,8 +196,22 @@ defmodule ExNVRWeb.DashboardLive do
       |> assign_runs()
       |> assign_timezone()
       |> maybe_push_stream_event(nil)
+      |> assign_predictions([])
+
+    if connected?(socket) do
+      Enum.each(socket.assigns.devices, fn device -> Phoenix.PubSub.subscribe(ExNVR.PubSub, "detection-#{device.id}") end)
+    end
 
     {:ok, assign(socket, start_date: nil, custom_duration: false)}
+  end
+
+  def handle_info({:motions, predictions}, socket) do
+    socket =
+      socket
+      |> push_event("motion", %{motions: predictions})
+      |> assign_predictions(predictions)
+
+    {:noreply, socket}
   end
 
   def handle_event("switch_device", %{"device" => device_id}, socket) do
@@ -260,6 +284,11 @@ defmodule ExNVRWeb.DashboardLive do
       {:error, changeset} ->
         {:noreply, assign_footage_form(socket, changeset)}
     end
+  end
+
+  defp assign_predictions(socket, predictions) do
+
+    assign(socket, predictions: predictions)
   end
 
   defp assign_devices(socket) do

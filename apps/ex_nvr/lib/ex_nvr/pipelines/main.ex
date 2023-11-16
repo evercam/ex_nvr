@@ -361,7 +361,10 @@ defmodule ExNVR.Pipelines.Main do
       |> get_child(:hls_sink),
       get_child(:video_tee)
       |> via_out(:copy)
-      |> child({:cvs_bufferer, :main_stream}, ExNVR.Elements.CVSBufferer)
+      |> child({:cvs_bufferer, :main_stream}, ExNVR.Elements.CVSBufferer),
+      get_child(:video_tee)
+      |> via_out(:copy)
+      |> child(:motion, %ExNVR.Elements.MotionDetectionBin{device_id: state.device.id})
     ]
   end
 

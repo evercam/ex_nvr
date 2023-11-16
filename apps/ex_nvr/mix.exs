@@ -54,6 +54,7 @@ defmodule ExNVR.MixProject do
       {:membrane_realtimer_plugin, "~> 0.8.0"},
       {:membrane_rtc_engine, "~> 0.17.0"},
       {:membrane_rtc_engine_webrtc, "~> 0.3.0"},
+      {:membrane_framerate_converter_plugin, "~> 0.7.0"},
       {:membrane_fake_plugin, "~> 0.10.0"},
       {:ex_libsrtp, "~> 0.6.0"},
       {:membrane_udp_plugin, "~> 0.10.0"},
@@ -62,7 +63,10 @@ defmodule ExNVR.MixProject do
       {:turbojpeg, github: "BinaryNoggin/elixir-turbojpeg", ref: "14e2b36"},
       {:flop, "~> 0.22.1"},
       {:soap, github: "gBillal/soap", branch: "parse-attributes"},
-      {:faker, "~> 0.17", only: :test}
+      {:faker, "~> 0.17", only: :test},
+      {:evision, "~> 0.1"},
+      {:nx, "~> 0.5"},
+      {:torchx, "~> 0.5"}
     ]
   end
 
