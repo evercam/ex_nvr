@@ -17,7 +17,8 @@ defmodule ExNVRWeb.DeviceLive do
      |> assign(
        device: %Device{},
        disks_data: get_disks_data(),
-       device_form: to_form(changeset)
+       device_form: to_form(changeset),
+       device_type: "ip"
      )
      |> allow_upload(:file_to_upload,
        accept: ~w(video/mp4),
@@ -33,15 +34,22 @@ defmodule ExNVRWeb.DeviceLive do
      assign(socket,
        device: device,
        disks_data: get_disks_data(),
-       device_form: to_form(Devices.change_device_update(device))
+       device_form: to_form(Devices.change_device_update(device)),
+       device_type: Atom.to_string(device.type)
      )}
   end
 
-  def handle_event("validate", %{"device" => device_params}, socket) do
+  def handle_event("validate", %{"device" => %{"type" => type} = device_params}, socket) do
     device_params
-    |> Devices.change_device_validation(socket)
-    |> then(&assign(socket, device_form: to_form(&1)))
-    |> then(&{:noreply, push_event(&1, "device-form-change", %{})})
+    |> Devices.change_device_validation()
+    |> then(&assign(socket, device_form: to_form(&1), device_type: type))
+    |> then(&{:noreply, &1})
+  end
+
+  def handle_event("validate", _params, %{assigns: %{device: %{type: type}}} = socket) do
+    socket
+    |> assign(device_type: Atom.to_string(type))
+    |> then(&{:noreply, &1})
   end
 
   def handle_event("save_device", %{"device" => device_params}, socket) do
@@ -67,15 +75,12 @@ defmodule ExNVRWeb.DeviceLive do
         |> then(&{:noreply, &1})
 
       {:error, changeset} ->
-        {:noreply,
-         assign(push_event(socket, "device-form-change", %{}),
-           device_form: to_form(changeset)
-         )}
+        {:noreply, assign(socket, device_form: to_form(changeset))}
     end
   end
 
   defp handle_progress(:file_to_upload, _entry, socket) do
-    {:noreply, push_event(socket, "device-form-change", %{})}
+    {:noreply, socket}
   end
 
   defp handle_uploaded_file(_socket, %{"type" => "ip"} = device_params) do
@@ -102,10 +107,10 @@ defmodule ExNVRWeb.DeviceLive do
   defp calculate_video_duration(file_location) do
     {content, _remainder} = MP4.Container.parse!(File.read!(file_location))
 
-    %{fields: %{duration: duration, timescale: _timescale}} =
+    %{fields: %{duration: duration, timescale: timescale}} =
       MP4.Container.get_box(content, [:moov, :mvhd])
 
-    duration
+    Membrane.Time.seconds(Ratio.new(duration, timescale))
   end
 
   defp do_update_device(socket, device, device_params) do
@@ -118,17 +123,11 @@ defmodule ExNVRWeb.DeviceLive do
 
         socket
         |> put_flash(:info, info)
-        |> assign(
-          device: updated_device,
-          device_form: to_form(Devices.change_device_update(updated_device))
-        )
+        |> redirect(to: ~p"/devices")
         |> then(&{:noreply, &1})
 
       {:error, changeset} ->
-        {:noreply,
-         assign(push_event(socket, "device-form-change", %{}),
-           device_form: to_form(changeset)
-         )}
+        {:noreply, assign(socket, device_form: to_form(changeset))}
     end
   end
 

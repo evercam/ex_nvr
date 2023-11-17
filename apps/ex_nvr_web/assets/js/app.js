@@ -110,43 +110,6 @@ window.addEventListener("phx:js-exec", ({ detail }) => {
     })
 })
 
-handleDeviceFormChange = (event) => {
-    event.preventDefault()
-    var selectElement = document.getElementById("device_type");
-    var ipConfigInputs = document.getElementById("ip_config_inputs");
-    var ipStreamUriInput = document.getElementById("config_stream_uri")
-    var fileConfigInputs = document.getElementById("file_config_inputs");
-    var credentialsInputs = document.getElementById("credentials_inputs");
-    var upload_field = document.getElementsByName('file_to_upload')[0];
-
-    if (selectElement.value === "ip") {
-        ipConfigInputs.classList.remove("hidden");
-        ipConfigInputs.required == true
-
-        credentialsInputs.classList.remove("hidden");
-
-        fileConfigInputs.classList.add("hidden");
-        fileConfigInputs.required = false
-        if (upload_field) {
-            upload_field.required = false
-        }
-    } else if (selectElement.value === "file") {
-        ipConfigInputs.classList.add("hidden");
-
-        ipStreamUriInput.required = false
-
-        credentialsInputs.classList.add("hidden");
-
-        fileConfigInputs.classList.remove("hidden");
-        fileConfigInputs.required = true
-        if (upload_field) {
-            upload_field.required = true
-        }
-    }
-}
-
-window.addEventListener("phx:device-form-change", handleDeviceFormChange)
-
 function downloadFile(url) {
     const anchor = document.createElement("a");
     anchor.style.display = "none";
