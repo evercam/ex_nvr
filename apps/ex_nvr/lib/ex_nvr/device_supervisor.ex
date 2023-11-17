@@ -3,8 +3,6 @@ defmodule ExNVR.DeviceSupervisor do
 
   use Supervisor
 
-  import ExNVR.Utils
-
   alias ExNVR.Model.Device
   alias ExNVR.Pipelines.Main
 
@@ -25,10 +23,6 @@ defmodule ExNVR.DeviceSupervisor do
 
   @impl true
   def init(device) do
-    File.mkdir_p!(recording_dir(device.id))
-    File.mkdir_p!(hls_dir(device.id))
-    File.mkdir_p!(bif_dir(device.id))
-
     params = [device: device]
 
     children = [
@@ -42,7 +36,7 @@ defmodule ExNVR.DeviceSupervisor do
         _other -> children
       end
 
-    Supervisor.init(children, strategy: :rest_for_one, max_restarts: 1_000)
+    Supervisor.init(children, strategy: :rest_for_one, max_restarts: 10_000)
   end
 
   @spec stop(Device.t()) :: :ok
