@@ -4,7 +4,7 @@ defmodule ExNVRWeb.MixProject do
   def project do
     [
       app: :ex_nvr_web,
-      version: "0.4.0",
+      version: "0.5.1",
       build_path: "../../_build",
       config_path: "../../config/config.exs",
       deps_path: "../../deps",

@@ -24,6 +24,10 @@ defmodule ExNVR.BifGeneratorServer do
 
   @impl true
   def handle_info(:tick, %{device: device} = state) do
+    unless File.exists?(Utils.bif_dir(device.id)) do
+      File.mkdir!(Utils.bif_dir(device.id))
+    end
+
     list_hours(device)
     |> Enum.each(fn start_date ->
       Logger.info("BifGenerator: generate BIF file #{inspect(start_date)}")
