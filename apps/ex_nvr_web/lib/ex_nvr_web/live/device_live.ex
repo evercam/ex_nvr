@@ -5,7 +5,7 @@ defmodule ExNVRWeb.DeviceLive do
 
   alias ExNVR.{Devices, DeviceSupervisor}
   alias ExNVR.Model.Device
-  alias Membrane.MP4
+  alias ExNVR.MP4.Reader
 
   @env Mix.env()
 
@@ -88,11 +88,11 @@ defmodule ExNVRWeb.DeviceLive do
   end
 
   defp handle_uploaded_file(socket, device_params) do
-    with [file_path] <- consume_uploaded_file(socket),
-         duration <- calculate_video_duration(file_path) do
+    with [path] <- consume_uploaded_file(socket),
+         {:ok, mp4_reader} <- Reader.new(path) do
       device_params
-      |> Kernel.put_in(["stream_config", "location"], file_path)
-      |> Kernel.put_in(["stream_config", "duration"], duration)
+      |> Kernel.put_in(["stream_config", "location"], path)
+      |> Kernel.put_in(["stream_config", "duration"], mp4_reader.duration)
     end
   end
 
@@ -102,15 +102,6 @@ defmodule ExNVRWeb.DeviceLive do
       File.cp!(path, dest)
       {:ok, dest}
     end)
-  end
-
-  defp calculate_video_duration(file_location) do
-    {content, _remainder} = MP4.Container.parse!(File.read!(file_location))
-
-    %{fields: %{duration: duration, timescale: timescale}} =
-      MP4.Container.get_box(content, [:moov, :mvhd])
-
-    Membrane.Time.seconds(Ratio.new(duration, timescale))
   end
 
   defp do_update_device(socket, device, device_params) do

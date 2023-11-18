@@ -30,7 +30,7 @@
               File
             </label>
             <.live_file_input :if={@device_type=="file" && is_nil(@device.id)}
-              class="w-full dark:text-white dark:bg-gray-700 rounded-lg" upload={@uploads.file_to_upload} />
+              class="w-full dark:text-white dark:bg-gray-700 rounded-lg" upload={@uploads.file_to_upload} required/>
             <.input :if={@device_type=="file" && @device.id} field={config[:location]} type="text" label="File"
               readonly />
           </.inputs_for>
