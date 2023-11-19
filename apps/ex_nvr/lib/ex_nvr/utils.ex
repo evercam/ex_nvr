@@ -5,6 +5,11 @@ defmodule ExNVR.Utils do
 
   @unix_socket_dir "/tmp/sockets"
 
+  @spec device_file_dir() :: Path.t()
+  def device_file_dir() do
+    Application.get_env(:ex_nvr, :device_file_directory)
+  end
+
   @spec hls_dir(Device.id() | nil) :: Path.t()
   def hls_dir(device_id \\ nil) do
     dir = Application.get_env(:ex_nvr, :hls_directory)

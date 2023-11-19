@@ -3,7 +3,7 @@ defmodule ExNVRWeb.DeviceLive do
 
   use ExNVRWeb, :live_view
 
-  alias ExNVR.{Devices, DeviceSupervisor}
+  alias ExNVR.{Devices, DeviceSupervisor, Utils}
   alias ExNVR.Model.Device
   alias ExNVR.MP4.Reader
 
@@ -22,8 +22,7 @@ defmodule ExNVRWeb.DeviceLive do
      )
      |> allow_upload(:file_to_upload,
        accept: ~w(video/mp4),
-       max_file_size: 1_000_000_000,
-       progress: &handle_progress/3
+       max_file_size: 1_000_000_000
      )}
   end
 
@@ -46,10 +45,8 @@ defmodule ExNVRWeb.DeviceLive do
     |> then(&{:noreply, &1})
   end
 
-  def handle_event("validate", _params, %{assigns: %{device: %{type: type}}} = socket) do
-    socket
-    |> assign(device_type: Atom.to_string(type))
-    |> then(&{:noreply, &1})
+  def handle_event("validate", _params, socket) do
+    {:noreply, socket}
   end
 
   def handle_event("save_device", %{"device" => device_params}, socket) do
@@ -79,10 +76,6 @@ defmodule ExNVRWeb.DeviceLive do
     end
   end
 
-  defp handle_progress(:file_to_upload, _entry, socket) do
-    {:noreply, socket}
-  end
-
   defp handle_uploaded_file(_socket, %{"type" => "ip"} = device_params) do
     device_params
   end
@@ -98,7 +91,7 @@ defmodule ExNVRWeb.DeviceLive do
 
   defp consume_uploaded_file(socket) do
     consume_uploaded_entries(socket, :file_to_upload, fn %{path: path}, entry ->
-      dest = Path.join("/home/sid/Desktop", Path.basename(entry.client_name))
+      dest = Path.join(Utils.device_file_dir(), Path.basename(entry.client_name))
       File.cp!(path, dest)
       {:ok, dest}
     end)
