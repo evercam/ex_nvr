@@ -30,7 +30,14 @@
               File
             </label>
             <.live_file_input :if={@device_type=="file" && is_nil(@device.id)}
-              class="w-full dark:text-white dark:bg-gray-700 rounded-lg" upload={@uploads.file_to_upload} required/>
+              class="w-full dark:text-white dark:bg-gray-700 rounded-lg" upload={@uploads.file_to_upload} required />
+            <div :if={@device_type=="file" && is_nil(@device.id)}>
+              <div :for={entry <- @uploads.file_to_upload.entries}>
+                <div :for={err <- upload_errors(@uploads.file_to_upload, entry)} style="color: #E11D48;">
+                  <%= error_to_string(err) %>
+                </div>
+              </div>
+            </div>
             <.input :if={@device_type=="file" && @device.id} field={config[:location]} type="text" label="File"
               readonly />
           </.inputs_for>

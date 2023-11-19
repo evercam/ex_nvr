@@ -57,6 +57,9 @@ defmodule ExNVRWeb.DeviceLive do
       else: do_save_device(socket, device_params)
   end
 
+  def error_to_string(:too_large), do: "Too large"
+  def error_to_string(:not_accepted), do: "You have selected an unacceptable file type"
+
   defp do_save_device(socket, device_params) do
     socket
     |> handle_uploaded_file(device_params)

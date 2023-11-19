@@ -6,7 +6,7 @@ defmodule ExNVRWeb.DeviceLiveTest do
   import ExNVR.{AccountsFixtures, DevicesFixtures}
   import Phoenix.LiveViewTest
 
-  alias ExNVR.Devices
+  alias ExNVR.{Devices, Utils}
 
   @moduletag :tmp_dir
 
@@ -35,41 +35,60 @@ defmodule ExNVRWeb.DeviceLiveTest do
     test "create a new FILE device", %{conn: conn} do
       {:ok, lv, _} = live(conn, ~p"/devices/new")
 
+      file_content = Path.expand("./big_buck.mp4", __DIR__) |> File.read!()
+
+      render_change(lv, :validate, %{"device" => %{"type" => "file"}})
+
+      lv
+      |> file_input("#device_form", :file_to_upload, [
+        %{
+          name: "big_buck.mp4",
+          content: file_content,
+          size: byte_size(file_content),
+          type: "video/mp4"
+        }
+      ])
+      |> render_upload("big_buck.mp4")
+
       {:ok, conn} =
         lv
         |> form("#device_form", %{
           "device" => %{
             "name" => "My Device",
             "type" => "file",
-            "stream_config" => %{
-              "location" => valid_file_location()
-            },
             "settings" => %{"storage_address" => "/tmp"}
           }
         })
         |> render_submit()
         |> follow_redirect(conn, ~p"/devices")
 
+      uploaded_file_path = Path.join(Utils.device_file_dir(), "big_buck.mp4")
+      assert File.exists?(uploaded_file_path)
+      File.rm!(uploaded_file_path)
+
       assert Phoenix.Flash.get(conn.assigns.flash, :info) == "Device created successfully"
     end
 
-    test "renders errors on form submission TYPE: FILE", %{conn: conn} do
+    test "renders errors on file upload with wrong type", %{conn: conn} do
       {:ok, lv, _} = live(conn, ~p"/devices/new")
 
-      result =
-        lv
-        |> form("#device_form", %{
-          "device" => %{
-            "name" => "My Device",
-            "type" => "file",
-            "stream_config" => %{"location" => "rtsp://"},
-            "settings" => %{"storage_address" => "/tmp"}
-          }
-        })
-        |> render_submit()
+      file_content = Path.expand("./device_file_with_wrong_type.txt", __DIR__) |> File.read!()
 
-      assert result =~ "File does not exist"
-      assert Enum.empty?(Devices.list())
+      render_change(lv, :validate, %{"device" => %{"type" => "file"}})
+
+      {:error, [[_, error]]} =
+        lv
+        |> file_input("#device_form", :file_to_upload, [
+          %{
+            name: "device_file_with_wrong_type.txt",
+            content: file_content,
+            size: byte_size(file_content),
+            type: "text/txt"
+          }
+        ])
+        |> render_upload("device_file_with_wrong_type.txt")
+
+      assert error == :not_accepted
     end
 
     test "create a new IP device", %{conn: conn} do
@@ -130,7 +149,7 @@ defmodule ExNVRWeb.DeviceLiveTest do
     test "update an IP Camera device", %{conn: conn, device: device} do
       {:ok, lv, _} = live(conn, ~p"/devices/#{device.id}")
 
-      view =
+      {:ok, conn} =
         lv
         |> form("#device_form", %{
           "device" => %{
@@ -141,12 +160,13 @@ defmodule ExNVRWeb.DeviceLiveTest do
           }
         })
         |> render_submit()
+        |> follow_redirect(conn, ~p"/devices")
 
-      assert view =~ "My Updated Device"
-      assert view =~ "rtsp://localhost:554"
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) == "Device updated successfully"
 
       assert updated_device = Devices.get(device.id)
       assert updated_device.name == "My Updated Device"
+      assert updated_device.stream_config.stream_uri == "rtsp://localhost:554"
     end
 
     test "renders errors on invalid update params for an IP Device", %{conn: conn, device: device} do
@@ -165,48 +185,24 @@ defmodule ExNVRWeb.DeviceLiveTest do
     end
 
     test "update a File Source device", %{conn: conn, file_device: device} do
-      file1_path = valid_file_location()
-
       {:ok, lv, _} = live(conn, ~p"/devices/#{device.id}")
 
-      view =
+      {:ok, conn} =
         lv
         |> form("#device_form", %{
           "device" => %{
             "name" => "My Updated Device",
-            "stream_config" => %{
-              "location" => file1_path
-            }
+            "timezone" => "Pacific/Apia"
           }
         })
         |> render_submit()
+        |> follow_redirect(conn, ~p"/devices")
 
-      assert view =~ "My Updated Device"
-      assert view =~ file1_path
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) == "Device updated successfully"
 
       assert updated_device = Devices.get(device.id)
       assert updated_device.name == "My Updated Device"
-    end
-
-    test "renders errors on invalid update params for a FILE type Device (Invalid file extension)",
-         %{
-           conn: conn,
-           file_device: device
-         } do
-      file1_path = invalid_file_extenstion()
-
-      {:ok, lv, _} = live(conn, ~p"/devices/#{device.id}")
-
-      result =
-        lv
-        |> form("#device_form", %{
-          "device" => %{
-            "stream_config" => %{"location" => file1_path}
-          }
-        })
-        |> render_submit()
-
-      assert result =~ "Invalid file extension"
+      assert updated_device.timezone == "Pacific/Apia"
     end
   end
 end

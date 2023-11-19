@@ -57,7 +57,8 @@ defmodule ExNVR.DevicesFixtures do
 
   defp build_stream_config(stream_config, "file") do
     Enum.into(stream_config, %{
-      location: valid_file_location()
+      location: valid_file_location(),
+      duration: 1000
     })
   end
 end
