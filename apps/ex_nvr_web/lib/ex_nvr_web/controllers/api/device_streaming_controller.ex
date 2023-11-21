@@ -87,7 +87,7 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
 
   defp serve_snapshot_from_recorded_videos(conn, %{time: time} = params) do
     device = conn.assigns.device
-    recording_dir = ExNVR.Utils.recording_dir(device.id)
+    recording_dir = ExNVR.Utils.recording_dir(device)
 
     with [recording] <- Recordings.get_recordings_between(device.id, time, time),
          {:ok, timestamp, snapshot} <-
@@ -153,7 +153,7 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
         {:ok,
          Enum.map(
            recordings,
-           &Recording.Download.new(&1, ExNVR.Utils.recording_dir(device.id))
+           &Recording.Download.new(&1, ExNVR.Utils.recording_dir(device))
          )}
     end
   end
@@ -162,7 +162,7 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
   def bif(conn, params) do
     with {:ok, params} <- validate_bif_req_params(params) do
       filename = Calendar.strftime(params.hour, "%Y%m%d%H.bif")
-      filepath = Path.join(Utils.bif_dir(conn.assigns.device.id), filename)
+      filepath = Path.join(Utils.bif_dir(conn.assigns.device), filename)
 
       if File.exists?(filepath) do
         send_download(conn, {:file, filepath}, filename: filename)

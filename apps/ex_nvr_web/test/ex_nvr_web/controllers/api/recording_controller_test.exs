@@ -10,7 +10,7 @@ defmodule ExNVRWeb.API.RecordingControllerTest do
     conn = build_conn() |> log_in_user_with_access_token(AccountsFixtures.user_fixture())
     device = DevicesFixtures.device_fixture()
 
-    File.mkdir_p!(ExNVR.Utils.recording_dir(device.id))
+    File.mkdir_p!(ExNVR.Utils.recording_dir(device))
     %{conn: conn, device: device}
   end
 

@@ -10,8 +10,7 @@ defmodule ExNVR.Recordings.SnapshooterTest do
 
   setup do
     device = device_fixture()
-
-    File.mkdir!(ExNVR.Utils.recording_dir(device.id))
+    File.mkdir_p!(ExNVR.Utils.recording_dir(device))
 
     recording =
       recording_fixture(device,
@@ -31,7 +30,7 @@ defmodule ExNVR.Recordings.SnapshooterTest do
     assert {:ok, timestamp, snapshot} =
              ExNVR.Recordings.Snapshooter.snapshot(
                recording,
-               ExNVR.Utils.recording_dir(device.id),
+               ExNVR.Utils.recording_dir(device),
                ~U(2023-06-23 10:00:03Z)
              )
 
@@ -54,7 +53,7 @@ defmodule ExNVR.Recordings.SnapshooterTest do
     assert {:ok, start_date, snapshot} =
              ExNVR.Recordings.Snapshooter.snapshot(
                recording,
-               ExNVR.Utils.recording_dir(device.id),
+               ExNVR.Utils.recording_dir(device),
                datetime,
                method: :precise
              )

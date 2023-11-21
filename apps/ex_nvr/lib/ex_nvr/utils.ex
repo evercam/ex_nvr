@@ -5,10 +5,16 @@ defmodule ExNVR.Utils do
 
   @unix_socket_dir "/tmp/sockets"
 
-  @spec recording_dir(Device.id() | nil) :: Path.t()
-  def recording_dir(device_id \\ nil) do
-    dir = Application.get_env(:ex_nvr, :recording_directory)
-    if device_id, do: Path.join(dir, device_id), else: dir
+  @spec recording_dir(Device.t()) :: Path.t()
+  def recording_dir(device) do
+    case Device.recording_dir(device) do
+      nil ->
+        dir = Application.get_env(:ex_nvr, :recording_directory)
+        Path.join(dir, device.id)
+
+      path ->
+        path
+    end
   end
 
   @spec hls_dir(Device.id() | nil) :: Path.t()
@@ -17,9 +23,9 @@ defmodule ExNVR.Utils do
     if device_id, do: Path.join(dir, device_id), else: dir
   end
 
-  @spec bif_dir(Device.id()) :: Path.t()
-  def bif_dir(device_id) do
-    Path.join(recording_dir(device_id), "bif")
+  @spec bif_dir(Device.t()) :: Path.t()
+  def bif_dir(device) do
+    Path.join(recording_dir(device), "bif")
   end
 
   @spec unix_socket_dir() :: Path.t()

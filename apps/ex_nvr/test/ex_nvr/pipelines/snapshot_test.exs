@@ -12,8 +12,7 @@ defmodule ExNVR.Pipelines.SnapshotTest do
 
   setup do
     device = device_fixture()
-
-    File.mkdir!(ExNVR.Utils.recording_dir(device.id))
+    File.mkdir!(ExNVR.Utils.recording_dir(device))
 
     recording =
       recording_fixture(device,
@@ -27,7 +26,7 @@ defmodule ExNVR.Pipelines.SnapshotTest do
   defp perform_test(device, recording, ref_path, method \\ :before) do
     assert {:ok, _sup_pid, _pid} =
              Pipelines.Snapshot.start(
-               device_id: device.id,
+               device: device,
                date: DateTime.add(recording.start_date, 3),
                method: method
              )

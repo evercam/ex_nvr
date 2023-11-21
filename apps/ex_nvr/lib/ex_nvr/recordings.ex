@@ -9,14 +9,14 @@ defmodule ExNVR.Recordings do
 
   @type error :: {:error, Ecto.Changeset.t() | File.posix()}
 
-  @spec create(Run.t(), map(), boolean()) :: {:ok, Recording.t(), Run.t()} | error()
-  def create(%Run{} = run, params, copy_file? \\ true) do
+  @spec create(Device.t(), Run.t(), map(), boolean()) :: {:ok, Recording.t(), Run.t()} | error()
+  def create(%Device{} = device, %Run{} = run, params, copy_file? \\ true) do
     params = if is_struct(params), do: Map.from_struct(params), else: params
 
-    with :ok <- copy_file(params, copy_file?) do
+    with :ok <- copy_file(device, params, copy_file?) do
       recording_changeset =
         params
-        |> Map.put(:filename, recording_path(params) |> Path.basename())
+        |> Map.put(:filename, recording_path(device, params) |> Path.basename())
         |> Recording.changeset()
 
       Multi.new()
@@ -30,9 +30,7 @@ defmodule ExNVR.Recordings do
     end
   end
 
-  @spec index(binary()) :: [
-          Recording.t()
-        ]
+  @spec index(binary()) :: [Recording.t()]
   def index(device_id) do
     Recording.with_device(device_id)
     |> Repo.all()
@@ -56,9 +54,13 @@ defmodule ExNVR.Recordings do
 
   @spec get_blob(Device.t(), binary()) :: binary() | nil
   def get_blob(%Device{id: id}, filename) do
-    with %Recording{} = rec <- Repo.get_by(Recording, %{device_id: id, filename: filename}) do
-      File.read!(recording_path(rec))
-    end
+    recording =
+      Recording.with_device(id)
+      |> Recording.with_name(filename)
+      |> Recording.preload_device()
+      |> Repo.one()
+
+    if recording, do: File.read!(recording_path(recording.device, recording))
   end
 
   # Runs
@@ -71,13 +73,13 @@ defmodule ExNVR.Recordings do
     Repo.update_all(Run.deactivate_query(device_id), set: [active: false])
   end
 
-  defp copy_file(_params, false), do: :ok
+  defp copy_file(_device, _params, false), do: :ok
 
-  defp copy_file(params, true) do
-    File.cp(params.path, recording_path(params))
+  defp copy_file(device, params, true) do
+    File.cp(params.path, recording_path(device, params))
   end
 
-  defp recording_path(%{device_id: device_id, start_date: start_date}) do
-    Path.join(Utils.recording_dir(device_id), "#{DateTime.to_unix(start_date, :microsecond)}.mp4")
+  defp recording_path(device, %{start_date: start_date}) do
+    Path.join(Utils.recording_dir(device), "#{DateTime.to_unix(start_date, :microsecond)}.mp4")
   end
 end

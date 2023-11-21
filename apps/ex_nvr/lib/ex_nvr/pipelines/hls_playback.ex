@@ -35,12 +35,12 @@ defmodule ExNVR.Pipelines.HlsPlayback do
 
   @impl true
   def handle_init(_ctx, options) do
-    Logger.metadata(device_id: options[:device_id])
+    Logger.metadata(device_id: options[:device].id)
     Membrane.Logger.info("Start playback pipeline with options: #{inspect(options)}")
 
     spec = [
       child(:source, %Elements.RecordingBin{
-        device_id: options[:device_id],
+        device: options[:device],
         start_date: options[:start_date]
       })
       |> via_out(:video)

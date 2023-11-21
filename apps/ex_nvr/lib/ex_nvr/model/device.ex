@@ -110,6 +110,36 @@ defmodule ExNVR.Model.Device do
     end
   end
 
+  defmodule Settings do
+    use Ecto.Schema
+
+    import Ecto.Changeset
+
+    @type t :: %__MODULE__{
+            generate_bif: boolean(),
+            storage_address: binary()
+          }
+
+    @primary_key false
+    embedded_schema do
+      field :generate_bif, :boolean, default: true
+      field :storage_address, :string
+    end
+
+    @spec changeset(t(), map()) :: Ecto.Changeset.t()
+    def changeset(struct, params) do
+      struct
+      |> cast(params, __MODULE__.__schema__(:fields))
+      |> validate_required([:storage_address])
+      |> validate_change(:storage_address, fn :storage_address, mountpoint ->
+        case File.stat(mountpoint) do
+          {:ok, %File.Stat{access: :read_write}} -> []
+          _other -> [storage_address: "has no write permissions"]
+        end
+      end)
+    end
+  end
+
   @primary_key {:id, :binary_id, autogenerate: true}
   schema "devices" do
     field :name, :string
@@ -119,6 +149,7 @@ defmodule ExNVR.Model.Device do
 
     embeds_one :credentials, Credentials, source: :credentials, on_replace: :update
     embeds_one :stream_config, StreamConfig, source: :config, on_replace: :update
+    embeds_one :settings, Settings, on_replace: :update
 
     timestamps(type: :utc_datetime_usec)
   end
@@ -139,8 +170,15 @@ defmodule ExNVR.Model.Device do
   def has_sub_stream(%__MODULE__{stream_config: %StreamConfig{sub_stream_uri: nil}}), do: false
   def has_sub_stream(_), do: true
 
+  @spec recording?(t()) :: boolean()
   def recording?(%__MODULE__{state: :stopped}), do: false
   def recording?(_), do: true
+
+  @spec recording_dir(t()) :: nil | Path.t()
+  def recording_dir(%__MODULE__{settings: %{storage_address: nil}}), do: nil
+
+  def recording_dir(%__MODULE__{id: id, settings: %{storage_address: storage}}),
+    do: Path.join([storage, "recordings", id])
 
   def filter(query \\ __MODULE__, params) do
     Enum.reduce(params, query, fn
@@ -168,6 +206,7 @@ defmodule ExNVR.Model.Device do
     changeset
     |> Changeset.validate_required([:name, :type])
     |> Changeset.validate_inclusion(:timezone, Tzdata.zone_list())
+    |> Changeset.cast_embed(:settings, required: true)
     |> validate_config()
   end
 

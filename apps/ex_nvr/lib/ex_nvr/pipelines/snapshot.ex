@@ -16,14 +16,14 @@ defmodule ExNVR.Pipelines.Snapshot do
 
   @impl true
   def handle_init(_ctx, options) do
-    Logger.metadata(device_id: options[:device_id])
+    Logger.metadata(device_id: options[:device].id)
     Membrane.Logger.info("Start snapshot pipeline with options: #{inspect(options)}")
 
     rank = if options[:method] == :precise, do: :last, else: :first
 
     spec = [
       child(:source, %RecordingBin{
-        device_id: options[:device_id],
+        device: options[:device],
         start_date: options[:date],
         end_date: options[:date],
         strategy: :keyframe_before

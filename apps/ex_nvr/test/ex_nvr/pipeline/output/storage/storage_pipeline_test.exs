@@ -16,13 +16,13 @@ defmodule ExNVR.Pipeline.Output.StoragePipelineTest do
 
   setup do
     device = device_fixture()
-    File.mkdir_p!(ExNVR.Utils.recording_dir(device.id))
+    File.mkdir_p!(ExNVR.Utils.recording_dir(device))
 
     %{device: device}
   end
 
   test "Segment a stream and save recordings", %{device: device} do
-    pid = start_pipeline(device.id)
+    pid = start_pipeline(device)
 
     assert_pipeline_notified(pid, :storage, {:segment_stored, segment1})
     assert_pipeline_notified(pid, :storage, {:segment_stored, segment2})
@@ -35,22 +35,21 @@ defmodule ExNVR.Pipeline.Output.StoragePipelineTest do
     assert {:ok, {recordings, _meta}} = ExNVR.Recordings.list()
     assert length(recordings) == 3
 
-    assert recording_path(device.id, segment1.start_date) |> File.exists?()
-    assert recording_path(device.id, segment2.start_date) |> File.exists?()
-    assert recording_path(device.id, segment3.start_date) |> File.exists?()
+    assert recording_path(device, segment1.start_date) |> File.exists?()
+    assert recording_path(device, segment2.start_date) |> File.exists?()
+    assert recording_path(device, segment3.start_date) |> File.exists?()
 
     Pipeline.terminate(pid)
   end
 
-  defp start_pipeline(device_id) do
+  defp start_pipeline(device) do
     structure = [
       child(:source, %Source{output: chunk_file()})
       |> child(:parser, %Membrane.H264.Parser{
         generate_best_effort_timestamps: %{framerate: {20, 1}}
       })
       |> child(:storage, %Storage{
-        device_id: device_id,
-        directory: ExNVR.Utils.recording_dir(device_id),
+        device: device,
         target_segment_duration: 4
       })
     ]
@@ -65,8 +64,8 @@ defmodule ExNVR.Pipeline.Output.StoragePipelineTest do
     |> Enum.map(&:binary.list_to_bin/1)
   end
 
-  defp recording_path(device_id, start_date) do
-    device_id
+  defp recording_path(device, start_date) do
+    device
     |> ExNVR.Utils.recording_dir()
     |> Path.join("#{DateTime.to_unix(start_date, :microsecond)}.mp4")
   end

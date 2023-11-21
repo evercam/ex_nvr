@@ -9,8 +9,8 @@ defmodule ExNVRWeb.RecordingListLiveTest do
   @moduletag :device
 
   defp create_device_directories(device) do
-    File.mkdir!(ExNVR.Utils.recording_dir(device.id))
-    File.mkdir!(ExNVR.Utils.bif_dir(device.id))
+    File.mkdir_p!(ExNVR.Utils.recording_dir(device))
+    File.mkdir_p!(ExNVR.Utils.bif_dir(device))
   end
 
   defp refute_recording_info(lv, recording) do

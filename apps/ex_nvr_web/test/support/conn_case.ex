@@ -79,8 +79,8 @@ defmodule ExNVRWeb.ConnCase do
   def maybe_create_device(tags) do
     if Map.has_key?(tags, :device) do
       device = ExNVR.DevicesFixtures.device_fixture()
-      File.mkdir!(ExNVR.Utils.recording_dir(device.id))
-      File.mkdir!(ExNVR.Utils.bif_dir(device.id))
+      File.mkdir!(ExNVR.Utils.recording_dir(device))
+      File.mkdir!(ExNVR.Utils.bif_dir(device))
       %{device: device}
     else
       %{}

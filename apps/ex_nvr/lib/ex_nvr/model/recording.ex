@@ -54,6 +54,12 @@ defmodule ExNVR.Model.Recording do
     where(query, [r], r.device_id == ^device_id)
   end
 
+  def with_name(query \\ __MODULE__, name) do
+    where(query, [r], r.filename == ^name)
+  end
+
+  def preload_device(query \\ __MODULE__), do: preload(query, [:device])
+
   def list_with_devices() do
     from(r in __MODULE__,
       join: d in assoc(r, :device),

@@ -13,7 +13,7 @@ defmodule ExNVR.Elements.RecordingPipelineTest do
 
   setup do
     device = device_fixture()
-    File.mkdir!(ExNVR.Utils.recording_dir(device.id))
+    File.mkdir_p!(ExNVR.Utils.recording_dir(device))
 
     recording_fixture(device,
       start_date: ~U(2023-09-06 10:00:00Z),
@@ -127,14 +127,13 @@ defmodule ExNVR.Elements.RecordingPipelineTest do
        ) do
     structure = [
       child(:source, %RecordingBin{
-        device_id: device.id,
+        device: device,
         start_date: start_date,
         end_date: end_date,
         strategy: strategy,
         duration: duration
       })
       |> via_out(:video)
-      # |> child(:filer, %Membrane.Debug.Filter{handle_buffer: &IO.inspect/1})
       |> child(:sink, %Membrane.File.Sink{location: out_file})
     ]
 
