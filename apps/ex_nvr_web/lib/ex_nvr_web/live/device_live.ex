@@ -8,14 +8,24 @@ defmodule ExNVRWeb.DeviceLive do
 
   def mount(%{"id" => "new"}, _session, socket) do
     changeset = Devices.change_device_creation(%Device{})
-    {:ok, assign(socket, device: %Device{}, device_form: to_form(changeset))}
+
+    {:ok,
+     assign(socket,
+       device: %Device{},
+       disks_data: get_disks_data(),
+       device_form: to_form(changeset)
+     )}
   end
 
   def mount(%{"id" => device_id}, _session, socket) do
     device = Devices.get!(device_id)
 
     {:ok,
-     assign(socket, device: device, device_form: to_form(Devices.change_device_update(device)))}
+     assign(socket,
+       device: device,
+       disks_data: get_disks_data(),
+       device_form: to_form(Devices.change_device_update(device))
+     )}
   end
 
   def handle_event("change_device_type", _params, socket) do
@@ -70,6 +80,32 @@ defmodule ExNVRWeb.DeviceLive do
          assign(push_event(socket, "toggle-device-config-inputs", %{}),
            device_form: to_form(changeset)
          )}
+    end
+  end
+
+  defp format_disk_entry({mountpoint, total_space, percent_free}) do
+    "#{mountpoint} (capacity: #{humanize_capacity(total_space)}, free: #{percent_free}%)"
+  end
+
+  defp humanize_capacity(capacity) do
+    cond do
+      capacity / 1_000_000_000 >= 1 -> "#{Float.round(capacity / 1024 ** 3, 2)} TiB"
+      capacity / 1_000_000 >= 1 -> "#{Float.round(capacity / 1024 ** 2, 2)} GiB"
+      true -> "#{Float.round(capacity / 1024, 2)} MiB"
+    end
+  end
+
+  defp get_disks_data() do
+    if Mix.env() == :test do
+      [{"/tmp", 1_000_000, 1}]
+    else
+      :disksup.get_disk_data()
+      |> Enum.map(fn {mountpoint, total_space, percentage} ->
+        {to_string(mountpoint), total_space, percentage}
+      end)
+      |> Enum.reject(fn {mountpoint, _, _} ->
+        String.match?(mountpoint, ~r[/(dev|sys|run).*])
+      end)
     end
   end
 end

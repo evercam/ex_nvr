@@ -152,6 +152,7 @@ defmodule ExNVR.DevicesTest do
       {:ok, device} = Devices.create(valid_device_attributes(%{name: @valid_camera_name}))
       assert device.id
       assert device.name == @valid_camera_name
+      assert Map.from_struct(device.settings) == valid_device_settings()
     end
   end
 

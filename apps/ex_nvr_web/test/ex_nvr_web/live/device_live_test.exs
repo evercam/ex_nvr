@@ -43,7 +43,8 @@ defmodule ExNVRWeb.DeviceLiveTest do
             "type" => "file",
             "stream_config" => %{
               "location" => valid_file_location()
-            }
+            },
+            "settings" => %{"storage_address" => "/tmp"}
           }
         })
         |> render_submit()
@@ -61,7 +62,8 @@ defmodule ExNVRWeb.DeviceLiveTest do
           "device" => %{
             "name" => "My Device",
             "type" => "file",
-            "stream_config" => %{"location" => "rtsp://"}
+            "stream_config" => %{"location" => "rtsp://"},
+            "settings" => %{"storage_address" => "/tmp"}
           }
         })
         |> render_submit()
@@ -85,6 +87,9 @@ defmodule ExNVRWeb.DeviceLiveTest do
             },
             "stream_config" => %{
               "stream_uri" => "rtsp://localhost:554"
+            },
+            "settings" => %{
+              "storage_address" => "/tmp"
             }
           }
         })
@@ -103,7 +108,8 @@ defmodule ExNVRWeb.DeviceLiveTest do
           "device" => %{
             "name" => "My Device",
             "type" => "ip",
-            "stream_config" => %{"stream_uri" => "rtsp://"}
+            "stream_config" => %{"stream_uri" => "rtsp://"},
+            "settings" => %{"storage_address" => "/tmp"}
           }
         })
         |> render_submit()
