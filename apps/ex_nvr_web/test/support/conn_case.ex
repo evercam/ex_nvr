@@ -78,9 +78,9 @@ defmodule ExNVRWeb.ConnCase do
 
   def maybe_create_device(tags) do
     if Map.has_key?(tags, :device) do
-      device = ExNVR.DevicesFixtures.device_fixture()
-      File.mkdir!(ExNVR.Utils.recording_dir(device))
-      File.mkdir!(ExNVR.Utils.bif_dir(device))
+      device =
+        ExNVR.DevicesFixtures.device_fixture(%{settings: %{storage_address: tags[:tmp_dir]}})
+
       %{device: device}
     else
       %{}
@@ -89,7 +89,6 @@ defmodule ExNVRWeb.ConnCase do
 
   defp maybe_set_application_env(tags) do
     if Map.has_key?(tags, :tmp_dir) do
-      Application.put_env(:ex_nvr, :recording_directory, tags.tmp_dir)
       Application.put_env(:ex_nvr, :hls_directory, tags.tmp_dir)
     end
   end

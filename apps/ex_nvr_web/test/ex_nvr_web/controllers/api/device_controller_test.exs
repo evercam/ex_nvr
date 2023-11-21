@@ -7,6 +7,8 @@ defmodule ExNVRWeb.API.DeviceControllerTest do
 
   alias ExNVR.Devices
 
+  @moduletag :tmp_dir
+
   setup %{conn: conn} do
     %{conn: log_in_user_with_access_token(conn, user_fixture())}
   end
@@ -33,8 +35,8 @@ defmodule ExNVRWeb.API.DeviceControllerTest do
   end
 
   describe "PUT/PATCH /api/devices/:id" do
-    setup do
-      %{device: device_fixture()}
+    setup ctx do
+      %{device: device_fixture(%{settings: %{storage_address: ctx.tmp_dir}})}
     end
 
     test "update a device", %{conn: conn, device: device} do
@@ -59,10 +61,10 @@ defmodule ExNVRWeb.API.DeviceControllerTest do
       assert response == []
     end
 
-    test "get all devices (existing devices)", %{conn: conn} do
+    test "get all devices (existing devices)", %{conn: conn, tmp_dir: tmp_dir} do
       devices =
         Enum.map(1..10, fn _ ->
-          device_fixture()
+          device_fixture(%{settings: %{storage_address: tmp_dir}})
         end)
 
       total_devices = devices |> length()
@@ -77,8 +79,8 @@ defmodule ExNVRWeb.API.DeviceControllerTest do
   end
 
   describe "GET /api/devices/:id" do
-    setup do
-      %{device: device_fixture()}
+    setup ctx do
+      %{device: device_fixture(%{settings: %{storage_address: ctx.tmp_dir}})}
     end
 
     test "get device", %{conn: conn, device: device} do

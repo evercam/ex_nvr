@@ -8,11 +8,6 @@ defmodule ExNVRWeb.RecordingListLiveTest do
   @moduletag :tmp_dir
   @moduletag :device
 
-  defp create_device_directories(device) do
-    File.mkdir_p!(ExNVR.Utils.recording_dir(device))
-    File.mkdir_p!(ExNVR.Utils.bif_dir(device))
-  end
-
   defp refute_recording_info(lv, recording) do
     refute lv
            |> element(~s{[id="recording-#{recording.id}-link"]})
@@ -42,9 +37,8 @@ defmodule ExNVRWeb.RecordingListLiveTest do
   end
 
   describe "Recording list page" do
-    setup %{device: device} do
-      new_device = device_fixture(%{name: "Device_yxz"})
-      create_device_directories(new_device)
+    setup %{device: device, tmp_dir: tmp_dir} do
+      new_device = device_fixture(%{name: "Device_yxz", settings: %{storage_address: tmp_dir}})
 
       %{
         recordings:
@@ -154,9 +148,8 @@ defmodule ExNVRWeb.RecordingListLiveTest do
           do: refute_recording_info(lv, recording)
     end
 
-    test "Filter recordings by device with no recordings", %{conn: conn} do
-      new_device = device_fixture()
-      create_device_directories(new_device)
+    test "Filter recordings by device with no recordings", %{conn: conn, tmp_dir: tmp_dir} do
+      new_device = device_fixture(%{settings: %{storage_address: tmp_dir}})
 
       {:ok, lv, _html} =
         conn

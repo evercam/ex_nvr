@@ -4,6 +4,8 @@ defmodule ExNVR.DevicesFixtures do
   entities via the `ExNVR.Devices` context.
   """
 
+  alias ExNVR.Model.Device
+
   @spec valid_rtsp_url() :: binary()
   def valid_rtsp_url(), do: "rtsp://example#{System.unique_integer()}:8541"
 
@@ -17,8 +19,11 @@ defmodule ExNVR.DevicesFixtures do
   def valid_device_credentials(), do: %{username: "user", password: "pass"}
   def valid_device_settings(), do: %{generate_bif: false, storage_address: "/tmp"}
 
+  @spec valid_device_attributes(map(), binary()) :: map()
   def valid_device_attributes(attrs \\ %{}, type \\ "ip") do
     {stream_config, attrs} = Map.pop(attrs, :stream_config, %{})
+    {settings, attrs} = Map.pop(attrs, :settings, %{})
+
     credentials = valid_device_credentials()
     stream_config = build_stream_config(stream_config, type)
 
@@ -30,16 +35,19 @@ defmodule ExNVR.DevicesFixtures do
       state: :recording,
       stream_config: stream_config,
       credentials: credentials,
-      settings: valid_device_settings()
+      settings: Enum.into(settings, valid_device_settings())
     })
   end
 
-  @spec device_fixture(map(), binary()) :: ExNVR.Model.Device.t()
+  @spec device_fixture(map(), binary()) :: Device.t()
   def device_fixture(attrs \\ %{}, device_type \\ "ip") do
     {:ok, device} =
       attrs
       |> valid_device_attributes(device_type)
       |> ExNVR.Devices.create()
+
+    File.mkdir_p!(Device.recording_dir(device))
+    File.mkdir_p!(ExNVR.Utils.bif_dir(device))
 
     device
   end

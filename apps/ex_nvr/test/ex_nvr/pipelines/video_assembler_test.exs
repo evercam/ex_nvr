@@ -12,9 +12,8 @@ defmodule ExNVR.Pipelines.VideoAssemblerTest do
 
   @moduletag :tmp_dir
 
-  setup do
-    device = device_fixture()
-    File.mkdir_p!(ExNVR.Utils.recording_dir(device))
+  setup ctx do
+    device = device_fixture(%{settings: %{storage_address: ctx.tmp_dir}})
 
     recording1 =
       recording_fixture(device,

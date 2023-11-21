@@ -11,9 +11,8 @@ defmodule ExNVR.Elements.RecordingPipelineTest do
 
   @moduletag :tmp_dir
 
-  setup do
-    device = device_fixture()
-    File.mkdir_p!(ExNVR.Utils.recording_dir(device))
+  setup %{tmp_dir: tmp_dir} do
+    device = device_fixture(%{settings: %{storage_address: tmp_dir}})
 
     recording_fixture(device,
       start_date: ~U(2023-09-06 10:00:00Z),

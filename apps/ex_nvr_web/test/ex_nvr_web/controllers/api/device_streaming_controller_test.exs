@@ -96,8 +96,11 @@ defmodule ExNVRWeb.API.DeviceStreamingControllerTest do
       |> response(404)
     end
 
-    test "Returns 404 if the device is not recording when requesting live snapshot", %{conn: conn} do
-      device = device_fixture(%{state: :failed})
+    test "Returns 404 if the device is not recording when requesting live snapshot", %{
+      conn: conn,
+      tmp_dir: tmp_dir
+    } do
+      device = device_fixture(%{state: :failed, settings: %{storage_address: tmp_dir}})
 
       conn
       |> get("/api/devices/#{device.id}/snapshot")

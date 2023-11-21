@@ -14,9 +14,8 @@ defmodule ExNVR.Pipeline.Output.StoragePipelineTest do
 
   @fixture_path "../../../../fixtures/video-30-10s.h264" |> Path.expand(__DIR__)
 
-  setup do
-    device = device_fixture()
-    File.mkdir_p!(ExNVR.Utils.recording_dir(device))
+  setup %{tmp_dir: tmp_dir} do
+    device = device_fixture(%{settings: %{storage_address: tmp_dir}})
 
     %{device: device}
   end

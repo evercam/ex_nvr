@@ -7,8 +7,8 @@ defmodule ExNVR.BifGeneratorTest do
 
   @moduletag :tmp_dir
 
-  setup do
-    device = device_fixture()
+  setup %{tmp_dir: tmp_dir} do
+    device = device_fixture(%{settings: %{storage_address: tmp_dir}})
 
     run_fixture(device,
       start_date: ~U(2023-08-10 10:15:10.000000Z),
@@ -25,9 +25,6 @@ defmodule ExNVR.BifGeneratorTest do
         start_date: ~U(2023-08-12 14:15:10.000000Z),
         end_date: ~U(2023-08-12 16:17:10.000000Z)
       )
-
-    File.mkdir_p!(ExNVR.Utils.recording_dir(device))
-    File.mkdir_p!(ExNVR.Utils.bif_dir(device))
 
     {:ok, device: device, run: run}
   end

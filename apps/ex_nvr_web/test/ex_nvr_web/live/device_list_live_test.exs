@@ -5,9 +5,11 @@ defmodule ExNVRWeb.DeviceListLiveTest do
   import ExNVR.{AccountsFixtures, DevicesFixtures}
   import Phoenix.LiveViewTest
 
+  @moduletag :tmp_dir
+
   describe "Device list page" do
-    setup do
-      %{device: device_fixture()}
+    setup ctx do
+      %{device: device_fixture(%{settings: %{storage_address: ctx.tmp_dir}})}
     end
 
     test "render devices page", %{conn: conn, device: device} do
@@ -50,8 +52,8 @@ defmodule ExNVRWeb.DeviceListLiveTest do
       %{conn: log_in_user(conn, user_fixture())}
     end
 
-    test "Stop recording", %{conn: conn} do
-      device = device_fixture(%{state: :recording})
+    test "Stop recording", %{conn: conn, tmp_dir: tmp_dir} do
+      device = device_fixture(%{state: :recording, settings: %{storage_address: tmp_dir}})
 
       {:ok, lv, html} = live(conn, ~p"/devices")
 
@@ -66,8 +68,8 @@ defmodule ExNVRWeb.DeviceListLiveTest do
       assert ExNVR.Devices.get!(device.id).state == :stopped
     end
 
-    test "Start recording", %{conn: conn} do
-      device = device_fixture(%{state: :stopped})
+    test "Start recording", %{conn: conn, tmp_dir: tmp_dir} do
+      device = device_fixture(%{state: :stopped, settings: %{storage_address: tmp_dir}})
 
       {:ok, lv, html} = live(conn, ~p"/devices")
 

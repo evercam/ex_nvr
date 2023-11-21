@@ -8,20 +8,30 @@ defmodule ExNVR.DevicesTest do
 
   @valid_camera_name "camera 1"
 
+  @moduletag :tmp_dir
+
+  setup ctx do
+    %{settings: %{storage_address: ctx.tmp_dir}}
+  end
+
   describe "list_devices/1" do
     test "returns empty list if no device exists" do
       assert Enum.empty?(Devices.list())
     end
 
-    test "returns all the devices" do
-      devices = [device_fixture(), device_fixture()]
+    test "returns all the devices", ctx do
+      devices = [
+        device_fixture(%{settings: ctx.settings}),
+        device_fixture(%{settings: ctx.settings})
+      ]
+
       assert devices == Devices.list()
     end
 
-    test "filter devices by state" do
-      device_1 = device_fixture(%{state: :recording})
-      device_2 = device_fixture(%{state: :failed})
-      device_3 = device_fixture(%{state: :stopped})
+    test "filter devices by state", ctx do
+      device_1 = device_fixture(%{state: :recording, settings: ctx.settings})
+      device_2 = device_fixture(%{state: :failed, settings: ctx.settings})
+      device_3 = device_fixture(%{state: :stopped, settings: ctx.settings})
 
       assert [device_1] == Devices.list(%{state: :recording})
       assert [device_2, device_3] == Devices.list(%{state: [:failed, :stopped]})
@@ -146,8 +156,8 @@ defmodule ExNVR.DevicesTest do
   end
 
   describe "update/2" do
-    setup do
-      %{device: device_fixture()}
+    setup ctx do
+      %{device: device_fixture(%{settings: ctx.settings})}
     end
 
     test "type cannot be updated", %{device: device} do
@@ -174,8 +184,8 @@ defmodule ExNVR.DevicesTest do
   end
 
   describe "update_state/2" do
-    setup do
-      %{device: device_fixture()}
+    setup ctx do
+      %{device: device_fixture(%{settings: ctx.settings})}
     end
 
     test "device state updated", %{device: device} do
@@ -273,8 +283,8 @@ defmodule ExNVR.DevicesTest do
     end
   end
 
-  test "get recordings dir" do
-    device = device_fixture()
-    assert "/tmp/recordings/#{device.id}" == Device.recording_dir(device)
+  test "get recordings dir", ctx do
+    device = device_fixture(%{settings: ctx.settings})
+    assert Path.join([ctx.tmp_dir, "recordings", device.id]) == Device.recording_dir(device)
   end
 end
