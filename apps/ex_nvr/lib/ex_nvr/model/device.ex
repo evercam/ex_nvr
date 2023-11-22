@@ -158,14 +158,12 @@ defmodule ExNVR.Model.Device do
 
   def file_location(%__MODULE__{stream_config: config} = _device), do: config.location
 
-  def config_updated(%{type: :ip, stream_config: config}, %{
-        type: :ip,
-        stream_config: config
-      }),
-      do: false
+  @spec config_updated(t(), t()) :: boolean()
+  def config_updated(%__MODULE__{} = device_1, %__MODULE__{} = device_2) do
+    device_1.stream_config != device_2.stream_config or device_1.settings != device_2.settings
+  end
 
-  def config_updated(_device, _updated_device), do: true
-
+  @spec has_sub_stream(t()) :: boolean()
   def has_sub_stream(%__MODULE__{stream_config: nil}), do: false
   def has_sub_stream(%__MODULE__{stream_config: %StreamConfig{sub_stream_uri: nil}}), do: false
   def has_sub_stream(_), do: true
@@ -174,11 +172,21 @@ defmodule ExNVR.Model.Device do
   def recording?(%__MODULE__{state: :stopped}), do: false
   def recording?(_), do: true
 
-  @spec recording_dir(t()) :: nil | Path.t()
-  def recording_dir(%__MODULE__{settings: %{storage_address: nil}}), do: nil
+  # directories path
 
-  def recording_dir(%__MODULE__{id: id, settings: %{storage_address: storage}}),
-    do: Path.join([storage, "recordings", id])
+  @spec base_dir(t()) :: Path.t()
+  def base_dir(%__MODULE__{settings: %{storage_address: path}}), do: Path.join(path, "ex_nvr")
+
+  @spec recording_dir(t(), :high | :low) :: Path.t()
+  def recording_dir(%__MODULE__{} = device, stream \\ :high) do
+    stream = if stream == :high, do: "hi_quality", else: "lo_quality"
+    Path.join([base_dir(device), device.id, stream])
+  end
+
+  @spec bif_dir(t()) :: Path.t()
+  def bif_dir(%__MODULE__{} = device) do
+    Path.join([base_dir(device), device.id, "bif"])
+  end
 
   def filter(query \\ __MODULE__, params) do
     Enum.reduce(params, query, fn
@@ -188,7 +196,8 @@ defmodule ExNVR.Model.Device do
     end)
   end
 
-  def create_changeset(device, params) do
+  # Changesets
+  def create_changeset(device \\ %__MODULE__{}, params) do
     device
     |> Changeset.cast(params, [:name, :type, :timezone, :state])
     |> Changeset.cast_embed(:credentials)

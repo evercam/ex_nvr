@@ -7,8 +7,8 @@ defmodule ExNVR.BifGeneratorServer do
 
   require Logger
 
+  alias ExNVR.Model.Device
   alias ExNVR.Pipelines.BifGenerator
-  alias ExNVR.Utils
 
   def start_link(options) do
     GenServer.start_link(__MODULE__, options)
@@ -24,10 +24,6 @@ defmodule ExNVR.BifGeneratorServer do
 
   @impl true
   def handle_info(:tick, %{device: device} = state) do
-    unless File.exists?(Utils.bif_dir(device)) do
-      File.mkdir!(Utils.bif_dir(device))
-    end
-
     list_hours(device)
     |> Enum.each(fn start_date ->
       Logger.info("BifGenerator: generate BIF file #{inspect(start_date)}")
@@ -64,7 +60,7 @@ defmodule ExNVR.BifGeneratorServer do
   end
 
   defp from_stored_files(device) do
-    Utils.bif_dir(device)
+    Device.bif_dir(device)
     |> Path.join("*.bif")
     |> Path.wildcard()
     |> Enum.sort(:desc)
@@ -96,7 +92,7 @@ defmodule ExNVR.BifGeneratorServer do
 
   defp bif_location(device, start_date) do
     formatted_date = Calendar.strftime(start_date, "%Y%m%d%H.bif")
-    Path.join(Utils.bif_dir(device), formatted_date)
+    Path.join(Device.bif_dir(device), formatted_date)
   end
 
   defp wait_for_pipeline(pip_pid) do

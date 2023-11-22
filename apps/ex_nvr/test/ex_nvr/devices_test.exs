@@ -148,11 +148,24 @@ defmodule ExNVR.DevicesTest do
       assert %{settings: %{storage_address: ["can't be blank"]}} = errors_on(changeset)
     end
 
-    test "create a new device" do
-      {:ok, device} = Devices.create(valid_device_attributes(%{name: @valid_camera_name}))
+    test "create a new device", %{tmp_dir: tmp_dir} do
+      {:ok, device} =
+        Devices.create(
+          valid_device_attributes(%{
+            name: @valid_camera_name,
+            settings: %{storage_address: tmp_dir}
+          })
+        )
+
       assert device.id
       assert device.name == @valid_camera_name
-      assert Map.from_struct(device.settings) == valid_device_settings()
+      assert device.settings.storage_address == tmp_dir
+
+      # assert folder created
+      assert File.exists?(Device.base_dir(device))
+      assert File.exists?(Device.recording_dir(device))
+      assert File.exists?(Device.recording_dir(device, :low))
+      assert File.exists?(Device.bif_dir(device))
     end
   end
 
@@ -286,6 +299,15 @@ defmodule ExNVR.DevicesTest do
 
   test "get recordings dir", ctx do
     device = device_fixture(%{settings: ctx.settings})
-    assert Path.join([ctx.tmp_dir, "recordings", device.id]) == Device.recording_dir(device)
+
+    assert Path.join([ctx.tmp_dir, "ex_nvr"]) == Device.base_dir(device)
+
+    assert Path.join([ctx.tmp_dir, "ex_nvr", device.id, "hi_quality"]) ==
+             Device.recording_dir(device)
+
+    assert Path.join([ctx.tmp_dir, "ex_nvr", device.id, "lo_quality"]) ==
+             Device.recording_dir(device, :low)
+
+    assert Path.join([ctx.tmp_dir, "ex_nvr", device.id, "bif"]) == Device.bif_dir(device)
   end
 end

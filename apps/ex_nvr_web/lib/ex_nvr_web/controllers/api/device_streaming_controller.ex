@@ -162,7 +162,7 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
   def bif(conn, params) do
     with {:ok, params} <- validate_bif_req_params(params) do
       filename = Calendar.strftime(params.hour, "%Y%m%d%H.bif")
-      filepath = Path.join(Utils.bif_dir(conn.assigns.device), filename)
+      filepath = Path.join(ExNVR.Model.Device.bif_dir(conn.assigns.device), filename)
 
       if File.exists?(filepath) do
         send_download(conn, {:file, filepath}, filename: filename)

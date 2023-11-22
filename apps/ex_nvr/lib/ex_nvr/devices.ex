@@ -10,9 +10,10 @@ defmodule ExNVR.Devices do
 
   @spec create(map()) :: {:ok, Device.t()} | {:error, Ecto.Changeset.t()}
   def create(params) do
-    %Device{}
-    |> Device.create_changeset(params)
-    |> Repo.insert()
+    with {:ok, device} = result <- Repo.insert(Device.create_changeset(params)) do
+      create_device_directories(device)
+      result
+    end
   end
 
   @spec update(Device.t(), map()) :: {:ok, Device.t()} | {:error, Ecto.Changeset.t()}
@@ -48,5 +49,12 @@ defmodule ExNVR.Devices do
   @spec change_device_update(Device.t(), map()) :: Ecto.Changeset.t()
   def change_device_update(%Device{} = device, attrs \\ %{}) do
     Device.update_changeset(device, attrs)
+  end
+
+  defp create_device_directories(device) do
+    File.mkdir_p!(Device.base_dir(device))
+    File.mkdir_p!(Device.recording_dir(device))
+    File.mkdir_p!(Device.recording_dir(device, :low))
+    File.mkdir_p!(Device.bif_dir(device))
   end
 end

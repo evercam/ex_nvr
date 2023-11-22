@@ -198,7 +198,7 @@ defmodule ExNVRWeb.API.DeviceStreamingControllerTest do
 
   describe "GET /api/devices/:device_id/bif/:hour" do
     setup %{device: device} do
-      Path.join(ExNVR.Utils.bif_dir(device), "2023083110.bif") |> File.touch!()
+      Path.join(ExNVR.Model.Device.bif_dir(device), "2023083110.bif") |> File.touch!()
     end
 
     test "Get bif file", %{conn: conn, device: device} do

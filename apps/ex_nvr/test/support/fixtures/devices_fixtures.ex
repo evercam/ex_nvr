@@ -46,9 +46,6 @@ defmodule ExNVR.DevicesFixtures do
       |> valid_device_attributes(device_type)
       |> ExNVR.Devices.create()
 
-    File.mkdir_p!(Device.recording_dir(device))
-    File.mkdir_p!(ExNVR.Utils.bif_dir(device))
-
     device
   end
 
