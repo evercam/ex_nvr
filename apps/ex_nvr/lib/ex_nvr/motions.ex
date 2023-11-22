@@ -16,17 +16,34 @@ defmodule ExNVR.Motions do
     Repo.insert_all(Motion, entries)
   end
 
-  @spec get_motions_from_time(binary(), DateTime.t()) :: [[Motion.t()]]
-  def get_motions_from_time(device_id, time) do
-    where(
-      Motion,
-      [r],
-      r.time <= ^DateTime.add(time, 1, :second) and r.time >= ^DateTime.add(time, -1, :second)
-      and r.device_id == ^device_id
+  @spec get_closest_time(DateTime.t(), binary()) :: [DateTime.t()]
+  def get_closest_time(time, device_id) do
+    from(m in Motion)
+    |> where([m], m.device_id == ^device_id and m.time <= ^time)
+    |> order_by(desc: :time)
+    |> limit(1)
+    |> Repo.one()
+    |> then(&(&1.time))
+  end
+
+  @spec get_with_device_time(DateTime.t(), binary()) :: [[Motion.t()]]
+  def get_with_device_time(time, device_id) do
+    from(m in Motion)
+    |> where(
+      [m],
+      m.device_id == ^device_id and m.time == ^time
     )
-    |> limit(50)
-    |> order_by(asc: :time)
+    |> order_by(desc: :time)
     |> Repo.all()
-    |> Repo.preload(:device)
+  end
+
+  @spec get_latest_timestamp(binary()) :: [DateTime.t()]
+  def get_latest_timestamp(device_id) do
+    from(m in Motion)
+    |> where([m], m.device_id == ^device_id)
+    |> order_by(desc: :time)
+    |> limit(1)
+    |> Repo.one()
+    |> then(&(&1.time))
   end
 end
