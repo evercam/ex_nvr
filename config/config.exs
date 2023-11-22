@@ -75,7 +75,7 @@ config :opentelemetry, traces_exporter: :none
 config :soap, :globals, version: "1.2"
 
 config :os_mon,
-  disk_space_check_interval: 1,
+  disk_space_check_interval: {:second, 30},
   disk_almost_full_threshold: 0.9
 
 # Import environment specific config. This must remain at the bottom

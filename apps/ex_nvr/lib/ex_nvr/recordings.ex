@@ -54,13 +54,9 @@ defmodule ExNVR.Recordings do
 
   @spec get_blob(Device.t(), binary()) :: binary() | nil
   def get_blob(%Device{id: id}, filename) do
-    recording =
-      Recording.with_device(id)
-      |> Recording.with_name(filename)
-      |> Recording.preload_device()
-      |> Repo.one()
-
-    if recording, do: File.read!(recording_path(recording.device, recording))
+    if recording = Repo.one(Recording.get_query(id, filename)) do
+      File.read!(recording_path(recording.device, recording))
+    end
   end
 
   # Runs

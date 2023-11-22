@@ -215,7 +215,7 @@ defmodule ExNVR.DevicesTest do
   describe "change_user_creation/1" do
     test "returns changeset" do
       assert %Ecto.Changeset{} = changeset = Devices.change_device_creation(%Device{})
-      assert changeset.required == [:settings, :name, :type]
+      assert changeset.required == [:name, :type, :settings]
     end
 
     test "requires Stream config (camera config) to be set when type is IP" do
@@ -228,7 +228,7 @@ defmodule ExNVR.DevicesTest do
                  valid_device_attributes(%{name: name, type: "ip"})
                )
 
-      assert changeset.required == [:stream_config, :settings, :name, :type]
+      assert changeset.required == [:stream_config, :name, :type, :settings]
     end
 
     test "allows fields to be set (Type: ip)" do
@@ -267,7 +267,7 @@ defmodule ExNVR.DevicesTest do
                  valid_device_attributes(%{name: name, type: "file"})
                )
 
-      assert changeset.required == [:stream_config, :settings, :name, :type]
+      assert changeset.required == [:stream_config, :name, :type, :settings]
     end
 
     test "allows fields to be set (Type: file)" do

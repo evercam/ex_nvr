@@ -138,6 +138,13 @@ defmodule ExNVR.Model.Device do
         end
       end)
     end
+
+    @spec update_changeset(t(), map()) :: Ecto.Changeset.t()
+    def update_changeset(struct, params) do
+      struct
+      |> cast(params, [:generate_bif])
+      |> validate_required([:storage_address])
+    end
   end
 
   @primary_key {:id, :binary_id, autogenerate: true}
@@ -201,6 +208,7 @@ defmodule ExNVR.Model.Device do
     device
     |> Changeset.cast(params, [:name, :type, :timezone, :state])
     |> Changeset.cast_embed(:credentials)
+    |> Changeset.cast_embed(:settings, required: true)
     |> common_config()
   end
 
@@ -208,6 +216,7 @@ defmodule ExNVR.Model.Device do
     device
     |> Changeset.cast(params, [:name, :timezone, :state])
     |> Changeset.cast_embed(:credentials)
+    |> Changeset.cast_embed(:settings, required: true, with: &Settings.update_changeset/2)
     |> common_config()
   end
 
@@ -215,7 +224,6 @@ defmodule ExNVR.Model.Device do
     changeset
     |> Changeset.validate_required([:name, :type])
     |> Changeset.validate_inclusion(:timezone, Tzdata.zone_list())
-    |> Changeset.cast_embed(:settings, required: true)
     |> validate_config()
   end
 

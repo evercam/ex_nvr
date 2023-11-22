@@ -20,7 +20,7 @@ defmodule ExNVR.Elements.RecordingBin do
 
   def_options device: [
                 spec: ExNVR.Model.Device.t(),
-                description: "The device id from where to read the recordings"
+                description: "The device from where to read the recordings"
               ],
               start_date: [
                 spec: DateTime.t(),

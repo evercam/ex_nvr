@@ -111,7 +111,9 @@ paths:
                   $ref: "#/components/schemas/StreamConfig"
                 credentials:
                   $ref: "#/components/schemas/Credentials"
-              required: [name, type]
+                settings:
+                  $ref: "#/components/schemas/DeviceSettings"
+              required: [name, type, settings]
       responses:
         '201':
           description: Created
@@ -178,6 +180,8 @@ paths:
                   $ref: "#/components/schemas/StreamConfig"
                 credentials:
                   $ref: "#/components/schemas/Credentials"
+                settings:
+                  $ref: "#/components/schemas/DeviceSettings"
       responses:
         '200':
           description: Success
@@ -526,6 +530,8 @@ components:
           $ref: "#/components/schemas/StreamConfig"
         credentials:
           $ref: "#/components/schemas/Credentials"
+        settings:
+          $ref: "#/components/schemas/DeviceSettings"
     StreamConfig:
       type: object
       description: Device stream configuration
@@ -553,6 +559,21 @@ components:
           type: string
           format: password
           description: Password to authenticate
+    DeviceSettings:
+      type: object
+      description: Device settings that controls how the device behaves.
+      properties:
+        generate_bif:
+          type: boolean
+          default: true
+          description: Indicates whether BIF (Base Index File) used for trick play should be generated.
+        storage_address:
+          type: string
+          description: | 
+            The mountpoint/folder where to store device data (recordings, bif, ...etc.)
+
+            This setting is not updatable after the creation of the device
+      required: [storage_address]
     Error:
       type: object
       properties:
