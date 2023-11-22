@@ -34,9 +34,9 @@ defmodule ExNVR.Pipeline.Output.StoragePipelineTest do
     assert {:ok, {recordings, _meta}} = ExNVR.Recordings.list()
     assert length(recordings) == 3
 
-    assert recording_path(device, segment1.start_date) |> File.exists?()
-    assert recording_path(device, segment2.start_date) |> File.exists?()
-    assert recording_path(device, segment3.start_date) |> File.exists?()
+    assert ExNVR.Recordings.recording_path(device, segment1) |> File.exists?()
+    assert ExNVR.Recordings.recording_path(device, segment2) |> File.exists?()
+    assert ExNVR.Recordings.recording_path(device, segment3) |> File.exists?()
 
     Pipeline.terminate(pid)
   end
@@ -61,11 +61,5 @@ defmodule ExNVR.Pipeline.Output.StoragePipelineTest do
     |> :binary.bin_to_list()
     |> Enum.chunk_every(500)
     |> Enum.map(&:binary.list_to_bin/1)
-  end
-
-  defp recording_path(device, start_date) do
-    device
-    |> ExNVR.Utils.recording_dir()
-    |> Path.join("#{DateTime.to_unix(start_date, :microsecond)}.mp4")
   end
 end

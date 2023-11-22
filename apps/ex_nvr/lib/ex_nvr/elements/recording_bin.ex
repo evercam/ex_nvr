@@ -158,19 +158,15 @@ defmodule ExNVR.Elements.RecordingBin do
     id = recording.id
 
     spec = [
-      child({:source, id}, %File.Source{location: recording_path(state.device, recording)})
+      child({:source, id}, %File.Source{
+        location: Recordings.recording_path(state.device, recording)
+      })
       |> child({:demuxer, id}, MP4.Demuxer.ISOM)
     ]
 
     state = update_recording_duration(state)
 
     {spec, %{state | recordings: rest, current_recording: recording}}
-  end
-
-  defp recording_path(device, recording) do
-    device
-    |> ExNVR.Utils.recording_dir()
-    |> Path.join(recording.filename)
   end
 
   defp update_recording_duration(%{current_recording: nil} = state), do: state

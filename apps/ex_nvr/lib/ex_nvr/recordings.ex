@@ -5,7 +5,7 @@ defmodule ExNVR.Recordings do
 
   alias Ecto.Multi
   alias ExNVR.Model.{Device, Recording, Run}
-  alias ExNVR.{Repo, Utils}
+  alias ExNVR.Repo
 
   @type error :: {:error, Ecto.Changeset.t() | File.posix()}
 
@@ -69,17 +69,22 @@ defmodule ExNVR.Recordings do
     Repo.all(Run.filter(params))
   end
 
+  @spec deactivate_runs(Device.t()) :: {non_neg_integer(), nil | term()}
   def deactivate_runs(%Device{id: device_id}) do
     Repo.update_all(Run.deactivate_query(device_id), set: [active: false])
+  end
+
+  @spec recording_path(Device.t(), map()) :: Path.t()
+  def recording_path(device, %{start_date: start_date}) do
+    Path.join(
+      [Device.recording_dir(device) | ExNVR.Utils.date_components(start_date)] ++
+        ["#{DateTime.to_unix(start_date, :microsecond)}.mp4"]
+    )
   end
 
   defp copy_file(_device, _params, false), do: :ok
 
   defp copy_file(device, params, true) do
     File.cp(params.path, recording_path(device, params))
-  end
-
-  defp recording_path(device, %{start_date: start_date}) do
-    Path.join(Utils.recording_dir(device), "#{DateTime.to_unix(start_date, :microsecond)}.mp4")
   end
 end

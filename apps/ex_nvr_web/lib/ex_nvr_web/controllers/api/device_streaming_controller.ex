@@ -87,11 +87,10 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
 
   defp serve_snapshot_from_recorded_videos(conn, %{time: time} = params) do
     device = conn.assigns.device
-    recording_dir = ExNVR.Utils.recording_dir(device)
 
     with [recording] <- Recordings.get_recordings_between(device.id, time, time),
          {:ok, timestamp, snapshot} <-
-           Recordings.Snapshooter.snapshot(recording, recording_dir, time, method: params.method) do
+           Recordings.Snapshooter.snapshot(device, recording, time, method: params.method) do
       conn
       |> put_resp_header("x-timestamp", "#{DateTime.to_unix(timestamp, :millisecond)}")
       |> put_resp_content_type("image/jpeg")
@@ -153,7 +152,7 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
         {:ok,
          Enum.map(
            recordings,
-           &Recording.Download.new(&1, ExNVR.Utils.recording_dir(device))
+           &Recording.Download.new(&1, Recordings.recording_path(device, &1))
          )}
     end
   end

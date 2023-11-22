@@ -5,27 +5,10 @@ defmodule ExNVR.Utils do
 
   @unix_socket_dir "/tmp/sockets"
 
-  @spec recording_dir(Device.t()) :: Path.t()
-  def recording_dir(device) do
-    case Device.recording_dir(device) do
-      nil ->
-        dir = Application.get_env(:ex_nvr, :recording_directory)
-        Path.join(dir, device.id)
-
-      path ->
-        path
-    end
-  end
-
   @spec hls_dir(Device.id() | nil) :: Path.t()
   def hls_dir(device_id \\ nil) do
     dir = Application.get_env(:ex_nvr, :hls_directory)
     if device_id, do: Path.join(dir, device_id), else: dir
-  end
-
-  @spec bif_dir(Device.t()) :: Path.t()
-  def bif_dir(device) do
-    Path.join(recording_dir(device), "bif")
   end
 
   @spec unix_socket_dir() :: Path.t()
@@ -48,4 +31,16 @@ defmodule ExNVR.Utils do
 
   # Streaming & Codecs utilities
   defguard keyframe(buffer) when buffer.metadata.h264.key_frame?
+
+  @spec date_components(DateTime.t()) :: [binary()]
+  def date_components(%DateTime{} = datetime) do
+    [
+      "#{datetime.year}",
+      pad_number(datetime.month),
+      pad_number(datetime.day),
+      pad_number(datetime.hour)
+    ]
+  end
+
+  defp pad_number(number), do: String.pad_leading("#{number}", 2, "0")
 end

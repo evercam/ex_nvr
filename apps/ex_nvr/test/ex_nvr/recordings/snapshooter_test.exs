@@ -28,8 +28,8 @@ defmodule ExNVR.Recordings.SnapshooterTest do
 
     assert {:ok, timestamp, snapshot} =
              ExNVR.Recordings.Snapshooter.snapshot(
+               device,
                recording,
-               ExNVR.Utils.recording_dir(device),
                ~U(2023-06-23 10:00:03Z)
              )
 
@@ -51,8 +51,8 @@ defmodule ExNVR.Recordings.SnapshooterTest do
 
     assert {:ok, start_date, snapshot} =
              ExNVR.Recordings.Snapshooter.snapshot(
+               device,
                recording,
-               ExNVR.Utils.recording_dir(device),
                datetime,
                method: :precise
              )

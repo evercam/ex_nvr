@@ -24,20 +24,22 @@ defmodule ExNVR.BifGeneratorServer do
 
   @impl true
   def handle_info(:tick, %{device: device} = state) do
-    list_hours(device)
-    |> Enum.each(fn start_date ->
-      Logger.info("BifGenerator: generate BIF file #{inspect(start_date)}")
+    if device.settings.generate_bif do
+      list_hours(device)
+      |> Enum.each(fn start_date ->
+        Logger.info("BifGenerator: generate BIF file #{inspect(start_date)}")
 
-      {:ok, _sup_pid, pip_pid} =
-        BifGenerator.start(
-          device: device,
-          start_date: start_date,
-          end_date: DateTime.add(start_date, 1, :hour),
-          location: bif_location(device, start_date)
-        )
+        {:ok, _sup_pid, pip_pid} =
+          BifGenerator.start(
+            device: device,
+            start_date: start_date,
+            end_date: DateTime.add(start_date, 1, :hour),
+            location: bif_location(device, start_date)
+          )
 
-      wait_for_pipeline(pip_pid)
-    end)
+        wait_for_pipeline(pip_pid)
+      end)
+    end
 
     Process.send_after(self(), :tick, :timer.minutes(5))
     {:noreply, state}

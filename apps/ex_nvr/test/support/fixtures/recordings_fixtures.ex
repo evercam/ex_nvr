@@ -29,6 +29,7 @@ defmodule ExNVR.RecordingsFixtures do
       attrs
       |> Enum.into(%{device_id: device.id})
       |> valid_recording_attributes()
+      |> tap(&File.mkdir_p!(Path.dirname(ExNVR.Recordings.recording_path(device, &1))))
       |> then(&ExNVR.Recordings.create(device, attrs[:run] || run_fixture(device), &1))
 
     recording

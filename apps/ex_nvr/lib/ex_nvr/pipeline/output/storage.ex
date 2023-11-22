@@ -56,7 +56,7 @@ defmodule ExNVR.Pipeline.Output.Storage do
 
     state = %{
       device: opts.device,
-      directory: ExNVR.Utils.recording_dir(opts.device),
+      directory: Device.recording_dir(opts.device),
       pending_segments: %{},
       segment_extension: ".mp4",
       run: nil,
@@ -76,6 +76,9 @@ defmodule ExNVR.Pipeline.Output.Storage do
       ) do
     Membrane.Logger.info("start recording a new segment '#{segment_ref}'")
 
+    recording_path = recording_path(state, segment_ref)
+    File.mkdir_p!(Path.dirname(recording_path))
+
     spec = [
       get_child(:segmenter)
       |> via_out(Pad.ref(:output, segment_ref))
@@ -84,7 +87,7 @@ defmodule ExNVR.Pipeline.Output.Storage do
       })
       |> child({:mp4_muxer, segment_ref}, %Membrane.MP4.Muxer.ISOM{fast_start: true})
       |> child({:sink, segment_ref}, %Membrane.File.Sink{
-        location: recording_path(state, segment_ref)
+        location: recording_path
       })
     ]
 
@@ -201,6 +204,12 @@ defmodule ExNVR.Pipeline.Output.Storage do
   defp maybe_new_run(state, _run), do: %{state | run: nil}
 
   defp recording_path(state, start_date) do
-    Path.join(state.directory, "#{div(start_date, 1_000)}#{state.segment_extension}")
+    start_date = div(start_date, 1_000)
+    date = DateTime.from_unix!(start_date, :microsecond)
+
+    Path.join(
+      [state.directory | ExNVR.Utils.date_components(date)] ++
+        ["#{start_date}#{state.segment_extension}"]
+    )
   end
 end

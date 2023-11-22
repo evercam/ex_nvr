@@ -9,7 +9,7 @@ defmodule ExNVR.BifGeneratorTest do
   @moduletag :tmp_dir
 
   setup %{tmp_dir: tmp_dir} do
-    device = device_fixture(%{settings: %{storage_address: tmp_dir}})
+    device = device_fixture(%{settings: %{storage_address: tmp_dir, generate_bif: true}})
 
     run_fixture(device,
       start_date: ~U(2023-08-10 10:15:10.000000Z),

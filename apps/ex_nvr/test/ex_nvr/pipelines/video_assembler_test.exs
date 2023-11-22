@@ -71,7 +71,7 @@ defmodule ExNVR.Pipelines.VideoAssemblerTest do
       rec =
         Enum.map(
           recordings,
-          &Recording.Download.new(&1, ExNVR.Utils.recording_dir(device))
+          &Recording.Download.new(&1, ExNVR.Recordings.recording_path(device, &1))
         )
 
       start_date = DateTime.to_unix(~U(2023-06-23 10:00:03Z), :millisecond)
