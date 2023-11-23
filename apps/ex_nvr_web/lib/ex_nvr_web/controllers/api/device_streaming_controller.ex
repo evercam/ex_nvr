@@ -259,7 +259,7 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
       |> Path.join(stream_id)
 
     pipeline_options = [
-      device_id: device.id,
+      device: device,
       start_date: params.pos,
       resolution: params.resolution,
       directory: path,

@@ -83,10 +83,6 @@ defmodule ExNVRWeb.DeviceLive do
     end
   end
 
-  defp format_disk_entry({mountpoint, total_space, percent_free}) do
-    "#{mountpoint} (capacity: #{humanize_capacity(total_space)}, free: #{percent_free}%)"
-  end
-
   defp humanize_capacity(capacity) do
     cond do
       capacity / 1_000_000_000 >= 1 -> "#{Float.round(capacity / 1024 ** 3, 2)} TiB"
