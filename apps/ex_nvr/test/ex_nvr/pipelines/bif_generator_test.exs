@@ -7,10 +7,8 @@ defmodule ExNVR.Pipelines.BifGeneratorTest do
 
   @moduletag :tmp_dir
 
-  setup do
-    device = device_fixture()
-
-    File.mkdir!(ExNVR.Utils.recording_dir(device.id))
+  setup ctx do
+    device = device_fixture(%{settings: %{storage_address: ctx.tmp_dir}})
 
     recording_fixture(device,
       start_date: ~U(2023-06-23 10:00:00Z),
@@ -53,9 +51,7 @@ defmodule ExNVR.Pipelines.BifGeneratorTest do
   defp prepare_pipeline(device, options) do
     options = [
       module: ExNVR.Pipelines.BifGenerator,
-      custom_args:
-        [device_id: device.id]
-        |> Keyword.merge(options)
+      custom_args: Keyword.merge([device: device], options)
     ]
 
     Testing.Pipeline.start_supervised!(options)

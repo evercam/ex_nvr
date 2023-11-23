@@ -110,6 +110,43 @@ defmodule ExNVR.Model.Device do
     end
   end
 
+  defmodule Settings do
+    use Ecto.Schema
+
+    import Ecto.Changeset
+
+    @type t :: %__MODULE__{
+            generate_bif: boolean(),
+            storage_address: binary()
+          }
+
+    @primary_key false
+    embedded_schema do
+      field :generate_bif, :boolean, default: true
+      field :storage_address, :string
+    end
+
+    @spec changeset(t(), map()) :: Ecto.Changeset.t()
+    def changeset(struct, params) do
+      struct
+      |> cast(params, __MODULE__.__schema__(:fields))
+      |> validate_required([:storage_address])
+      |> validate_change(:storage_address, fn :storage_address, mountpoint ->
+        case File.stat(mountpoint) do
+          {:ok, %File.Stat{access: :read_write}} -> []
+          _other -> [storage_address: "has no write permissions"]
+        end
+      end)
+    end
+
+    @spec update_changeset(t(), map()) :: Ecto.Changeset.t()
+    def update_changeset(struct, params) do
+      struct
+      |> cast(params, [:generate_bif])
+      |> validate_required([:storage_address])
+    end
+  end
+
   @primary_key {:id, :binary_id, autogenerate: true}
   schema "devices" do
     field :name, :string
@@ -119,6 +156,7 @@ defmodule ExNVR.Model.Device do
 
     embeds_one :credentials, Credentials, source: :credentials, on_replace: :update
     embeds_one :stream_config, StreamConfig, source: :config, on_replace: :update
+    embeds_one :settings, Settings, on_replace: :update
 
     timestamps(type: :utc_datetime_usec)
   end
@@ -127,20 +165,35 @@ defmodule ExNVR.Model.Device do
 
   def file_location(%__MODULE__{stream_config: config} = _device), do: config.location
 
-  def config_updated(%{type: :ip, stream_config: config}, %{
-        type: :ip,
-        stream_config: config
-      }),
-      do: false
+  @spec config_updated(t(), t()) :: boolean()
+  def config_updated(%__MODULE__{} = device_1, %__MODULE__{} = device_2) do
+    device_1.stream_config != device_2.stream_config or device_1.settings != device_2.settings
+  end
 
-  def config_updated(_device, _updated_device), do: true
-
+  @spec has_sub_stream(t()) :: boolean()
   def has_sub_stream(%__MODULE__{stream_config: nil}), do: false
   def has_sub_stream(%__MODULE__{stream_config: %StreamConfig{sub_stream_uri: nil}}), do: false
   def has_sub_stream(_), do: true
 
+  @spec recording?(t()) :: boolean()
   def recording?(%__MODULE__{state: :stopped}), do: false
   def recording?(_), do: true
+
+  # directories path
+
+  @spec base_dir(t()) :: Path.t()
+  def base_dir(%__MODULE__{settings: %{storage_address: path}}), do: Path.join(path, "ex_nvr")
+
+  @spec recording_dir(t(), :high | :low) :: Path.t()
+  def recording_dir(%__MODULE__{} = device, stream \\ :high) do
+    stream = if stream == :high, do: "hi_quality", else: "lo_quality"
+    Path.join([base_dir(device), device.id, stream])
+  end
+
+  @spec bif_dir(t()) :: Path.t()
+  def bif_dir(%__MODULE__{} = device) do
+    Path.join([base_dir(device), device.id, "bif"])
+  end
 
   def filter(query \\ __MODULE__, params) do
     Enum.reduce(params, query, fn
@@ -150,10 +203,12 @@ defmodule ExNVR.Model.Device do
     end)
   end
 
-  def create_changeset(device, params) do
+  # Changesets
+  def create_changeset(device \\ %__MODULE__{}, params) do
     device
     |> Changeset.cast(params, [:name, :type, :timezone, :state])
     |> Changeset.cast_embed(:credentials)
+    |> Changeset.cast_embed(:settings, required: true)
     |> common_config()
   end
 
@@ -161,6 +216,7 @@ defmodule ExNVR.Model.Device do
     device
     |> Changeset.cast(params, [:name, :timezone, :state])
     |> Changeset.cast_embed(:credentials)
+    |> Changeset.cast_embed(:settings, required: true, with: &Settings.update_changeset/2)
     |> common_config()
   end
 

@@ -3,17 +3,17 @@ defmodule ExNVR.Recordings.Snapshooter do
   Get a snapshot from a recording
   """
 
-  alias ExNVR.Model.Recording
+  alias ExNVR.Model.{Device, Recording}
   alias ExNVR.MP4.Reader
   alias Membrane.{Buffer, H264}
   alias Membrane.H264.FFmpeg.Decoder
   alias Membrane.Time
 
-  @spec snapshot(Recording.t(), Path.t(), DateTime.t(), Keyword.t()) ::
+  @spec snapshot(Device.t(), Recording.t(), DateTime.t(), Keyword.t()) ::
           {:ok, DateTime.t(), binary()} | {:error, term()}
-  def snapshot(%Recording{} = recording, recording_dir, datetime, opts \\ []) do
+  def snapshot(%Device{} = device, %Recording{} = recording, datetime, opts \\ []) do
     method = Keyword.get(opts, :method, :before)
-    path = Path.join(recording_dir, recording.filename)
+    path = ExNVR.Recordings.recording_path(device, recording)
     seek_time = Time.from_datetime(datetime) - Time.from_datetime(recording.start_date)
 
     with {:ok, mp4_reader} <- Reader.new(path),

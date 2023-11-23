@@ -8,6 +8,8 @@ defmodule ExNVRWeb.DeviceLiveTest do
 
   alias ExNVR.Devices
 
+  @moduletag :tmp_dir
+
   setup %{conn: conn} do
     %{conn: log_in_user(conn, user_fixture())}
   end
@@ -20,8 +22,8 @@ defmodule ExNVRWeb.DeviceLiveTest do
       assert html =~ "Creating..."
     end
 
-    test "render update device page", %{conn: conn} do
-      device = device_fixture()
+    test "render update device page", %{conn: conn, tmp_dir: tmp_dir} do
+      device = device_fixture(%{settings: %{storage_address: tmp_dir}})
       {:ok, _lv, html} = live(conn, ~p"/devices/#{device.id}")
 
       assert html =~ "Update a device"
@@ -41,7 +43,8 @@ defmodule ExNVRWeb.DeviceLiveTest do
             "type" => "file",
             "stream_config" => %{
               "location" => valid_file_location()
-            }
+            },
+            "settings" => %{"storage_address" => "/tmp"}
           }
         })
         |> render_submit()
@@ -59,7 +62,8 @@ defmodule ExNVRWeb.DeviceLiveTest do
           "device" => %{
             "name" => "My Device",
             "type" => "file",
-            "stream_config" => %{"location" => "rtsp://"}
+            "stream_config" => %{"location" => "rtsp://"},
+            "settings" => %{"storage_address" => "/tmp"}
           }
         })
         |> render_submit()
@@ -83,6 +87,9 @@ defmodule ExNVRWeb.DeviceLiveTest do
             },
             "stream_config" => %{
               "stream_uri" => "rtsp://localhost:554"
+            },
+            "settings" => %{
+              "storage_address" => "/tmp"
             }
           }
         })
@@ -101,7 +108,8 @@ defmodule ExNVRWeb.DeviceLiveTest do
           "device" => %{
             "name" => "My Device",
             "type" => "ip",
-            "stream_config" => %{"stream_uri" => "rtsp://"}
+            "stream_config" => %{"stream_uri" => "rtsp://"},
+            "settings" => %{"storage_address" => "/tmp"}
           }
         })
         |> render_submit()
@@ -112,8 +120,11 @@ defmodule ExNVRWeb.DeviceLiveTest do
   end
 
   describe "Update a device" do
-    setup do
-      %{device: device_fixture(), file_device: device_fixture(%{}, "file")}
+    setup ctx do
+      %{
+        device: device_fixture(%{settings: %{storage_address: ctx.tmp_dir}}),
+        file_device: device_fixture(%{settings: %{storage_address: ctx.tmp_dir}}, "file")
+      }
     end
 
     test "update an IP Camera device", %{conn: conn, device: device} do

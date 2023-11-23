@@ -11,10 +11,8 @@ defmodule ExNVR.Pipelines.HlsPlaybackTest do
 
   @moduletag :tmp_dir
 
-  setup do
-    device = device_fixture()
-
-    File.mkdir!(ExNVR.Utils.recording_dir(device.id))
+  setup ctx do
+    device = device_fixture(%{settings: %{storage_address: ctx.tmp_dir}})
 
     recording_fixture(device,
       start_date: ~U(2023-06-23 10:00:00Z),
@@ -48,7 +46,7 @@ defmodule ExNVR.Pipelines.HlsPlaybackTest do
     options = [
       module: ExNVR.Pipelines.HlsPlayback,
       custom_args:
-        [device_id: device.id, start_date: ~U(2023-06-23 10:00:02Z)] |> Keyword.merge(options)
+        [device: device, start_date: ~U(2023-06-23 10:00:02Z)] |> Keyword.merge(options)
     ]
 
     Testing.Pipeline.start_supervised!(options)

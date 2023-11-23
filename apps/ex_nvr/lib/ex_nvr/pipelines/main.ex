@@ -173,23 +173,11 @@ defmodule ExNVR.Pipelines.Main do
 
   @impl true
   def handle_setup(_ctx, state) do
-    do_create_directories(state.device)
-
     # Set device state and make last active run inactive
     # may happens on application crash
     device_state = if state.device.type == :file, do: :recording, else: :failed
     Recordings.deactivate_runs(state.device)
     {[], maybe_update_device_and_report(state, device_state)}
-  end
-
-  defp do_create_directories(device) do
-    unless File.exists?(Utils.recording_dir(device.id)) do
-      File.mkdir!(Utils.recording_dir(device.id))
-    end
-
-    unless File.exists?(Utils.hls_dir(device.id)) do
-      File.mkdir!(Utils.hls_dir(device.id))
-    end
   end
 
   @impl true
@@ -362,8 +350,7 @@ defmodule ExNVR.Pipelines.Main do
       |> child(:video_tee, Membrane.Tee.Master)
       |> via_out(:master)
       |> child({:storage_bin, :main_stream}, %Output.Storage{
-        device_id: state.device.id,
-        directory: Utils.recording_dir(state.device.id),
+        device: state.device,
         target_segment_duration: state.segment_duration,
         correct_timestamp: true
       }),

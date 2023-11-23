@@ -14,7 +14,7 @@ defmodule ExNVR.Pipelines.VideoAssembler do
 
   @impl true
   def handle_init(_ctx, options) do
-    Logger.metadata(device_id: options[:device_id])
+    Logger.metadata(device_id: options[:device].id)
     Membrane.Logger.info("Initialize VideoAssembler pipeline with: #{inspect(options)}")
 
     spec = [
@@ -28,7 +28,7 @@ defmodule ExNVR.Pipelines.VideoAssembler do
       })
     ]
 
-    {[spec: spec], %{device_id: options[:device_id]}}
+    {[spec: spec], %{device: options[:device]}}
   end
 
   @impl true

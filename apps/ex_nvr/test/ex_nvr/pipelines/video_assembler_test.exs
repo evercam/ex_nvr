@@ -12,10 +12,8 @@ defmodule ExNVR.Pipelines.VideoAssemblerTest do
 
   @moduletag :tmp_dir
 
-  setup do
-    device = device_fixture()
-
-    File.mkdir!(ExNVR.Utils.recording_dir(device.id))
+  setup ctx do
+    device = device_fixture(%{settings: %{storage_address: ctx.tmp_dir}})
 
     recording1 =
       recording_fixture(device,
@@ -73,7 +71,7 @@ defmodule ExNVR.Pipelines.VideoAssemblerTest do
       rec =
         Enum.map(
           recordings,
-          &Recording.Download.new(&1, ExNVR.Utils.recording_dir(device.id))
+          &Recording.Download.new(&1, ExNVR.Recordings.recording_path(device, &1))
         )
 
       start_date = DateTime.to_unix(~U(2023-06-23 10:00:03Z), :millisecond)
@@ -97,9 +95,7 @@ defmodule ExNVR.Pipelines.VideoAssemblerTest do
   defp prepare_pipeline(device, options) do
     options = [
       module: ExNVR.Pipelines.VideoAssembler,
-      custom_args:
-        [device_id: device.id]
-        |> Keyword.merge(options)
+      custom_args: Keyword.merge([device: device], options)
     ]
 
     Testing.Pipeline.start_supervised!(options)

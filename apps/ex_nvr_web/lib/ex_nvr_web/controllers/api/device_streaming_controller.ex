@@ -87,11 +87,10 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
 
   defp serve_snapshot_from_recorded_videos(conn, %{time: time} = params) do
     device = conn.assigns.device
-    recording_dir = ExNVR.Utils.recording_dir(device.id)
 
     with [recording] <- Recordings.get_recordings_between(device.id, time, time),
          {:ok, timestamp, snapshot} <-
-           Recordings.Snapshooter.snapshot(recording, recording_dir, time, method: params.method) do
+           Recordings.Snapshooter.snapshot(device, recording, time, method: params.method) do
       conn
       |> put_resp_header("x-timestamp", "#{DateTime.to_unix(timestamp, :millisecond)}")
       |> put_resp_content_type("image/jpeg")
@@ -153,7 +152,7 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
         {:ok,
          Enum.map(
            recordings,
-           &Recording.Download.new(&1, ExNVR.Utils.recording_dir(device.id))
+           &Recording.Download.new(&1, Recordings.recording_path(device, &1))
          )}
     end
   end
@@ -162,7 +161,7 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
   def bif(conn, params) do
     with {:ok, params} <- validate_bif_req_params(params) do
       filename = Calendar.strftime(params.hour, "%Y%m%d%H.bif")
-      filepath = Path.join(Utils.bif_dir(conn.assigns.device.id), filename)
+      filepath = Path.join(ExNVR.Model.Device.bif_dir(conn.assigns.device), filename)
 
       if File.exists?(filepath) do
         send_download(conn, {:file, filepath}, filename: filename)
@@ -260,7 +259,7 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
       |> Path.join(stream_id)
 
     pipeline_options = [
-      device_id: device.id,
+      device: device,
       start_date: params.pos,
       resolution: params.resolution,
       directory: path,

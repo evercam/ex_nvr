@@ -6,11 +6,10 @@ defmodule ExNVRWeb.API.RecordingControllerTest do
 
   @moduletag :tmp_dir
 
-  setup do
+  setup ctx do
     conn = build_conn() |> log_in_user_with_access_token(AccountsFixtures.user_fixture())
-    device = DevicesFixtures.device_fixture()
+    device = DevicesFixtures.device_fixture(%{settings: %{storage_address: ctx.tmp_dir}})
 
-    File.mkdir_p!(ExNVR.Utils.recording_dir(device.id))
     %{conn: conn, device: device}
   end
 

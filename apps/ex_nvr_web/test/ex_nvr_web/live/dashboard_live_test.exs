@@ -21,9 +21,9 @@ defmodule ExNVRWeb.DashboardTest do
       assert path == ~p"/devices"
     end
 
+    @tag :tmp_dir
+    @tag :device
     test "render dashboard page (with devices)", %{conn: conn} do
-      device_fixture()
-
       {:ok, lv, html} = live(conn, ~p"/dashboard")
 
       assert html =~ "Device"
@@ -38,9 +38,16 @@ defmodule ExNVRWeb.DashboardTest do
   end
 
   describe "switch device" do
-    test "switch devices update available streams", %{conn: conn} do
-      device_1 = device_fixture()
-      device_2 = device_fixture(%{stream_config: %{sub_stream_uri: valid_rtsp_url()}})
+    @describetag :tmp_dir
+
+    test "switch devices update available streams", %{conn: conn, tmp_dir: tmp_dir} do
+      device_1 = device_fixture(%{settings: %{storage_address: tmp_dir}})
+
+      device_2 =
+        device_fixture(%{
+          settings: %{storage_address: tmp_dir},
+          stream_config: %{sub_stream_uri: valid_rtsp_url()}
+        })
 
       {:ok, lv, html} = live(conn, ~p"/dashboard")
 
@@ -60,9 +67,10 @@ defmodule ExNVRWeb.DashboardTest do
   end
 
   describe "download footage" do
-    test "end date field is shown if custom duration selected", %{conn: conn} do
-      device_fixture()
+    @describetag :tmp_dir
+    @describetag :device
 
+    test "end date field is shown if custom duration selected", %{conn: conn} do
       {:ok, lv, _html} = live(conn, ~p"/dashboard")
 
       html =
@@ -74,8 +82,6 @@ defmodule ExNVRWeb.DashboardTest do
     end
 
     test "no footage", %{conn: conn} do
-      device_fixture()
-
       {:ok, lv, _html} = live(conn, ~p"/dashboard")
 
       html =
@@ -87,8 +93,6 @@ defmodule ExNVRWeb.DashboardTest do
       refute html =~ "End Date"
     end
 
-    @tag :device
-    @tag :tmp_dir
     test "no errors", %{conn: conn, device: device} do
       recording_fixture(device, start_date: ~U(2023-10-05T10:00:00Z))
 

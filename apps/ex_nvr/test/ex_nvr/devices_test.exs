@@ -8,20 +8,30 @@ defmodule ExNVR.DevicesTest do
 
   @valid_camera_name "camera 1"
 
+  @moduletag :tmp_dir
+
+  setup ctx do
+    %{settings: %{storage_address: ctx.tmp_dir}}
+  end
+
   describe "list_devices/1" do
     test "returns empty list if no device exists" do
       assert Enum.empty?(Devices.list())
     end
 
-    test "returns all the devices" do
-      devices = [device_fixture(), device_fixture()]
+    test "returns all the devices", ctx do
+      devices = [
+        device_fixture(%{settings: ctx.settings}),
+        device_fixture(%{settings: ctx.settings})
+      ]
+
       assert devices == Devices.list()
     end
 
-    test "filter devices by state" do
-      device_1 = device_fixture(%{state: :recording})
-      device_2 = device_fixture(%{state: :failed})
-      device_3 = device_fixture(%{state: :stopped})
+    test "filter devices by state", ctx do
+      device_1 = device_fixture(%{state: :recording, settings: ctx.settings})
+      device_2 = device_fixture(%{state: :failed, settings: ctx.settings})
+      device_3 = device_fixture(%{state: :stopped, settings: ctx.settings})
 
       assert [device_1] == Devices.list(%{state: :recording})
       assert [device_2, device_3] == Devices.list(%{state: [:failed, :stopped]})
@@ -45,7 +55,12 @@ defmodule ExNVR.DevicesTest do
     end
 
     test "requires stream config when type is file" do
-      {:error, changeset} = Devices.create(%{name: @valid_camera_name, type: "file"})
+      {:error, changeset} =
+        Devices.create(%{
+          name: @valid_camera_name,
+          type: "file",
+          settings: valid_device_settings()
+        })
 
       assert %{
                stream_config: ["can't be blank"]
@@ -54,7 +69,12 @@ defmodule ExNVR.DevicesTest do
 
     test "requires File location when type is File" do
       {:error, changeset} =
-        Devices.create(%{name: @valid_camera_name, type: "file", stream_config: %{}})
+        Devices.create(%{
+          name: @valid_camera_name,
+          type: "file",
+          stream_config: %{},
+          settings: valid_device_settings()
+        })
 
       assert %{
                stream_config: %{location: ["can't be blank"]}
@@ -82,7 +102,8 @@ defmodule ExNVR.DevicesTest do
     end
 
     test "requires stream config when type is ip" do
-      {:error, changeset} = Devices.create(%{name: @valid_camera_name, type: "ip"})
+      {:error, changeset} =
+        Devices.create(%{name: @valid_camera_name, type: "ip", settings: valid_device_settings()})
 
       assert %{
                stream_config: ["can't be blank"]
@@ -91,7 +112,12 @@ defmodule ExNVR.DevicesTest do
 
     test "requires stream_uri" do
       {:error, changeset} =
-        Devices.create(%{name: @valid_camera_name, type: "ip", stream_config: %{}})
+        Devices.create(%{
+          name: @valid_camera_name,
+          type: "ip",
+          stream_config: %{},
+          settings: valid_device_settings()
+        })
 
       assert %{
                stream_config: %{stream_uri: ["can't be blank"]}
@@ -114,16 +140,38 @@ defmodule ExNVR.DevicesTest do
              } = errors_on(changeset)
     end
 
-    test "create a new device" do
-      {:ok, device} = Devices.create(valid_device_attributes(%{name: @valid_camera_name}))
+    test "require settings" do
+      {:error, changeset} = Devices.create(%{})
+      assert %{settings: ["can't be blank"]} = errors_on(changeset)
+
+      {:error, changeset} = Devices.create(%{settings: %{}})
+      assert %{settings: %{storage_address: ["can't be blank"]}} = errors_on(changeset)
+    end
+
+    test "create a new device", %{tmp_dir: tmp_dir} do
+      {:ok, device} =
+        Devices.create(
+          valid_device_attributes(%{
+            name: @valid_camera_name,
+            settings: %{storage_address: tmp_dir}
+          })
+        )
+
       assert device.id
       assert device.name == @valid_camera_name
+      assert device.settings.storage_address == tmp_dir
+
+      # assert folder created
+      assert File.exists?(Device.base_dir(device))
+      assert File.exists?(Device.recording_dir(device))
+      assert File.exists?(Device.recording_dir(device, :low))
+      assert File.exists?(Device.bif_dir(device))
     end
   end
 
   describe "update/2" do
-    setup do
-      %{device: device_fixture()}
+    setup ctx do
+      %{device: device_fixture(%{settings: ctx.settings})}
     end
 
     test "type cannot be updated", %{device: device} do
@@ -139,17 +187,19 @@ defmodule ExNVR.DevicesTest do
       {:ok, device} =
         Devices.update(device, %{
           name: @valid_camera_name,
-          stream_config: %{sub_stream_uri: stream_uri}
+          stream_config: %{sub_stream_uri: stream_uri},
+          settings: %{generate_bif: true}
         })
 
       assert device.name == @valid_camera_name
       assert device.stream_config.sub_stream_uri == stream_uri
+      assert device.settings.generate_bif
     end
   end
 
   describe "update_state/2" do
-    setup do
-      %{device: device_fixture()}
+    setup ctx do
+      %{device: device_fixture(%{settings: ctx.settings})}
     end
 
     test "device state updated", %{device: device} do
@@ -165,7 +215,7 @@ defmodule ExNVR.DevicesTest do
   describe "change_user_creation/1" do
     test "returns changeset" do
       assert %Ecto.Changeset{} = changeset = Devices.change_device_creation(%Device{})
-      assert changeset.required == [:name, :type]
+      assert changeset.required == [:name, :type, :settings]
     end
 
     test "requires Stream config (camera config) to be set when type is IP" do
@@ -178,7 +228,7 @@ defmodule ExNVR.DevicesTest do
                  valid_device_attributes(%{name: name, type: "ip"})
                )
 
-      assert changeset.required == [:stream_config, :name, :type]
+      assert changeset.required == [:stream_config, :name, :type, :settings]
     end
 
     test "allows fields to be set (Type: ip)" do
@@ -217,7 +267,7 @@ defmodule ExNVR.DevicesTest do
                  valid_device_attributes(%{name: name, type: "file"})
                )
 
-      assert changeset.required == [:stream_config, :name, :type]
+      assert changeset.required == [:stream_config, :name, :type, :settings]
     end
 
     test "allows fields to be set (Type: file)" do
@@ -245,5 +295,19 @@ defmodule ExNVR.DevicesTest do
       assert %Ecto.Changeset{} = config_changeset = get_change(changeset, :stream_config)
       assert get_change(config_changeset, :location) == stream_config.location
     end
+  end
+
+  test "get recordings dir", ctx do
+    device = device_fixture(%{settings: ctx.settings})
+
+    assert Path.join([ctx.tmp_dir, "ex_nvr"]) == Device.base_dir(device)
+
+    assert Path.join([ctx.tmp_dir, "ex_nvr", device.id, "hi_quality"]) ==
+             Device.recording_dir(device)
+
+    assert Path.join([ctx.tmp_dir, "ex_nvr", device.id, "lo_quality"]) ==
+             Device.recording_dir(device, :low)
+
+    assert Path.join([ctx.tmp_dir, "ex_nvr", device.id, "bif"]) == Device.bif_dir(device)
   end
 end

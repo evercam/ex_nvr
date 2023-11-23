@@ -18,9 +18,9 @@ defmodule ExNVR.Elements.RecordingBin do
   alias ExNVR.Elements.Recording.Timestamper
   alias Membrane.{File, H264, MP4}
 
-  def_options device_id: [
-                spec: binary(),
-                description: "The device id from where to read the recordings"
+  def_options device: [
+                spec: ExNVR.Model.Device.t(),
+                description: "The device from where to read the recordings"
               ],
               start_date: [
                 spec: DateTime.t(),
@@ -68,7 +68,7 @@ defmodule ExNVR.Elements.RecordingBin do
     Membrane.Logger.debug("Initialize recording bin: #{inspect(options)}")
 
     recordings =
-      Recordings.get_recordings_between(options.device_id, options.start_date, options.end_date)
+      Recordings.get_recordings_between(options.device.id, options.start_date, options.end_date)
 
     state =
       Map.from_struct(options)
@@ -125,7 +125,7 @@ defmodule ExNVR.Elements.RecordingBin do
   def handle_element_end_of_stream({:timestamper, id}, pad, ctx, %{recordings: []} = state) do
     recordings =
       Recordings.get_recordings_between(
-        state.device_id,
+        state.device.id,
         state.current_recording.end_date,
         state.end_date
       )
@@ -158,19 +158,15 @@ defmodule ExNVR.Elements.RecordingBin do
     id = recording.id
 
     spec = [
-      child({:source, id}, %File.Source{location: recording_path(state.device_id, recording)})
+      child({:source, id}, %File.Source{
+        location: Recordings.recording_path(state.device, recording)
+      })
       |> child({:demuxer, id}, MP4.Demuxer.ISOM)
     ]
 
     state = update_recording_duration(state)
 
     {spec, %{state | recordings: rest, current_recording: recording}}
-  end
-
-  defp recording_path(device_id, recording) do
-    device_id
-    |> ExNVR.Utils.recording_dir()
-    |> Path.join(recording.filename)
   end
 
   defp update_recording_duration(%{current_recording: nil} = state), do: state

@@ -106,6 +106,59 @@
           </div>
         </div>
       </div>
+
+      <div id="device-settings" class="flex flex-col">
+        <p class="text-xl font-medium mb-4 text-gray-800 dark:text-white">
+          Device Settings
+        </p>
+        <div class="flex flex-col text-gray-900 dark:text-white">
+          <.inputs_for :let={settings} field={@device_form[:settings]}>
+            <div class="w-full mb-5 font-medium bg-white dark:bg-gray-800">
+              <h2 class="mb-2">Select storage address</h2>
+              <ul class="border border-gray-200 rounded-lg dark:border-gray-600">
+                <li
+                  :for={disk_entry <- @disks_data}
+                  class="p-2 w-full border-b border-gray-200 rounded-t-lg dark:border-gray-600"
+                >
+                  <div class="flex items-center ps-3">
+                    <.input
+                      field={settings[:storage_address]}
+                      id="settings-storage-address"
+                      type="radio"
+                      value={elem(disk_entry, 0)}
+                      checked={elem(disk_entry, 0) == settings[:storage_address].value}
+                      disabled={not is_nil(@device.id)}
+                    />
+                    <div class="w-full px-2 font-normal text-xs">
+                      <div class="flex justify-between mb-1">
+                        <span class="text-blue-700 dark:text-white">
+                          <%= elem(disk_entry, 0) %>
+                        </span>
+                        <span class="text-blue-700 dark:text-white">
+                          <%= humanize_capacity(elem(disk_entry, 1)) %>
+                        </span>
+                      </div>
+                      <div class="w-full bg-gray-200 rounded-full dark:bg-gray-700">
+                        <div
+                          class="bg-blue-600 text-xs font-medium text-blue-100 text-center leading-none rounded-full"
+                          style={"width: #{elem(disk_entry, 2)}%"}
+                        >
+                          <%= elem(disk_entry, 2) %>%
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </li>
+              </ul>
+            </div>
+
+            <h2>Other settings</h2>
+            <div class="mx-3 px-3">
+              <.input field={settings[:generate_bif]} type="checkbox" label="Generate BIF" />
+            </div>
+          </.inputs_for>
+        </div>
+      </div>
       <:actions>
         <.button :if={is_nil(@device.id)} class="w-full" phx-disable-with="Creating...">
           Create

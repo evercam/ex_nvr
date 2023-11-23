@@ -13,7 +13,7 @@ defmodule ExNVR.Pipelines.BifGenerator do
   def handle_init(_ctx, options) do
     spec = [
       child(:source, %ExNVR.Elements.RecordingBin{
-        device_id: options[:device_id],
+        device: options[:device],
         start_date: options[:start_date],
         end_date: options[:end_date],
         strategy: :exact

@@ -15,8 +15,8 @@ defmodule ExNVR.Pipeline.Output.SocketPipelineTest do
   @moduletag :tmp_dir
 
   if :os.type() |> elem(0) == :unix do
-    test "snapshots are sent to unix socket" do
-      device = device_fixture()
+    test "snapshots are sent to unix socket", %{tmp_dir: tmp_dir} do
+      device = device_fixture(%{settings: %{storage_address: tmp_dir}})
       File.mkdir_p!(Utils.unix_socket_dir())
       Process.register(self(), Utils.pipeline_name(device))
       {:ok, _server} = UnixSocketServer.start_link(device: device)
