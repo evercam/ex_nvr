@@ -5,11 +5,11 @@ defmodule ExNVRWeb.API.DeviceController do
 
   action_fallback ExNVRWeb.API.FallbackController
 
-  plug ExNVRWeb.Plug.Device, [field_name: "id"] when action in [:update, :show]
+  plug ExNVRWeb.Plug.Device, [field_name: "id"] when action in [:update, :show, :delete]
 
   import ExNVR.Authorization
+  alias ExNVR.{Devices, DeviceSupervisor, Utils}
 
-  alias ExNVR.{Devices, DeviceSupervisor}
   alias ExNVR.Model.Device
   alias Plug.Conn
 
@@ -49,6 +49,17 @@ defmodule ExNVRWeb.API.DeviceController do
       end
 
       render(conn, :show, device: device, user: conn.assigns.current_user)
+    end
+  end
+
+  def delete(%Conn{} = conn, _params) do
+    device = conn.assigns.device
+    with :ok <- DeviceSupervisor.stop(device),
+         {:ok, _} <- Utils.delete_recordings(device.id),
+         :ok <- Devices.delete(device) do
+      send_resp(conn, 200, "")
+    else
+      _ -> send_resp(conn, 500, "Couldn't delete device")
     end
   end
 

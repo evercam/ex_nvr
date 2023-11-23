@@ -117,6 +117,17 @@ defmodule ExNVR.Recordings do
     end
   end
 
+  def delete_with_device(device_id) do
+    Multi.new()
+    |> Multi.delete_all(:delete_devices, Recording.with_device(device_id))
+    |> Multi.delete_all(:delete_runs, Run.with_device(device_id))
+    |> Repo.transaction()
+    |> case do
+      {:ok, _} -> :ok
+      {:error, _, changeset, _} -> {:error, changeset}
+    end
+  end
+
   defp copy_file(_device, _params, false), do: :ok
 
   defp copy_file(device, params, true) do

@@ -6,6 +6,7 @@ defmodule ExNVR.Devices do
   alias Ecto.Multi
   alias ExNVR.Model.Device
   alias ExNVR.Repo
+  alias ExNVR.Recordings
 
   import Ecto.Query
 
@@ -47,6 +48,16 @@ defmodule ExNVR.Devices do
     case get(device_id) do
       %Device{} = device -> device
       nil -> raise "device does not exists"
+    end
+  end
+
+  @spec delete(atom() | %{:id => any(), optional(any()) => any()}) :: :error | :ok
+  def delete(device) do
+    with :ok <- Recordings.delete_with_device(device.id),
+         {:ok, _} <- Repo.delete(device) do
+      :ok
+    else
+      _ -> :error
     end
   end
 
