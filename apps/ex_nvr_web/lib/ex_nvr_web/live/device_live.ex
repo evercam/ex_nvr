@@ -38,15 +38,15 @@ defmodule ExNVRWeb.DeviceLive do
      )}
   end
 
-  def handle_event("validate", %{"device" => %{"type" => type} = device_params}, socket) do
-    device_params
-    |> Devices.change_device_validation()
-    |> then(&assign(socket, device_form: to_form(&1), device_type: type))
-    |> then(&{:noreply, &1})
-  end
+  def handle_event("validate", %{"device" => device_params}, socket) do
+    device = socket.assigns.device
 
-  def handle_event("validate", _params, socket) do
-    {:noreply, socket}
+    {device_type, changeset} = get_validation_assigns(device, device_params)
+
+    changeset
+    |> Map.put(:action, :validate)
+    |> then(&assign(socket, device_form: to_form(&1), device_type: device_type))
+    |> then(&{:noreply, &1})
   end
 
   def handle_event("save_device", %{"device" => device_params}, socket) do
@@ -59,6 +59,18 @@ defmodule ExNVRWeb.DeviceLive do
 
   def error_to_string(:too_large), do: "Too large"
   def error_to_string(:not_accepted), do: "You have selected an unacceptable file type"
+
+  defp get_validation_assigns(%{id: id} = device, device_params) when not is_nil(id) do
+    device_type = Atom.to_string(device.type)
+    changeset = Devices.change_device_update(device, device_params)
+    {device_type, changeset}
+  end
+
+  defp get_validation_assigns(_device, device_params) do
+    device_type = device_params["type"]
+    changeset = Devices.change_device_creation(%Device{}, device_params)
+    {device_type, changeset}
+  end
 
   defp do_save_device(socket, device_params) do
     socket
