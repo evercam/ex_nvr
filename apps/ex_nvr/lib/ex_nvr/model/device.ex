@@ -215,8 +215,6 @@ defmodule ExNVR.Model.Device do
     |> validate_config()
   end
 
-  defp validate_config(%Changeset{valid?: false} = cs), do: cs
-
   defp validate_config(%Changeset{} = changeset) do
     type = Changeset.get_field(changeset, :type)
 

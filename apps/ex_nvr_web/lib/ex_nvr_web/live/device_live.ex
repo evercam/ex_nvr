@@ -10,7 +10,7 @@ defmodule ExNVRWeb.DeviceLive do
   @env Mix.env()
 
   def mount(%{"id" => "new"}, _session, socket) do
-    changeset = Devices.change_device_creation(%Device{})
+    changeset = Devices.change_device_creation(%Device{type: :ip})
 
     {:ok,
      socket
