@@ -55,7 +55,6 @@ if config_env() == :prod do
     pool_size: String.to_integer(System.get_env("POOL_SIZE") || "5")
 
   config :ex_nvr,
-    recording_directory: System.fetch_env!("EXNVR_RECORDING_DIRECTORY"),
     hls_directory: System.get_env("EXNVR_HLS_DIRECTORY", "./data/hls"),
     admin_username: System.get_env("EXNVR_ADMIN_USERNAME", "admin@localhost"),
     admin_password: System.get_env("EXNVR_ADMIN_PASSWORD", "P@ssw0rd"),

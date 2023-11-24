@@ -13,9 +13,7 @@ config :ex_nvr, ExNVR.Repo,
   pool_size: 5,
   pool: Ecto.Adapters.SQL.Sandbox
 
-config :ex_nvr,
-  recording_directory: ".",
-  run_pipelines: false
+config :ex_nvr, run_pipelines: false
 
 # integrated turn variables
 config :ex_nvr,
