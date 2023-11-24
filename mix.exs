@@ -80,7 +80,7 @@ defmodule ExNVR.Umbrella.MixProject do
     # Same thing happened when using `:tar` step, links are not copied correctly
     # which made the size of the tar ball big.
     {arch, os, abi} = get_target()
-    filename = "#{release.name}-#{release.version}-#{arch}-unknown-#{os}-#{abi}.tar.gz"
+    filename = "#{release.name}-v#{release.version}-#{arch}-unknown-#{os}-#{abi}.tar.gz"
     dest = Path.expand("../..", release.path)
 
     System.cmd("tar", [
