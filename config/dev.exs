@@ -8,7 +8,6 @@ config :ex_nvr, ExNVR.Repo,
   show_sensitive_data_on_connection_error: true
 
 config :ex_nvr,
-  recording_directory: Path.expand("../data/recordings", Path.dirname(__ENV__.file)),
   hls_directory: Path.expand("../data/hls", Path.dirname(__ENV__.file)),
   run_pipelines: false
 

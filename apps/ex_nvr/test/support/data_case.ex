@@ -33,7 +33,6 @@ defmodule ExNVR.DataCase do
 
   setup tags do
     if Map.has_key?(tags, :tmp_dir) do
-      Application.put_env(:ex_nvr, :recording_directory, tags.tmp_dir)
       Application.put_env(:ex_nvr, :hls_directory, tags.tmp_dir)
     end
 

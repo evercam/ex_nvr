@@ -6,6 +6,8 @@ defmodule ExNVRWeb.DeviceLive do
   alias ExNVR.{Devices, DeviceSupervisor}
   alias ExNVR.Model.Device
 
+  @env Mix.env()
+
   def mount(%{"id" => "new"}, _session, socket) do
     changeset = Devices.change_device_creation(%Device{})
 
@@ -92,7 +94,7 @@ defmodule ExNVRWeb.DeviceLive do
   end
 
   defp get_disks_data() do
-    if Mix.env() == :test do
+    if @env == :test do
       [{"/tmp", 1_000_000, 1}]
     else
       :disksup.get_disk_data()

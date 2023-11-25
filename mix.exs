@@ -26,7 +26,9 @@ defmodule ExNVR.Umbrella.MixProject do
     [
       ex_nvr: [
         version: @version,
-        applications: [ex_nvr: :permanent, ex_nvr_web: :permanent]
+        applications: [ex_nvr: :permanent, ex_nvr_web: :permanent],
+        include_executables_for: [:unix],
+        steps: [:assemble, &copy_external_libs/1, &archive/1]
       ]
     ]
   end
@@ -45,5 +47,59 @@ defmodule ExNVR.Umbrella.MixProject do
       # run `mix setup` in all child apps
       setup: ["cmd mix setup"]
     ]
+  end
+
+  defp copy_external_libs(release) do
+    case get_target() do
+      {arch, "linux", "gnu"} ->
+        libs_dest = Path.join(release.path, "external_lib")
+        File.mkdir_p!(libs_dest)
+        copy_libs(arch, libs_dest)
+        release
+
+      _other ->
+        release
+    end
+  end
+
+  defp copy_libs(arch, dest_dir) do
+    # Tried to use `File.cp` to copy dependencies however links are not copied correctly
+    # which made the size of the destination folder 3 times the orginal size.
+    libs = [
+      Path.join(["_build", "#{Mix.env()}", "bundlex_precompiled", "**", "lib", "*.so*"]),
+      "/usr/lib/#{arch}-linux-gnu/libsrtp2.so*",
+      "/usr/lib/#{arch}-linux-gnu/libturbojpeg.so*",
+      "/usr/lib/#{arch}-linux-gnu/libssl.so*",
+      "/usr/lib/#{arch}-linux-gnu/libcrypto.so*"
+    ]
+
+    System.shell("cp -P #{Enum.join(libs, " ")} #{dest_dir}")
+  end
+
+  defp archive(release) do
+    # Same thing happened when using `:tar` step, links are not copied correctly
+    # which made the size of the tar ball big.
+    {arch, os, abi} = get_target()
+    filename = "#{release.name}-v#{release.version}-#{arch}-unknown-#{os}-#{abi}.tar.gz"
+    dest = Path.expand("../..", release.path)
+
+    System.cmd("tar", [
+      "-czvf",
+      Path.join(dest, filename),
+      "-C",
+      Path.expand("..", release.path),
+      "#{release.name}"
+    ])
+
+    release
+  end
+
+  defp get_target() do
+    [architecture, _vendor, os, abi] =
+      :erlang.system_info(:system_architecture)
+      |> List.to_string()
+      |> String.split("-")
+
+    {architecture, os, abi}
   end
 end

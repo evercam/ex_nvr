@@ -19,7 +19,7 @@ defmodule ExNVR.Upgrade do
     mountpoint = Keyword.fetch!(opts, :mountpoint)
     recording_dir = Keyword.fetch!(opts, :recording_dir)
 
-    ExNVR.Repo.update_all(Device, [set: [settings: %Device.Settings{storage_address: mountpoint}]])
+    ExNVR.Repo.update_all(Device, set: [settings: %Device.Settings{storage_address: mountpoint}])
     devices = ExNVR.Repo.all(Device)
 
     Enum.each(devices, &create_device_directories/1)
@@ -59,6 +59,5 @@ defmodule ExNVR.Upgrade do
       end)
       |> Stream.run()
     end)
-
   end
 end
