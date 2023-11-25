@@ -55,10 +55,9 @@ if config_env() == :prod do
     pool_size: String.to_integer(System.get_env("POOL_SIZE") || "5")
 
   config :ex_nvr,
-    hls_directory: System.get_env("EXNVR_HLS_DIRECTORY", "./data/hls"),
+    hls_directory: System.get_env("EXNVR_HLS_DIRECTORY", "./hls"),
     admin_username: System.get_env("EXNVR_ADMIN_USERNAME", "admin@localhost"),
-    admin_password: System.get_env("EXNVR_ADMIN_PASSWORD", "P@ssw0rd"),
-    generate_bif: String.to_atom(System.get_env("EXNVR_GENERATE_BIF", "true"))
+    admin_password: System.get_env("EXNVR_ADMIN_PASSWORD", "P@ssw0rd")
 
   config :ex_nvr,
     integrated_turn_ip:
