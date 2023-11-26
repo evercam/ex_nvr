@@ -35,6 +35,7 @@ COPY mix.exs mix.lock ./
 COPY config config
 COPY assets assets
 COPY apps apps
+COPY rel rel
 
 RUN mix deps.get
 RUN mix deps.compile

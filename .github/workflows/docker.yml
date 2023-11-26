@@ -1,4 +1,4 @@
-name: ci
+name: docker
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
       - 'v*'
 
 jobs:
-  build:
+  publish:
 
     runs-on: ubuntu-latest
 
@@ -43,20 +43,3 @@ jobs:
         labels: ${{ steps.meta.outputs.labels }}
         build-args: |
           ERL_FLAGS=+JPperf true
-
-    - name: Checkout code
-      uses: actions/checkout@v3
-      with:
-        ref: ${{ github.ref }}
-
-    - name: Copy Documentation
-      run:  cp apps/ex_nvr_web/priv/static/openapi.yaml docs/
-
-    - name: Deploy to GitHub Pages
-      run: |
-        git config user.name "GitHub Actions"
-        git config user.email "github-actions@github.com"
-        git checkout --orphan gh-pages
-        git add -A
-        git commit -m "Deploy documentation for tag ${{ github.ref_name }} to github pages"
-        git push origin gh-pages -f    
