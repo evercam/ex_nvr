@@ -17,22 +17,22 @@ defmodule ExNVRWeb.API.FallbackController do
     |> json(%{
       code: "BAD_ARGUMENT",
       message: "bad argument",
-      details: changeset_to_details(changeset)
+      details: changeset_to_details(Changeset.traverse_errors(changeset, & &1))
     })
   end
 
-  def changeset_to_details(%Changeset{} = changeset) do
-    changeset
-    |> Changeset.traverse_errors(fn {msg, options} ->
-      error_msg =
-        Regex.replace(~r/%{(\w+)}/, msg, fn _, key ->
-          options
-          |> Keyword.get(String.to_existing_atom(key), key)
-          |> to_string()
-        end)
+  def call(conn, {:error, %Flop.Meta{errors: errors}}) do
+    conn
+    |> put_status(400)
+    |> json(%{
+      code: "BAD_ARGUMENT",
+      message: "bad argument",
+      details: changeset_to_details(errors)
+    })
+  end
 
-      [error_msg: error_msg, validation: options[:validation] || options[:constraint]]
-    end)
+  defp changeset_to_details(errors) do
+    errors
     |> Enum.flat_map(&map_error/1)
     |> Enum.map(fn {target, code, message} ->
       %{
@@ -43,6 +43,24 @@ defmodule ExNVRWeb.API.FallbackController do
     end)
   end
 
-  defp map_error({_field, errors}) when is_map(errors), do: Enum.flat_map(errors, &map_error/1)
-  defp map_error({field, errors}), do: Enum.map(errors, &{field, &1[:validation], &1[:error_msg]})
+  defp map_error({field, errors}) do
+    errors = List.flatten(errors)
+
+    case Keyword.keyword?(errors) do
+      true ->
+        Enum.flat_map(errors, &map_error/1)
+
+      false ->
+        Enum.map(errors, fn {msg, options} ->
+          error_msg =
+            Regex.replace(~r/%{(\w+)}/, msg, fn _, key ->
+              options
+              |> Keyword.get(String.to_existing_atom(key), key)
+              |> to_string()
+            end)
+
+          {field, options[:validation] || options[:constraint], error_msg}
+        end)
+    end
+  end
 end

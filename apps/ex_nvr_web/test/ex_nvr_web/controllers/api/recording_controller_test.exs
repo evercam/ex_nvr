@@ -1,31 +1,32 @@
 defmodule ExNVRWeb.API.RecordingControllerTest do
   use ExNVRWeb.ConnCase
 
-  alias ExNVR.{AccountsFixtures, DevicesFixtures, RecordingsFixtures}
+  import ExNVR.{AccountsFixtures, RecordingsFixtures}
+
   alias Faker.Random
 
   @moduletag :tmp_dir
 
   setup ctx do
-    conn = build_conn() |> log_in_user_with_access_token(AccountsFixtures.user_fixture())
-    device = DevicesFixtures.device_fixture(%{settings: %{storage_address: ctx.tmp_dir}})
+    conn = build_conn() |> log_in_user_with_access_token(user_fixture())
+    device = device_fixture(%{settings: %{storage_address: ctx.tmp_dir}})
 
     %{conn: conn, device: device}
   end
 
   describe "GET /api/devices/:device_id/recordings" do
     setup %{device: device} do
-      RecordingsFixtures.run_fixture(device,
+      run_fixture(device,
         start_date: ~U(2023-05-01 01:52:00.000000Z),
         end_date: ~U(2023-05-02 10:15:30.000000Z)
       )
 
-      RecordingsFixtures.run_fixture(device,
+      run_fixture(device,
         start_date: ~U(2023-05-03 20:12:00.000000Z),
         end_date: ~U(2023-05-03 21:10:30.000000Z)
       )
 
-      RecordingsFixtures.run_fixture(device,
+      run_fixture(device,
         start_date: ~U(2023-05-10 08:52:00.000000Z),
         end_date: ~U(2023-05-15 12:45:30.000000Z),
         active: true
@@ -62,9 +63,66 @@ defmodule ExNVRWeb.API.RecordingControllerTest do
     end
   end
 
+  describe "GET /api/recordings/chunks" do
+    setup ctx do
+      device_1 = device_fixture(%{settings: %{storage_address: ctx.tmp_dir}})
+      device_2 = device_fixture(%{settings: %{storage_address: ctx.tmp_dir}})
+      device_3 = device_fixture(%{settings: %{storage_address: ctx.tmp_dir}})
+
+      rec_1 = recording_fixture(device_1)
+      rec_2 = recording_fixture(device_1)
+      rec_3 = recording_fixture(device_2)
+      rec_4 = recording_fixture(device_3)
+
+      %{recordings: [rec_1, rec_2, rec_3, rec_4], device: device_1}
+    end
+
+    test "get recordings chunks", %{conn: conn, recordings: recordings} do
+      response =
+        conn
+        |> get("/api/recordings/chunks")
+        |> json_response(200)
+
+      assert length(response["data"]) == 4
+
+      assert Enum.map(response["data"], & &1["id"]) |> MapSet.new() ==
+               Enum.map(recordings, & &1.id) |> MapSet.new()
+
+      assert %{
+               "total_count" => 4,
+               "total_pages" => 1,
+               "current_page" => 1,
+               "page_size" => 100
+             } = response["meta"]
+    end
+
+    test "filter recordings chunks", %{conn: conn, device: device, recordings: recordings} do
+      response =
+        conn
+        |> get(
+          "/api/recordings/chunks?filters[0][field]=device_id&filters[0][value]=#{device.id}"
+        )
+        |> json_response(200)
+
+      assert length(response["data"]) == 2
+
+      assert Enum.map(response["data"], & &1["id"]) |> MapSet.new() ==
+               Enum.take(recordings, 2) |> Enum.map(& &1.id) |> MapSet.new()
+    end
+
+    test "invalid params", %{conn: conn} do
+      response =
+        conn
+        |> get("/api/recordings/chunks?filters[0][field]=device&order_by=some_field")
+        |> json_response(400)
+
+      assert response["code"] == "BAD_ARGUMENT"
+    end
+  end
+
   describe "GET /api/devices/:device_id/recordings/:recording_id/blob" do
     setup do
-      %{user: AccountsFixtures.user_fixture()}
+      %{user: user_fixture()}
     end
 
     test "get recording blob", %{tmp_dir: tmp_dir, device: device, conn: conn} do
@@ -72,7 +130,7 @@ defmodule ExNVRWeb.API.RecordingControllerTest do
       content = Random.Elixir.random_bytes(20)
       File.write!(file_path, content)
 
-      recording = RecordingsFixtures.recording_fixture(device, path: file_path)
+      recording = recording_fixture(device, path: file_path)
 
       response =
         conn

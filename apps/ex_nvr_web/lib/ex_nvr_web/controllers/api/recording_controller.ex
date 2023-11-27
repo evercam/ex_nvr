@@ -22,15 +22,36 @@ defmodule ExNVRWeb.API.RecordingController do
     end
   end
 
+  @spec chunks(Plug.Conn.t(), map) :: Plug.Conn.t()
+  def chunks(conn, params) do
+    case Recordings.list(params) do
+      {:ok, {recordings, meta}} ->
+        meta =
+          Map.take(meta, [
+            :current_page,
+            :page_size,
+            :total_count,
+            :total_pages
+          ])
+
+        recordings = Enum.map(recordings, &Map.drop(&1, [:device_name, :timezone]))
+
+        json(conn, %{meta: meta, data: recordings})
+
+      {:error, meta} ->
+        {:error, meta}
+    end
+  end
+
   @spec blob(Plug.Conn.t(), map) :: Plug.Conn.t()
   def blob(conn, %{"recording_id" => recording_filename}) do
     device = conn.assigns.device
 
-    if content = Recordings.get_blob(device, recording_filename) do
-      conn
-      |> put_resp_content_type("video/mp4")
-      |> put_resp_header("content-disposition", "attachment;filename=#{recording_filename}")
-      |> send_resp(200, content)
+    if recording = Recordings.get(device, recording_filename) do
+      send_download(conn, {:file, Recordings.recording_path(device, recording)},
+        filename: recording_filename,
+        content_type: "video/mp4"
+      )
     else
       not_found(conn)
     end
