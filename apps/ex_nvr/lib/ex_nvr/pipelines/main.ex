@@ -160,7 +160,7 @@ defmodule ExNVR.Pipelines.Main do
 
       {[spec: spec], state}
     else
-      location = Device.file_location(device)
+      location = Path.join(Device.base_dir(device), device.stream_config.filename)
 
       Membrane.Logger.info("""
       Start streaming for

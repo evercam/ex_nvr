@@ -93,7 +93,7 @@ defmodule ExNVRWeb.API.DeviceControllerTest do
 
       assert device.stream_config.stream_uri == response["stream_config"]["stream_uri"]
       assert device.stream_config.sub_stream_uri == response["stream_config"]["sub_stream_uri"]
-      assert device.stream_config.location == response["stream_config"]["location"]
+      assert device.stream_config.filename == response["stream_config"]["filename"]
 
       assert device.credentials.username == response["credentials"]["username"]
       assert device.credentials.password == response["credentials"]["password"]

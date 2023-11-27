@@ -6,7 +6,8 @@ defmodule ExNVRWeb.DeviceLiveTest do
   import ExNVR.{AccountsFixtures, DevicesFixtures}
   import Phoenix.LiveViewTest
 
-  alias ExNVR.{Devices, Utils}
+  alias ExNVR.{Devices}
+  alias ExNVR.Model.Device
 
   @moduletag :tmp_dir
 
@@ -62,7 +63,22 @@ defmodule ExNVRWeb.DeviceLiveTest do
         |> render_submit()
         |> follow_redirect(conn, ~p"/devices")
 
-      uploaded_file_path = Path.join(Utils.device_file_dir(), "big_buck.mp4")
+      devices = Devices.list()
+      assert length(devices) == 1
+
+      [created_device] = devices
+
+      assert created_device.name == "My Device"
+      assert created_device.type == :file
+      assert created_device.settings.storage_address == "/tmp"
+      assert created_device.stream_config.filename == "big_buck.mp4"
+
+      uploaded_file_path =
+        Path.join([
+          Device.base_dir(created_device),
+          created_device.stream_config.filename
+        ])
+
       assert File.exists?(uploaded_file_path)
       File.rm!(uploaded_file_path)
 
@@ -72,7 +88,8 @@ defmodule ExNVRWeb.DeviceLiveTest do
     test "renders errors on file upload with wrong type", %{conn: conn} do
       {:ok, lv, _} = live(conn, ~p"/devices/new")
 
-      file_content = Path.expand("../fixtures/device_file_with_wrong_type.txt", __DIR__) |> File.read!()
+      file_content =
+        Path.expand("../fixtures/device_file_with_wrong_type.txt", __DIR__) |> File.read!()
 
       render_change(lv, :validate, %{"device" => %{"type" => "file"}})
 

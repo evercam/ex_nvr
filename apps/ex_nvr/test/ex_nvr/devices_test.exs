@@ -77,27 +77,7 @@ defmodule ExNVR.DevicesTest do
         })
 
       assert %{
-               stream_config: %{location: ["can't be blank"]}
-             } = errors_on(changeset)
-    end
-
-    test "validate File existence and extension when type is file" do
-      file1_path = "../fixtures/video-30-10s.h264" |> Path.expand(__DIR__)
-
-      {:error, changeset} =
-        Devices.create(valid_device_attributes(%{stream_config: %{location: file1_path}}, "file"))
-
-      assert %{
-               stream_config: %{location: ["Invalid file extension"]}
-             } == errors_on(changeset)
-
-      file2_path = "../fixtures/non-existing.mp4" |> Path.expand(__DIR__)
-
-      {:error, changeset} =
-        Devices.create(valid_device_attributes(%{stream_config: %{location: file2_path}}, "file"))
-
-      assert %{
-               stream_config: %{location: ["File does not exist"]}
+               stream_config: %{duration: ["can't be blank"], filename: ["can't be blank"]}
              } = errors_on(changeset)
     end
 
@@ -215,7 +195,7 @@ defmodule ExNVR.DevicesTest do
   describe "change_user_creation/1" do
     test "returns changeset" do
       assert %Ecto.Changeset{} = changeset = Devices.change_device_creation(%Device{})
-      assert changeset.required == [:name, :type, :settings]
+      assert changeset.required == [:stream_config, :name, :type, :settings]
     end
 
     test "requires Stream config (camera config) to be set when type is IP" do
@@ -274,7 +254,8 @@ defmodule ExNVR.DevicesTest do
       name = "Camera 1"
 
       stream_config = %{
-        location: valid_file_location()
+        filename: "big_buck.mp4",
+        duration: 1000
       }
 
       assert %Ecto.Changeset{} =
@@ -293,14 +274,15 @@ defmodule ExNVR.DevicesTest do
       assert get_change(changeset, :type) == :file
 
       assert %Ecto.Changeset{} = config_changeset = get_change(changeset, :stream_config)
-      assert get_change(config_changeset, :location) == stream_config.location
+      assert get_change(config_changeset, :filename) == stream_config.filename
+      assert get_change(config_changeset, :duration) == stream_config.duration
     end
   end
 
   test "get recordings dir", ctx do
     device = device_fixture(%{settings: ctx.settings})
 
-    assert Path.join([ctx.tmp_dir, "ex_nvr"]) == Device.base_dir(device)
+    assert Path.join([ctx.tmp_dir, "ex_nvr", device.id]) == Device.base_dir(device)
 
     assert Path.join([ctx.tmp_dir, "ex_nvr", device.id, "hi_quality"]) ==
              Device.recording_dir(device)

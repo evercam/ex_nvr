@@ -38,7 +38,7 @@
                 </div>
               </div>
             </div>
-            <.input :if={@device_type=="file" && @device.id} field={config[:location]} type="text" label="File"
+            <.input :if={@device_type=="file" && @device.id} field={config[:filename]} type="text" label="File"
               readonly />
           </.inputs_for>
           <.inputs_for :if={@device_type=="ip" } :let={credentials} field={@device_form[:credentials]}>

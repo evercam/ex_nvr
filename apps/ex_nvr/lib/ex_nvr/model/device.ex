@@ -52,7 +52,8 @@ defmodule ExNVR.Model.Device do
     import Ecto.Changeset
 
     @type t :: %__MODULE__{
-            location: binary(),
+            filename: binary(),
+            temporary_path: binary(),
             duration: Membrane.Time.t(),
             stream_uri: binary(),
             sub_stream_uri: binary()
@@ -62,13 +63,14 @@ defmodule ExNVR.Model.Device do
     embedded_schema do
       field :stream_uri, :string
       field :sub_stream_uri, :string
-      field :location, :string
+      field :filename, :string
+      field :temporary_path, :string, virtual: true
       field :duration, :integer
     end
 
     def changeset(struct, params, device_type) do
       struct
-      |> cast(params, [:stream_uri, :sub_stream_uri, :location, :duration])
+      |> cast(params, [:stream_uri, :sub_stream_uri, :filename, :temporary_path, :duration])
       |> validate_device_config(device_type)
     end
 
@@ -79,7 +81,7 @@ defmodule ExNVR.Model.Device do
     end
 
     defp validate_device_config(changeset, :file) do
-      validate_required(changeset, [:location, :duration])
+      validate_required(changeset, [:filename, :duration])
     end
 
     defp validate_uri(field, rtsp_uri) do
@@ -151,8 +153,6 @@ defmodule ExNVR.Model.Device do
 
   def streams(%__MODULE__{} = device), do: build_stream_uri(device)
 
-  def file_location(%__MODULE__{stream_config: config} = _device), do: config.location
-
   @spec config_updated(t(), t()) :: boolean()
   def config_updated(%__MODULE__{} = device_1, %__MODULE__{} = device_2) do
     device_1.stream_config != device_2.stream_config or device_1.settings != device_2.settings
@@ -170,17 +170,18 @@ defmodule ExNVR.Model.Device do
   # directories path
 
   @spec base_dir(t()) :: Path.t()
-  def base_dir(%__MODULE__{settings: %{storage_address: path}}), do: Path.join(path, "ex_nvr")
+  def base_dir(%__MODULE__{id: id, settings: %{storage_address: path}}),
+    do: Path.join([path, "ex_nvr", id])
 
   @spec recording_dir(t(), :high | :low) :: Path.t()
   def recording_dir(%__MODULE__{} = device, stream \\ :high) do
     stream = if stream == :high, do: "hi_quality", else: "lo_quality"
-    Path.join([base_dir(device), device.id, stream])
+    Path.join(base_dir(device), stream)
   end
 
   @spec bif_dir(t()) :: Path.t()
   def bif_dir(%__MODULE__{} = device) do
-    Path.join([base_dir(device), device.id, "bif"])
+    Path.join(base_dir(device), "bif")
   end
 
   def filter(query \\ __MODULE__, params) do

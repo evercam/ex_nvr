@@ -56,5 +56,15 @@ defmodule ExNVR.Devices do
     File.mkdir_p!(Device.recording_dir(device))
     File.mkdir_p!(Device.recording_dir(device, :low))
     File.mkdir_p!(Device.bif_dir(device))
+    copy_device_file(device)
   end
+
+  defp copy_device_file(%Device{type: :file} = device) do
+    File.cp!(
+      device.stream_config.temporary_path,
+      Path.join(Device.base_dir(device), device.stream_config.filename)
+    )
+  end
+
+  defp copy_device_file(_device), do: :ok
 end

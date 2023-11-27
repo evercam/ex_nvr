@@ -3,7 +3,7 @@ defmodule ExNVRWeb.DeviceLive do
 
   use ExNVRWeb, :live_view
 
-  alias ExNVR.{Devices, DeviceSupervisor, Utils}
+  alias ExNVR.{Devices, DeviceSupervisor}
   alias ExNVR.Model.Device
   alias ExNVR.MP4.Reader
 
@@ -96,19 +96,18 @@ defmodule ExNVRWeb.DeviceLive do
   end
 
   defp handle_uploaded_file(socket, device_params) do
-    with [path] <- consume_uploaded_file(socket),
+    with [{path, filename}] <- consume_uploaded_file(socket),
          {:ok, mp4_reader} <- Reader.new(path) do
       device_params
-      |> Kernel.put_in(["stream_config", "location"], path)
+      |> Kernel.put_in(["stream_config", "temporary_path"], path)
+      |> Kernel.put_in(["stream_config", "filename"], filename)
       |> Kernel.put_in(["stream_config", "duration"], mp4_reader.duration)
     end
   end
 
   defp consume_uploaded_file(socket) do
     consume_uploaded_entries(socket, :file_to_upload, fn %{path: path}, entry ->
-      dest = Path.join(Utils.device_file_dir(), Path.basename(entry.client_name))
-      File.cp!(path, dest)
-      {:ok, dest}
+      {:postpone, {path, entry.client_name}}
     end)
   end
 
