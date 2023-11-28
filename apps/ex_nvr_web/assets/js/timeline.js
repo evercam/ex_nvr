@@ -125,12 +125,11 @@ export default function createTimeline(element) {
             day: "2-digit",
             hour: "2-digit",
             minute: "2-digit",
-            timeZone: timeline.dataset.timezone || "UTC",
             hour12: false,
         })
         const dateFormatted = formatter.formatToParts(date)
         const datePart = `${dateFormatted[4].value}-${dateFormatted[0].value}-${dateFormatted[2].value}`
-        const timePart = `${dateFormatted[6].value}:${dateFormatted[8].value}`
+        const timePart = `${dateFormatted[6].value}:${dateFormatted[8].value}:00`
 
         window.TimelineHook.pushEvent("datetime", {
             value: `${datePart}T${timePart}`,
