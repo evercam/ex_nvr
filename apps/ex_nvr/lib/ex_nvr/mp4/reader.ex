@@ -24,7 +24,7 @@ defmodule ExNVR.MP4.Reader do
          {box, ""} <- Container.parse!(mov_box) do
       samples_info = SamplesInfo.get_samples_info(box[:moov])
       mdat_offset = SamplesInfo.get_mdat_offset(samples_info)
-      duration = calculate_duration(box[:moov])
+      duration = calculate_duration(box)
       :file.position(fd, mdat_offset)
 
       {:ok,
@@ -71,6 +71,9 @@ defmodule ExNVR.MP4.Reader do
     %__MODULE__{reader | samples_info: samples_info}
   end
 
+  @spec duration(t()) :: Membrane.Time.t()
+  def duration(%__MODULE__{duration: duration}), do: duration
+
   defp lookup_moov_box(fd) do
     case IO.binread(fd, 8) do
       <<size::32, "moov">> = box_header ->
@@ -106,10 +109,9 @@ defmodule ExNVR.MP4.Reader do
 
   defp move_cursor(fd, amount), do: :file.position(fd, {:cur, amount})
 
-  defp calculate_duration(%{children: boxes}) do
-    [mvhd: %{fields: %{duration: duration, timescale: timescale}}] =
-      boxes
-      |> Enum.filter(fn {type, _content} -> type == :mvhd end)
+  defp calculate_duration(box) do
+    %{duration: duration, timescale: timescale} =
+      Container.get_box(box, [:moov, :mvhd]).fields
 
     duration
     |> Ratio.new(timescale)

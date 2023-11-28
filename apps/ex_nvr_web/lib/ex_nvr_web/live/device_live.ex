@@ -97,11 +97,12 @@ defmodule ExNVRWeb.DeviceLive do
 
   defp handle_uploaded_file(socket, device_params) do
     with [{path, filename}] <- consume_uploaded_file(socket),
-         {:ok, mp4_reader} <- Reader.new(path) do
-      device_params
-      |> Kernel.put_in(["stream_config", "temporary_path"], path)
-      |> Kernel.put_in(["stream_config", "filename"], filename)
-      |> Kernel.put_in(["stream_config", "duration"], mp4_reader.duration)
+         {:ok, reader} <- Reader.new(path) do
+      Map.put(device_params, "stream_config", %{
+        "temporary_path" => path,
+        "filename" => filename,
+        "duration" => Reader.duration(reader)
+      })
     end
   end
 

@@ -153,6 +153,10 @@ defmodule ExNVR.Model.Device do
 
   def streams(%__MODULE__{} = device), do: build_stream_uri(device)
 
+  def file_location(%__MODULE__{stream_config: %{filename: filename}} = device) do
+    Path.join(base_dir(device), filename)
+  end
+
   @spec config_updated(t(), t()) :: boolean()
   def config_updated(%__MODULE__{} = device_1, %__MODULE__{} = device_2) do
     device_1.stream_config != device_2.stream_config or device_1.settings != device_2.settings

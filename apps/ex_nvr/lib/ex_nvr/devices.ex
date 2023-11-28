@@ -3,6 +3,7 @@ defmodule ExNVR.Devices do
   Context to manipulate devices
   """
 
+  alias Ecto.Multi
   alias ExNVR.Model.Device
   alias ExNVR.Repo
 
@@ -10,9 +11,14 @@ defmodule ExNVR.Devices do
 
   @spec create(map()) :: {:ok, Device.t()} | {:error, Ecto.Changeset.t()}
   def create(params) do
-    with {:ok, device} = result <- Repo.insert(Device.create_changeset(params)) do
-      create_device_directories(device)
-      result
+    Multi.new()
+    |> Multi.insert(:device, Device.create_changeset(params))
+    |> Multi.run(:create_device_directories, &create_device_directories/2)
+    |> Multi.run(:copy_device_file, &copy_device_file/2)
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{device: device}} -> {:ok, device}
+      {:error, :device, changeset, _} -> {:error, changeset}
     end
   end
 
@@ -51,20 +57,18 @@ defmodule ExNVR.Devices do
     Device.update_changeset(device, attrs)
   end
 
-  defp create_device_directories(device) do
+  defp create_device_directories(_repo, %{device: device}) do
     File.mkdir_p!(Device.base_dir(device))
     File.mkdir_p!(Device.recording_dir(device))
     File.mkdir_p!(Device.recording_dir(device, :low))
     File.mkdir_p!(Device.bif_dir(device))
-    copy_device_file(device)
+    {:ok, nil}
   end
 
-  defp copy_device_file(%Device{type: :file} = device) do
-    File.cp!(
-      device.stream_config.temporary_path,
-      Path.join(Device.base_dir(device), device.stream_config.filename)
-    )
+  defp copy_device_file(_repo, %{device: %{type: :file, stream_config: stream_config} = device}) do
+    File.cp!(stream_config.temporary_path, Device.file_location(device))
+    {:ok, nil}
   end
 
-  defp copy_device_file(_device), do: :ok
+  defp copy_device_file(_repo, _changes), do: {:ok, nil}
 end
