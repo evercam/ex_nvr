@@ -219,7 +219,8 @@ defmodule ExNVRWeb.DashboardLive do
 
   def handle_event("datetime", %{"value" => value}, socket) do
     current_datetime = socket.assigns.start_date
-    new_datetime = parse_datetime(value)
+    timezone = socket.assigns.current_device.timezone
+    new_datetime = parse_datetime(value, timezone)
 
     socket =
       if current_datetime != new_datetime do
@@ -296,9 +297,19 @@ defmodule ExNVRWeb.DashboardLive do
     segments =
       Recordings.list_runs(%{device_id: device.id})
       |> Enum.map(&Map.take(&1, [:start_date, :end_date]))
+      |> shift_timezones(device.timezone)
       |> Jason.encode!()
 
     assign(socket, segments: segments)
+  end
+
+  defp shift_timezones(dates, timezone) do
+    Enum.map(dates, fn %{start_date: start_date, end_date: end_date} ->
+      %{
+        start_date: DateTime.shift_zone!(start_date, timezone) |> DateTime.to_naive(),
+        end_date: DateTime.shift_zone!(end_date, timezone) |> DateTime.to_naive()
+      }
+    end)
   end
 
   defp assign_timezone(%{assigns: %{current_device: nil}} = socket), do: socket
@@ -356,9 +367,11 @@ defmodule ExNVRWeb.DashboardLive do
     assign(socket, live_view_enabled?: enabled?)
   end
 
-  defp parse_datetime(datetime) do
-    case DateTime.from_iso8601(datetime <> ":00Z") do
-      {:ok, date, _} -> date
+  defp parse_datetime(datetime, timezone) do
+    with {:ok, naive_date} <- NaiveDateTime.from_iso8601(datetime),
+         {:ok, zoned_date} <- DateTime.from_naive(naive_date, timezone) do
+      zoned_date
+    else
       _ -> nil
     end
   end
