@@ -9,7 +9,7 @@ defmodule ExNVR.Model.Recording do
 
   @derive {Flop.Schema,
            filterable: [:start_date, :end_date, :device_id],
-           sortable: [:start_date, :end_date, :device_name],
+           sortable: [:start_date, :end_date, :device_name, :device_id],
            default_order: %{
              order_by: [:start_date, :end_date, :device_name],
              order_directions: [:desc]
@@ -55,7 +55,7 @@ defmodule ExNVR.Model.Recording do
   end
 
   def get_query(query \\ __MODULE__, device_id, name) do
-    from(r in query, where: r.device_id == ^device_id and r.filename == ^name, preload: [:device])
+    from(r in query, where: r.device_id == ^device_id and r.filename == ^name)
   end
 
   def list_with_devices() do

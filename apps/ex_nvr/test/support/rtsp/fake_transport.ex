@@ -64,10 +64,9 @@ defmodule ExNVR.RTSP.Transport.Fake do
     :ok
   end
 
-  @spec perform_request(binary(), any(), Keyword.t()) ::
-          {:ok, binary()} | {:error, term()}
+  @spec perform_request(binary(), any(), Keyword.t()) :: {:ok, binary()}
   def perform_request(request, state, _options) do
-    {:ok, establish_session_without_media_packets(request, state)}
+    establish_session_without_media_packets(request, state)
   end
 
   @spec establish_session_without_media_packets(binary(), any()) :: {:ok, binary()}

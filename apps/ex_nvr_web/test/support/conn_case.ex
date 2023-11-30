@@ -28,6 +28,8 @@ defmodule ExNVRWeb.ConnCase do
       import Plug.Conn
       import Phoenix.ConnTest
       import ExNVRWeb.ConnCase
+
+      import ExNVR.DevicesFixtures
     end
   end
 

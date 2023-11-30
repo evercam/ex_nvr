@@ -28,6 +28,8 @@ defmodule ExNVRWeb.Router do
 
     resources "/devices", API.DeviceController, only: [:create, :update, :index, :show]
 
+    get "/recordings/chunks", API.RecordingController, :chunks
+
     scope "/devices/:device_id" do
       pipe_through ExNVRWeb.Plug.Device
 
