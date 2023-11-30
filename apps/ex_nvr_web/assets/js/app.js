@@ -21,9 +21,10 @@ import "phoenix_html"
 import { Socket } from "phoenix"
 import { LiveSocket } from "phoenix_live_view"
 import topbar from "../vendor/topbar"
-import createTimeline, { updateTimelineSegments } from "./timeline"
 import "flowbite/dist/flowbite.phoenix"
 import Hls from "hls.js"
+import { renderVueComponent } from "./vue-wrapper"
+import { ETimeline } from "@evercam/ui"
 
 const MANIFEST_LOAD_TIMEOUT = 60_000
 
@@ -44,15 +45,59 @@ let Hooks = {
             videoElement.play();
         },
       },      
-    Timeline: {
+    VueTimeline: {
+        vueApp: undefined,
+
         mounted() {
-            createTimeline(this.el)
-            window.TimelineHook = this
+            const el = this.el.getElementsByClassName("timeline")[0]
+            this.vueApp = renderVueComponent({
+                el: el,
+                component: ETimeline,
+                props: {
+                    eventsGroups: {
+                        Recordings: {
+                            label: "Recordings",
+                            color: "#FF5733",
+                            events: []
+                        },
+                        Motions: {
+                            label: "Motions",
+                            color: "#007BFF",
+                            events: []
+                        }
+                    },
+                    dark: true
+                },
+                events: {
+                    "date-clicked": (d) => this.dateClicked(d)
+                }
+            })
+
+            window.VueTimelineHook = this
         },
-        updated() {
-            updateTimelineSegments(this.el)
+        dateClicked(d) {
+            const selectedDate = new Date(d).getTime()
+            const result = this.vueApp?.$children[0].eventsGroups.Recordings.events.reduce(
+                (acc, value) => acc || (value.startDate <= selectedDate && selectedDate <= value.endDate),
+                false
+            )
+            if (result) {
+                console.log("In")
+                this.pushEvent("datetime", {
+                    value: selectedDate,
+                })
+            }
         },
-    },
+        update(events) {
+            if (this.vueApp) {
+                this.vueApp.$children[0].eventsGroups = events
+            }
+        },
+        destroyed() {
+            this.vueApp?.$destroy()
+            this.vueApp = undefined
+        }
+    }
 }
 
 let csrfToken = document
@@ -124,6 +169,10 @@ window.addEventListener("phx:stream", (e) => {
 
 window.addEventListener("phx:motion", (e) => {
     drawRois(e.detail.motions)
+})
+
+window.addEventListener("phx:update-timeline", (e) => {
+    window.VueTimelineHook?.update(e.detail.events)
 })
 
 window.addEventListener("phx:js-exec", ({ detail }) => {

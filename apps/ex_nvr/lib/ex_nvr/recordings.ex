@@ -24,7 +24,13 @@ defmodule ExNVR.Recordings do
       |> Multi.insert(:run, run, on_conflict: :replace_all)
       |> Repo.transaction()
       |> case do
-        {:ok, %{recording: recording, run: run}} -> {:ok, recording, run}
+        {:ok, %{recording: recording, run: run}} ->
+          Phoenix.PubSub.broadcast(
+            ExNVR.PubSub,
+            "new_runs",
+            :run
+          )
+          {:ok, recording, run}
         {:error, _, changeset, _} -> {:error, changeset}
       end
     end

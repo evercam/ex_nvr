@@ -8,7 +8,7 @@ defmodule ExNvr.Elements.MotionDetectionSink do
   alias Evision, as: Cv
   alias ExNVR.Model.Motion
 
-  @min_contour_area 400
+  @min_contour_area 500
   @max_counter_area 30_000
 
   def_input_pad :input,

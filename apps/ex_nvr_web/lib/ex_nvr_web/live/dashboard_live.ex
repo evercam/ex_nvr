@@ -2,10 +2,9 @@ defmodule ExNVRWeb.DashboardLive do
   use ExNVRWeb, :live_view
 
   alias Ecto.Changeset
-  alias ExNVR.Devices
-  alias ExNVR.Recordings
+  alias ExNVR.{Devices, Recordings, Motions}
   alias ExNVR.Model.Device
-  alias ExNVRWeb.TimelineComponent
+  alias ExNVRWeb.VueTimelineComponent
 
   @durations [
     {"2 Minutes", "120"},
@@ -97,19 +96,23 @@ defmodule ExNVRWeb.DashboardLive do
           >
             Device is not recording, live view is not available
           </div>
-          <.live_component
+          <%!-- <.live_component
             module={TimelineComponent}
             id="tl"
             segments={@segments}
             timezone={@timezone}
+          /> --%>
+          <.live_component
+            module={VueTimelineComponent}
+            id="tl"
           />
-          <div class="text-white">
+          <%!-- <div class="text-white">
             <.table id="predictions" rows={@predictions}>
               <:col :let={prediction} label="Label"><%= prediction.label %></:col>
               <:col :let={prediction} label="time"><%= prediction.time %></:col>
               <:col :let={prediction} label="R.O.I"><%= Jason.encode!(prediction.dimentions) %></:col>
             </.table>
-          </div>
+          </div> --%>
         </div>
       </div>
 
@@ -198,8 +201,19 @@ defmodule ExNVRWeb.DashboardLive do
       |> maybe_push_stream_event(nil)
       |> assign_predictions([])
 
-    if connected?(socket) do
-      Enum.each(socket.assigns.devices, fn device -> Phoenix.PubSub.subscribe(ExNVR.PubSub, "detection-#{device.id}") end)
+    socket = if connected?(socket) do
+        Enum.each(
+          socket.assigns.devices,
+          fn device ->
+            Phoenix.PubSub.subscribe(ExNVR.PubSub, "detection-#{device.id}")
+          end
+        )
+        Phoenix.PubSub.subscribe(ExNVR.PubSub, "new_runs")
+
+        socket
+        |> push_timeline()
+    else
+      socket
     end
 
     {:ok, assign(socket, start_date: nil, custom_duration: false)}
@@ -210,6 +224,16 @@ defmodule ExNVRWeb.DashboardLive do
       socket
       |> push_event("motion", %{motions: predictions})
       |> assign_predictions(predictions)
+      |> push_timeline()
+
+    {:noreply, socket}
+  end
+
+  def handle_info(:run, socket) do
+    socket =
+      socket
+      |> assign_runs()
+      |> push_timeline()
 
     {:noreply, socket}
   end
@@ -227,6 +251,7 @@ defmodule ExNVRWeb.DashboardLive do
       |> assign_runs()
       |> assign_timezone()
       |> maybe_push_stream_event(socket.assigns.start_date)
+      |> push_timeline()
 
     {:noreply, socket}
   end
@@ -243,7 +268,9 @@ defmodule ExNVRWeb.DashboardLive do
 
   def handle_event("datetime", %{"value" => value}, socket) do
     current_datetime = socket.assigns.start_date
-    new_datetime = parse_datetime(value)
+    timezone = socket.assigns.timezone
+    new_datetime = parse_datetime(value, timezone)
+    IO.inspect(value)
 
     socket =
       if current_datetime != new_datetime do
@@ -286,9 +313,13 @@ defmodule ExNVRWeb.DashboardLive do
     end
   end
 
-  defp assign_predictions(socket, predictions) do
+  defp assign_predictions(%{assigns: %{current_device: current_device}} = socket, []) when current_device != nil do
+    socket
+    |> assign(predictions: Motions.list(current_device.id))
+  end
 
-    assign(socket, predictions: predictions)
+  defp assign_predictions(%{assigns: %{predictions: predictions}} = socket, new_predictions) do
+    assign(socket, predictions: predictions ++ new_predictions)
   end
 
   defp assign_devices(socket) do
@@ -325,9 +356,42 @@ defmodule ExNVRWeb.DashboardLive do
     segments =
       Recordings.list_runs(%{device_id: device.id})
       |> Enum.map(&Map.take(&1, [:start_date, :end_date]))
-      |> Jason.encode!()
 
     assign(socket, segments: segments)
+  end
+
+  defp push_timeline(%{assigns: %{segments: nil}} = socket), do: socket
+
+  defp push_timeline(%{assigns: %{segments: segments, predictions: predictions}} = socket) do
+    events = %{
+      "Recordings" => %{
+        "label" => "Recordings",
+        "color" => "#FF5733",
+        "events" => Enum.map(
+          segments,
+          fn segment ->
+            %{
+              "startDate" => DateTime.to_unix(segment.start_date, :millisecond),
+              "endDate" => DateTime.to_unix(segment.end_date, :millisecond),
+            }
+          end
+        )
+      },
+      "Motions" => %{
+        "label" => "Motions",
+        "color" => "#007BFF",
+        "events" => Enum.map(
+          predictions,
+          fn prediction ->
+            %{
+              "timestamp" => DateTime.to_unix(prediction.time, :millisecond)
+            }
+          end
+        )
+      }
+    }
+
+    push_event(socket, "update-timeline", %{events: events})
   end
 
   defp assign_timezone(%{assigns: %{current_device: nil}} = socket), do: socket
@@ -385,9 +449,9 @@ defmodule ExNVRWeb.DashboardLive do
     assign(socket, live_view_enabled?: enabled?)
   end
 
-  defp parse_datetime(datetime) do
-    case DateTime.from_iso8601(datetime <> ":00Z") do
-      {:ok, date, _} -> date
+  defp parse_datetime(datetime, timezone) do
+    case DateTime.from_unix(datetime, :millisecond) do
+      {:ok, date} -> DateTime.from_naive!(date, timezone)
       _ -> nil
     end
   end
@@ -409,6 +473,10 @@ defmodule ExNVRWeb.DashboardLive do
 
   defp durations(), do: @durations
 
+  @spec validate_footage_req_params(
+          :invalid | %{optional(:__struct__) => none(), optional(atom() | binary()) => any()},
+          any()
+        ) :: {:error, Ecto.Changeset.t()} | {:ok, map()}
   def validate_footage_req_params(params, timezone) do
     types = %{
       device_id: :string,

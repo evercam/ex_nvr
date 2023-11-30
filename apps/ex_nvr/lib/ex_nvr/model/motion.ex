@@ -74,6 +74,10 @@ defmodule ExNVR.Model.Motion do
     |> Changeset.validate_required([:dimentions, :device_id])
   end
 
+  def with_device(query \\ __MODULE__, device_id) do
+    where(query, [r], r.device_id == ^device_id)
+  end
+
   defimpl Jason.Encoder do
     def encode(%ExNVR.Model.Motion{label: label, time: time, dimentions: dimentions}, opts) do
       Jason.Encode.map(%{

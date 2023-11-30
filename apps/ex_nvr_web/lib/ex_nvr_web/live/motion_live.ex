@@ -196,7 +196,7 @@ defmodule ExNVRWeb.MotionLive do
         socket
         |> assign(interval_timer: 0)
         |> assign(timer_ref: ref)
-      {:error, reason} -> socket
+      {:error, _} -> socket
     end
   end
 

@@ -11,9 +11,14 @@ defmodule ExNVR.Motions do
     |> Repo.insert()
   end
 
-  @spec create_all([map()]) :: [[Motion.t()]]
+  @spec create_all([map()]) :: [Motion.t()]
   def create_all(entries) do
     Repo.insert_all(Motion, entries)
+  end
+
+  def list(device_id) do
+    Motion.with_device(device_id)
+    |> Repo.all()
   end
 
   @spec get_closest_time(DateTime.t(), binary()) :: [DateTime.t()]
