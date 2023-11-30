@@ -5,17 +5,24 @@ defmodule ExNVRWeb.DeviceLive do
 
   alias ExNVR.{Devices, DeviceSupervisor}
   alias ExNVR.Model.Device
+  alias ExNVR.MP4.Reader
 
   @env Mix.env()
 
   def mount(%{"id" => "new"}, _session, socket) do
-    changeset = Devices.change_device_creation(%Device{})
+    changeset = Devices.change_device_creation(%Device{type: :ip})
 
     {:ok,
-     assign(socket,
+     socket
+     |> assign(
        device: %Device{},
        disks_data: get_disks_data(),
-       device_form: to_form(changeset)
+       device_form: to_form(changeset),
+       device_type: "ip"
+     )
+     |> allow_upload(:file_to_upload,
+       accept: ~w(video/mp4),
+       max_file_size: 1_000_000_000
      )}
   end
 
@@ -26,12 +33,20 @@ defmodule ExNVRWeb.DeviceLive do
      assign(socket,
        device: device,
        disks_data: get_disks_data(),
-       device_form: to_form(Devices.change_device_update(device))
+       device_form: to_form(Devices.change_device_update(device)),
+       device_type: Atom.to_string(device.type)
      )}
   end
 
-  def handle_event("change_device_type", _params, socket) do
-    {:noreply, push_event(socket, "toggle-device-config-inputs", %{})}
+  def handle_event("validate", %{"device" => device_params}, socket) do
+    device = socket.assigns.device
+
+    {device_type, changeset} = get_validation_assigns(device, device_params)
+
+    changeset
+    |> Map.put(:action, :validate)
+    |> then(&assign(socket, device_form: to_form(&1), device_type: device_type))
+    |> then(&{:noreply, &1})
   end
 
   def handle_event("save_device", %{"device" => device_params}, socket) do
@@ -42,8 +57,26 @@ defmodule ExNVRWeb.DeviceLive do
       else: do_save_device(socket, device_params)
   end
 
+  def error_to_string(:too_large), do: "Too large"
+  def error_to_string(:not_accepted), do: "You have selected an unacceptable file type"
+
+  defp get_validation_assigns(%{id: id} = device, device_params) when not is_nil(id) do
+    device_type = Atom.to_string(device.type)
+    changeset = Devices.change_device_update(device, device_params)
+    {device_type, changeset}
+  end
+
+  defp get_validation_assigns(_device, device_params) do
+    device_type = device_params["type"]
+    changeset = Devices.change_device_creation(%Device{}, device_params)
+    {device_type, changeset}
+  end
+
   defp do_save_device(socket, device_params) do
-    case Devices.create(device_params) do
+    socket
+    |> handle_uploaded_file(device_params)
+    |> Devices.create()
+    |> case do
       {:ok, device} ->
         info = "Device created successfully"
         DeviceSupervisor.start(device)
@@ -54,11 +87,29 @@ defmodule ExNVRWeb.DeviceLive do
         |> then(&{:noreply, &1})
 
       {:error, changeset} ->
-        {:noreply,
-         assign(push_event(socket, "toggle-device-config-inputs", %{}),
-           device_form: to_form(changeset)
-         )}
+        {:noreply, assign(socket, device_form: to_form(changeset))}
     end
+  end
+
+  defp handle_uploaded_file(_socket, %{"type" => "ip"} = device_params) do
+    device_params
+  end
+
+  defp handle_uploaded_file(socket, device_params) do
+    with [{path, filename}] <- consume_uploaded_file(socket),
+         {:ok, reader} <- Reader.new(path) do
+      Map.put(device_params, "stream_config", %{
+        "temporary_path" => path,
+        "filename" => filename,
+        "duration" => Reader.duration(reader)
+      })
+    end
+  end
+
+  defp consume_uploaded_file(socket) do
+    consume_uploaded_entries(socket, :file_to_upload, fn %{path: path}, entry ->
+      {:postpone, {path, entry.client_name}}
+    end)
   end
 
   defp do_update_device(socket, device, device_params) do
@@ -71,17 +122,11 @@ defmodule ExNVRWeb.DeviceLive do
 
         socket
         |> put_flash(:info, info)
-        |> assign(
-          device: updated_device,
-          device_form: to_form(Devices.change_device_update(updated_device))
-        )
+        |> redirect(to: ~p"/devices")
         |> then(&{:noreply, &1})
 
       {:error, changeset} ->
-        {:noreply,
-         assign(push_event(socket, "toggle-device-config-inputs", %{}),
-           device_form: to_form(changeset)
-         )}
+        {:noreply, assign(socket, device_form: to_form(changeset))}
     end
   end
 

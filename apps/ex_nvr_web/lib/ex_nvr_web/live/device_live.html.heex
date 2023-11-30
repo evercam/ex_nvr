@@ -1,43 +1,18 @@
 <div class="grow max-w-2xl">
   <div class="px-6 lg:px-8 bg-white dark:bg-gray-800">
-    <h3
-      :if={@device.id == nil}
-      class="mb-4 text-xl text-center font-medium text-gray-900 dark:text-white"
-    >
+    <h3 :if={@device.id==nil} class="mb-4 text-xl text-center font-medium text-gray-900 dark:text-white">
       Create a new device
     </h3>
-    <h3
-      :if={@device.id != nil}
-      class="mb-4 text-xl text-center font-medium text-gray-900 dark:text-white"
-    >
+    <h3 :if={@device.id !=nil} class="mb-4 text-xl text-center font-medium text-gray-900 dark:text-white">
       Update a device
     </h3>
-    <.simple_form id="device_form" for={@device_form} class="space-y-6" phx-submit="save_device">
-      <.input
-        field={@device_form[:name]}
-        type="text"
-        label="Name"
-        placeholder="Camera Name"
-        required
-      />
+    <.simple_form id="device_form" for={@device_form} class="space-y-6" phx-change="validate" phx-submit="save_device">
+      <.input field={@device_form[:name]} type="text" label="Name" placeholder="Camera Name" required />
       <div class="flex justify-between">
-        <.input
-          field={@device_form[:type]}
-          id="device_type"
-          type="select"
-          options={[{"IP Camera", "ip"}, {"File", "file"}]}
-          label="Type"
-          placeholder="Choose your device type"
-          disabled={@device.id != nil}
-          phx-change="change_device_type"
-        />
+        <.input field={@device_form[:type]} id="device_type" type="select" options={[{"IP Camera", "ip" },
+          {"File", "file" }]} label="Type" placeholder="Choose your device type" disabled={@device.id !=nil} />
 
-        <.input
-          field={@device_form[:timezone]}
-          type="select"
-          options={Tzdata.zone_list() ++ [nil]}
-          label="Timezone"
-        />
+        <.input field={@device_form[:timezone]} type="select" options={Tzdata.zone_list() ++ [nil]} label="Timezone" />
       </div>
 
       <div class="flex flex-col">
@@ -46,64 +21,30 @@
         </p>
         <div class="flex flex-col">
           <.inputs_for :let={config} field={@device_form[:stream_config]}>
-            <div
-              id="ip_config_inputs"
-              class={
-                if @device && @device.type == :file,
-                  do: ["hidden"],
-                  else: [""]
-              }
-            >
-              <.input
-                field={config[:stream_uri]}
-                id="config_stream_uri"
-                type="text"
-                label="Main Stream"
-                placeholder="rtsp://camera1:554/video/stream1"
-                required={@device && @device.type == :ip}
-              />
-              <.input
-                field={config[:sub_stream_uri]}
-                id="config_sub_stream_uri"
-                type="text"
-                label="Sub Stream"
-                placeholder="rtsp://camera1:554/video/stream2"
-              />
+            <.input :if={@device_type=="ip" } field={config[:stream_uri]} id="config_stream_uri" type="text"
+              label="Main Stream" placeholder="rtsp://camera1:554/video/stream1" required />
+            <.input :if={@device_type=="ip" } field={config[:sub_stream_uri]} id="config_sub_stream_uri" type="text"
+              label="Sub Stream" placeholder="rtsp://camera1:554/video/stream2" />
+            <label :if={@device_type=="file" && is_nil(@device.id)} for={@uploads.file_to_upload.ref}
+              class="block text-gray-800 dark:text-white font-medium">
+              File
+            </label>
+            <.live_file_input :if={@device_type=="file" && is_nil(@device.id)}
+              class="w-full dark:text-white dark:bg-gray-700 rounded-lg" upload={@uploads.file_to_upload} required />
+            <div :if={@device_type=="file" && is_nil(@device.id)}>
+              <div :for={entry <- @uploads.file_to_upload.entries}>
+                <div :for={err <- upload_errors(@uploads.file_to_upload, entry)} style="color: #E11D48;">
+                  <%= error_to_string(err) %>
+                </div>
+              </div>
             </div>
-            <div
-              id="file_config_inputs"
-              class={
-                if @device && @device.type == :file,
-                  do: [""],
-                  else: ["hidden"]
-              }
-            >
-              <.input
-                field={config[:location]}
-                id="config_file_location"
-                type="text"
-                label="File Location"
-                placeholder="/Users/me/Desktop/FileStreams/Stream1.mp4"
-                required={@device && @device.type == :file}
-              />
-            </div>
+            <.input :if={@device_type=="file" && @device.id} field={config[:filename]} type="text" label="File"
+              readonly />
           </.inputs_for>
-          <div id="credentials_inputs">
-            <.inputs_for :let={credentials} field={@device_form[:credentials]}>
-              <.input
-                field={credentials[:username]}
-                id="config_username"
-                type="text"
-                label="Username"
-              />
-              <.input
-                field={credentials[:password]}
-                id="config_password"
-                type="password"
-                label="Password"
-              />
-            </.inputs_for>
-          </div>
+          <.inputs_for :if={@device_type=="ip" } :let={credentials} field={@device_form[:credentials]}>
+            <.input field={credentials[:username]} id="config_username" type="text" label="Username" />
+            <.input field={credentials[:password]} id="config_password" type="password" label="Password" />
+          </.inputs_for>
         </div>
       </div>
 
