@@ -1,6 +1,5 @@
 defmodule ExNVR.Authorization do
   alias __MODULE__
-  alias ExNVR.Accounts.User
   alias ExNVR.Model.{Device, Recording}
 
   defstruct role: nil, create: %{}, read: %{}, update: %{}, delete: %{}, stream: %{}, download_archives: %{}
@@ -17,7 +16,7 @@ defmodule ExNVR.Authorization do
     |> read(Recording)
   end
 
-  def grant(role), do: %Authorizaation{role: role}
+  def grant(role), do: %Authorization{role: role}
 
   def read(authorization, resource), do: put_action(authorization, :read, resource)
 
@@ -36,8 +35,6 @@ defmodule ExNVR.Authorization do
     |> create(resource)
     |> read(resource)
     |> update(resource)
-    |> stream(resource)
-    |> download_archives(resource)
   end
 
   def all(authorization, resource) do
