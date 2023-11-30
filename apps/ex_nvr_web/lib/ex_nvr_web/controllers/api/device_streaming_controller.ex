@@ -7,6 +7,8 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
 
   require Logger
 
+  plug ExNVRWeb.Authorize, resource: ExNVR.Model.Device
+
   alias Ecto.Changeset
   alias ExNVR.Pipelines.{HlsPlayback, Main}
   alias ExNVR.{HLS, Model.Recording, Recordings, Utils}
