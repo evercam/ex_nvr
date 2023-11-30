@@ -5,9 +5,9 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
 
   action_fallback ExNVRWeb.API.FallbackController
 
-  require Logger
+  plug ExNVRWeb.Plug.Authorize, resource: ExNVR.Model.Device
 
-  plug ExNVRWeb.Authorize, resource: ExNVR.Model.Device
+  require Logger
 
   alias Ecto.Changeset
   alias ExNVR.Pipelines.{HlsPlayback, Main}
