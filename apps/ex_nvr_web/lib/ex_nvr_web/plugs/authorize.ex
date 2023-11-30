@@ -1,9 +1,10 @@
-defmodule ExNVRWeb.Authorize do
+defmodule ExNVRWeb.Plug.Authorize do
   import Plug.Conn
   import Phoenix.Controller
   import ExNVR.Authorization
+  import ExNVRWeb.Controller.Helpers
 
-  alias ExNVRWeb.Router.Helpers, as: Routes
+  # alias ExNVRWeb.Router.Helpers, as: Routes
 
   def init(opts), do: opts
 
@@ -19,10 +20,14 @@ defmodule ExNVRWeb.Authorize do
   defp maybe_continue(true, conn), do: conn
 
   defp maybe_continue(false, conn) do
+    # conn
+    # |> put_flash(:error, "You're not authorized to perform this action.")
+    # |> redirect(to: Routes.page_path(conn, :index))
+    # |> halt()
     conn
-    |> put_flash(:error, "You're not authorized to perform this action.")
-    |> redirect(to: Routes.page_path(conn, :index))
+    |> unauthorized()
     |> halt()
+
   end
 
   defp check(action, role, resource) when action in [:index, :show], do: can(role) |> read?(resource)
