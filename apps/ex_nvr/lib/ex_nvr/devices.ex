@@ -13,8 +13,11 @@ defmodule ExNVR.Devices do
   def create(params) do
     Multi.new()
     |> Multi.insert(:device, Device.create_changeset(params))
-    |> Multi.run(:create_device_directories, &create_device_directories/2)
-    |> Multi.run(:copy_device_file, &copy_device_file/2)
+    |> Multi.run(:create_directories, fn _repo, %{device: device} ->
+      create_device_directories(device)
+      copy_device_file(device)
+      {:ok, nil}
+    end)
     |> Repo.transaction()
     |> case do
       {:ok, %{device: device}} -> {:ok, device}
@@ -57,18 +60,16 @@ defmodule ExNVR.Devices do
     Device.update_changeset(device, attrs)
   end
 
-  defp create_device_directories(_repo, %{device: device}) do
+  defp create_device_directories(device) do
     File.mkdir_p!(Device.base_dir(device))
     File.mkdir_p!(Device.recording_dir(device))
     File.mkdir_p!(Device.recording_dir(device, :low))
     File.mkdir_p!(Device.bif_dir(device))
-    {:ok, nil}
   end
 
-  defp copy_device_file(_repo, %{device: %{type: :file, stream_config: stream_config} = device}) do
+  defp copy_device_file(%Device{type: :file, stream_config: stream_config} = device) do
     File.cp!(stream_config.temporary_path, Device.file_location(device))
-    {:ok, nil}
   end
 
-  defp copy_device_file(_repo, _changes), do: {:ok, nil}
+  defp copy_device_file(_device), do: :ok
 end

@@ -13,15 +13,15 @@ defmodule ExNVR.Model.Device do
   @type id :: binary()
 
   @type t :: %__MODULE__{
-          id: id(),
-          name: binary(),
-          type: binary(),
+          id: id() | nil,
+          name: binary() | nil,
+          type: :ip | :file,
           timezone: binary(),
           state: state(),
-          credentials: Credentials.t(),
-          stream_config: StreamConfig.t(),
-          inserted_at: DateTime.t(),
-          updated_at: DateTime.t()
+          credentials: Credentials.t() | nil,
+          stream_config: StreamConfig.t() | nil,
+          inserted_at: DateTime.t() | nil,
+          updated_at: DateTime.t() | nil
         }
 
   defmodule Credentials do
@@ -53,7 +53,7 @@ defmodule ExNVR.Model.Device do
 
     @type t :: %__MODULE__{
             filename: binary(),
-            temporary_path: binary(),
+            temporary_path: Path.t(),
             duration: Membrane.Time.t(),
             stream_uri: binary(),
             sub_stream_uri: binary()
@@ -140,7 +140,7 @@ defmodule ExNVR.Model.Device do
   @primary_key {:id, :binary_id, autogenerate: true}
   schema "devices" do
     field :name, :string
-    field :type, Ecto.Enum, values: [:ip, :file]
+    field :type, Ecto.Enum, values: [:ip, :file], default: :ip
     field :timezone, :string, default: "UTC"
     field :state, Ecto.Enum, values: @states, default: :recording
 
@@ -151,11 +151,16 @@ defmodule ExNVR.Model.Device do
     timestamps(type: :utc_datetime_usec)
   end
 
+  @spec streams(t()) :: {binary(), binary() | nil}
   def streams(%__MODULE__{} = device), do: build_stream_uri(device)
 
+  @spec file_location(t()) :: Path.t()
   def file_location(%__MODULE__{stream_config: %{filename: filename}} = device) do
     Path.join(base_dir(device), filename)
   end
+
+  @spec file_duration(t()) :: Membrane.Time.t()
+  def file_duration(%__MODULE__{type: :file, stream_config: %{duration: duration}}), do: duration
 
   @spec config_updated(t(), t()) :: boolean()
   def config_updated(%__MODULE__{} = device_1, %__MODULE__{} = device_2) do

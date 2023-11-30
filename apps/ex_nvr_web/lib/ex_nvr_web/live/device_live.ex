@@ -10,7 +10,7 @@ defmodule ExNVRWeb.DeviceLive do
   @env Mix.env()
 
   def mount(%{"id" => "new"}, _session, socket) do
-    changeset = Devices.change_device_creation(%Device{type: :ip})
+    changeset = Devices.change_device_creation(%Device{})
 
     {:ok,
      socket
@@ -130,7 +130,7 @@ defmodule ExNVRWeb.DeviceLive do
     end
   end
 
-  defp humanize_capacity(capacity) do
+  defp humanize_capacity({capacity, _percentag}) do
     cond do
       capacity / 1_000_000_000 >= 1 -> "#{Float.round(capacity / 1024 ** 3, 2)} TiB"
       capacity / 1_000_000 >= 1 -> "#{Float.round(capacity / 1024 ** 2, 2)} GiB"
@@ -140,13 +140,13 @@ defmodule ExNVRWeb.DeviceLive do
 
   defp get_disks_data() do
     if @env == :test do
-      [{"/tmp", 1_000_000, 1}]
+      [{"/tmp", {1_000_000, 1}}]
     else
       :disksup.get_disk_data()
       |> Enum.map(fn {mountpoint, total_space, percentage} ->
-        {to_string(mountpoint), total_space, percentage}
+        {to_string(mountpoint), {total_space, percentage}}
       end)
-      |> Enum.reject(fn {mountpoint, _, _} ->
+      |> Enum.reject(fn {mountpoint, _value} ->
         String.match?(mountpoint, ~r[/(dev|sys|run).*])
       end)
     end

@@ -160,14 +160,12 @@ defmodule ExNVR.Pipelines.Main do
 
       {[spec: spec], state}
     else
-      location = Device.file_location(device)
-
       Membrane.Logger.info("""
       Start streaming for
-      location: #{location}
+      location: #{Device.file_location(device)}
       """)
 
-      {[spec: common_spec ++ build_file_stream_spec(location)], state}
+      {[spec: common_spec ++ build_file_stream_spec(device)], state}
     end
   end
 
@@ -364,11 +362,9 @@ defmodule ExNVR.Pipelines.Main do
     ]
   end
 
-  defp build_file_stream_spec(location) do
+  defp build_file_stream_spec(device) do
     [
-      child(:source, %Source.File{
-        location: location
-      })
+      child(:source, %Source.File{device: device})
       |> via_out(:video)
       |> child(:video_tee, Membrane.Tee.Master)
       |> via_out(:master)

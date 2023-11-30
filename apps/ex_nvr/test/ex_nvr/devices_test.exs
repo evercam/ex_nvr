@@ -42,10 +42,7 @@ defmodule ExNVR.DevicesTest do
     test "requires name and type" do
       {:error, changeset} = Devices.create(%{})
 
-      assert %{
-               name: ["can't be blank"],
-               type: ["can't be blank"]
-             } = errors_on(changeset)
+      assert %{name: ["can't be blank"]} = errors_on(changeset)
     end
 
     test "validate type is in the specified enum" do
@@ -231,7 +228,6 @@ defmodule ExNVR.DevicesTest do
 
       assert changeset.valid?
       assert get_change(changeset, :name) == name
-      assert get_change(changeset, :type) == :ip
 
       assert %Ecto.Changeset{} = config_changeset = get_change(changeset, :stream_config)
       assert get_change(config_changeset, :stream_uri) == stream_config.stream_uri

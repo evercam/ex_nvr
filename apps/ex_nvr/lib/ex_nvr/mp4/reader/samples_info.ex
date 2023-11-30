@@ -216,9 +216,13 @@ defmodule ExNVR.MP4.Reader.SamplesInfo do
      }}
   end
 
-  defp unpack_sync_samples(boxes) do
-    %{fields: %{entry_list: entry_list}} = boxes.children[:stss]
-    Enum.map(entry_list, fn %{sample_number: sample_no} -> sample_no end)
+  defp unpack_sync_samples(%{children: boxes}) do
+    if stss = boxes[:stss] do
+      %{fields: %{entry_list: entry_list}} = stss
+      Enum.map(entry_list, fn %{sample_number: sample_no} -> sample_no end)
+    else
+      []
+    end
   end
 
   defp get_dts_and_pts(samples, timescales) do
@@ -246,6 +250,8 @@ defmodule ExNVR.MP4.Reader.SamplesInfo do
       {sample, Map.put(last_dts, track_id, dts)}
     end)
   end
+
+  defp get_sync_samples(samples, %{sync: []}), do: samples
 
   defp get_sync_samples(samples, track_data) do
     counter = Map.new(track_data, fn {track_id, _data} -> {track_id, 1} end)

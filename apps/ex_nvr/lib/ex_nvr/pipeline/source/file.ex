@@ -8,11 +8,12 @@ defmodule ExNVR.Pipeline.Source.File do
   require Membrane.Logger
 
   alias ExNVR.Elements.Recording.Timestamper
+  alias ExNVR.Model.Device
   alias Membrane.MP4
 
-  def_options location: [
-                spec: Path.t(),
-                description: "The location of the video file"
+  def_options device: [
+                spec: Device.t(),
+                description: "The file device"
               ]
 
   def_output_pad :video,
@@ -25,9 +26,9 @@ defmodule ExNVR.Pipeline.Source.File do
 
     state =
       %{
-        location: options.location,
-        iteration: 0,
-        duration: 0
+        location: Device.file_location(options.device),
+        duration: Device.file_duration(options.device),
+        iteration: 0
       }
 
     spec =
@@ -38,18 +39,6 @@ defmodule ExNVR.Pipeline.Source.File do
       ] ++ read_file_spec(state)
 
     {[spec: spec], state}
-  end
-
-  @impl true
-  def handle_setup(_ctx, state) do
-    # We need to check the extension and read the duration
-    {content, _remainder} = MP4.Container.parse!(File.read!(state.location))
-
-    %{fields: %{duration: duration, timescale: timescale}} =
-      MP4.Container.get_box(content, [:moov, :mvhd])
-
-    duration = Membrane.Time.seconds(Ratio.new(duration, timescale))
-    {[], %{state | duration: duration}}
   end
 
   @impl true
