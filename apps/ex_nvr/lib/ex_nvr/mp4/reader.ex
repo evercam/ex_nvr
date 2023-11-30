@@ -61,7 +61,8 @@ defmodule ExNVR.MP4.Reader do
       samples_info.samples
       |> Enum.reverse()
       |> Enum.find_index(&(&1.track_id == track_id and &1.sync and &1.dts <= ts))
-      |> then(&(length(samples_info.samples) - &1 - 1))
+
+    index = if index, do: length(samples_info.samples) - index - 1, else: 0
 
     {to_discard, rest} = Enum.split(samples_info.samples, index)
     total_size = Enum.reduce(to_discard, 0, fn sample, size -> size + sample.size end)
@@ -111,7 +112,7 @@ defmodule ExNVR.MP4.Reader do
 
   defp calculate_duration(box) do
     %{duration: duration, timescale: timescale} =
-      Container.get_box(box, [:moov, :mvhd]).fields
+      Container.get_box(box, [:moov, :mvhd])[:fields]
 
     duration
     |> Ratio.new(timescale)

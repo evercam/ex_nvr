@@ -304,7 +304,7 @@ defmodule ExNVRWeb.CoreComponents do
     """
   end
 
-  def input(%{type: "radio"} = assigns) do
+  def input(%{type: "radio", options: nil} = assigns) do
     ~H"""
     <div phx-feedback-for={@name}>
       <label class="flex items-center gap-4 text-sm leading-6 text-zinc-600 dark:text-white">
@@ -323,6 +323,40 @@ defmodule ExNVRWeb.CoreComponents do
         />
         <%= @label %>
       </label>
+      <.error :for={msg <- @errors}><%= msg %></.error>
+    </div>
+    """
+  end
+
+  def input(%{type: "radio"} = assigns) do
+    ~H"""
+    <div phx-feedback-for={@name}>
+      <ul class="border border-gray-200 rounded-lg dark:border-gray-600">
+        <li
+          :for={option <- @options}
+          class="p-2 w-full border-b border-gray-200 rounded-t-lg dark:border-gray-600"
+        >
+          <div class="flex items-center ps-3">
+            <label class="flex items-center gap-4 text-sm leading-6 text-zinc-600 dark:text-white">
+              <input
+                type="radio"
+                id={@id}
+                name={@name}
+                class={[
+                  "rounded text-zinc-900 border-gray-300 rounded bg-gray-50 focus:ring-3 focus:ring-blue-300",
+                  "dark:bg-gray-700 dark:border-gray-600 dark:focus:ring-blue-600",
+                  "dark:ring-offset-gray-800 dark:focus:ring-offset-gray-80"
+                ]}
+                value={elem(option, 0)}
+                checked={elem(option, 0) == @value}
+                {@rest}
+              />
+              <%= @label %>
+            </label>
+            <%= render_slot(@inner_block, option) %>
+          </div>
+        </li>
+      </ul>
       <.error :for={msg <- @errors}><%= msg %></.error>
     </div>
     """

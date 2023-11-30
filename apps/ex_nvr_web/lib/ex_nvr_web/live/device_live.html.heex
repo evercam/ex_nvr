@@ -1,18 +1,48 @@
 <div class="grow max-w-2xl">
   <div class="px-6 lg:px-8 bg-white dark:bg-gray-800">
-    <h3 :if={@device.id==nil} class="mb-4 text-xl text-center font-medium text-gray-900 dark:text-white">
+    <h3
+      :if={@device.id == nil}
+      class="mb-4 text-xl text-center font-medium text-gray-900 dark:text-white"
+    >
       Create a new device
     </h3>
-    <h3 :if={@device.id !=nil} class="mb-4 text-xl text-center font-medium text-gray-900 dark:text-white">
+    <h3
+      :if={@device.id != nil}
+      class="mb-4 text-xl text-center font-medium text-gray-900 dark:text-white"
+    >
       Update a device
     </h3>
-    <.simple_form id="device_form" for={@device_form} class="space-y-6" phx-change="validate" phx-submit="save_device">
-      <.input field={@device_form[:name]} type="text" label="Name" placeholder="Camera Name" required />
+    <.simple_form
+      id="device_form"
+      for={@device_form}
+      class="space-y-6"
+      phx-change="validate"
+      phx-submit="save_device"
+    >
+      <.input
+        field={@device_form[:name]}
+        type="text"
+        label="Name"
+        placeholder="Camera Name"
+        required
+      />
       <div class="flex justify-between">
-        <.input field={@device_form[:type]} id="device_type" type="select" options={[{"IP Camera", "ip" },
-          {"File", "file" }]} label="Type" placeholder="Choose your device type" disabled={@device.id !=nil} />
+        <.input
+          field={@device_form[:type]}
+          id="device_type"
+          type="select"
+          options={[{"IP Camera", "ip"}, {"File", "file"}]}
+          label="Type"
+          placeholder="Choose your device type"
+          disabled={@device.id != nil}
+        />
 
-        <.input field={@device_form[:timezone]} type="select" options={Tzdata.zone_list() ++ [nil]} label="Timezone" />
+        <.input
+          field={@device_form[:timezone]}
+          type="select"
+          options={Tzdata.zone_list() ++ [nil]}
+          label="Timezone"
+        />
       </div>
 
       <div class="flex flex-col">
@@ -21,29 +51,71 @@
         </p>
         <div class="flex flex-col">
           <.inputs_for :let={config} field={@device_form[:stream_config]}>
-            <.input :if={@device_type=="ip" } field={config[:stream_uri]} id="config_stream_uri" type="text"
-              label="Main Stream" placeholder="rtsp://camera1:554/video/stream1" required />
-            <.input :if={@device_type=="ip" } field={config[:sub_stream_uri]} id="config_sub_stream_uri" type="text"
-              label="Sub Stream" placeholder="rtsp://camera1:554/video/stream2" />
-            <label :if={@device_type=="file" && is_nil(@device.id)} for={@uploads.file_to_upload.ref}
-              class="block text-gray-800 dark:text-white font-medium">
+            <.input
+              :if={@device_type == "ip"}
+              field={config[:stream_uri]}
+              id="config_stream_uri"
+              type="text"
+              label="Main Stream"
+              placeholder="rtsp://camera1:554/video/stream1"
+              required
+            />
+            <.input
+              :if={@device_type == "ip"}
+              field={config[:sub_stream_uri]}
+              id="config_sub_stream_uri"
+              type="text"
+              label="Sub Stream"
+              placeholder="rtsp://camera1:554/video/stream2"
+            />
+            <label
+              :if={@device_type == "file" && is_nil(@device.id)}
+              for={@uploads.file_to_upload.ref}
+              class="block text-gray-800 dark:text-white font-medium"
+            >
               File
             </label>
-            <.live_file_input :if={@device_type=="file" && is_nil(@device.id)}
-              class="w-full dark:text-white dark:bg-gray-700 rounded-lg" upload={@uploads.file_to_upload} required />
-            <div :if={@device_type=="file" && is_nil(@device.id)}>
+            <.live_file_input
+              :if={@device_type == "file" && is_nil(@device.id)}
+              class="w-full dark:text-white dark:bg-gray-700 rounded-lg"
+              upload={@uploads.file_to_upload}
+              required
+            />
+            <div :if={@device_type == "file" && is_nil(@device.id)}>
               <div :for={entry <- @uploads.file_to_upload.entries}>
-                <div :for={err <- upload_errors(@uploads.file_to_upload, entry)} style="color: #E11D48;">
+                <div
+                  :for={err <- upload_errors(@uploads.file_to_upload, entry)}
+                  style="color: #E11D48;"
+                >
                   <%= error_to_string(err) %>
                 </div>
               </div>
             </div>
-            <.input :if={@device_type=="file" && @device.id} field={config[:filename]} type="text" label="File"
-              readonly />
+            <.input
+              :if={@device_type == "file" && @device.id}
+              field={config[:filename]}
+              type="text"
+              label="File"
+              readonly
+            />
           </.inputs_for>
-          <.inputs_for :if={@device_type=="ip" } :let={credentials} field={@device_form[:credentials]}>
-            <.input field={credentials[:username]} id="config_username" type="text" label="Username" />
-            <.input field={credentials[:password]} id="config_password" type="password" label="Password" />
+          <.inputs_for
+            :let={credentials}
+            :if={@device_type == "ip"}
+            field={@device_form[:credentials]}
+          >
+            <.input
+              field={credentials[:username]}
+              id="config_username"
+              type="text"
+              label="Username"
+            />
+            <.input
+              field={credentials[:password]}
+              id="config_password"
+              type="password"
+              label="Password"
+            />
           </.inputs_for>
         </div>
       </div>
@@ -56,41 +128,33 @@
           <.inputs_for :let={settings} field={@device_form[:settings]}>
             <div class="w-full mb-5 font-medium bg-white dark:bg-gray-800">
               <h2 class="mb-2">Select storage address</h2>
-              <ul class="border border-gray-200 rounded-lg dark:border-gray-600">
-                <li
-                  :for={disk_entry <- @disks_data}
-                  class="p-2 w-full border-b border-gray-200 rounded-t-lg dark:border-gray-600"
-                >
-                  <div class="flex items-center ps-3">
-                    <.input
-                      field={settings[:storage_address]}
-                      id="settings-storage-address"
-                      type="radio"
-                      value={elem(disk_entry, 0)}
-                      checked={elem(disk_entry, 0) == settings[:storage_address].value}
-                      disabled={not is_nil(@device.id)}
-                    />
-                    <div class="w-full px-2 font-normal text-xs">
-                      <div class="flex justify-between mb-1">
-                        <span class="text-blue-700 dark:text-white">
-                          <%= elem(disk_entry, 0) %>
-                        </span>
-                        <span class="text-blue-700 dark:text-white">
-                          <%= humanize_capacity(elem(disk_entry, 1)) %>
-                        </span>
-                      </div>
-                      <div class="w-full bg-gray-200 rounded-full dark:bg-gray-700">
-                        <div
-                          class="bg-blue-600 text-xs font-medium text-blue-100 text-center leading-none rounded-full"
-                          style={"width: #{elem(disk_entry, 2)}%"}
-                        >
-                          <%= elem(disk_entry, 2) %>%
-                        </div>
-                      </div>
+              <.input
+                :let={option}
+                field={settings[:storage_address]}
+                id="settings-storage-address"
+                type="radio"
+                options={@disks_data}
+                disabled={not is_nil(@device.id)}
+              >
+                <div class="w-full px-2 font-normal text-xs">
+                  <div class="flex justify-between mb-1">
+                    <span class="text-blue-700 dark:text-white">
+                      <%= elem(option, 0) %>
+                    </span>
+                    <span class="text-blue-700 dark:text-white">
+                      <%= humanize_capacity(elem(option, 1)) %>
+                    </span>
+                  </div>
+                  <div class="w-full bg-gray-200 rounded-full dark:bg-gray-700">
+                    <div
+                      class="bg-blue-600 text-xs font-medium text-blue-100 text-center leading-none rounded-full"
+                      style={"width: #{elem(option, 1) |> elem(1)}%"}
+                    >
+                      <%= elem(option, 1) |> elem(1) %>%
                     </div>
                   </div>
-                </li>
-              </ul>
+                </div>
+              </.input>
             </div>
 
             <h2>Other settings</h2>

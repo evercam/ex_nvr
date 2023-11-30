@@ -5,7 +5,7 @@ defmodule ExNVR.Pipeline.Output.Bif.Archiver.Index do
   @type image_size :: non_neg_integer()
 
   @type t :: %__MODULE__{
-          entries: {timestamp(), image_size()}
+          entries: [{timestamp(), image_size()}]
         }
 
   defstruct entries: []

@@ -34,6 +34,10 @@ defmodule ExNVR.Pipeline.Output.WebRTC.StreamEndpoint do
 
     rtpmap = media_track.rtpmap
 
+    fmtp = %ExSDP.Attribute.FMTP{
+      pt: rtpmap.payload_type
+    }
+
     track =
       Track.new(
         media_track.type,
@@ -41,7 +45,7 @@ defmodule ExNVR.Pipeline.Output.WebRTC.StreamEndpoint do
         endpoint_id,
         media_track.encoding,
         rtpmap.clock_rate,
-        %{rtpmap.payload_type => {"#{media_track.encoding}", rtpmap.clock_rate}},
+        fmtp,
         ctx: %{
           rtpmap: rtpmap
         }
