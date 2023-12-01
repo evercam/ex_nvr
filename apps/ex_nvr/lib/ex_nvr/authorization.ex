@@ -2,7 +2,7 @@ defmodule ExNVR.Authorization do
   alias __MODULE__
   alias ExNVR.Model.{Device, Recording}
 
-  defstruct role: nil, create: %{}, read: %{}, update: %{}, delete: %{}, stream: %{}, download_archives: %{}
+  defstruct role: nil, create: %{}, read: %{}, update: %{}, delete: %{}, stream: %{}, download_archives: %{}, onvif_discovery: %{}
 
   def can(:admin = role) do
     grant(role)
@@ -12,8 +12,11 @@ defmodule ExNVR.Authorization do
 
   def can(:user = role) do
     grant(role)
-    |> edit(Device)
-    |> read(Recording)
+    # |> edit(Device)
+    # |> read(Recording)
+    |> stream(Device)
+    # |> download_archives(Device)
+    |> onvif_discovery(Device)
   end
 
   def grant(role), do: %Authorization{role: role}
@@ -30,6 +33,8 @@ defmodule ExNVR.Authorization do
 
   def download_archives(authorization, resource), do: put_action(authorization, :download_archives, resource)
 
+  def onvif_discovery(authorization, resource), do: put_action(authorization, :onvif_discovery, resource)
+
   def edit(authorization, resource) do
     authorization
     |> create(resource)
@@ -43,6 +48,7 @@ defmodule ExNVR.Authorization do
     |> delete(resource)
     |> stream(resource)
     |> download_archives(resource)
+    |> onvif_discovery(resource)
   end
 
   def read?(authorization, resource) do
@@ -67,6 +73,10 @@ defmodule ExNVR.Authorization do
 
   def download_archives?(authorization, resource) do
     Map.get(authorization.download_archives, resource, false)
+  end
+
+  def onvif_discovery?(authorization, resource) do
+    Map.get(authorization.onvif_discovery, resource, false)
   end
 
   defp put_action(authorization, action, resource) do
