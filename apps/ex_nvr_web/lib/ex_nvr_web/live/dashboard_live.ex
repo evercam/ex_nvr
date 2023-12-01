@@ -241,14 +241,17 @@ defmodule ExNVRWeb.DashboardLive do
     role = socket.assigns.current_user.role
 
     with true <- can(role) |> download_archives?(Device),
-        "" <- params["duration"] do
+         "" <- params["duration"] do
       {:noreply, assign(socket, custom_duration: true)}
     else
-      false -> socket
-              |> put_flash(:error, "You are not authorized to perform this action!")
-              |> redirect(to: ~p"/dashboard")
-              |> then(&{:noreply, &1})
-      _ ->  {:noreply, assign(socket, custom_duration: false)}
+      false ->
+        socket
+        |> put_flash(:error, "You are not authorized to perform this action!")
+        |> redirect(to: ~p"/dashboard")
+        |> then(&{:noreply, &1})
+
+      _ ->
+        {:noreply, assign(socket, custom_duration: false)}
     end
   end
 
@@ -257,23 +260,24 @@ defmodule ExNVRWeb.DashboardLive do
     device = Enum.find(socket.assigns.devices, &(&1.id == params["device_id"]))
 
     with true <- can(role) |> download_archives?(Device),
-        {:ok, params} <- validate_footage_req_params(params, device.timezone) do
-            query_params = %{
-              start_date: format_date(params[:start_date]),
-              end_date: format_date(params[:end_date]),
-              duration: params[:duration]
-            }
+         {:ok, params} <- validate_footage_req_params(params, device.timezone) do
+      query_params = %{
+        start_date: format_date(params[:start_date]),
+        end_date: format_date(params[:end_date]),
+        duration: params[:duration]
+      }
 
-            socket
-            |> push_event("download-footage", %{
-              url: ~p"/api/devices/#{device.id}/footage/?#{query_params}"
-            })
-            |> then(&{:noreply, &1})
+      socket
+      |> push_event("download-footage", %{
+        url: ~p"/api/devices/#{device.id}/footage/?#{query_params}"
+      })
+      |> then(&{:noreply, &1})
     else
-      false -> socket
-              |> put_flash(:error, "You are not authorized to perform this action!")
-              |> redirect(to: ~p"/dashboard")
-              |> then(&{:noreply, &1})
+      false ->
+        socket
+        |> put_flash(:error, "You are not authorized to perform this action!")
+        |> redirect(to: ~p"/dashboard")
+        |> then(&{:noreply, &1})
 
       {:error, changeset} ->
         {:noreply, assign_footage_form(socket, changeset)}

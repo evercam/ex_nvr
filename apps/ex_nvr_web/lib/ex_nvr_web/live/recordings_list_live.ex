@@ -143,12 +143,12 @@ defmodule ExNVRWeb.RecordingListLive do
 
     if can(role) |> read?(Recording) do
       {:ok,
-      assign(socket,
-        devices: Devices.list(),
-        popup_open: false,
-        filter_params: params,
-        pagination_params: %{}
-      )}
+       assign(socket,
+         devices: Devices.list(),
+         popup_open: false,
+         filter_params: params,
+         pagination_params: %{}
+       )}
     else
       socket
       |> put_flash(:error, "You are not authorized to perform this action!")
@@ -162,9 +162,8 @@ defmodule ExNVRWeb.RecordingListLive do
     role = socket.assigns.current_user.role
 
     with true <- can(role) |> read?(Recording),
-        {:ok, {recordings, meta}} <- Recordings.list(params) do
+         {:ok, {recordings, meta}} <- Recordings.list(params) do
       {:noreply, assign(socket, meta: meta, recordings: recordings)}
-
     else
       false ->
         socket
@@ -175,6 +174,7 @@ defmodule ExNVRWeb.RecordingListLive do
       {:error, meta} ->
         {:noreply, assign(socket, meta: meta)}
     end
+
     case Recordings.list(params) do
       {:ok, {recordings, meta}} ->
         {:noreply, assign(socket, meta: meta, recordings: recordings)}

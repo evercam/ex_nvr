@@ -111,6 +111,7 @@ defmodule ExNVRWeb.DeviceListLive do
 
   def handle_event("stop-recording", %{"device" => device_id}, socket) do
     role = socket.assigns.current_user.role
+
     if can(role) |> update?(Device) do
       update_device_state(socket, device_id, :stopped)
     else
@@ -123,6 +124,7 @@ defmodule ExNVRWeb.DeviceListLive do
 
   def handle_event("start-recording", %{"device" => device_id}, socket) do
     role = socket.assigns.current_user.role
+
     if can(role) |> update?(Device) do
       update_device_state(socket, device_id, :recording)
     else

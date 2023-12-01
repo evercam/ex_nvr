@@ -17,17 +17,17 @@ defmodule ExNVRWeb.DeviceLive do
 
     if can(role) |> create?(Device) do
       {:ok,
-      socket
-      |> assign(
-        device: %Device{},
-        disks_data: get_disks_data(),
-        device_form: to_form(changeset),
-        device_type: "ip"
-      )
-      |> allow_upload(:file_to_upload,
-        accept: ~w(video/mp4),
-        max_file_size: 1_000_000_000
-      )}
+       socket
+       |> assign(
+         device: %Device{},
+         disks_data: get_disks_data(),
+         device_form: to_form(changeset),
+         device_type: "ip"
+       )
+       |> allow_upload(:file_to_upload,
+         accept: ~w(video/mp4),
+         max_file_size: 1_000_000_000
+       )}
     else
       socket
       |> put_flash(:error, "You are not authorized to perform this action!")
@@ -42,12 +42,12 @@ defmodule ExNVRWeb.DeviceLive do
 
     if can(role) |> read?(Device) do
       {:ok,
-      assign(socket,
-        device: device,
-        disks_data: get_disks_data(),
-        device_form: to_form(Devices.change_device_update(device)),
-        device_type: Atom.to_string(device.type)
-      )}
+       assign(socket,
+         device: device,
+         disks_data: get_disks_data(),
+         device_form: to_form(Devices.change_device_update(device)),
+         device_type: Atom.to_string(device.type)
+       )}
     else
       socket
       |> put_flash(:error, "You are not authorized to perform this action!")
@@ -94,15 +94,14 @@ defmodule ExNVRWeb.DeviceLive do
     role = socket.assigns.current_user.role
 
     with true <- can(role) |> create?(Device),
-        {:ok, device} <- socket |> handle_uploaded_file(device_params) |> Devices.create() do
-        info = "Device created successfully"
-        DeviceSupervisor.start(device)
+         {:ok, device} <- socket |> handle_uploaded_file(device_params) |> Devices.create() do
+      info = "Device created successfully"
+      DeviceSupervisor.start(device)
 
-        socket
-        |> put_flash(:info, info)
-        |> redirect(to: ~p"/devices")
-        |> then(&{:noreply, &1})
-
+      socket
+      |> put_flash(:info, info)
+      |> redirect(to: ~p"/devices")
+      |> then(&{:noreply, &1})
     else
       false ->
         socket
@@ -140,16 +139,16 @@ defmodule ExNVRWeb.DeviceLive do
     role = socket.assigns.current_user.role
 
     with true <- can(role) |> update?(Device),
-      {:ok, updated_device} <- Devices.update(device, device_params) do
-        info = "Device updated successfully"
+         {:ok, updated_device} <- Devices.update(device, device_params) do
+      info = "Device updated successfully"
 
-        if Device.recording?(device) and Device.config_updated(device, updated_device),
-          do: DeviceSupervisor.restart(updated_device)
+      if Device.recording?(device) and Device.config_updated(device, updated_device),
+        do: DeviceSupervisor.restart(updated_device)
 
-        socket
-        |> put_flash(:info, info)
-        |> redirect(to: ~p"/devices")
-        |> then(&{:noreply, &1})
+      socket
+      |> put_flash(:info, info)
+      |> redirect(to: ~p"/devices")
+      |> then(&{:noreply, &1})
     else
       false ->
         socket
