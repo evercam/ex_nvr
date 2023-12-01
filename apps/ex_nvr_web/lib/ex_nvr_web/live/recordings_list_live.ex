@@ -3,8 +3,11 @@ defmodule ExNVRWeb.RecordingListLive do
 
   use ExNVRWeb, :live_view
 
+  import ExNVR.Authorization
+
   alias ExNVRWeb.Router.Helpers, as: Routes
   alias ExNVR.{Recordings, Devices}
+  alias ExNVR.Model.Recording
 
   @impl true
   def render(assigns) do
@@ -136,17 +139,42 @@ defmodule ExNVRWeb.RecordingListLive do
 
   @impl true
   def mount(params, _session, socket) do
-    {:ok,
-     assign(socket,
-       devices: Devices.list(),
-       popup_open: false,
-       filter_params: params,
-       pagination_params: %{}
-     )}
+    role = socket.assigns.current_user.role
+
+    if can(role) |> read?(Recording) do
+      {:ok,
+      assign(socket,
+        devices: Devices.list(),
+        popup_open: false,
+        filter_params: params,
+        pagination_params: %{}
+      )}
+    else
+      socket
+      |> put_flash(:error, "You are not authorized to perform this action!")
+      |> redirect(to: ~p"/dashboard")
+      |> then(&{:ok, &1})
+    end
   end
 
   @impl true
   def handle_params(params, _uri, socket) do
+    role = socket.assigns.current_user.role
+
+    with true <- can(role) |> read?(Recording),
+        {:ok, {recordings, meta}} <- Recordings.list(params) do
+      {:noreply, assign(socket, meta: meta, recordings: recordings)}
+
+    else
+      false ->
+        socket
+        |> put_flash(:error, "You are not authorized to perform this action!")
+        |> redirect(to: ~p"/dashboard")
+        |> then(&{:noreply, &1})
+
+      {:error, meta} ->
+        {:noreply, assign(socket, meta: meta)}
+    end
     case Recordings.list(params) do
       {:ok, {recordings, meta}} ->
         {:noreply, assign(socket, meta: meta, recordings: recordings)}
