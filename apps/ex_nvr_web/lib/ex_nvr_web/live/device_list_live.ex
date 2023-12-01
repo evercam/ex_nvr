@@ -3,6 +3,8 @@ defmodule ExNVRWeb.DeviceListLive do
 
   use ExNVRWeb, :live_view
 
+  import ExNVR.Authorization
+
   alias ExNVR.Model.Device
   alias ExNVR.{Devices, DeviceSupervisor}
 
@@ -95,15 +97,40 @@ defmodule ExNVRWeb.DeviceListLive do
   end
 
   def mount(_params, _session, socket) do
-    {:ok, assign(socket, devices: Devices.list())}
+    role = socket.assigns.current_user.role
+
+    if can(role) |> read?(Device) do
+      {:ok, assign(socket, devices: Devices.list())}
+    else
+      socket
+      |> put_flash(:error, "You are not authorized to perform this action!")
+      |> redirect(to: ~p"/dashboard")
+      |> then(&{:ok, &1})
+    end
   end
 
   def handle_event("stop-recording", %{"device" => device_id}, socket) do
-    update_device_state(socket, device_id, :stopped)
+    role = socket.assigns.current_user.role
+    if can(role) |> update?(Device) do
+      update_device_state(socket, device_id, :stopped)
+    else
+      socket
+      |> put_flash(:error, "You are not authorized to perform this action!")
+      |> redirect(to: ~p"/devices")
+      |> then(&{:noreply, &1})
+    end
   end
 
   def handle_event("start-recording", %{"device" => device_id}, socket) do
-    update_device_state(socket, device_id, :recording)
+    role = socket.assigns.current_user.role
+    if can(role) |> update?(Device) do
+      update_device_state(socket, device_id, :recording)
+    else
+      socket
+      |> put_flash(:error, "You are not authorized to perform this action!")
+      |> redirect(to: ~p"/devices")
+      |> then(&{:noreply, &1})
+    end
   end
 
   defp update_device_state(socket, device_id, new_state) do
