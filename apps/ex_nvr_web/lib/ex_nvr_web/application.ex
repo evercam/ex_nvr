@@ -8,6 +8,7 @@ defmodule ExNVRWeb.Application do
     children = [
       ExNVRWeb.Telemetry,
       ExNVRWeb.Endpoint,
+      ExNVRWeb.PromEx,
       {ExNVRWeb.HlsStreamingMonitor, []}
     ]
 
