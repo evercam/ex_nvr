@@ -9,7 +9,7 @@ defmodule ExNVRWeb.PromEx.Device do
 
   @impl true
   def polling_metrics(opts) do
-    poll_rate = Keyword.get(opts, :poll_rate, 3_000)
+    poll_rate = Keyword.get(opts, :poll_rate, 15_000)
 
     [
       device_state_metrics(poll_rate)
