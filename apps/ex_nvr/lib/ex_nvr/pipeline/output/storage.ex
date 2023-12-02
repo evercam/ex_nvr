@@ -11,6 +11,8 @@ defmodule ExNVR.Pipeline.Output.Storage do
   alias ExNVR.Model.{Device, Run}
   alias Membrane.H264
 
+  @recordings_event [:ex_nvr, :recordings, :stop]
+
   def_input_pad :input,
     demand_mode: :auto,
     demand_unit: :buffers,
@@ -156,15 +158,23 @@ defmodule ExNVR.Pipeline.Output.Storage do
 
     case ExNVR.Recordings.create(state.device, state.run, recording, false) do
       {:ok, _, run} ->
+        duration_ms = Membrane.Time.round_to_milliseconds(Segment.duration(segment))
+
         Membrane.Logger.info("""
         Segment saved successfully
-          Media duration: #{Membrane.Time.round_to_milliseconds(Segment.duration(segment))} ms
+          Media duration: #{duration_ms} ms
           Realtime (monotonic) duration: #{Membrane.Time.round_to_milliseconds(Segment.realtime_duration(segment))} ms
           Wallclock duration: #{Membrane.Time.round_to_milliseconds(Segment.wall_clock_duration(segment))} ms
           Size: #{div(Segment.size(segment), 1024)} KiB
           Segment end date: #{recording.end_date}
           Current date time: #{Membrane.Time.to_datetime(segment.wallclock_end_date)}
         """)
+
+        :telemetry.execute(
+          @recordings_event,
+          %{duration: duration_ms, size: Segment.size(segment)},
+          %{device_id: state.device.id}
+        )
 
         {maybe_new_run(state, run), recording}
 

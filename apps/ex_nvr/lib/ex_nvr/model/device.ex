@@ -201,6 +201,9 @@ defmodule ExNVR.Model.Device do
     end)
   end
 
+  @spec states() :: [state()]
+  def states(), do: @states
+
   # Changesets
   def create_changeset(device \\ %__MODULE__{}, params) do
     device

@@ -54,6 +54,7 @@ defmodule ExNVRWeb.MixProject do
       {:corsica, "~> 2.1"},
       {:logger_json, "~> 5.1"},
       {:flop_phoenix, "~> 0.21.1"},
+      {:prom_ex, "~> 1.9.0"},
       {:mock, "~> 0.3", only: :test}
     ]
   end
