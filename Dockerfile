@@ -40,11 +40,7 @@ COPY rel rel
 RUN mix deps.get
 RUN mix deps.compile
 
-RUN cd apps/ex_nvr_web/assets && npm install
-RUN cd apps/ex_nvr_web && mix assets.deploy
-
 # compile and build release
-
 RUN mix do compile, release
 
 # prepare release image
@@ -64,7 +60,8 @@ RUN \
 
 WORKDIR /app
 
-RUN chown nobody:nobody /app
+RUN mkdir /var/lib/ex_nvr
+RUN chown nobody:nobody /app /var/lib/ex_nvr
 
 USER nobody:nobody
 
