@@ -4,7 +4,7 @@ defmodule ExNVRWeb.MixProject do
   def project do
     [
       app: :ex_nvr_web,
-      version: "0.5.1",
+      version: "0.6.0",
       build_path: "../../_build",
       config_path: "../../config/config.exs",
       deps_path: "../../deps",
@@ -68,7 +68,8 @@ defmodule ExNVRWeb.MixProject do
       test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"],
       "assets.setup": ["tailwind.install --if-missing", "esbuild.install --if-missing"],
       "assets.build": ["tailwind default", "esbuild default"],
-      "assets.deploy": ["tailwind default --minify", "esbuild default --minify", "phx.digest"]
+      "assets.deploy": ["tailwind default --minify", "esbuild default --minify", "phx.digest"],
+      release: ["cmd --cd assets npm install", "assets.deploy"]
     ]
   end
 end

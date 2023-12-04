@@ -6,6 +6,8 @@ NVR (Network Video Recorder) for Elixir using [Membrane Framework](https://githu
 
 ## Installation
 
+### Docker
+
 To get started with `ex_nvr` it's preferrable and easy to run a docker image:
 ```bash
 docker run --rm -it -p 4000:4000 --env-file .env ghcr.io/evercam/ex_nvr:latest
@@ -21,21 +23,53 @@ This will create an image `ex_nvr` with `custom` tag. To run it, issue this comm
 docker run --rm -it -p 4000:4000 --env-file .env ex_nvr:custom
 ```
 
-### Arm/v7
+#### Arm/v7
 There's currently no automated docker build for `arm/v7` since building the image using `buildx` and `Qemu` take ages to complete,
 the workaroud is to build the image on the target host itself
 
 ```bash
-docker build -t ex_nvr:0.1.1 -f Dockerfile-armv7 .
+docker build -t ex_nvr:0.6.0 -f Dockerfile-armv7 .
 ```
 
-Note that running the docker cotainer needs some environment variables defined in the `.env` file. The list of environment 
-variables needed to configure `ex_nvr` are:
+### Releases
+
+Starting from `v0.6.0`, there are elixir releases for `GNU/Linux` and debian packages available as [release assets](/releases).
+
+You can download the tar file and uncompress it. cd to the decompressed directory and then run:
+```bash
+./run
+```
+
+For debian packages, just download the package and run:
+```bash
+sudo dpkg -i <package name>
+```
+
+This will install `ex_nvr` as a `systemd` service under the name `ex-nvr`. To run it issue the command
+```bash
+sudo systemctl start ex-nvr
+```
+
+To start it on boot
+```bash
+sudo systemctl enable ex-nvr.service
+```
+
+To delete the package, first stop the service and the use `dpkg` to delete it
+```bash
+sudo systemctl stop ex-nvr
+sudo systemctl disable ex-nvr.service
+sudo dpkg -P ex-nvr
+```
+
+## Environment Variables
+
+If you want to configure some aspects of `ex_nvr`, you can set the following environment variables:
 
 | **Env variable** | **descritpion** |
 |------------------|-----------------|
-| DATABASE_PATH    | The path where Sqlite database will be created. |
-| EXNVR_HLS_DIRECTORY | The directory where hls playlists will be stored. Defaults to: `./hls`. <br/><br/>It is not necessary to expose this folder via volumes since the playlists are deleted each time the user stop streaming.
+| DATABASE_PATH    | The path where Sqlite database will be created. Defaults to: `/var/lib/ex_nvr/ex_nvr.db` |
+| EXNVR_HLS_DIRECTORY | The directory where hls playlists will be stored. Defaults to: `/tmp/hls`. <br/><br/>It is not necessary to expose this folder via volumes since the playlists are deleted each time the user stop streaming.
 | EXNVR_ADMIN_USERNAME | The username(email) of the admin user to create on first startup. Defaults to: `admin@localhost`. |
 | EXNVR_ADMIN_PASSWORD | The password of the admin user to create on first startup. Defaults to: `P@ssw0rd`. |
 | SECRET_KEY_BASE  | A 64 byte key that's used by **Pheonix** to encrypt cookies |

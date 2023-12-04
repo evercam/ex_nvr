@@ -31,8 +31,7 @@ COPY rel rel
 
 RUN mix deps.get
 RUN mix deps.compile
-
-RUN cd apps/ex_nvr_web/assets && npm install
-RUN cd apps/ex_nvr_web && mix assets.deploy
-
 RUN mix do release
+
+RUN mkdir build-assets
+RUN cp _build/prod/*.tar.gz _build/prod/*.deb build-assets/

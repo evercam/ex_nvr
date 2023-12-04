@@ -1,7 +1,7 @@
 defmodule ExNVR.Umbrella.MixProject do
   use Mix.Project
 
-  @version "0.5.1"
+  @version "0.6.0"
 
   def project do
     [
@@ -28,7 +28,7 @@ defmodule ExNVR.Umbrella.MixProject do
         version: @version,
         applications: [ex_nvr: :permanent, ex_nvr_web: :permanent],
         include_executables_for: [:unix],
-        steps: [:assemble, &copy_external_libs/1, &archive/1]
+        steps: [:assemble, &copy_external_libs/1, &archive/1, &genererat_deb_package/1]
       ]
     ]
   end
@@ -45,7 +45,8 @@ defmodule ExNVR.Umbrella.MixProject do
   defp aliases do
     [
       # run `mix setup` in all child apps
-      setup: ["cmd mix setup"]
+      setup: ["cmd mix setup"],
+      release: ["cmd --app ex_nvr_web mix release", "release"]
     ]
   end
 
@@ -94,6 +95,67 @@ defmodule ExNVR.Umbrella.MixProject do
     release
   end
 
+  defp genererat_deb_package(release) do
+    generate_deb? = System.get_env("GENERATE_DEB_PACKAGE", "false") |> String.to_existing_atom()
+    {arch, os, abi} = get_target()
+
+    case {generate_deb?, os, abi} do
+      {true, "linux", "gnu"} ->
+        name = "ex-nvr_#{release.version}-1_#{get_debian_arch(arch)}"
+        pkg_dest = Path.expand("../..", release.path)
+        dest = Path.join(pkg_dest, name)
+
+        File.rm_rf!(dest)
+
+        File.mkdir!(dest)
+        File.mkdir_p!(Path.join([dest, "opt", "ex_nvr"]))
+        File.mkdir_p!(Path.join([dest, "var", "lib", "ex_nvr"]))
+        File.mkdir_p!(Path.join([dest, "usr", "lib", "systemd", "system"]))
+        File.mkdir_p!(Path.join(dest, "DEBIAN"))
+
+        File.cp_r!(release.path, Path.join([dest, "opt", "ex_nvr"]))
+
+        File.write!(Path.join([dest, "DEBIAN", "control"]), """
+        Package: ex-nvr
+        Version: #{release.version}
+        Architecture: #{get_debian_arch(arch)}
+        Maintainer: Evercam <support@evercam.io>
+        Description: NVR (Network Video Recorder) software for Elixir.
+        Homepage: https://github.com/evercam/ex_nvr
+        """)
+
+        File.write!(Path.join([dest, "usr", "lib", "systemd", "system", "ex_nvr.service"]), """
+        [Unit]
+        Description=ExNVR: Network Video Recorder
+        After=network.target
+
+        [Service]
+        Type=simple
+        User=root
+        Group=root
+        ExecStart=/opt/ex_nvr/run
+        Restart=always
+        RestartSec=1
+        SyslogIdentifier=ex_nvr
+        WorkingDirectory=/opt/ex_nvr
+
+        [Install]
+        WantedBy=multi-user.target
+        """)
+
+        {_result, 0} =
+          System.cmd("dpkg-deb", ["--root-owner-group", "--build", name],
+            stderr_to_stdout: true,
+            cd: pkg_dest
+          )
+
+        release
+
+      _other ->
+        release
+    end
+  end
+
   defp get_target() do
     [architecture, _vendor, os, abi] =
       :erlang.system_info(:system_architecture)
@@ -102,4 +164,7 @@ defmodule ExNVR.Umbrella.MixProject do
 
     {architecture, os, abi}
   end
+
+  defp get_debian_arch("x86_64"), do: "amd64"
+  defp get_debian_arch("aarch64"), do: "arm64"
 end
