@@ -33,7 +33,7 @@ docker build -t ex_nvr:0.6.0 -f Dockerfile-armv7 .
 
 ### Releases
 
-Starting from `v0.6.0`, there are elixir releases for `GNU/Linux` and debian packages available as [release assets](/releases).
+Starting from `v0.6.0`, there are elixir releases for `GNU/Linux` and debian packages available as [release assets](https://github.com/evercam/ex_nvr/releases).
 
 You can download the tar file and uncompress it. cd to the decompressed directory and then run:
 ```bash
