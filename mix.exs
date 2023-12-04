@@ -96,58 +96,63 @@ defmodule ExNVR.Umbrella.MixProject do
   end
 
   defp genererat_deb_package(release) do
-    if System.get_env("GENERATE_DEB_PACKAGE", "false") |> String.to_existing_atom() do
-      {arch, _os, _abi} = get_target()
-      name = "ex-nvr_#{release.version}-1_#{get_debian_arch(arch)}"
-      pkg_dest = Path.expand("../..", release.path)
-      dest = Path.join(pkg_dest, name)
+    generate_deb? = System.get_env("GENERATE_DEB_PACKAGE", "false") |> String.to_existing_atom()
+    {arch, os, abi} = get_target()
 
-      File.rm_rf!(dest)
+    case {generate_deb?, os, abi} do
+      {true, "linux", "gnu"} ->
+        name = "ex-nvr_#{release.version}-1_#{get_debian_arch(arch)}"
+        pkg_dest = Path.expand("../..", release.path)
+        dest = Path.join(pkg_dest, name)
 
-      File.mkdir!(dest)
-      File.mkdir_p!(Path.join([dest, "opt", "ex_nvr"]))
-      File.mkdir_p!(Path.join([dest, "var", "lib", "ex_nvr"]))
-      File.mkdir_p!(Path.join([dest, "usr", "lib", "systemd", "system"]))
-      File.mkdir_p!(Path.join(dest, "DEBIAN"))
+        File.rm_rf!(dest)
 
-      File.cp_r!(release.path, Path.join([dest, "opt", "ex_nvr"]))
+        File.mkdir!(dest)
+        File.mkdir_p!(Path.join([dest, "opt", "ex_nvr"]))
+        File.mkdir_p!(Path.join([dest, "var", "lib", "ex_nvr"]))
+        File.mkdir_p!(Path.join([dest, "usr", "lib", "systemd", "system"]))
+        File.mkdir_p!(Path.join(dest, "DEBIAN"))
 
-      File.write!(Path.join([dest, "DEBIAN", "control"]), """
-      Package: ex-nvr
-      Version: #{release.version}
-      Architecture: #{get_debian_arch(arch)}
-      Maintainer: Evercam <support@evercam.io>
-      Description: NVR (Network Video Recorder) software for Elixir.
-      Homepage: https://github.com/evercam/ex_nvr
-      """)
+        File.cp_r!(release.path, Path.join([dest, "opt", "ex_nvr"]))
 
-      File.write!(Path.join([dest, "usr", "lib", "systemd", "system", "ex_nvr.service"]), """
-      [Unit]
-      Description=ExNVR: Network Video Recorder
-      After=network.target
+        File.write!(Path.join([dest, "DEBIAN", "control"]), """
+        Package: ex-nvr
+        Version: #{release.version}
+        Architecture: #{get_debian_arch(arch)}
+        Maintainer: Evercam <support@evercam.io>
+        Description: NVR (Network Video Recorder) software for Elixir.
+        Homepage: https://github.com/evercam/ex_nvr
+        """)
 
-      [Service]
-      Type=simple
-      User=root
-      Group=root
-      ExecStart=/opt/ex_nvr/run
-      Restart=always
-      RestartSec=1
-      SyslogIdentifier=ex_nvr
+        File.write!(Path.join([dest, "usr", "lib", "systemd", "system", "ex_nvr.service"]), """
+        [Unit]
+        Description=ExNVR: Network Video Recorder
+        After=network.target
 
-      [Install]
-      WantedBy=multi-user.target
-      """)
+        [Service]
+        Type=simple
+        User=root
+        Group=root
+        ExecStart=/opt/ex_nvr/run
+        Restart=always
+        RestartSec=1
+        SyslogIdentifier=ex_nvr
+        WorkingDirectory=/opt/ex_nvr
 
-      {_result, 0} =
-        System.cmd("dpkg-deb", ["--root-owner-group", "--build", name],
-          stderr_to_stdout: true,
-          cd: pkg_dest
-        )
+        [Install]
+        WantedBy=multi-user.target
+        """)
 
-      release
-    else
-      release
+        {_result, 0} =
+          System.cmd("dpkg-deb", ["--root-owner-group", "--build", name],
+            stderr_to_stdout: true,
+            cd: pkg_dest
+          )
+
+        release
+
+      _other ->
+        release
     end
   end
 
