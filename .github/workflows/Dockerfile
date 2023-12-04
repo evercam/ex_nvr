@@ -14,6 +14,7 @@ RUN \
 ARG ERL_FLAGS
 ENV ERL_FLAGS=$ERL_FLAGS
 ENV MIX_ENV=prod
+ENV GENERATE_DEB_PACKAGE=true
 
 # Create build workdir
 WORKDIR /app
