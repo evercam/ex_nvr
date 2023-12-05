@@ -1,8 +1,6 @@
 defmodule ExNVRWeb.DashboardLive do
   use ExNVRWeb, :live_view
 
-  import ExNVR.Authorization
-
   alias Ecto.Changeset
   alias ExNVR.Devices
   alias ExNVR.Recordings
