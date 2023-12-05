@@ -6,10 +6,7 @@ defmodule ExNVR.Authorization do
             create: %{},
             read: %{},
             update: %{},
-            delete: %{},
-            stream: %{},
-            download_archives: %{},
-            onvif_discovery: %{}
+            delete: %{}
 
   def can(:admin = role) do
     grant(role)
@@ -19,11 +16,8 @@ defmodule ExNVR.Authorization do
 
   def can(:user = role) do
     grant(role)
-    # |> edit(Device)
-    # |> read(Recording)
-    |> stream(Device)
-    # |> download_archives(Device)
-    |> onvif_discovery(Device)
+    |> read(Device)
+    |> read(Recording)
   end
 
   def grant(role), do: %Authorization{role: role}
@@ -36,28 +30,12 @@ defmodule ExNVR.Authorization do
 
   def delete(authorization, resource), do: put_action(authorization, :delete, resource)
 
-  def stream(authorization, resource), do: put_action(authorization, :stream, resource)
-
-  def download_archives(authorization, resource),
-    do: put_action(authorization, :download_archives, resource)
-
-  def onvif_discovery(authorization, resource),
-    do: put_action(authorization, :onvif_discovery, resource)
-
-  def edit(authorization, resource) do
-    authorization
-    |> create(resource)
-    |> read(resource)
-    |> update(resource)
-  end
-
   def all(authorization, resource) do
     authorization
-    |> edit(resource)
+    |> read(resource)
+    |> create(resource)
+    |> update(resource)
     |> delete(resource)
-    |> stream(resource)
-    |> download_archives(resource)
-    |> onvif_discovery(resource)
   end
 
   def read?(authorization, resource) do
@@ -74,18 +52,6 @@ defmodule ExNVR.Authorization do
 
   def delete?(authorization, resource) do
     Map.get(authorization.delete, resource, false)
-  end
-
-  def stream?(authorization, resource) do
-    Map.get(authorization.stream, resource, false)
-  end
-
-  def download_archives?(authorization, resource) do
-    Map.get(authorization.download_archives, resource, false)
-  end
-
-  def onvif_discovery?(authorization, resource) do
-    Map.get(authorization.onvif_discovery, resource, false)
   end
 
   defp put_action(authorization, action, resource) do
