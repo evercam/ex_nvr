@@ -5,7 +5,7 @@ defmodule ExNVRWeb.API.DeviceController do
 
   action_fallback ExNVRWeb.API.FallbackController
 
-  plug ExNVRWeb.Plug.Authorize, resource: ExNVR.Model.Device
+  plug ExNVRWeb.Plug.Authorize, resource: :device
   plug ExNVRWeb.Plug.Device, [field_name: "id"] when action in [:update, :show]
 
   alias ExNVR.{Devices, DeviceSupervisor}
