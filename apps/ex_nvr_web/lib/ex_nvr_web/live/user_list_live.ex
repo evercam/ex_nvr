@@ -8,7 +8,7 @@ defmodule ExNVRWeb.UserListLive do
   def render(assigns) do
     ~H"""
     <div class="grow">
-      <div class="ml-4 sm:ml-0">
+      <div :if={@current_user.role == :admin} class="ml-4 sm:ml-0">
         <.link href={~p"/users/new"}>
           <.button>Add User</.button>
         </.link>
@@ -32,6 +32,7 @@ defmodule ExNVRWeb.UserListLive do
         </:col>
         <:action :let={user}>
           <.button
+            :if={@current_user.role == :admin}
             id={"dropdownMenuIconButton_#{user.id}"}
             data-dropdown-toggle={"dropdownDots_#{user.id}"}
             class="text-sm ml-3 hover:bg-gray-100 dark:bg-gray-800"
@@ -78,9 +79,22 @@ defmodule ExNVRWeb.UserListLive do
           <%= if @confirm_delete && @user_id == user.id do %>
             <div class="fixed top-0 right-0 bottom-0 left-0 flex justify-center items-center bg-black bg-opacity-70 z-50">
               <div class="confirm-dialog bg-white p-4 rounded-lg text-center border-b border-gray-200 dark:bg-gray-800 dark:border-gray-700">
-                <p class="text-white mb-10 mt-10"><%="Are you sure you want to delete the User: '#{user.email}'" %></p>
-                <.button phx-click="delete" phx-value-id={@user_id} class="bg-red-500 text-white px-4 py-2 mx-2 rounded hover:bg-red-600">Yes</.button>
-                <.button phx-click="cancel-delete" class="bg-gray-500 text-white px-4 py-2 mx-2 rounded hover:bg-gray-600">No</.button>
+                <p class="text-white mb-10 mt-10">
+                  <%= "Are you sure you want to delete the User: '#{user.email}'" %>
+                </p>
+                <.button
+                  phx-click="delete"
+                  phx-value-id={@user_id}
+                  class="bg-red-500 text-white px-4 py-2 mx-2 rounded hover:bg-red-600"
+                >
+                  Yes
+                </.button>
+                <.button
+                  phx-click="cancel-delete"
+                  class="bg-gray-500 text-white px-4 py-2 mx-2 rounded hover:bg-gray-600"
+                >
+                  No
+                </.button>
               </div>
             </div>
           <% end %>
@@ -101,6 +115,7 @@ defmodule ExNVRWeb.UserListLive do
   def handle_event("delete", %{"id" => id}, socket) do
     user = Accounts.get_user!(id)
     email = user.email
+
     case Accounts.delete_user(user) do
       {:ok, _deleted_user} ->
         info = "User: '#{email}' has been deleted"

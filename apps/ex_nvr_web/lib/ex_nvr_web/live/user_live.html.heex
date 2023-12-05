@@ -1,79 +1,70 @@
 <div class="grow max-w-2xl">
-    <div class="px-6 lg:px-8 bg-white dark:bg-gray-800">
-      <h3
+  <div class="px-6 lg:px-8 bg-white dark:bg-gray-800">
+    <h3
+      :if={@user.id == nil}
+      class="mb-4 text-xl text-center font-medium text-gray-900 dark:text-white"
+    >
+      Create a new user
+    </h3>
+    <h3
+      :if={@user.id != nil}
+      class="mb-4 text-xl text-center font-medium text-gray-900 dark:text-white"
+    >
+      Update a user
+    </h3>
+    <.simple_form id="user_form" for={@user_form} class="space-y-6" phx-submit="save_user">
+      <.input
+        field={@user_form[:first_name]}
+        type="text"
+        label="First Name"
+        placeholder="First Name"
+        required
+      />
+      <.input
+        field={@user_form[:last_name]}
+        type="text"
+        label="Last Name"
+        placeholder="Last Name"
+        required
+      />
+      <.input field={@user_form[:email]} type="email" label="Email" placeholder="Email" required />
+      <.input
         :if={@user.id == nil}
-        class="mb-4 text-xl text-center font-medium text-gray-900 dark:text-white"
-      >
-        Create a new user
-      </h3>
-      <h3
-        :if={@user.id != nil}
-        class="mb-4 text-xl text-center font-medium text-gray-900 dark:text-white"
-      >
-        Update a user
-      </h3>
-      <.simple_form id="user_form" for={@user_form} class="space-y-6" phx-submit="save_user">
+        field={@user_form[:password]}
+        type="password"
+        label="Password"
+        placeholder="Password"
+        required
+      />
+      <div class="flex justify-around">
         <.input
-          field={@user_form[:first_name]}
-          type="text"
-          label="First Name"
-          placeholder="First Name"
-          required
+          field={@user_form[:role]}
+          id="user_role"
+          type="select"
+          options={[{"Admin", "admin"}, {"User", "user"}]}
+          label="Role"
+          placeholder="Choose a role for the user"
         />
-        <.input
-          field={@user_form[:last_name]}
-          type="text"
-          label="Last Name"
-          placeholder="Last Name"
-          required
-        />
-        <.input
-          field={@user_form[:email]}
-          type="email"
-          label="Email"
-          placeholder="Email"
-          required
-        />
-        <%= if @user.id == nil do %>
-        <.input
-          field={@user_form[:password]}
-          type="password"
-          label="Password"
-          placeholder="Password"
-          required
-        />
-        <%= end %>
-        <div class="flex justify-around">
-          <.input
-            field={@user_form[:role]}
-            id="user_role"
-            type="select"
-            options={[{"Admin", "admin"}, {"User", "user"}]}
-            label="Role"
-            placeholder="Choose a role for the user"
-          />
 
-          <.input
-            field={@user_form[:language]}
-            id="user_language"
-            type="select"
-            options={[{"English", "en"}]}
-            label="Language"
-            placeholder="Choose a Language for the user"
-          />
-  
-        </div>
+        <.input
+          field={@user_form[:language]}
+          id="user_language"
+          type="select"
+          options={[{"English", "en"}]}
+          label="Language"
+          placeholder="Choose a Language for the user"
+        />
+      </div>
 
-        <:actions>
-          <.button :if={is_nil(@user.id)} class="w-full" phx-disable-with="Creating...">
-            Create
-          </.button>
-  
-          <.button :if={@user.id} class="w-full" phx-disable-with="Updating...">
-            Update
-          </.button>
-        </:actions>
-      </.simple_form>
-    </div>
+      <:actions>
+        <.button :if={is_nil(@user.id)} class="w-full" phx-disable-with="Creating...">
+          Create
+        </.button>
+
+        <.button :if={@user.id} class="w-full" phx-disable-with="Updating...">
+          Update
+        </.button>
+      </:actions>
+    </.simple_form>
   </div>
-  
+</div>

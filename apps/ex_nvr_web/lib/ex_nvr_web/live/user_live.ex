@@ -13,10 +13,7 @@ defmodule ExNVRWeb.UserLive do
 
   def mount(%{"id" => user_id}, _session, socket) do
     user = Accounts.get_user!(user_id)
-    IO.inspect(user.hashed_password)
-    IO.inspect(Accounts.change_user_update(user))
-    {:ok,
-     assign(socket, user: user, user_form: to_form(Accounts.change_user_update(user)))}
+    {:ok, assign(socket, user: user, user_form: to_form(Accounts.change_user_update(user)))}
   end
 
   def handle_event("save_user", %{"user" => user_params}, socket) do
@@ -40,14 +37,13 @@ defmodule ExNVRWeb.UserLive do
       {:error, changeset} ->
         {:noreply,
          assign(
-          socket,
-          user_form: to_form(changeset)
+           socket,
+           user_form: to_form(changeset)
          )}
     end
   end
 
   defp do_update_user(socket, user, user_params) do
-
     case Accounts.update_user(user, user_params) do
       {:ok, updated_user} ->
         info = "User updated successfully"
@@ -63,7 +59,7 @@ defmodule ExNVRWeb.UserLive do
       {:error, changeset} ->
         {:noreply,
          assign(socket,
-         user_form: to_form(changeset)
+           user_form: to_form(changeset)
          )}
     end
   end
