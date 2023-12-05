@@ -238,45 +238,26 @@ defmodule ExNVRWeb.DashboardLive do
   end
 
   def handle_event("footage_duration", %{"footage" => params}, socket) do
-    role = socket.assigns.current_user.role
-
-    with true <- can(role) |> download_archives?(Device),
-         "" <- params["duration"] do
-      {:noreply, assign(socket, custom_duration: true)}
-    else
-      false ->
-        socket
-        |> put_flash(:error, "You are not authorized to perform this action!")
-        |> redirect(to: ~p"/dashboard")
-        |> then(&{:noreply, &1})
-
-      _ ->
-        {:noreply, assign(socket, custom_duration: false)}
-    end
+    if params["duration"] == "",
+      do: {:noreply, assign(socket, custom_duration: true)},
+      else: {:noreply, assign(socket, custom_duration: false)}
   end
 
   def handle_event("download_footage", %{"footage" => params}, socket) do
-    role = socket.assigns.current_user.role
     device = Enum.find(socket.assigns.devices, &(&1.id == params["device_id"]))
 
-    with true <- can(role) |> download_archives?(Device),
-         {:ok, params} <- validate_footage_req_params(params, device.timezone) do
-      query_params = %{
-        start_date: format_date(params[:start_date]),
-        end_date: format_date(params[:end_date]),
-        duration: params[:duration]
-      }
+    case validate_footage_req_params(params, device.timezone) do
+      {:ok, params} ->
+        query_params = %{
+          start_date: format_date(params[:start_date]),
+          end_date: format_date(params[:end_date]),
+          duration: params[:duration]
+        }
 
-      socket
-      |> push_event("download-footage", %{
-        url: ~p"/api/devices/#{device.id}/footage/?#{query_params}"
-      })
-      |> then(&{:noreply, &1})
-    else
-      false ->
         socket
-        |> put_flash(:error, "You are not authorized to perform this action!")
-        |> redirect(to: ~p"/dashboard")
+        |> push_event("download-footage", %{
+          url: ~p"/api/devices/#{device.id}/footage/?#{query_params}"
+        })
         |> then(&{:noreply, &1})
 
       {:error, changeset} ->
@@ -375,11 +356,9 @@ defmodule ExNVRWeb.DashboardLive do
   defp live_view_enabled?(socket) do
     device = socket.assigns.current_device
     start_date = socket.assigns[:start_date]
-    role = socket.assigns.current_user.role
 
     enabled? =
       cond do
-        can(role) |> stream?(Device) -> true
         is_nil(device) -> false
         not is_nil(start_date) -> true
         not ExNVR.Utils.run_main_pipeline?() -> false
