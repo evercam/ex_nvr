@@ -157,8 +157,6 @@ defmodule ExNVRWeb.DeviceListLive do
   defp delete_device(socket, device_id) do
     devices = socket.assigns.devices
     with %Device{} = device <- Enum.find(devices, &(&1.id == device_id)),
-         :ok <- DeviceSupervisor.stop(device),
-         {:ok, _} <- Utils.delete_recordings(device_id),
          :ok <- Devices.delete(device) do
       socket =
         socket

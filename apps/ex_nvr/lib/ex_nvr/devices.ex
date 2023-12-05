@@ -4,9 +4,9 @@ defmodule ExNVR.Devices do
   """
 
   alias Ecto.Multi
-  alias ExNVR.Model.Device
-  alias ExNVR.Repo
-  alias ExNVR.Recordings
+  alias ExNVR.Model.{Device, Recording, Run}
+  alias ExNVR.{Repo, DeviceSupervisor}
+  alias Ecto.Multi
 
   import Ecto.Query
 
@@ -51,13 +51,22 @@ defmodule ExNVR.Devices do
     end
   end
 
-  @spec delete(atom() | %{:id => any(), optional(any()) => any()}) :: :error | :ok
+  @spec delete(atom() | %{:id => any(), optional(any()) => any()}) :: {:error, Ecto.Changeset.t()} | :ok
   def delete(device) do
-    with :ok <- Recordings.delete_with_device(device.id),
-         {:ok, _} <- Repo.delete(device) do
-      :ok
-    else
-      _ -> :error
+    Multi.new()
+    |> Multi.delete_all(:delete_devices, Recording.with_device(device.id))
+    |> Multi.delete_all(:delete_runs, Run.with_device(device.id))
+    |> Multi.delete(:delete_device, device)
+    |> Multi.run(:stop_pipeline, fn _repo, _param ->
+      case DeviceSupervisor.stop(device) do
+        :ok -> {:ok, nil}
+        _ -> {:error, "Couldn't stop pipeline"}
+      end
+    end)
+    |> Repo.transaction()
+    |> case do
+      {:ok, _} -> :ok
+      {:error, _, changeset, _} -> {:error, changeset}
     end
   end
 

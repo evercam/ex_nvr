@@ -26,7 +26,7 @@ defmodule ExNVRWeb.Router do
   scope "/api", ExNVRWeb do
     pipe_through [:api, :api_require_authenticated_user]
 
-    resources "/devices", API.DeviceController, only: [:create, :update, :index, :show, :delete]
+    resources "/devices", API.DeviceController, only: [:new, :edit]
 
     get "/recordings/chunks", API.RecordingController, :chunks
 
