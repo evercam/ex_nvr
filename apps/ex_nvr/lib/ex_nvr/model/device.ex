@@ -8,8 +8,10 @@ defmodule ExNVR.Model.Device do
   alias Ecto.Changeset
 
   @states [:stopped, :recording, :failed]
+  @vendors [ :hikvision, :milesight, :axis ]
 
   @type state :: :stopped | :recording | :failed
+  @type vendor :: :hikvision | :milesight| :axis
   @type id :: binary()
 
   @type t :: %__MODULE__{
@@ -18,6 +20,10 @@ defmodule ExNVR.Model.Device do
           type: :ip | :file,
           timezone: binary(),
           state: state(),
+          vendor: vendor(),
+          mac: binary(),
+          url: binary(),
+          model: binary(),
           credentials: Credentials.t() | nil,
           stream_config: StreamConfig.t() | nil,
           inserted_at: DateTime.t() | nil,
@@ -40,6 +46,14 @@ defmodule ExNVR.Model.Device do
       field :password, :string
     end
 
+    @spec changeset(
+            {map(), map()}
+            | %{
+                :__struct__ => atom() | %{:__changeset__ => map(), optional(any()) => any()},
+                optional(atom()) => any()
+              },
+            :invalid | %{optional(:__struct__) => none(), optional(atom() | binary()) => any()}
+          ) :: Ecto.Changeset.t()
     def changeset(struct, params) do
       struct
       |> cast(params, __MODULE__.__schema__(:fields))
@@ -56,7 +70,7 @@ defmodule ExNVR.Model.Device do
             temporary_path: Path.t(),
             duration: Membrane.Time.t(),
             stream_uri: binary(),
-            sub_stream_uri: binary()
+            sub_stream_uri: binary(),
           }
 
     @primary_key false
@@ -70,7 +84,7 @@ defmodule ExNVR.Model.Device do
 
     def changeset(struct, params, device_type) do
       struct
-      |> cast(params, [:stream_uri, :sub_stream_uri, :filename, :temporary_path, :duration])
+      |> cast(params, __MODULE__.__schema__(:fields))
       |> validate_device_config(device_type)
     end
 
@@ -144,6 +158,11 @@ defmodule ExNVR.Model.Device do
     field :timezone, :string, default: "UTC"
     field :state, Ecto.Enum, values: @states, default: :recording
 
+    field :vendor, Ecto.Enum, values: @vendors, default: :hikvision
+    field :mac, :string, default: ""
+    field :url, :string, default: ""
+    field :model, :string, default: ""
+
     embeds_one :credentials, Credentials, source: :credentials, on_replace: :update
     embeds_one :stream_config, StreamConfig, source: :config, on_replace: :update
     embeds_one :settings, Settings, on_replace: :update
@@ -207,7 +226,7 @@ defmodule ExNVR.Model.Device do
   # Changesets
   def create_changeset(device \\ %__MODULE__{}, params) do
     device
-    |> Changeset.cast(params, [:name, :type, :timezone, :state])
+    |> Changeset.cast(params, [:name, :type, :timezone, :state, :vendor, :mac, :url, :model])
     |> Changeset.cast_embed(:credentials)
     |> Changeset.cast_embed(:settings, required: true)
     |> common_config()
@@ -215,7 +234,7 @@ defmodule ExNVR.Model.Device do
 
   def update_changeset(device, params) do
     device
-    |> Changeset.cast(params, [:name, :timezone, :state])
+    |> Changeset.cast(params, [:name, :timezone, :state, :vendor, :mac, :url, :model])
     |> Changeset.cast_embed(:credentials)
     |> Changeset.cast_embed(:settings, required: true, with: &Settings.update_changeset/2)
     |> common_config()
@@ -225,6 +244,7 @@ defmodule ExNVR.Model.Device do
     changeset
     |> Changeset.validate_required([:name, :type])
     |> Changeset.validate_inclusion(:timezone, Tzdata.zone_list())
+    |> Changeset.validate_inclusion(:vendor, @vendors)
     |> validate_config()
   end
 
