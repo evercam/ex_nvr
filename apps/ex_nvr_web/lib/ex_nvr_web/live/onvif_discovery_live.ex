@@ -7,6 +7,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
   require Membrane.Logger
 
   import ExNVR.Authorization
+  import ExNVRWeb.Live.Helpers
 
   alias Ecto.Changeset
   alias ExNVR.Onvif
@@ -27,24 +28,20 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
   def mount(_params, _session, socket) do
     role = socket.assigns.current_user.role
 
-    if can(role) |> onvif_discovery?(Device) do
-      socket
-      |> assign_discovery_form()
-      |> assign_discovered_devices()
-      |> assign(device_details: nil, device_details_cache: %{})
-      |> then(&{:ok, &1})
-    else
-      socket
-      |> put_flash(:error, "You are not authorized to perform this action!")
-      |> redirect(to: ~p"/dashboard")
-      |> then(&{:ok, &1})
-    end
+    if is_authorized?(role, :device, :create),
+      do:
+        socket
+        |> assign_discovery_form()
+        |> assign_discovered_devices()
+        |> assign(device_details: nil, device_details_cache: %{})
+        |> then(&{:ok, &1}),
+      else: unauthorized(socket, ~p"/dashboard", :ok)
   end
 
   def handle_event("discover", %{"discover_settings" => params}, socket) do
     role = socket.assigns.current_user.role
 
-    with true <- can(role) |> onvif_discovery?(Device),
+    with true <- is_authorized?(role, :device, :create),
          {:ok, %{timeout: timeout} = validated_params} <- validate_discover_params(params),
          {:ok, discovered_devices} <- Onvif.discover(timeout: :timer.seconds(timeout)) do
       socket
@@ -58,10 +55,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
       |> then(&{:noreply, &1})
     else
       false ->
-        socket
-        |> put_flash(:error, "You are not authorized to perform this action!")
-        |> redirect(to: ~p"/dashboard")
-        |> then(&{:noreply, &1})
+        unauthorized(socket, ~p"/dashboard", :noreply)
 
       {:error, %Changeset{} = changeset} ->
         {:noreply, assign_discovery_form(socket, changeset)}

@@ -4,6 +4,7 @@ defmodule ExNVRWeb.DeviceListLive do
   use ExNVRWeb, :live_view
 
   import ExNVR.Authorization
+  import ExNVRWeb.Live.Helpers
 
   alias ExNVR.Model.Device
   alias ExNVR.{Devices, DeviceSupervisor}
@@ -11,7 +12,7 @@ defmodule ExNVRWeb.DeviceListLive do
   def render(assigns) do
     ~H"""
     <div class="grow">
-      <div class="ml-4 sm:ml-0">
+      <div :if={@current_user.role == :admin} class="ml-4 sm:ml-0">
         <.link href={~p"/devices/new"}>
           <.button>Add device</.button>
         </.link>
@@ -38,6 +39,7 @@ defmodule ExNVRWeb.DeviceListLive do
         </:col>
         <:action :let={device}>
           <.button
+            :if={@current_user.role == :admin}
             id={"dropdownMenuIconButton_#{device.id}"}
             data-dropdown-toggle={"dropdownDots_#{device.id}"}
             class="text-sm ml-3 hover:bg-gray-100 dark:bg-gray-800"
@@ -99,40 +101,25 @@ defmodule ExNVRWeb.DeviceListLive do
   def mount(_params, _session, socket) do
     role = socket.assigns.current_user.role
 
-    if can(role) |> read?(Device) do
-      {:ok, assign(socket, devices: Devices.list())}
-    else
-      socket
-      |> put_flash(:error, "You are not authorized to perform this action!")
-      |> redirect(to: ~p"/dashboard")
-      |> then(&{:ok, &1})
-    end
+    if is_authorized?(role, :device, :read),
+      do: {:ok, assign(socket, devices: Devices.list())},
+      else: unauthorized(socket, ~p"/dashboard", :ok)
   end
 
   def handle_event("stop-recording", %{"device" => device_id}, socket) do
     role = socket.assigns.current_user.role
 
-    if can(role) |> update?(Device) do
-      update_device_state(socket, device_id, :stopped)
-    else
-      socket
-      |> put_flash(:error, "You are not authorized to perform this action!")
-      |> redirect(to: ~p"/devices")
-      |> then(&{:noreply, &1})
-    end
+    if is_authorized?(role, :device, :update),
+      do: update_device_state(socket, device_id, :stopped),
+      else: unauthorized(socket, ~p"/devices", :noreply)
   end
 
   def handle_event("start-recording", %{"device" => device_id}, socket) do
     role = socket.assigns.current_user.role
 
-    if can(role) |> update?(Device) do
-      update_device_state(socket, device_id, :recording)
-    else
-      socket
-      |> put_flash(:error, "You are not authorized to perform this action!")
-      |> redirect(to: ~p"/devices")
-      |> then(&{:noreply, &1})
-    end
+    if is_authorized?(role, :device, :update),
+      do: update_device_state(socket, device_id, :recording),
+      else: unauthorized(socket, ~p"/devices", :noreply)
   end
 
   defp update_device_state(socket, device_id, new_state) do

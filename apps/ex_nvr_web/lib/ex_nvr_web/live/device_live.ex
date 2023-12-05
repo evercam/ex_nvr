@@ -4,6 +4,7 @@ defmodule ExNVRWeb.DeviceLive do
   use ExNVRWeb, :live_view
 
   import ExNVR.Authorization
+  import ExNVRWeb.Live.Helpers
 
   alias ExNVR.{Devices, DeviceSupervisor}
   alias ExNVR.Model.Device
@@ -15,45 +16,37 @@ defmodule ExNVRWeb.DeviceLive do
     changeset = Devices.change_device_creation(%Device{})
     role = socket.assigns.current_user.role
 
-    if can(role) |> create?(Device) do
-      {:ok,
-       socket
-       |> assign(
-         device: %Device{},
-         disks_data: get_disks_data(),
-         device_form: to_form(changeset),
-         device_type: "ip"
-       )
-       |> allow_upload(:file_to_upload,
-         accept: ~w(video/mp4),
-         max_file_size: 1_000_000_000
-       )}
-    else
-      socket
-      |> put_flash(:error, "You are not authorized to perform this action!")
-      |> redirect(to: ~p"/dashboard")
-      |> then(&{:ok, &1})
-    end
+    if is_authorized?(role, :device, :create),
+      do:
+        {:ok,
+         socket
+         |> assign(
+           device: %Device{},
+           disks_data: get_disks_data(),
+           device_form: to_form(changeset),
+           device_type: "ip"
+         )
+         |> allow_upload(:file_to_upload,
+           accept: ~w(video/mp4),
+           max_file_size: 1_000_000_000
+         )},
+      else: unauthorized(socket, ~p"/devices", :ok)
   end
 
   def mount(%{"id" => device_id}, _session, socket) do
     device = Devices.get!(device_id)
     role = socket.assigns.current_user.role
 
-    if can(role) |> read?(Device) do
-      {:ok,
-       assign(socket,
-         device: device,
-         disks_data: get_disks_data(),
-         device_form: to_form(Devices.change_device_update(device)),
-         device_type: Atom.to_string(device.type)
-       )}
-    else
-      socket
-      |> put_flash(:error, "You are not authorized to perform this action!")
-      |> redirect(to: ~p"/dashboard")
-      |> then(&{:ok, &1})
-    end
+    if is_authorized?(role, :device, :update),
+      do:
+        {:ok,
+         assign(socket,
+           device: device,
+           disks_data: get_disks_data(),
+           device_form: to_form(Devices.change_device_update(device)),
+           device_type: Atom.to_string(device.type)
+         )},
+      else: unauthorized(socket, ~p"/devices", :ok)
   end
 
   def handle_event("validate", %{"device" => device_params}, socket) do
@@ -93,7 +86,7 @@ defmodule ExNVRWeb.DeviceLive do
   defp do_save_device(socket, device_params) do
     role = socket.assigns.current_user.role
 
-    with true <- can(role) |> create?(Device),
+    with true <- is_authorized?(role, :device, :create),
          {:ok, device} <- socket |> handle_uploaded_file(device_params) |> Devices.create() do
       info = "Device created successfully"
       DeviceSupervisor.start(device)
@@ -104,10 +97,7 @@ defmodule ExNVRWeb.DeviceLive do
       |> then(&{:noreply, &1})
     else
       false ->
-        socket
-        |> put_flash(:error, "You are not authorized to perform this action!")
-        |> redirect(to: ~p"/devices")
-        |> then(&{:noreply, &1})
+        unauthorized(socket, ~p"/devices", :noreply)
 
       {:error, changeset} ->
         {:noreply, assign(socket, device_form: to_form(changeset))}
@@ -138,7 +128,7 @@ defmodule ExNVRWeb.DeviceLive do
   defp do_update_device(socket, device, device_params) do
     role = socket.assigns.current_user.role
 
-    with true <- can(role) |> update?(Device),
+    with true <- is_authorized?(role, :device, :update),
          {:ok, updated_device} <- Devices.update(device, device_params) do
       info = "Device updated successfully"
 
@@ -151,10 +141,7 @@ defmodule ExNVRWeb.DeviceLive do
       |> then(&{:noreply, &1})
     else
       false ->
-        socket
-        |> put_flash(:error, "You are not authorized to perform this action!")
-        |> redirect(to: ~p"/devices")
-        |> then(&{:noreply, &1})
+        unauthorized(socket, ~p"/devices", :noreply)
 
       {:error, changeset} ->
         {:noreply, assign(socket, device_form: to_form(changeset))}
