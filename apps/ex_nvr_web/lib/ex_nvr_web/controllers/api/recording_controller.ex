@@ -4,8 +4,6 @@ defmodule ExNVRWeb.API.RecordingController do
 
   action_fallback ExNVRWeb.API.FallbackController
 
-  plug ExNVRWeb.Plug.Authorize, resource: ExNVR.Model.Recording
-
   import ExNVRWeb.Controller.Helpers
 
   alias Ecto.Changeset
