@@ -35,6 +35,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
         |> assign_discovered_devices()
         |> assign(device_details: nil, device_details_cache: %{})
         |> then(&{:ok, &1})
+
       {:error, :unauthorized} ->
         unauthorized(socket, ~p"/dashboard", :ok)
     end

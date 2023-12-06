@@ -30,6 +30,7 @@ defmodule ExNVRWeb.DeviceLive do
            accept: ~w(video/mp4),
            max_file_size: 1_000_000_000
          )}
+
       {:error, :unauthorized} ->
         unauthorized(socket, ~p"/devices", :ok)
     end
@@ -48,6 +49,7 @@ defmodule ExNVRWeb.DeviceLive do
            device_form: to_form(Devices.change_device_update(device)),
            device_type: Atom.to_string(device.type)
          )}
+
       {:error, :unauthorized} ->
         unauthorized(socket, ~p"/devices", :ok)
     end
