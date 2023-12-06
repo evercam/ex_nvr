@@ -61,13 +61,15 @@ defmodule ExNVR.Model.Device do
             temporary_path: Path.t(),
             duration: Membrane.Time.t(),
             stream_uri: binary(),
-            sub_stream_uri: binary()
+            sub_stream_uri: binary(),
+            snapshot_uri: binary()
           }
 
     @primary_key false
     embedded_schema do
       field :stream_uri, :string
       field :sub_stream_uri, :string
+      field :snapshot_uri, :string
       field :filename, :string
       field :temporary_path, :string, virtual: true
       field :duration, :integer
@@ -75,7 +77,14 @@ defmodule ExNVR.Model.Device do
 
     def changeset(struct, params, device_type) do
       struct
-      |> cast(params, [:stream_uri, :sub_stream_uri, :filename, :temporary_path, :duration])
+      |> cast(params, [
+        :stream_uri,
+        :sub_stream_uri,
+        :snapshot_uri,
+        :filename,
+        :temporary_path,
+        :duration
+      ])
       |> validate_device_config(device_type)
     end
 
@@ -83,21 +92,24 @@ defmodule ExNVR.Model.Device do
       validate_required(changeset, [:stream_uri])
       |> Changeset.validate_change(:stream_uri, &validate_uri/2)
       |> Changeset.validate_change(:sub_stream_uri, &validate_uri/2)
+      |> Changeset.validate_change(:snapshot_uri, fn :snapshot_uri, snapshot_uri ->
+        validate_uri(:snapshot_uri, snapshot_uri, "http")
+      end)
     end
 
     defp validate_device_config(changeset, :file) do
       validate_required(changeset, [:filename, :duration])
     end
 
-    defp validate_uri(field, rtsp_uri) do
-      uri = URI.parse(rtsp_uri)
+    defp validate_uri(field, uri, protocl \\ "rtsp") do
+      parsed_uri = URI.parse(uri)
 
       cond do
-        uri.scheme != "rtsp" ->
-          [{field, "scheme should be rtsp"}]
+        parsed_uri.scheme != protocl ->
+          [{field, "scheme should be #{protocl}"}]
 
-        to_string(uri.host) == "" ->
-          [{field, "invalid rtsp uri"}]
+        to_string(parsed_uri.host) == "" ->
+          [{field, "invalid #{protocl} uri"}]
 
         true ->
           []

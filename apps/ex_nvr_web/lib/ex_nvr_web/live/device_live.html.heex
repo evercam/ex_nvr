@@ -81,6 +81,14 @@
               label="Sub Stream"
               placeholder="rtsp://camera1:554/video/stream2"
             />
+            <.input
+              :if={@device_type == "ip"}
+              field={config[:snapshot_uri]}
+              id="config_snapshot_uri"
+              type="text"
+              label="Snapshot uri"
+              placeholder="http://camera1:80/snapshot"
+            />
             <label
               :if={@device_type == "file" && is_nil(@device.id)}
               for={@uploads.file_to_upload.ref}
