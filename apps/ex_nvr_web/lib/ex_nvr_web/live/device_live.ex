@@ -14,10 +14,10 @@ defmodule ExNVRWeb.DeviceLive do
 
   def mount(%{"id" => "new"}, _session, socket) do
     changeset = Devices.change_device_creation(%Device{})
-    role = socket.assigns.current_user.role
+    user = socket.assigns.current_user
 
-    if is_authorized?(role, :device, :create),
-      do:
+    case authorized?(user, :device, :create) do
+      {:ok, :authorized} ->
         {:ok,
          socket
          |> assign(
@@ -29,24 +29,28 @@ defmodule ExNVRWeb.DeviceLive do
          |> allow_upload(:file_to_upload,
            accept: ~w(video/mp4),
            max_file_size: 1_000_000_000
-         )},
-      else: unauthorized(socket, ~p"/devices", :ok)
+         )}
+      {:error, :unauthorized} ->
+        unauthorized(socket, ~p"/devices", :ok)
+    end
   end
 
   def mount(%{"id" => device_id}, _session, socket) do
     device = Devices.get!(device_id)
-    role = socket.assigns.current_user.role
+    user = socket.assigns.current_user
 
-    if is_authorized?(role, :device, :update),
-      do:
+    case authorized?(user, :device, :update) do
+      {:ok, :authorized} ->
         {:ok,
          assign(socket,
            device: device,
            disks_data: get_disks_data(),
            device_form: to_form(Devices.change_device_update(device)),
            device_type: Atom.to_string(device.type)
-         )},
-      else: unauthorized(socket, ~p"/devices", :ok)
+         )}
+      {:error, :unauthorized} ->
+        unauthorized(socket, ~p"/devices", :ok)
+    end
   end
 
   def handle_event("validate", %{"device" => device_params}, socket) do
@@ -84,9 +88,9 @@ defmodule ExNVRWeb.DeviceLive do
   end
 
   defp do_save_device(socket, device_params) do
-    role = socket.assigns.current_user.role
+    user = socket.assigns.current_user
 
-    with true <- is_authorized?(role, :device, :create),
+    with {:ok, :authorized} <- authorized?(user, :device, :create),
          {:ok, device} <- socket |> handle_uploaded_file(device_params) |> Devices.create() do
       info = "Device created successfully"
       DeviceSupervisor.start(device)
@@ -96,7 +100,7 @@ defmodule ExNVRWeb.DeviceLive do
       |> redirect(to: ~p"/devices")
       |> then(&{:noreply, &1})
     else
-      false ->
+      {:error, :unauthorized} ->
         unauthorized(socket, ~p"/devices", :noreply)
 
       {:error, changeset} ->
@@ -126,9 +130,9 @@ defmodule ExNVRWeb.DeviceLive do
   end
 
   defp do_update_device(socket, device, device_params) do
-    role = socket.assigns.current_user.role
+    user = socket.assigns.current_user
 
-    with true <- is_authorized?(role, :device, :update),
+    with {:ok, :authorized} <- authorized?(user, :device, :update),
          {:ok, updated_device} <- Devices.update(device, device_params) do
       info = "Device updated successfully"
 
@@ -140,7 +144,7 @@ defmodule ExNVRWeb.DeviceLive do
       |> redirect(to: ~p"/devices")
       |> then(&{:noreply, &1})
     else
-      false ->
+      {:error, :unauthorized} ->
         unauthorized(socket, ~p"/devices", :noreply)
 
       {:error, changeset} ->

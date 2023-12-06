@@ -7,11 +7,11 @@ defmodule ExNVRWeb.Plug.Authorize do
   def init(opts), do: opts
 
   def call(conn, opts) do
-    role = conn.assigns.current_user.role
+    user = conn.assigns.current_user
     resource = Keyword.get(opts, :resource)
     action = action_name(conn)
 
-    check(action, role, resource)
+    check(action, user, resource)
     |> maybe_continue(conn)
   end
 
@@ -23,15 +23,33 @@ defmodule ExNVRWeb.Plug.Authorize do
     |> halt()
   end
 
-  defp check(action, role, resource) when action in [:index, :show],
-    do: is_authorized?(role, resource, :read)
+  defp check(action, user, resource) when action in [:index, :show],
+    do:
+      if({:ok, :authorized} = authorized?(user, resource, :read),
+        do: true,
+        else: false
+      )
 
-  defp check(action, role, resource) when action in [:new, :create],
-    do: is_authorized?(role, resource, :create)
+  defp check(action, user, resource) when action in [:new, :create],
+    do:
+      if({:ok, :authorized} = authorized?(user, resource, :create),
+        do: true,
+        else: false
+      )
 
-  defp check(action, role, resource) when action in [:edit, :update],
-    do: is_authorized?(role, resource, :update)
+  defp check(action, user, resource) when action in [:edit, :update],
+    do:
+      if({:ok, :authorized} = authorized?(user, resource, :update),
+        do: true,
+        else: false
+      )
 
-  defp check(:delete, role, resource), do: is_authorized?(role, resource, :delete)
-  defp check(_action, _role, _resource), do: false
+  defp check(:delete, user, resource),
+    do:
+      if({:ok, :authorized} = authorized?(user, resource, :delete),
+        do: true,
+        else: false
+      )
+
+  defp check(_action, _user, _resource), do: false
 end

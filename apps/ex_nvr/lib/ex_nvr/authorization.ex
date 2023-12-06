@@ -2,9 +2,10 @@ defmodule ExNVR.Authorization do
   @moduledoc """
   Basic user authorization module by role.
   """
-  def is_authorized?(:admin, :device, _action), do: true
-  def is_authorized?(:user, :device, :read), do: true
-  def is_authorized?(_role, :recording, :read), do: true
+  alias ExNVR.Accounts.User
+  def authorized?(%User{role: :admin}, :device, _action), do: {:ok, :authorized}
+  def authorized?(%User{role: :user}, :device, :read), do: {:ok, :authorized}
+  def authorized?(_user, :recording, :read), do: {:ok, :authorized}
 
-  def is_authorized?(_role, _resource, _action), do: false
+  def authorized?(_user, _resource, _action), do: {:error, :unauthorized}
 end
