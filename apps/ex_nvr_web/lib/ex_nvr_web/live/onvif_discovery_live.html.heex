@@ -20,7 +20,7 @@
       </.simple_form>
     </.card>
     <!-- Found devices -->
-    <.card class="w-full md:w-3/5 p-4">
+    <.card class="w-full md:w-3/5 p-4 h-[500px] overflow-y-auto">
       <h2 class="text-2xl font-bold mb-4 dark:text-white">Found Devices</h2>
       <p :if={@discovered_devices == []} class="text-l dark:text-white">No devices found</p>
 
@@ -28,7 +28,10 @@
         <li
           :for={new_device <- @discovered_devices}
           id={new_device.name}
-          class="mb-2 p-4 shadow-md rounded dark:bg-gray-700 cursor-pointer"
+          class={
+          [
+          "mb-2 p-4 shadow-md rounded cursor-pointer"
+          ] ++ if @selected_device && @selected_device.name == new_device.name, do: ["dark:bg-gray-400"], else: ["dark:bg-gray-700"]}
           phx-click="device-details"
           phx-value-name={new_device.name}
         >

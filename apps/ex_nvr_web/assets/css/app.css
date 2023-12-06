@@ -42,3 +42,23 @@ video::-webkit-media-controls-current-time-display {
 .card-shadow {
     box-shadow: rgba(0, 0, 0, 0.2) 0px 8px 24px;
 }
+
+/* custom scrollbar */
+::-webkit-scrollbar {
+    width: 25px;
+}
+
+::-webkit-scrollbar-track {
+    background-color: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background-color: #d6dee1;
+    border-radius: 20px;
+    border: 6px solid transparent;
+    background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background-color: #a8bbbf;
+}

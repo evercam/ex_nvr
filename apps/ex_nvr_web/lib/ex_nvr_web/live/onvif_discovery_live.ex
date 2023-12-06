@@ -26,7 +26,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
     socket
     |> assign_discovery_form()
     |> assign_discovered_devices()
-    |> assign(device_details: nil, device_details_cache: %{})
+    |> assign(selected_device: nil, device_details: nil, device_details_cache: %{})
     |> then(&{:ok, &1})
   end
 
@@ -62,7 +62,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
 
     case Map.fetch(device_details_cache, device.name) do
       {:ok, device_details} ->
-        {:noreply, assign(socket, device_details: device_details)}
+        {:noreply, assign(socket, selected_device: device, device_details: device_details)}
 
       :error ->
         opts = [username: device.username, password: device.password]
@@ -85,6 +85,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
 
         {:noreply,
          assign(socket,
+           selected_device: device,
            device_details: device_details,
            device_details_cache: Map.put(device_details_cache, device_name, device_details)
          )}
