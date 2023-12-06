@@ -20,15 +20,14 @@ defmodule ExNVRWeb.API.DeviceController do
 
     with :ok <- authorized?(user, :device, :create),
          {:ok, device} <- Devices.create(params) do
-      if Device.recording?(device) do
-        DeviceSupervisor.start(device)
-      end
+      if Device.recording?(device), do: DeviceSupervisor.start(device)
 
       conn
       |> put_status(201)
       |> render(:show, device: device)
     else
-      unauthorized(conn)
+      {:error, :unauthorized} ->
+        unauthorized(conn)
     end
   end
 
@@ -55,7 +54,8 @@ defmodule ExNVRWeb.API.DeviceController do
 
       render(conn, :show, device: device)
     else
-      unauthorized(conn)
+      {:error, :unauthorized} ->
+        unauthorized(conn)
     end
   end
 
