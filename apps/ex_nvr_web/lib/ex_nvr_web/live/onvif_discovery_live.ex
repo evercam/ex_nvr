@@ -29,7 +29,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
     user = socket.assigns.current_user
 
     case authorized?(user, :device, :create) do
-      {:ok, :authorized} ->
+      :ok ->
         socket
         |> assign_discovery_form()
         |> assign_discovered_devices()
@@ -44,7 +44,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
   def handle_event("discover", %{"discover_settings" => params}, socket) do
     user = socket.assigns.current_user
 
-    with {:ok, :authorized} <- authorized?(user, :device, :create),
+    with :ok <- authorized?(user, :device, :create),
          {:ok, %{timeout: timeout} = validated_params} <- validate_discover_params(params),
          {:ok, discovered_devices} <- Onvif.discover(timeout: :timer.seconds(timeout)) do
       socket

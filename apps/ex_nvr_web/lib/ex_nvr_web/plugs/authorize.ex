@@ -25,28 +25,28 @@ defmodule ExNVRWeb.Plug.Authorize do
 
   defp check(action, user, resource) when action in [:index, :show],
     do:
-      if({:ok, :authorized} = authorized?(user, resource, :read),
+      if(:ok = authorized?(user, resource, :read),
         do: true,
         else: false
       )
 
   defp check(action, user, resource) when action in [:new, :create],
     do:
-      if({:ok, :authorized} = authorized?(user, resource, :create),
+      if(:ok = authorized?(user, resource, :create),
         do: true,
         else: false
       )
 
   defp check(action, user, resource) when action in [:edit, :update],
     do:
-      if({:ok, :authorized} = authorized?(user, resource, :update),
+      if(:ok = authorized?(user, resource, :update),
         do: true,
         else: false
       )
 
   defp check(:delete, user, resource),
     do:
-      if({:ok, :authorized} = authorized?(user, resource, :delete),
+      if(:ok = authorized?(user, resource, :delete),
         do: true,
         else: false
       )
