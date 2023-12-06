@@ -3,9 +3,6 @@ defmodule ExNVRWeb.RecordingListLive do
 
   use ExNVRWeb, :live_view
 
-  import ExNVR.Authorization
-  import ExNVRWeb.Live.Helpers
-
   alias ExNVRWeb.Router.Helpers, as: Routes
   alias ExNVR.{Recordings, Devices}
 
@@ -139,35 +136,17 @@ defmodule ExNVRWeb.RecordingListLive do
 
   @impl true
   def mount(params, _session, socket) do
-    role = socket.assigns.current_user.role
-
-    if is_authorized?(role, :recording, :read),
-      do:
-        {:ok,
-         assign(socket,
-           devices: Devices.list(),
-           popup_open: false,
-           filter_params: params,
-           pagination_params: %{}
-         )},
-      else: unauthorized(socket, ~p"/dashboard", :ok)
+    {:ok,
+     assign(socket,
+       devices: Devices.list(),
+       popup_open: false,
+       filter_params: params,
+       pagination_params: %{}
+     )}
   end
 
   @impl true
   def handle_params(params, _uri, socket) do
-    role = socket.assigns.current_user.role
-
-    with true <- is_authorized?(role, :recording, :read),
-         {:ok, {recordings, meta}} <- Recordings.list(params) do
-      {:noreply, assign(socket, meta: meta, recordings: recordings)}
-    else
-      false ->
-        unauthorized(socket, ~p"/dashboard", :noreply)
-
-      {:error, meta} ->
-        {:noreply, assign(socket, meta: meta)}
-    end
-
     case Recordings.list(params) do
       {:ok, {recordings, meta}} ->
         {:noreply, assign(socket, meta: meta, recordings: recordings)}

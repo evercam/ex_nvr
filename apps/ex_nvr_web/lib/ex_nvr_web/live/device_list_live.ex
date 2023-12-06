@@ -99,27 +99,25 @@ defmodule ExNVRWeb.DeviceListLive do
   end
 
   def mount(_params, _session, socket) do
-    role = socket.assigns.current_user.role
-
-    if is_authorized?(role, :device, :read),
-      do: {:ok, assign(socket, devices: Devices.list())},
-      else: unauthorized(socket, ~p"/dashboard", :ok)
+    {:ok, assign(socket, devices: Devices.list())}
   end
 
   def handle_event("stop-recording", %{"device" => device_id}, socket) do
-    role = socket.assigns.current_user.role
+    user = socket.assigns.current_user
 
-    if is_authorized?(role, :device, :update),
-      do: update_device_state(socket, device_id, :stopped),
-      else: unauthorized(socket, ~p"/devices", :noreply)
+    case authorized?(user, :device, :update) do
+      {:ok, :authorized} -> update_device_state(socket, device_id, :stopped)
+      {:error, :unauthorized} -> unauthorized(socket, ~p"/devices", :noreply)
+    end
   end
 
   def handle_event("start-recording", %{"device" => device_id}, socket) do
-    role = socket.assigns.current_user.role
+    user = socket.assigns.current_user
 
-    if is_authorized?(role, :device, :update),
-      do: update_device_state(socket, device_id, :recording),
-      else: unauthorized(socket, ~p"/devices", :noreply)
+    case authorized?(user, :device, :update) do
+      {:ok, :authorized} -> update_device_state(socket, device_id, :recording)
+      {:error, :unauthorized} -> unauthorized(socket, ~p"/devices", :noreply)
+    end
   end
 
   defp update_device_state(socket, device_id, new_state) do
