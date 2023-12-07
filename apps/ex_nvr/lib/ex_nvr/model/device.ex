@@ -8,7 +8,7 @@ defmodule ExNVR.Model.Device do
   alias Ecto.Changeset
 
   @states [:stopped, :recording, :failed]
-  @vendors [ nil, "hikvision", "milesight", "axis" ]
+  @vendors [nil, "hikvision", "milesight", "axis"]
 
   @type state :: :stopped | :recording | :failed
   @type id :: binary()
@@ -62,7 +62,7 @@ defmodule ExNVR.Model.Device do
             temporary_path: Path.t(),
             duration: Membrane.Time.t(),
             stream_uri: binary(),
-            sub_stream_uri: binary(),
+            sub_stream_uri: binary()
           }
 
     @primary_key false

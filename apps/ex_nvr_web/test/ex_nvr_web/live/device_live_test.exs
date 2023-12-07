@@ -154,6 +154,7 @@ defmodule ExNVRWeb.DeviceLiveTest do
       assert result =~ "invalid rtsp uri"
       assert Enum.empty?(Devices.list())
     end
+
     test "renders errors on wrong vendor", %{conn: conn} do
       {:ok, lv, _} = live(conn, ~p"/devices/new")
 
