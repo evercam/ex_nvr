@@ -214,7 +214,7 @@ defmodule ExNVRWeb.UserAuth do
   end
 
   def on_mount(:ensure_user_is_admin, _params, session, socket) do
-    if session["current_user_role"] == "admin" do
+    if socket.assigns.current_user.role == :admin do
       {:cont, socket}
     else
       socket =
@@ -251,7 +251,7 @@ defmodule ExNVRWeb.UserAuth do
   Used for routes that require the user to be an admin.
   """
   def require_admin_user(conn, _opts) do
-    if conn.assigns[:current_user].role == "admin" do
+    if conn.assigns[:current_user].role == :admin do
       conn
     else
       conn
