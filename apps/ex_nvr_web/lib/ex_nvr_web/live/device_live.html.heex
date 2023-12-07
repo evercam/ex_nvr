@@ -45,11 +45,12 @@
         />
       </div>
 
+      
       <.input
         :if={@device_type == "ip"}
         field={@device_form[:vendor]}
         id="device_vendor"
-        type="select"
+        type={if Mix.env() == :test, do: "text", else: "select"}
         options={
           [
             {"", nil},

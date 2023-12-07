@@ -117,6 +117,7 @@ defmodule ExNVRWeb.DeviceLiveTest do
           "device" => %{
             "name" => "My Device",
             "type" => "ip",
+            "vendor" => "hikvision",
             "credentials" => %{
               "username" => "user",
               "password" => "pass"
@@ -151,6 +152,33 @@ defmodule ExNVRWeb.DeviceLiveTest do
         |> render_submit()
 
       assert result =~ "invalid rtsp uri"
+      assert Enum.empty?(Devices.list())
+    end
+    test "renders errors on wrong vendor", %{conn: conn} do
+      {:ok, lv, _} = live(conn, ~p"/devices/new")
+
+      result =
+        lv
+        |> form("#device_form", %{
+          "device" => %{
+            "name" => "My Device",
+            "type" => "ip",
+            "vendor" => "random vendor",
+            "credentials" => %{
+              "username" => "user",
+              "password" => "pass"
+            },
+            "stream_config" => %{
+              "stream_uri" => "rtsp://localhost:554"
+            },
+            "settings" => %{
+              "storage_address" => "/tmp"
+            }
+          }
+        })
+        |> render_submit()
+
+      assert result =~ "invalid vendor"
       assert Enum.empty?(Devices.list())
     end
   end
