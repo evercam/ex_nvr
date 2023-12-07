@@ -63,17 +63,19 @@ defmodule ExNVRWeb.API.DeviceController do
   def index(%Conn{} = conn, params) do
     user = conn.assigns.current_user
 
-    if :ok = authorized?(user, :device, :read),
-      do: render(conn, :list, devices: Devices.list(params)),
-      else: unauthorized(conn)
+    case authorized?(user, :device, :read) do
+      :ok -> render(conn, :list, devices: Devices.list(params))
+      {:error, :unauthorized} -> unauthorized(conn)
+    end
   end
 
   @spec show(Conn.t(), map()) :: Conn.t() | {:error, Ecto.Changeset.t()}
   def show(%Conn{} = conn, _params) do
     user = conn.assigns.current_user
 
-    if :ok = authorized?(user, :device, :read),
-      do: render(conn, :show, device: conn.assigns.device),
-      else: unauthorized(conn)
+    case authorized?(user, :device, :read) do
+      :ok -> render(conn, :show, device: conn.assigns.device)
+      {:error, :unauthorized} -> unauthorized(conn)
+    end
   end
 end
