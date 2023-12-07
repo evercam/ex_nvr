@@ -6,6 +6,8 @@ defmodule ExNVRWeb.UserAuth do
   import ExNVRWeb.Controller.Helpers
   import Plug.Conn
   import Phoenix.Controller
+  import ExNVRWeb.Live.Helpers
+  import ExNVR.Authorization
 
   alias ExNVR.Accounts
 
@@ -210,6 +212,32 @@ defmodule ExNVRWeb.UserAuth do
       {:halt, Phoenix.LiveView.redirect(socket, to: signed_in_path(socket))}
     else
       {:cont, socket}
+    end
+  end
+
+  def on_mount(:ensure_authorized, _params, _session, socket) do
+    user = socket.assigns.current_user
+
+    action =
+      case socket.view do
+        ExNVRWeb.DashboardLive -> :read
+        ExNVRWeb.DeviceListLive -> :read
+        ExNVRWeb.RecordingListLive -> :read
+        ExNVRWeb.UserSettingsLive -> :read
+        _ -> socket.assigns.live_action
+      end
+
+    case authorized?(user, :device, action) do
+      :ok ->
+        {:cont, socket}
+
+      {:error, :unauthorized} ->
+        socket =
+          socket
+          |> Phoenix.LiveView.put_flash(:error, "You are not authorized to access this page.")
+          |> Phoenix.LiveView.redirect(to: ~p"/dashboard")
+
+        {:halt, socket}
     end
   end
 
