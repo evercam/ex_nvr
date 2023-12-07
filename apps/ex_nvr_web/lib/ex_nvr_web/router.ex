@@ -91,20 +91,30 @@ defmodule ExNVRWeb.Router do
 
     live_session :require_authenticated_user,
       on_mount: [
-        {ExNVRWeb.UserAuth, :ensure_authenticated},
-        {ExNVRWeb.UserAuth, :ensure_authorized}
+        {ExNVRWeb.UserAuth, :ensure_authenticated}
       ] do
       live "/dashboard", DashboardLive, :new
 
       live "/devices", DeviceListLive, :list
-      live "/devices/:id", DeviceLive, :edit
-
-      live "/onvif-discovery", OnvifDiscoveryLive, :onvif_discovery
 
       live "/recordings", RecordingListLive, :list
 
       live "/users/settings", UserSettingsLive, :edit
       live "/users/settings/confirm-email/:token", UserSettingsLive, :confirm_email
+    end
+  end
+
+  scope "/", ExNVRWeb do
+    pipe_through [:browser, :require_authenticated_user, :require_admin_user]
+
+    live_session :require_admin_user,
+      on_mount: [
+        {ExNVRWeb.UserAuth, :ensure_authenticated},
+        {ExNVRWeb.UserAuth, :ensure_user_is_admin}
+      ] do
+      live "/devices/:id", DeviceLive, :edit
+      live "/devices/new", DeviceLive, :new
+      live "/onvif-discovery", OnvifDiscoveryLive, :onvif_discovery
     end
   end
 

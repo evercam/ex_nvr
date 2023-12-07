@@ -6,8 +6,6 @@ defmodule ExNVRWeb.UserAuth do
   import ExNVRWeb.Controller.Helpers
   import Plug.Conn
   import Phoenix.Controller
-  import ExNVRWeb.Live.Helpers
-  import ExNVR.Authorization
 
   alias ExNVR.Accounts
 
@@ -215,29 +213,16 @@ defmodule ExNVRWeb.UserAuth do
     end
   end
 
-  def on_mount(:ensure_authorized, _params, _session, socket) do
-    user = socket.assigns.current_user
+  def on_mount(:ensure_user_is_admin, _params, session, socket) do
+    if session["current_user_role"] == "admin" do
+      {:cont, socket}
+    else
+      socket =
+        socket
+        |> Phoenix.LiveView.put_flash(:error, "You can't access this page.")
+        |> Phoenix.LiveView.redirect(to: ~p"/dashboard")
 
-    action =
-      case socket.view do
-        ExNVRWeb.DashboardLive -> :read
-        ExNVRWeb.DeviceListLive -> :read
-        ExNVRWeb.RecordingListLive -> :read
-        ExNVRWeb.UserSettingsLive -> :read
-        _ -> socket.assigns.live_action
-      end
-
-    case authorized?(user, :device, action) do
-      :ok ->
-        {:cont, socket}
-
-      {:error, :unauthorized} ->
-        socket =
-          socket
-          |> Phoenix.LiveView.put_flash(:error, "You are not authorized to access this page.")
-          |> Phoenix.LiveView.redirect(to: ~p"/dashboard")
-
-        {:halt, socket}
+      {:halt, socket}
     end
   end
 
@@ -259,6 +244,20 @@ defmodule ExNVRWeb.UserAuth do
       |> halt()
     else
       conn
+    end
+  end
+
+  @doc """
+  Used for routes that require the user to be an admin.
+  """
+  def require_admin_user(conn, _opts) do
+    if conn.assigns[:current_user].role == "admin" do
+      conn
+    else
+      conn
+      |> put_flash(:error, "You can't access this page.")
+      |> redirect(to: ~p"/dashboard")
+      |> halt()
     end
   end
 
