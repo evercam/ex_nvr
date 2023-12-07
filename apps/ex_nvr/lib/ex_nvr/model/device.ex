@@ -8,10 +8,9 @@ defmodule ExNVR.Model.Device do
   alias Ecto.Changeset
 
   @states [:stopped, :recording, :failed]
-  @vendors [ :hikvision, :milesight, :axis ]
+  @vendors [ nil, "hikvision", "milesight", "axis" ]
 
   @type state :: :stopped | :recording | :failed
-  @type vendor :: :hikvision | :milesight| :axis
   @type id :: binary()
 
   @type t :: %__MODULE__{
@@ -20,10 +19,10 @@ defmodule ExNVR.Model.Device do
           type: :ip | :file,
           timezone: binary(),
           state: state(),
-          vendor: vendor(),
-          mac: binary(),
-          url: binary(),
-          model: binary(),
+          vendor: binary() | nil,
+          mac: binary() | nil,
+          url: binary() | nil,
+          model: binary() | nil,
           credentials: Credentials.t() | nil,
           stream_config: StreamConfig.t() | nil,
           inserted_at: DateTime.t() | nil,
@@ -46,14 +45,7 @@ defmodule ExNVR.Model.Device do
       field :password, :string
     end
 
-    @spec changeset(
-            {map(), map()}
-            | %{
-                :__struct__ => atom() | %{:__changeset__ => map(), optional(any()) => any()},
-                optional(atom()) => any()
-              },
-            :invalid | %{optional(:__struct__) => none(), optional(atom() | binary()) => any()}
-          ) :: Ecto.Changeset.t()
+    @spec changeset(t(), map()) :: Ecto.Changeset.t()
     def changeset(struct, params) do
       struct
       |> cast(params, __MODULE__.__schema__(:fields))
@@ -158,10 +150,10 @@ defmodule ExNVR.Model.Device do
     field :timezone, :string, default: "UTC"
     field :state, Ecto.Enum, values: @states, default: :recording
 
-    field :vendor, Ecto.Enum, values: @vendors, default: :hikvision
-    field :mac, :string, default: ""
-    field :url, :string, default: ""
-    field :model, :string, default: ""
+    field :vendor, :string
+    field :mac, :string
+    field :url, :string
+    field :model, :string
 
     embeds_one :credentials, Credentials, source: :credentials, on_replace: :update
     embeds_one :stream_config, StreamConfig, source: :config, on_replace: :update

@@ -45,27 +45,28 @@
         />
       </div>
 
+      <.input
+        :if={@device_type == "ip"}
+        field={@device_form[:vendor]}
+        id="device_vendor"
+        type="select"
+        options={
+          [
+            {"", nil},
+            {"Hikvision", "hikvision"}, 
+            {"Milesight Technology Co.,Ltd", "milesight"},
+            {"AXIS", "axis"}
+          ]
+        }
+        label="Vendor"
+        placeholder="Choose your device vendor"
+      />
       <div class="flex flex-col">
         <p class="text-xl font-medium mb-4 text-gray-800 dark:text-white">
           Device Config
         </p>
         <div class="flex flex-col">
           <.inputs_for :let={config} field={@device_form[:stream_config]}>
-            <.input
-              :if={@device_type == "ip"}
-              field={@device_form[:vendor]}
-              id="device_vendor"
-              type="select"
-              options={
-                [
-                  {"Hikvision", "hikvision"}, 
-                  {"Milesight Technology Co.,Ltd", "milesight"},
-                  {"Axis", "axis"}
-                ]
-              }
-              label="Vendor"
-              placeholder="Choose your device vendor"
-            />
             <.input
               :if={@device_type == "ip"}
               field={config[:stream_uri]}
