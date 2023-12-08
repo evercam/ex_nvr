@@ -16,7 +16,7 @@ defmodule ExNVRWeb.DeviceLive do
     changeset = Devices.change_device_creation(%Device{})
     user = socket.assigns.current_user
 
-    case authorized?(user, :device, :create) do
+    case authorize(user, :device, :create) do
       :ok ->
         {:ok,
          socket
@@ -40,7 +40,7 @@ defmodule ExNVRWeb.DeviceLive do
     device = Devices.get!(device_id)
     user = socket.assigns.current_user
 
-    case authorized?(user, :device, :update) do
+    case authorize(user, :device, :update) do
       :ok ->
         {:ok,
          assign(socket,
@@ -92,7 +92,7 @@ defmodule ExNVRWeb.DeviceLive do
   defp do_save_device(socket, device_params) do
     user = socket.assigns.current_user
 
-    with :ok <- authorized?(user, :device, :create),
+    with :ok <- authorize(user, :device, :create),
          {:ok, device} <- socket |> handle_uploaded_file(device_params) |> Devices.create() do
       info = "Device created successfully"
       DeviceSupervisor.start(device)
@@ -134,7 +134,7 @@ defmodule ExNVRWeb.DeviceLive do
   defp do_update_device(socket, device, device_params) do
     user = socket.assigns.current_user
 
-    with :ok <- authorized?(user, :device, :update),
+    with :ok <- authorize(user, :device, :update),
          {:ok, updated_device} <- Devices.update(device, device_params) do
       info = "Device updated successfully"
 
