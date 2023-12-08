@@ -611,6 +611,19 @@ components:
             The mountpoint/folder where to store device data (recordings, bif, ...etc.)
 
             This setting is not updatable after the creation of the device
+        override_on_full_disk:
+          type: boolean
+          default: false
+          description: A boolean value to signal that when reaching the override_on_full_disk_threshold on the storage_address disk usage percentage some old recordings would be deleted
+        override_on_full_disk_threshold:
+          type: float
+          default: 90.0
+          description: A float value where if storage_address storage usage percentage reaches this value some old recordings will be deleted
+          oneOf:
+            - minimum: 0
+              maximum: 100
+              exclusiveMinimum: true
+              exclusiveMaximum: true
       required: [storage_address]
     Error:
       type: object

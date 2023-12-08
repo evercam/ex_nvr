@@ -129,6 +129,30 @@ defmodule ExNVR.DevicesTest do
       assert %{settings: %{storage_address: ["can't be blank"]}} = errors_on(changeset)
     end
 
+    test "override_on_full_disk_threshold is between 0 and 100", %{tmp_dir: tmp_dir} do
+      {:error, changeset} = Devices.create(
+          valid_device_attributes(%{
+            name: @valid_camera_name,
+            settings: %{
+              storage_address: tmp_dir,
+              override_on_full_disk_threshold: 120
+            }
+          })
+        )
+      assert %{settings: %{override_on_full_disk_threshold: ["value must be between 0 and 100"]}} = errors_on(changeset)
+
+      {:error, changeset} = Devices.create(
+          valid_device_attributes(%{
+            name: @valid_camera_name,
+            settings: %{
+              storage_address: tmp_dir,
+              override_on_full_disk_threshold: -40
+            }
+          })
+        )
+      assert %{settings: %{override_on_full_disk_threshold: ["value must be between 0 and 100"]}} = errors_on(changeset)
+    end
+
     test "create a new device", %{tmp_dir: tmp_dir} do
       {:ok, device} =
         Devices.create(
@@ -138,11 +162,15 @@ defmodule ExNVR.DevicesTest do
             mac: @valid_mac,
             url: @valid_url,
             model: @valid_model,
-            settings: %{storage_address: tmp_dir}
+            settings: %{
+              storage_address: tmp_dir,
+              override_on_full_disk: true
+            }
           })
         )
 
       assert device.id
+      assert device.settings.override_on_full_disk
       assert device.name == @valid_camera_name
       assert device.vendor == @valid_vendor
       assert device.mac == @valid_mac
@@ -177,11 +205,14 @@ defmodule ExNVR.DevicesTest do
         Devices.update(device, %{
           name: @valid_camera_name,
           stream_config: %{sub_stream_uri: stream_uri},
-          settings: %{generate_bif: true},
           vendor: @valid_vendor,
           mac: @valid_mac,
           url: @valid_url,
           model: @valid_model
+          settings: %{
+            generate_bif: true,
+            override_on_full_disk: true
+          }
         })
 
       assert device.name == @valid_camera_name
@@ -191,6 +222,29 @@ defmodule ExNVR.DevicesTest do
       assert device.mac == @valid_mac
       assert device.url == @valid_url
       assert device.model == @valid_model
+      assert device.settings.override_on_full_disk
+    end
+
+    test "override_on_full_disk_threshold is between 0 and 100", %{device: device} do
+      {:error, changeset} = Devices.update(
+          device,
+          valid_device_attributes(%{
+            settings: %{
+              override_on_full_disk_threshold: 120
+            }
+          })
+        )
+      assert %{settings: %{override_on_full_disk_threshold: ["value must be between 0 and 100"]}} = errors_on(changeset)
+
+      {:error, changeset} = Devices.update(
+            device,
+          valid_device_attributes(%{
+            settings: %{
+              override_on_full_disk_threshold: -40
+            }
+          })
+        )
+      assert %{settings: %{override_on_full_disk_threshold: ["value must be between 0 and 100"]}} = errors_on(changeset)
     end
   end
 
