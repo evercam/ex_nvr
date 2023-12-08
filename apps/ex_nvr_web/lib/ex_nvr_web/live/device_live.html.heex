@@ -49,15 +49,14 @@
         :if={@device_type == "ip"}
         field={@device_form[:vendor]}
         id="device_vendor"
-        type={if Mix.env() == :test, do: "text", else: "select"}
+        type="select"
         options={[
-          {"", nil},
-          {"Hikvision", "hikvision"},
-          {"Milesight Technology Co.,Ltd", "milesight"},
-          {"AXIS", "axis"}
+          "Hikvision",
+          "Milesight Technology Co.,Ltd",
+          "AXIS"
         ]}
         label="Vendor"
-        placeholder="Choose your device vendor"
+        prompt="Choose your device vendor"
       />
       <div class="flex flex-col">
         <p class="text-xl font-medium mb-4 text-gray-800 dark:text-white">

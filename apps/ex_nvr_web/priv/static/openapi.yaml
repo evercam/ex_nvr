@@ -94,7 +94,6 @@ paths:
                   description: Device type
                 vendor:
                   type: string
-                  enum: [hikvision, milesight, axis]
                   description: Device vendor
                 mac:
                   type: string
@@ -176,7 +175,6 @@ paths:
                   description: Device name
                 vendor:
                   type: string
-                  enum: [hikvision, milesight, axis]
                   description: Device vendor
                 mac:
                   type: string

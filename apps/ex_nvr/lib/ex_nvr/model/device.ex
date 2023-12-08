@@ -8,7 +8,6 @@ defmodule ExNVR.Model.Device do
   alias Ecto.Changeset
 
   @states [:stopped, :recording, :failed]
-  @vendors [nil, "hikvision", "milesight", "axis"]
 
   @type state :: :stopped | :recording | :failed
   @type id :: binary()
@@ -236,7 +235,6 @@ defmodule ExNVR.Model.Device do
     changeset
     |> Changeset.validate_required([:name, :type])
     |> Changeset.validate_inclusion(:timezone, Tzdata.zone_list())
-    |> Changeset.validate_inclusion(:vendor, @vendors, message: "invalid vendor")
     |> validate_config()
   end
 
