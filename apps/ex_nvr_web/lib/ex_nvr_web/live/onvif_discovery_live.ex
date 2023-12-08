@@ -19,7 +19,8 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
     infos: nil,
     time_settings: nil,
     network_interface: nil,
-    media_profiles: []
+    media_profiles: [],
+    snapshot_uri: nil
   }
 
   def mount(_params, _session, socket) do
@@ -90,6 +91,28 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
            device_details_cache: Map.put(device_details_cache, device_name, device_details)
          )}
     end
+  end
+
+  def handle_event("add-device", _params, socket) do
+    selected_device = socket.assigns.selected_device
+    device_details = socket.assigns.device_details
+
+    %{stream_uri: stream_uri} = Enum.at(device_details.media_profiles, 0, %{stream_uri: nil})
+    %{stream_uri: sub_stream_uri} = Enum.at(device_details.media_profiles, 1, %{stream_uri: nil})
+
+    socket
+    |> put_flash(:device_params, %{
+      name: selected_device.name,
+      type: :ip,
+      stream_config: %{
+        stream_uri: stream_uri,
+        sub_stream_uri: sub_stream_uri,
+        snapshot_uri: device_details.snapshot_uri
+      },
+      credentials: %{username: selected_device.username, password: selected_device.password}
+    })
+    |> redirect(to: ~p"/devices/new")
+    |> then(&{:noreply, &1})
   end
 
   defp assign_discovery_form(socket, params \\ nil) do

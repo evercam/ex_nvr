@@ -10,7 +10,8 @@ defmodule ExNVRWeb.DeviceLive do
   @env Mix.env()
 
   def mount(%{"id" => "new"}, _session, socket) do
-    changeset = Devices.change_device_creation(%Device{})
+    device_params = get_device_params(socket.assigns.flash)
+    changeset = Devices.change_device_creation(%Device{}, device_params)
 
     {:ok,
      socket
@@ -59,6 +60,9 @@ defmodule ExNVRWeb.DeviceLive do
 
   def error_to_string(:too_large), do: "Too large"
   def error_to_string(:not_accepted), do: "You have selected an unacceptable file type"
+
+  defp get_device_params(%{"device_params" => device_params}), do: device_params
+  defp get_device_params(_flash), do: %{}
 
   defp get_validation_assigns(%{id: id} = device, device_params) when not is_nil(id) do
     device_type = Atom.to_string(device.type)
