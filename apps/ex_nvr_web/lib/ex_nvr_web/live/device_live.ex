@@ -47,11 +47,12 @@ defmodule ExNVRWeb.DeviceLive do
 
     changeset
     |> Map.put(:action, :validate)
-    |> then(&assign(
-      socket,
-      device_form: to_form(&1),
-      device_type: device_type,
-      override_on_full_disk: device_params["settings"]["override_on_full_disk"] == "true"
+    |> then(
+      &assign(
+        socket,
+        device_form: to_form(&1),
+        device_type: device_type,
+        override_on_full_disk: device_params["settings"]["override_on_full_disk"] == "true"
       )
     )
     |> then(&{:noreply, &1})

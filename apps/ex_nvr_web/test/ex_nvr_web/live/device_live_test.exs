@@ -147,7 +147,7 @@ defmodule ExNVRWeb.DeviceLiveTest do
             "type" => "ip",
             "stream_config" => %{"stream_uri" => "rtsp://"},
             "settings" => %{
-              "storage_address" => "/tmp",
+              "storage_address" => "/tmp"
             }
           }
         })

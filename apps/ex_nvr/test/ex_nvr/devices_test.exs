@@ -130,7 +130,8 @@ defmodule ExNVR.DevicesTest do
     end
 
     test "override_on_full_disk_threshold is between 0 and 100", %{tmp_dir: tmp_dir} do
-      {:error, changeset} = Devices.create(
+      {:error, changeset} =
+        Devices.create(
           valid_device_attributes(%{
             name: @valid_camera_name,
             settings: %{
@@ -139,9 +140,12 @@ defmodule ExNVR.DevicesTest do
             }
           })
         )
-      assert %{settings: %{override_on_full_disk_threshold: ["value must be between 0 and 100"]}} = errors_on(changeset)
 
-      {:error, changeset} = Devices.create(
+      assert %{settings: %{override_on_full_disk_threshold: ["value must be between 0 and 100"]}} =
+               errors_on(changeset)
+
+      {:error, changeset} =
+        Devices.create(
           valid_device_attributes(%{
             name: @valid_camera_name,
             settings: %{
@@ -150,7 +154,9 @@ defmodule ExNVR.DevicesTest do
             }
           })
         )
-      assert %{settings: %{override_on_full_disk_threshold: ["value must be between 0 and 100"]}} = errors_on(changeset)
+
+      assert %{settings: %{override_on_full_disk_threshold: ["value must be between 0 and 100"]}} =
+               errors_on(changeset)
     end
 
     test "create a new device", %{tmp_dir: tmp_dir} do
@@ -226,7 +232,8 @@ defmodule ExNVR.DevicesTest do
     end
 
     test "override_on_full_disk_threshold is between 0 and 100", %{device: device} do
-      {:error, changeset} = Devices.update(
+      {:error, changeset} =
+        Devices.update(
           device,
           valid_device_attributes(%{
             settings: %{
@@ -234,17 +241,22 @@ defmodule ExNVR.DevicesTest do
             }
           })
         )
-      assert %{settings: %{override_on_full_disk_threshold: ["value must be between 0 and 100"]}} = errors_on(changeset)
 
-      {:error, changeset} = Devices.update(
-            device,
+      assert %{settings: %{override_on_full_disk_threshold: ["value must be between 0 and 100"]}} =
+               errors_on(changeset)
+
+      {:error, changeset} =
+        Devices.update(
+          device,
           valid_device_attributes(%{
             settings: %{
               override_on_full_disk_threshold: -40
             }
           })
         )
-      assert %{settings: %{override_on_full_disk_threshold: ["value must be between 0 and 100"]}} = errors_on(changeset)
+
+      assert %{settings: %{override_on_full_disk_threshold: ["value must be between 0 and 100"]}} =
+               errors_on(changeset)
     end
   end
 

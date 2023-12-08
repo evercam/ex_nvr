@@ -36,11 +36,10 @@ defmodule ExNVR.DiskMonitor do
     {:noreply, state}
   end
 
-
   @impl true
   def handle_info(:overflow, %{device: device, timer: timer} = state) do
     if timer >= @wait_until_remove_timer do
-      #delete recordings
+      # delete recordings
       IO.inspect("Deleting old recordings because of hard drive nearly full")
       Recordings.delete_oldest_recordings(device, @recordings_count_to_delete)
       {:noreply, Map.put(state, :timer, 0)}
