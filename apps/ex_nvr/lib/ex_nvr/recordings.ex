@@ -21,7 +21,7 @@ defmodule ExNVR.Recordings do
 
       Multi.new()
       |> Multi.insert(:recording, recording_changeset)
-      |> Multi.insert(:run, run, on_conflict: :replace_all)
+      |> Multi.insert(:run, run, on_conflict: {:replace_all_except, [:start_date]})
       |> Repo.transaction()
       |> case do
         {:ok, %{recording: recording, run: run}} -> {:ok, recording, run}
@@ -74,6 +74,33 @@ defmodule ExNVR.Recordings do
       [Device.recording_dir(device) | ExNVR.Utils.date_components(start_date)] ++
         ["#{DateTime.to_unix(start_date, :microsecond)}.mp4"]
     )
+  end
+
+  @spec delete_oldest_recordings(Device.t(), integer()) :: {:ok, Ecto.Schema.t()} | {:error, Ecto.Changeset.t()}
+  def delete_oldest_recordings(device, limit) do
+    recordings =
+      Recording.oldest_recordings_by_device(device.id, limit)
+      |> Repo.all()
+
+    Multi.new()
+    |> Multi.run(:adapt_runs, fn _repo, _params ->
+      Enum.each(Enum.reverse(recordings), fn recording ->
+        Run.between_dates(recording.start_date, device.id)
+        |> Repo.one()
+        |> Map.put(:start_date, recording.end_date)
+        |> Repo.insert(on_conflict: :replace_all)
+      end)
+      {:ok, nil}
+    end)
+    |> Multi.delete_all(:delete_recordings, Recording.list_recordings(Enum.map(recordings, & &1.id)))
+    |> Multi.run(:delete_files, fn _repo, _params ->
+      Enum.each(recordings, fn recording ->
+        recording_path(device, recording)
+        |> File.rm()
+      end)
+      {:ok, nil}
+    end)
+    |> Repo.transaction()
   end
 
   defp copy_file(_device, _params, false), do: :ok

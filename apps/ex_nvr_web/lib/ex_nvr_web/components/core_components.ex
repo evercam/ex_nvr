@@ -362,6 +362,29 @@ defmodule ExNVRWeb.CoreComponents do
     """
   end
 
+  def input(%{type: "range"} = assigns) do
+    ~H"""
+    <div phx-feedback-for={@name}>
+      <label class="flex items-center gap-4 text-sm leading-6 text-zinc-600 dark:text-white">
+        <input
+          type="range"
+          id={@id}
+          name={@name}
+          class={[
+            "rounded text-zinc-900 border-gray-300 rounded bg-gray-50 focus:ring-3 focus:ring-blue-300",
+            "dark:bg-gray-700 dark:border-gray-600 dark:focus:ring-blue-600",
+            "dark:ring-offset-gray-800 dark:focus:ring-offset-gray-80 w-60"
+          ]}
+          value={@value}
+          {@rest}
+        />
+        <%= "(#{@value}%) #{@label}" %>
+      </label>
+      <.error :for={msg <- @errors}><%= msg %></.error>
+    </div>
+    """
+  end
+
   def input(%{type: "select"} = assigns) do
     ~H"""
     <div phx-feedback-for={@name}>

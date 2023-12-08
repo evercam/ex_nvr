@@ -119,6 +119,8 @@ defmodule ExNVR.Model.Device do
     embedded_schema do
       field :generate_bif, :boolean, default: true
       field :storage_address, :string
+      field :override_on_full_disk, :boolean, default: false
+      field :override_on_full_disk_threshold, :float, default: 90.0
     end
 
     @spec changeset(t(), map()) :: Ecto.Changeset.t()
@@ -137,7 +139,7 @@ defmodule ExNVR.Model.Device do
     @spec update_changeset(t(), map()) :: Ecto.Changeset.t()
     def update_changeset(struct, params) do
       struct
-      |> cast(params, [:generate_bif])
+      |> cast(params, [:generate_bif, :override_on_full_disk, :override_on_full_disk_threshold])
       |> validate_required([:storage_address])
     end
   end

@@ -27,7 +27,8 @@ defmodule ExNVR.DeviceSupervisor do
 
     children = [
       {Main, params},
-      {ExNVR.BifGeneratorServer, params}
+      {ExNVR.BifGeneratorServer, params},
+      {ExNVR.DiskMonitor, params}
     ]
 
     children =

@@ -30,6 +30,10 @@ defmodule ExNVR.Model.Run do
     from(r in __MODULE__, where: r.device_id == ^device_id and r.active == true)
   end
 
+  def between_dates(query \\ __MODULE__, date, device_id) do
+    where(query, [r], r.device_id == ^device_id and r.start_date <= ^date and r.end_date >= ^date)
+  end
+
   def filter(query \\ __MODULE__, params) do
     Enum.reduce(params, query, fn
       {:device_id, id}, q -> where(q, [r], r.device_id == ^id)

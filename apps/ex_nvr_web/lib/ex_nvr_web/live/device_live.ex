@@ -18,7 +18,8 @@ defmodule ExNVRWeb.DeviceLive do
        device: %Device{},
        disks_data: get_disks_data(),
        device_form: to_form(changeset),
-       device_type: "ip"
+       device_type: "ip",
+       override_on_full_disk: false
      )
      |> allow_upload(:file_to_upload,
        accept: ~w(video/mp4),
@@ -34,7 +35,8 @@ defmodule ExNVRWeb.DeviceLive do
        device: device,
        disks_data: get_disks_data(),
        device_form: to_form(Devices.change_device_update(device)),
-       device_type: Atom.to_string(device.type)
+       device_type: Atom.to_string(device.type),
+       override_on_full_disk: device.settings.override_on_full_disk
      )}
   end
 
@@ -45,7 +47,13 @@ defmodule ExNVRWeb.DeviceLive do
 
     changeset
     |> Map.put(:action, :validate)
-    |> then(&assign(socket, device_form: to_form(&1), device_type: device_type))
+    |> then(&assign(
+      socket,
+      device_form: to_form(&1),
+      device_type: device_type,
+      override_on_full_disk: device_params["settings"]["override_on_full_disk"] == "true"
+      )
+    )
     |> then(&{:noreply, &1})
   end
 
