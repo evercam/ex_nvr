@@ -32,7 +32,7 @@ defmodule ExNVRWeb.DeviceLive do
          )}
 
       {:error, :unauthorized} ->
-        unauthorized(socket, ~p"/devices", :ok)
+        unauthorized(socket, :ok)
     end
   end
 
@@ -51,7 +51,7 @@ defmodule ExNVRWeb.DeviceLive do
          )}
 
       {:error, :unauthorized} ->
-        unauthorized(socket, ~p"/devices", :ok)
+        unauthorized(socket, :ok)
     end
   end
 
@@ -103,7 +103,7 @@ defmodule ExNVRWeb.DeviceLive do
       |> then(&{:noreply, &1})
     else
       {:error, :unauthorized} ->
-        unauthorized(socket, ~p"/devices", :noreply)
+        unauthorized(socket, :noreply)
 
       {:error, changeset} ->
         {:noreply, assign(socket, device_form: to_form(changeset))}
@@ -147,7 +147,7 @@ defmodule ExNVRWeb.DeviceLive do
       |> then(&{:noreply, &1})
     else
       {:error, :unauthorized} ->
-        unauthorized(socket, ~p"/devices", :noreply)
+        unauthorized(socket, :noreply)
 
       {:error, changeset} ->
         {:noreply, assign(socket, device_form: to_form(changeset))}

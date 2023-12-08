@@ -37,7 +37,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
         |> then(&{:ok, &1})
 
       {:error, :unauthorized} ->
-        unauthorized(socket, ~p"/dashboard", :ok)
+        unauthorized(socket, :ok)
     end
   end
 
@@ -58,7 +58,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
       |> then(&{:noreply, &1})
     else
       {:error, :unauthorized} ->
-        unauthorized(socket, ~p"/dashboard", :noreply)
+        unauthorized(socket, :noreply)
 
       {:error, %Changeset{} = changeset} ->
         {:noreply, assign_discovery_form(socket, changeset)}

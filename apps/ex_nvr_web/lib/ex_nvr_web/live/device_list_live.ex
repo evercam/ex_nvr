@@ -107,7 +107,7 @@ defmodule ExNVRWeb.DeviceListLive do
 
     case authorize(user, :device, :update) do
       :ok -> update_device_state(socket, device_id, :stopped)
-      {:error, :unauthorized} -> unauthorized(socket, ~p"/devices", :noreply)
+      {:error, :unauthorized} -> unauthorized(socket, :noreply)
     end
   end
 
@@ -116,7 +116,7 @@ defmodule ExNVRWeb.DeviceListLive do
 
     case authorize(user, :device, :update) do
       :ok -> update_device_state(socket, device_id, :recording)
-      {:error, :unauthorized} -> unauthorized(socket, ~p"/devices", :noreply)
+      {:error, :unauthorized} -> unauthorized(socket, :noreply)
     end
   end
 
