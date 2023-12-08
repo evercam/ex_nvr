@@ -23,7 +23,7 @@ defmodule ExNVRWeb.API.DeviceController do
 
       conn
       |> put_status(201)
-      |> render(:show, device: device)
+      |> render(:show, device: device, user: conn.assigns.current_user)
     end
   end
 
@@ -48,17 +48,17 @@ defmodule ExNVRWeb.API.DeviceController do
           :ok
       end
 
-      render(conn, :show, device: device)
+      render(conn, :show, device: device, user: conn.assigns.current_user)
     end
   end
 
   @spec index(Conn.t(), map()) :: Conn.t() | {:error, Ecto.Changeset.t()}
   def index(%Conn{} = conn, params) do
-    render(conn, :list, devices: Devices.list(params))
+    render(conn, :list, devices: Devices.list(params), user: conn.assigns.current_user)
   end
 
   @spec show(Conn.t(), map()) :: Conn.t() | {:error, Ecto.Changeset.t()}
   def show(%Conn{} = conn, _params) do
-    render(conn, :show, device: conn.assigns.device)
+    render(conn, :show, device: conn.assigns.device, user: conn.assigns.current_user)
   end
 end
