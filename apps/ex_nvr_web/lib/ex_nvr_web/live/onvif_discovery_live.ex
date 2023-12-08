@@ -6,9 +6,6 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
 
   require Membrane.Logger
 
-  import ExNVR.Authorization
-  import ExNVRWeb.Live.Helpers
-
   alias Ecto.Changeset
   alias ExNVR.Onvif
 
@@ -34,7 +31,6 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
   end
 
   def handle_event("discover", %{"discover_settings" => params}, socket) do
-
     with {:ok, %{timeout: timeout} = validated_params} <- validate_discover_params(params),
          {:ok, discovered_devices} <- Onvif.discover(timeout: :timer.seconds(timeout)) do
       socket

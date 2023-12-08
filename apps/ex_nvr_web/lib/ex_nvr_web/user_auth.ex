@@ -213,7 +213,7 @@ defmodule ExNVRWeb.UserAuth do
     end
   end
 
-  def on_mount(:ensure_user_is_admin, _params, session, socket) do
+  def on_mount(:ensure_user_is_admin, _params, _session, socket) do
     if socket.assigns.current_user.role == :admin do
       {:cont, socket}
     else

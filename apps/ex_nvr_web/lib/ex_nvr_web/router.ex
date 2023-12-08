@@ -113,7 +113,6 @@ defmodule ExNVRWeb.Router do
         {ExNVRWeb.UserAuth, :ensure_user_is_admin}
       ] do
       live "/devices/:id", DeviceLive, :edit
-      live "/devices/new", DeviceLive, :new
       live "/onvif-discovery", OnvifDiscoveryLive, :onvif_discovery
     end
   end

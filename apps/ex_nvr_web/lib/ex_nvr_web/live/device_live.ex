@@ -13,29 +13,29 @@ defmodule ExNVRWeb.DeviceLive do
     changeset = Devices.change_device_creation(%Device{})
 
     {:ok,
-      socket
-      |> assign(
-        device: %Device{},
-        disks_data: get_disks_data(),
-        device_form: to_form(changeset),
-        device_type: "ip"
-      )
-      |> allow_upload(:file_to_upload,
-        accept: ~w(video/mp4),
-        max_file_size: 1_000_000_000
-      )}
+     socket
+     |> assign(
+       device: %Device{},
+       disks_data: get_disks_data(),
+       device_form: to_form(changeset),
+       device_type: "ip"
+     )
+     |> allow_upload(:file_to_upload,
+       accept: ~w(video/mp4),
+       max_file_size: 1_000_000_000
+     )}
   end
 
   def mount(%{"id" => device_id}, _session, socket) do
     device = Devices.get!(device_id)
 
     {:ok,
-      assign(socket,
-        device: device,
-        disks_data: get_disks_data(),
-        device_form: to_form(Devices.change_device_update(device)),
-        device_type: Atom.to_string(device.type)
-      )}
+     assign(socket,
+       device: device,
+       disks_data: get_disks_data(),
+       device_form: to_form(Devices.change_device_update(device)),
+       device_type: Atom.to_string(device.type)
+     )}
   end
 
   def handle_event("validate", %{"device" => device_params}, socket) do
@@ -73,7 +73,6 @@ defmodule ExNVRWeb.DeviceLive do
   end
 
   defp do_save_device(socket, device_params) do
-
     with {:ok, device} <- socket |> handle_uploaded_file(device_params) |> Devices.create() do
       info = "Device created successfully"
       DeviceSupervisor.start(device)
@@ -110,7 +109,6 @@ defmodule ExNVRWeb.DeviceLive do
   end
 
   defp do_update_device(socket, device, device_params) do
-
     with {:ok, updated_device} <- Devices.update(device, device_params) do
       info = "Device updated successfully"
 
