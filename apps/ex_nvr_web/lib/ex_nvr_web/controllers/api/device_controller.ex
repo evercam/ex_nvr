@@ -8,7 +8,6 @@ defmodule ExNVRWeb.API.DeviceController do
   plug ExNVRWeb.Plug.Device, [field_name: "id"] when action in [:update, :show]
 
   import ExNVR.Authorization
-  import ExNVRWeb.Controller.Helpers
 
   alias ExNVR.{Devices, DeviceSupervisor}
   alias ExNVR.Model.Device
@@ -18,16 +17,13 @@ defmodule ExNVRWeb.API.DeviceController do
   def create(%Conn{} = conn, params) do
     user = conn.assigns.current_user
 
-    with :ok <- authorized?(user, :device, :create),
+    with :ok <- authorize(user, :device, :create),
          {:ok, device} <- Devices.create(params) do
       if Device.recording?(device), do: DeviceSupervisor.start(device)
 
       conn
       |> put_status(201)
       |> render(:show, device: device)
-    else
-      {:error, :unauthorized} ->
-        unauthorized(conn)
     end
   end
 
@@ -36,7 +32,7 @@ defmodule ExNVRWeb.API.DeviceController do
     device = conn.assigns.device
     user = conn.assigns.current_user
 
-    with :ok <- authorized?(user, :device, :update),
+    with :ok <- authorize(user, :device, :update),
          {:ok, updated_device} <- Devices.update(device, params) do
       cond do
         device.state != updated_device.state and not Device.recording?(updated_device.state) ->
@@ -53,29 +49,16 @@ defmodule ExNVRWeb.API.DeviceController do
       end
 
       render(conn, :show, device: device)
-    else
-      {:error, :unauthorized} ->
-        unauthorized(conn)
     end
   end
 
   @spec index(Conn.t(), map()) :: Conn.t() | {:error, Ecto.Changeset.t()}
   def index(%Conn{} = conn, params) do
-    user = conn.assigns.current_user
-
-    case authorized?(user, :device, :read) do
-      :ok -> render(conn, :list, devices: Devices.list(params))
-      {:error, :unauthorized} -> unauthorized(conn)
-    end
+    render(conn, :list, devices: Devices.list(params))
   end
 
   @spec show(Conn.t(), map()) :: Conn.t() | {:error, Ecto.Changeset.t()}
   def show(%Conn{} = conn, _params) do
-    user = conn.assigns.current_user
-
-    case authorized?(user, :device, :read) do
-      :ok -> render(conn, :show, device: conn.assigns.device)
-      {:error, :unauthorized} -> unauthorized(conn)
-    end
+    render(conn, :show, device: conn.assigns.device)
   end
 end
