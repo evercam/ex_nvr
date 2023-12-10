@@ -25,7 +25,7 @@ docker run --rm -it -p 4000:4000 --env-file .env ex_nvr:custom
 
 #### Arm/v7
 There's currently no automated docker build for `arm/v7` since building the image using `buildx` and `Qemu` take ages to complete,
-the workaroud is to build the image on the target host itself
+the workaround is to build the image on the target host itself
 
 ```bash
 docker build -t ex_nvr:0.6.0 -f Dockerfile-armv7 .
