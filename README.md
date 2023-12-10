@@ -37,28 +37,32 @@ Starting from `v0.6.0`, there are elixir releases for `GNU/Linux` and debian pac
 
 You can download the tar file and uncompress it. cd to the decompressed directory and then run:
 ```bash
-./run
+sudo ./run
 ```
+
+The `sudo` is needed to create the database as the default location is `/var/lib/ex_nvr` which is not accessible to not-root users by default. If you want to run it as the current user, you have two choices:
+* Update the `DATABASE_PATH` env variables in the `env.sh` file in `releases/<version>` to point to another location.
+* Create the `/var/lib/ex_nvr` folder and make it owned by the current user `sudo chown $UID:$GID /var/lib/ex_nvr`
 
 For debian packages, just download the package and run:
 ```bash
 sudo dpkg -i <package name>
 ```
 
-This will install `ex_nvr` as a `systemd` service under the name `ex-nvr`. To run it issue the command
+This will install `ex_nvr` as a `systemd` service under the name `ex_nvr`. To run it issue the command
 ```bash
-sudo systemctl start ex-nvr
+sudo systemctl start ex_nvr
 ```
 
 To start it on boot
 ```bash
-sudo systemctl enable ex-nvr.service
+sudo systemctl enable ex_nvr.service
 ```
 
 To delete the package, first stop the service and the use `dpkg` to delete it
 ```bash
-sudo systemctl stop ex-nvr
-sudo systemctl disable ex-nvr.service
+sudo systemctl stop ex_nvr
+sudo systemctl disable ex_nvr.service
 sudo dpkg -P ex-nvr
 ```
 

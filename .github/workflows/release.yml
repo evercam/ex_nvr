@@ -10,6 +10,7 @@ jobs:
     runs-on: ubuntu-20.04
     env:
       MIX_ENV: prod
+      GENERATE_DEB_PACKAGE: true
     steps:
       - uses: actions/checkout@v3
 
