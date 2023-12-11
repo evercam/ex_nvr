@@ -82,7 +82,9 @@ defmodule ExNVR.Recordings do
     recordings =
       Recording.oldest_recordings_by_device(device.id, limit)
       |> Repo.all()
+
     oldest_recording = List.first(recordings)
+
     runs =
       Run.before_date(
         device.id,
@@ -108,10 +110,13 @@ defmodule ExNVR.Recordings do
     # update the oldest run start date to match the start date of the oldest recording
     |> Multi.run(:update_run, fn _repo, _params ->
       date = List.last(recordings) |> Map.get(:end_date)
+
       Run.between_dates(date, device.id)
       |> Repo.one()
       |> case do
-        nil -> {:ok, nil}
+        nil ->
+          {:ok, nil}
+
         run ->
           run
           |> Map.put(:start_date, date)
@@ -130,8 +135,12 @@ defmodule ExNVR.Recordings do
     |> Repo.transaction()
     |> case do
       {:ok, _changes} ->
-        :telemetry.execute([:ex_nvr, :recording, :delete], %{count: length(recordings)}, %{device_id: device.id})
+        :telemetry.execute([:ex_nvr, :recording, :delete], %{count: length(recordings)}, %{
+          device_id: device.id
+        })
+
         :ok
+
       {:error, _, changeset, _} ->
         {:error, changeset}
     end
