@@ -12,7 +12,7 @@ defmodule ExNVRWeb.API.DeviceJSON do
 
   defp serialize_device(device) do
     device
-    |> Map.take([:__meta__])
+    |> Map.drop([:__meta__])
     |> Map.put(:stream_config, Map.from_struct(device.stream_config))
     |> Map.put(:credentials, Map.from_struct(device.credentials))
     |> Map.put(:settings, Map.from_struct(device.settings))
