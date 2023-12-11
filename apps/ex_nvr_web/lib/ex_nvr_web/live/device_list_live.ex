@@ -4,7 +4,6 @@ defmodule ExNVRWeb.DeviceListLive do
   use ExNVRWeb, :live_view
 
   import ExNVR.Authorization
-  import ExNVRWeb.Live.Helpers
 
   alias ExNVR.Model.Device
   alias ExNVR.{Devices, DeviceSupervisor}
@@ -137,4 +136,10 @@ defmodule ExNVRWeb.DeviceListLive do
 
   defp get_type_label(:ip), do: "IP Camera"
   defp get_type_label(:file), do: "File"
+
+  defp unauthorized(socket, reply) do
+    socket
+    |> put_flash(:error, "You are not authorized to perform this action!")
+    |> then(&{reply, &1})
+  end
 end
