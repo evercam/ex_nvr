@@ -5,8 +5,8 @@ defmodule ExNVR.DiskMonitor do
 
   alias ExNVR.Recordings
 
-  @interval_timer :timer.seconds(5)
-  @wait_until_remove_timer :timer.seconds(20)
+  @interval_timer :timer.minutes(1)
+  @wait_until_remove_timer :timer.minutes(5)
   @recordings_count_to_delete 30
 
   def start_link(options) do
