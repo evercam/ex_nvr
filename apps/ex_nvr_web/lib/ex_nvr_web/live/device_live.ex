@@ -73,15 +73,19 @@ defmodule ExNVRWeb.DeviceLive do
   end
 
   defp do_save_device(socket, device_params) do
-    with {:ok, device} <- socket |> handle_uploaded_file(device_params) |> Devices.create() do
-      info = "Device created successfully"
-      DeviceSupervisor.start(device)
+    socket
+    |> handle_uploaded_file(device_params)
+    |> Devices.create()
+    |> case do
+      {:ok, device} ->
+        info = "Device created successfully"
+        DeviceSupervisor.start(device)
 
-      socket
-      |> put_flash(:info, info)
-      |> redirect(to: ~p"/devices")
-      |> then(&{:noreply, &1})
-    else
+        socket
+        |> put_flash(:info, info)
+        |> redirect(to: ~p"/devices")
+        |> then(&{:noreply, &1})
+
       {:error, changeset} ->
         {:noreply, assign(socket, device_form: to_form(changeset))}
     end
@@ -109,17 +113,18 @@ defmodule ExNVRWeb.DeviceLive do
   end
 
   defp do_update_device(socket, device, device_params) do
-    with {:ok, updated_device} <- Devices.update(device, device_params) do
-      info = "Device updated successfully"
+    case Devices.update(device, device_params) do
+      {:ok, updated_device} ->
+        info = "Device updated successfully"
 
-      if Device.recording?(device) and Device.config_updated(device, updated_device),
-        do: DeviceSupervisor.restart(updated_device)
+        if Device.recording?(device) and Device.config_updated(device, updated_device),
+          do: DeviceSupervisor.restart(updated_device)
 
-      socket
-      |> put_flash(:info, info)
-      |> redirect(to: ~p"/devices")
-      |> then(&{:noreply, &1})
-    else
+        socket
+        |> put_flash(:info, info)
+        |> redirect(to: ~p"/devices")
+        |> then(&{:noreply, &1})
+
       {:error, changeset} ->
         {:noreply, assign(socket, device_form: to_form(changeset))}
     end
