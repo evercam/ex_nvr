@@ -53,12 +53,12 @@ video::-webkit-media-controls-current-time-display {
 }
 
 ::-webkit-scrollbar-thumb {
-    background-color: #d6dee1;
+    background-color: #a8bbbf;
     border-radius: 20px;
     border: 6px solid transparent;
     background-clip: content-box;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background-color: #a8bbbf;
+    background-color: #7f8c8f;
 }

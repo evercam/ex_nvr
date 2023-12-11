@@ -31,7 +31,7 @@
           class={
           [
           "mb-2 p-4 shadow-md rounded cursor-pointer"
-          ] ++ if @selected_device && @selected_device.name == new_device.name, do: ["dark:bg-gray-400"], else: ["dark:bg-gray-700"]}
+          ] ++ if @selected_device && @selected_device.name == new_device.name, do: ["dark:bg-gray-500"], else: ["dark:bg-gray-700"]}
           phx-click="device-details"
           phx-value-name={new_device.name}
         >
@@ -141,12 +141,16 @@
               <td class="font-bold">Stream URI</td>
               <td><%= profile.stream_uri %></td>
             </tr>
+            <tr>
+              <td class="font-bold">Snapshot URI</td>
+              <td><%= profile.snapshot_uri %></td>
+            </tr>
           </table>
         </div>
       </div>
     </div>
-    <div class="w-full pr-5 pb-5">
-      <.button :if={@selected_device} phx-click="add-device" class="float-right">add device</.button>
+    <div class="w-full pr-5 pb-5 mb-5">
+      <.button :if={@selected_device} phx-click="add-device" class="float-right">Add device</.button>
     </div>
   </.card>
 </div>

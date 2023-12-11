@@ -19,8 +19,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
     infos: nil,
     time_settings: nil,
     network_interface: nil,
-    media_profiles: [],
-    snapshot_uri: nil
+    media_profiles: []
   }
 
   def mount(_params, _session, socket) do
@@ -83,7 +82,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
           |> fetch_network_settings(device.url, opts)
           |> fetch_media_profiles(media_url, opts)
           |> fetch_stream_uris(media_url, opts)
-          |> fetch_snapshot_uri(media_url, opts)
+          |> fetch_snapshot_uris(media_url, opts)
 
         {:noreply,
          assign(socket,
@@ -101,6 +100,9 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
     %{stream_uri: stream_uri} = Enum.at(device_details.media_profiles, 0, %{stream_uri: nil})
     %{stream_uri: sub_stream_uri} = Enum.at(device_details.media_profiles, 1, %{stream_uri: nil})
 
+    %{snapshot_uri: snapshot_uri} =
+      Enum.at(device_details.media_profiles, 0, %{snapshot_uri: nil})
+
     socket
     |> put_flash(:device_params, %{
       name: selected_device.name,
@@ -108,7 +110,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
       stream_config: %{
         stream_uri: stream_uri,
         sub_stream_uri: sub_stream_uri,
-        snapshot_uri: device_details.snapshot_uri
+        snapshot_uri: snapshot_uri
       },
       credentials: %{username: selected_device.username, password: selected_device.password}
     })
@@ -187,17 +189,21 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
     %{device_details | media_profiles: profiles}
   end
 
-  defp fetch_snapshot_uri(%{media_profiles: [%{id: profile_id} | _]} = device_details, url, opts) do
-    body = %{"ProfileToken" => profile_id}
+  defp fetch_snapshot_uris(%{media_profiles: profiles} = device_details, url, opts) do
+    profiles =
+      Enum.map(profiles, fn profile ->
+        body = %{"ProfileToken" => profile.id}
+        response = Onvif.call(url, :get_snapshot_uri, body, opts)
 
-    response = Onvif.call(url, :get_snapshot_uri, body, opts)
+        handle_response(
+          profile,
+          response,
+          "GetSnapshotUri",
+          &map_snapshot_uri_response/2
+        )
+      end)
 
-    handle_response(
-      device_details,
-      response,
-      "GetSystemDateAndTime",
-      &map_snapshot_uri_response/2
-    )
+    %{device_details | media_profiles: profiles}
   end
 
   defp handle_response(device_details, {:error, error}, operation, _mapper) do
@@ -298,17 +304,18 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
             frame_rate: rate_control[:FrameRateLimit],
             max_bit_rate: rate_control[:BitrateLimit]
           },
-          stream_uri: nil
+          stream_uri: nil,
+          snapshot_uri: nil
         }
       end)
 
     %{device_details | media_profiles: profiles}
   end
 
-  defp map_snapshot_uri_response(device_details, %{GetSnapshotUriResponse: snapshot_uri_response}) do
+  defp map_snapshot_uri_response(profile, %{GetSnapshotUriResponse: snapshot_uri_response}) do
     snapshot_uri = snapshot_uri_response[:Uri]
 
-    %{device_details | snapshot_uri: snapshot_uri}
+    %{profile | snapshot_uri: snapshot_uri}
   end
 
   defp display_key(key) do
