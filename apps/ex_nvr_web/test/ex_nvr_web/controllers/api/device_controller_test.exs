@@ -32,6 +32,17 @@ defmodule ExNVRWeb.API.DeviceControllerTest do
 
       assert response["code"] == "BAD_ARGUMENT"
     end
+
+    test "create a new device with unauthorized role", %{conn: conn} do
+      user_conn = log_in_user_with_access_token(conn, user_fixture(%{role: :user}))
+
+      response =
+        user_conn
+        |> post(~p"/api/devices", valid_device_attributes())
+        |> json_response(403)
+
+      assert response["message"] == "Forbidden"
+    end
   end
 
   describe "PUT/PATCH /api/devices/:id" do
@@ -48,6 +59,19 @@ defmodule ExNVRWeb.API.DeviceControllerTest do
 
       updated_device = Devices.get!(device.id)
       assert updated_device.name == "Updated Name"
+    end
+
+    test "update a device by unauthorized user", %{conn: conn, device: device} do
+      user_conn = log_in_user_with_access_token(conn, user_fixture(%{role: :user}))
+
+      response =
+        user_conn
+        |> put(~p"/api/devices/#{device.id}", %{
+          name: "Updated Name"
+        })
+        |> json_response(403)
+
+      assert response["message"] == "Forbidden"
     end
   end
 
@@ -97,6 +121,20 @@ defmodule ExNVRWeb.API.DeviceControllerTest do
 
       assert device.credentials.username == response["credentials"]["username"]
       assert device.credentials.password == response["credentials"]["password"]
+    end
+
+    test "get device with filtered fields", %{conn: conn, device: device} do
+      user = user_fixture(%{role: :user})
+      user_conn = log_in_user_with_access_token(conn, user)
+
+      response =
+        user_conn
+        |> get(~p"/api/devices/#{device.id}")
+        |> json_response(200)
+
+      refute Map.get(response, "settings")
+      refute Map.get(response, "credentials")
+      refute Map.get(response, "stream_config")
     end
 
     test "device not found", %{conn: conn} do

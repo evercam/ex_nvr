@@ -3,13 +3,15 @@ defmodule ExNVRWeb.DeviceListLive do
 
   use ExNVRWeb, :live_view
 
+  import ExNVR.Authorization
+
   alias ExNVR.Model.Device
   alias ExNVR.{Devices, DeviceSupervisor}
 
   def render(assigns) do
     ~H"""
     <div class="grow">
-      <div class="ml-4 sm:ml-0">
+      <div :if={@current_user.role == :admin} class="ml-4 sm:ml-0">
         <.link href={~p"/devices/new"}>
           <.button>Add device</.button>
         </.link>
@@ -36,6 +38,7 @@ defmodule ExNVRWeb.DeviceListLive do
         </:col>
         <:action :let={device}>
           <.button
+            :if={@current_user.role == :admin}
             id={"dropdownMenuIconButton_#{device.id}"}
             data-dropdown-toggle={"dropdownDots_#{device.id}"}
             class="text-sm ml-3 hover:bg-gray-100 dark:bg-gray-800"
@@ -99,11 +102,21 @@ defmodule ExNVRWeb.DeviceListLive do
   end
 
   def handle_event("stop-recording", %{"device" => device_id}, socket) do
-    update_device_state(socket, device_id, :stopped)
+    user = socket.assigns.current_user
+
+    case authorize(user, :device, :update) do
+      :ok -> update_device_state(socket, device_id, :stopped)
+      {:error, :unauthorized} -> unauthorized(socket, :noreply)
+    end
   end
 
   def handle_event("start-recording", %{"device" => device_id}, socket) do
-    update_device_state(socket, device_id, :recording)
+    user = socket.assigns.current_user
+
+    case authorize(user, :device, :update) do
+      :ok -> update_device_state(socket, device_id, :recording)
+      {:error, :unauthorized} -> unauthorized(socket, :noreply)
+    end
   end
 
   defp update_device_state(socket, device_id, new_state) do
@@ -123,4 +136,10 @@ defmodule ExNVRWeb.DeviceListLive do
 
   defp get_type_label(:ip), do: "IP Camera"
   defp get_type_label(:file), do: "File"
+
+  defp unauthorized(socket, reply) do
+    socket
+    |> put_flash(:error, "You are not authorized to perform this action!")
+    |> then(&{reply, &1})
+  end
 end

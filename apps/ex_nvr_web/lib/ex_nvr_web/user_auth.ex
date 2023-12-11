@@ -213,6 +213,19 @@ defmodule ExNVRWeb.UserAuth do
     end
   end
 
+  def on_mount(:ensure_user_is_admin, _params, _session, socket) do
+    if socket.assigns.current_user.role == :admin do
+      {:cont, socket}
+    else
+      socket =
+        socket
+        |> Phoenix.LiveView.put_flash(:error, "You can't access this page.")
+        |> Phoenix.LiveView.redirect(to: ~p"/dashboard")
+
+      {:halt, socket}
+    end
+  end
+
   defp mount_current_user(session, socket) do
     Phoenix.Component.assign_new(socket, :current_user, fn ->
       if user_token = session["user_token"] do
@@ -231,6 +244,20 @@ defmodule ExNVRWeb.UserAuth do
       |> halt()
     else
       conn
+    end
+  end
+
+  @doc """
+  Used for routes that require the user to be an admin.
+  """
+  def require_admin_user(conn, _opts) do
+    if conn.assigns[:current_user].role == :admin do
+      conn
+    else
+      conn
+      |> put_flash(:error, "You can't access this page.")
+      |> redirect(to: ~p"/dashboard")
+      |> halt()
     end
   end
 

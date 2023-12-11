@@ -139,7 +139,7 @@ defmodule ExNVR.DevicesTest do
             url: @valid_url,
             model: @valid_model,
             settings: %{storage_address: tmp_dir}
-            })
+          })
         )
 
       assert device.id
@@ -181,7 +181,7 @@ defmodule ExNVR.DevicesTest do
           vendor: @valid_vendor,
           mac: @valid_mac,
           url: @valid_url,
-          model: @valid_model,
+          model: @valid_model
         })
 
       assert device.name == @valid_camera_name

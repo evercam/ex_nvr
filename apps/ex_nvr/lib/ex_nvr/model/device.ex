@@ -75,7 +75,7 @@ defmodule ExNVR.Model.Device do
 
     def changeset(struct, params, device_type) do
       struct
-      |> cast(params, __MODULE__.__schema__(:fields))
+      |> cast(params, [:stream_uri, :sub_stream_uri, :filename, :temporary_path, :duration])
       |> validate_device_config(device_type)
     end
 
