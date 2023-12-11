@@ -62,3 +62,7 @@ video::-webkit-media-controls-current-time-display {
 ::-webkit-scrollbar-thumb:hover {
     background-color: #7f8c8f;
 }
+
+.break-anywhere {
+    overflow-wrap: anywhere;
+}

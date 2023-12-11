@@ -55,7 +55,7 @@
           <table class="w-full table-auto">
             <tr :for={{key, value} <- @device_details[:infos]}>
               <td class="font-bold"><%= display_key(key) %></td>
-              <td class="break-words"><%= value %></td>
+              <td class="break-anywhere"><%= value %></td>
             </tr>
           </table>
         </div>
@@ -68,7 +68,7 @@
           <table class="w-full table-auto">
             <tr :for={{key, value} <- @device_details[:time_settings]}>
               <td class="font-bold"><%= display_key(key) %></td>
-              <td><%= value %></td>
+              <td class="break-anywhere"><%= value %></td>
             </tr>
           </table>
         </div>
@@ -81,7 +81,7 @@
           <table class="w-full table-auto">
             <tr :for={{key, value} <- @device_details[:network_interface]}>
               <td class="font-bold"><%= display_key(key) %></td>
-              <td><%= value %></td>
+              <td class="break-anywhere"><%= value %></td>
             </tr>
           </table>
         </div>
