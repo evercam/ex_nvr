@@ -88,13 +88,9 @@ defmodule ExNVR.Recordings do
     runs =
       Run.before_date(
         device.id,
-        List.last(recordings)
-        |> Map.get(:start_date)
+        Map.get(oldest_recording, :start_date)
       )
       |> Repo.all()
-
-    IO.inspect(List.last(runs))
-    IO.inspect(oldest_recording.end_date)
 
     Multi.new()
     # Delete recordings from db
@@ -105,24 +101,15 @@ defmodule ExNVR.Recordings do
     # delete all the runs that have start date less than the start date of the oldest recording
     |> Multi.delete_all(
       :delete_runs,
-      Run.list_runs(Enum.map(runs, & &1.id))
+      Run.list_runs(Enum.map(Enum.drop(runs, -1), & &1.id))
     )
     # update the oldest run start date to match the start date of the oldest recording
-    |> Multi.run(:update_run, fn _repo, _params ->
-      date = List.last(recordings) |> Map.get(:end_date)
-
-      Run.between_dates(date, device.id)
-      |> Repo.one()
-      |> case do
-        nil ->
-          {:ok, nil}
-
-        run ->
-          run
-          |> Map.put(:start_date, date)
-          |> Repo.insert(on_conflict: :replace_all)
-      end
-    end)
+    |> Multi.insert(
+      :update_run,
+      List.last(runs)
+      |> Map.put(:start_date, List.last(recordings) |> Map.get(:end_date)),
+      on_conflict: :replace_all
+    )
     # delete all the recording files
     |> Multi.run(:delete_files, fn _repo, _params ->
       Enum.each(recordings, fn recording ->
