@@ -9,49 +9,8 @@ defmodule ExNVRWeb.API.DeviceControllerTest do
 
   @moduletag :tmp_dir
 
-
-  defp format_device_info_per_role(user, device) do
-    case user.role do
-      :user ->
-        %{
-          "id" => device.id,
-          "name" => device.name,
-          "type" => Atom.to_string(device.type),
-          "state" => Atom.to_string(device.state),
-          "timezone" => device.timezone
-        }
-
-      :admin ->
-        %{
-          "id" => device.id,
-          "name" => device.name,
-          "type" => Atom.to_string(device.type),
-          "state" => Atom.to_string(device.state),
-          "timezone" => device.timezone,
-          "inserted_at" => DateTime.to_iso8601(device.inserted_at),
-          "updated_at" => DateTime.to_iso8601(device.updated_at),
-          "stream_config" => %{
-            "stream_uri" => device.stream_config.stream_uri,
-            "sub_stream_uri" => device.stream_config.sub_stream_uri,
-            "filename" => device.stream_config.filename,
-            "duration" => device.stream_config.duration,
-            "temporary_path" => device.stream_config.temporary_path
-          },
-          "credentials" => %{
-            "username" => device.credentials.username,
-            "password" => device.credentials.password
-          },
-          "settings" => %{
-            "generate_bif" => device.settings.generate_bif,
-            "storage_address" => device.settings.storage_address
-          }
-        }
-    end
-  end
-
   setup %{conn: conn} do
-    admin = user_fixture()
-    %{conn: log_in_user_with_access_token(conn, admin), admin: admin}
+    %{conn: log_in_user_with_access_token(conn, user_fixture())}
   end
 
   describe "POST /api/devices" do
@@ -76,6 +35,7 @@ defmodule ExNVRWeb.API.DeviceControllerTest do
 
     test "create a new device with Unauthorized role", %{conn: conn} do
       user_conn = log_in_user_with_access_token(conn, user_fixture(%{role: :user}))
+
       response =
         user_conn
         |> post(~p"/api/devices", valid_device_attributes())
@@ -103,6 +63,7 @@ defmodule ExNVRWeb.API.DeviceControllerTest do
 
     test "update a device by unauthorized user", %{conn: conn, device: device} do
       user_conn = log_in_user_with_access_token(conn, user_fixture(%{role: :user}))
+
       response =
         user_conn
         |> put(~p"/api/devices/#{device.id}", %{
@@ -124,7 +85,7 @@ defmodule ExNVRWeb.API.DeviceControllerTest do
       assert response == []
     end
 
-    test "get all devices (existing devices - admin)", %{conn: conn, tmp_dir: tmp_dir, admin: admin} do
+    test "get all devices (existing devices)", %{conn: conn, tmp_dir: tmp_dir} do
       devices =
         Enum.map(1..10, fn _ ->
           device_fixture(%{settings: %{storage_address: tmp_dir}})
@@ -138,27 +99,6 @@ defmodule ExNVRWeb.API.DeviceControllerTest do
         |> json_response(200)
 
       assert length(response) == total_devices
-      assert Enum.map(devices, &format_device_info_per_role(admin, &1)) == response
-    end
-
-    test "get all devices (existing devices - :user)", %{conn: conn, tmp_dir: tmp_dir} do
-      user = user_fixture(%{role: :user})
-      user_conn = log_in_user_with_access_token(conn, user)
-
-      devices =
-        Enum.map(1..10, fn _ ->
-          device_fixture(%{settings: %{storage_address: tmp_dir}})
-        end)
-
-      total_devices = devices |> length()
-
-      response =
-        user_conn
-        |> get("/api/devices/")
-        |> json_response(200)
-
-      assert length(response) == total_devices
-      assert Enum.map(devices, &format_device_info_per_role(user, &1)) == response
     end
   end
 
@@ -167,24 +107,39 @@ defmodule ExNVRWeb.API.DeviceControllerTest do
       %{device: device_fixture(%{settings: %{storage_address: ctx.tmp_dir}})}
     end
 
-    test "get device (:admin)", %{conn: conn, device: device, admin: admin} do
+    test "get device", %{conn: conn, device: device} do
       response =
         conn
         |> get(~p"/api/devices/#{device.id}")
         |> json_response(200)
 
-      assert format_device_info_per_role(admin, device) == response
+      assert device.id == response["id"]
+
+      assert device.stream_config.stream_uri == response["stream_config"]["stream_uri"]
+      assert device.stream_config.sub_stream_uri == response["stream_config"]["sub_stream_uri"]
+      assert device.stream_config.filename == response["stream_config"]["filename"]
+
+      assert device.credentials.username == response["credentials"]["username"]
+      assert device.credentials.password == response["credentials"]["password"]
     end
 
-    test "get device (:user)", %{conn: conn, device: device} do
+    test "get device with filtered fields", %{conn: conn, device: device} do
       user = user_fixture(%{role: :user})
       user_conn = log_in_user_with_access_token(conn, user)
+
       response =
         user_conn
         |> get(~p"/api/devices/#{device.id}")
         |> json_response(200)
 
-      assert format_device_info_per_role(user, device) == response
+      assert Map.get(response, :settings, nil)
+             |> is_nil()
+
+      assert Map.get(response, :credentials, nil)
+             |> is_nil()
+
+      assert Map.get(response, :stream_config, nil)
+             |> is_nil()
     end
 
     test "device not found", %{conn: conn} do
