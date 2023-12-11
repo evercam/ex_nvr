@@ -107,6 +107,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
     |> put_flash(:device_params, %{
       name: selected_device.name,
       type: :ip,
+      vendor: get_vendor_code(device_details.infos.manufacturer),
       stream_config: %{
         stream_uri: stream_uri,
         sub_stream_uri: sub_stream_uri,
@@ -117,6 +118,10 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
     |> redirect(to: ~p"/devices/new")
     |> then(&{:noreply, &1})
   end
+
+  defp get_vendor_code("Milesight Technology Co.,Ltd."), do: "Milesight Technology Co.,Ltd"
+  defp get_vendor_code("HIKVISION"), do: "Hikvision"
+  defp get_vendor_code(manufacturer), do: manufacturer
 
   defp assign_discovery_form(socket, params \\ nil) do
     assign(
