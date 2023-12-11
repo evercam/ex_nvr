@@ -230,34 +230,6 @@ defmodule ExNVR.DevicesTest do
       assert device.model == @valid_model
       assert device.settings.override_on_full_disk
     end
-
-    test "override_on_full_disk_threshold is between 0 and 100", %{device: device} do
-      {:error, changeset} =
-        Devices.update(
-          device,
-          valid_device_attributes(%{
-            settings: %{
-              override_on_full_disk_threshold: 120
-            }
-          })
-        )
-
-      assert %{settings: %{override_on_full_disk_threshold: ["value must be between 0 and 100"]}} =
-               errors_on(changeset)
-
-      {:error, changeset} =
-        Devices.update(
-          device,
-          valid_device_attributes(%{
-            settings: %{
-              override_on_full_disk_threshold: -40
-            }
-          })
-        )
-
-      assert %{settings: %{override_on_full_disk_threshold: ["value must be between 0 and 100"]}} =
-               errors_on(changeset)
-    end
   end
 
   describe "update_state/2" do

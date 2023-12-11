@@ -82,31 +82,59 @@ defmodule ExNVR.Recordings do
     recordings =
       Recording.oldest_recordings_by_device(device.id, limit)
       |> Repo.all()
+    oldest_recording = List.first(recordings)
+    runs =
+      Run.before_date(
+        device.id,
+        List.last(recordings)
+        |> Map.get(:start_date)
+      )
+      |> Repo.all()
+
+    IO.inspect(List.last(runs))
+    IO.inspect(oldest_recording.end_date)
 
     Multi.new()
-    |> Multi.run(:adapt_runs, fn _repo, _params ->
-      Enum.each(Enum.reverse(recordings), fn recording ->
-        Run.between_dates(recording.start_date, device.id)
-        |> Repo.one()
-        |> Map.put(:start_date, recording.end_date)
-        |> Repo.insert(on_conflict: :replace_all)
-      end)
-
-      {:ok, nil}
-    end)
+    # Delete recordings from db
     |> Multi.delete_all(
       :delete_recordings,
       Recording.list_recordings(Enum.map(recordings, & &1.id))
     )
+    # delete all the runs that have start date less than the start date of the oldest recording
+    |> Multi.delete_all(
+      :delete_runs,
+      Run.list_runs(Enum.map(runs, & &1.id))
+    )
+    # update the oldest run start date to match the start date of the oldest recording
+    |> Multi.run(:update_run, fn _repo, _params ->
+      date = List.last(recordings) |> Map.get(:end_date)
+      Run.between_dates(date, device.id)
+      |> Repo.one()
+      |> case do
+        nil -> {:ok, nil}
+        run ->
+          run
+          |> Map.put(:start_date, date)
+          |> Repo.insert(on_conflict: :replace_all)
+      end
+    end)
+    # delete all the recording files
     |> Multi.run(:delete_files, fn _repo, _params ->
       Enum.each(recordings, fn recording ->
         recording_path(device, recording)
-        |> File.rm()
+        |> File.rm!()
       end)
 
       {:ok, nil}
     end)
     |> Repo.transaction()
+    |> case do
+      {:ok, _changes} ->
+        :telemetry.execute([:ex_nvr, :recording, :delete], %{count: length(recordings)}, %{device_id: device.id})
+        :ok
+      {:error, _, changeset, _} ->
+        {:error, changeset}
+    end
   end
 
   defp copy_file(_device, _params, false), do: :ok

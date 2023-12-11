@@ -30,8 +30,19 @@ defmodule ExNVR.Model.Run do
     from(r in __MODULE__, where: r.device_id == ^device_id and r.active == true)
   end
 
+  def before_date(query \\ __MODULE__, device_id, date) do
+    from(r in query,
+      where: r.device_id == ^device_id and r.start_date <= ^date,
+      order_by: r.start_date
+    )
+  end
+
   def between_dates(query \\ __MODULE__, date, device_id) do
     where(query, [r], r.device_id == ^device_id and r.start_date <= ^date and r.end_date >= ^date)
+  end
+
+  def list_runs(query \\ __MODULE__, ids) do
+    where(query, [r], r.id in ^ids)
   end
 
   def filter(query \\ __MODULE__, params) do

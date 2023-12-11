@@ -4,10 +4,9 @@ defmodule ExNVR.DiskMonitor do
   require Logger
 
   alias ExNVR.Recordings
-  alias ExNVR.Model.Device
 
-  @interval_timer :timer.minutes(1)
-  @wait_until_remove_timer :timer.minutes(5)
+  @interval_timer :timer.seconds(5)
+  @wait_until_remove_timer :timer.seconds(20)
   @recordings_count_to_delete 30
 
   def start_link(options) do
@@ -19,17 +18,25 @@ defmodule ExNVR.DiskMonitor do
     Logger.metadata(device_id: options[:device].id)
     Logger.info("Start disk monitor")
     send(self(), :tick)
-    {:ok, %{device: options[:device]}}
+    {:ok, %{device: options[:device], full_space_ticks: 0}}
   end
 
   @impl true
-  def handle_info(:tick, %{device: device} = state) do
-    with true <- device.settings.override_on_full_disk,
-         {:ok, percentage} <- get_device_disk_usage(device),
-         true <- percentage >= device.settings.override_on_full_disk_threshold do
-      send(self(), :overflow)
-    else
-      _ -> state = Map.put(state, :timer, 0)
+  def handle_info(:tick, %{device: device, full_space_ticks: full_space_ticks} = state) when device.settings.override_on_full_disk do
+    used_space = get_device_disk_usage(device)
+    Logger.metadata(device_id: device.id)
+    IO.inspect("Disk usage #{used_space}")
+    state = cond do
+      used_space >= device.settings.override_on_full_disk_threshold and full_space_ticks >= @wait_until_remove_timer ->
+        Logger.metadata(device_id: device.id)
+        IO.inspect("Deleting old recordings because of hard drive nearly full")
+        Recordings.delete_oldest_recordings(device, @recordings_count_to_delete)
+        %{state | full_space_ticks: 0}
+      used_space >= device.settings.override_on_full_disk_threshold ->
+        IO.inspect("Critical drive #{full_space_ticks}")
+        %{state | full_space_ticks: full_space_ticks + @interval_timer}
+      true ->
+        %{state | full_space_ticks: 0}
     end
 
     Process.send_after(self(), :tick, @interval_timer)
@@ -37,28 +44,13 @@ defmodule ExNVR.DiskMonitor do
   end
 
   @impl true
-  def handle_info(:overflow, %{device: device, timer: timer} = state) do
-    if timer >= @wait_until_remove_timer do
-      # delete recordings
-      IO.inspect("Deleting old recordings because of hard drive nearly full")
-      Recordings.delete_oldest_recordings(device, @recordings_count_to_delete)
-      {:noreply, Map.put(state, :timer, 0)}
-    else
-      {:noreply, Map.put(state, :timer, timer + @interval_timer)}
-    end
-  end
-
-  @impl true
-  def handle_info(:overflow, state) do
-    {:noreply, Map.put(state, :timer, 0)}
-  end
+  def handle_info(:tick, state), do: {:noreply, state}
 
   defp get_device_disk_usage(device) do
-    :disksup.get_disk_data()
-    |> Enum.find_value(fn {mountpoint, _total_space, percentage} ->
-      if to_string(mountpoint) == device.settings.storage_address do
-        {:ok, percentage}
-      end
-    end)
+    [{_mountpoint, total, avail, _percentage}] = :disksup.get_disk_info(device.settings.storage_address)
+    case total do
+      0 -> 100
+      total -> (1 - (avail / total)) * 100
+    end
   end
 end

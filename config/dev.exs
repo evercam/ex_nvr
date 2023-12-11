@@ -9,7 +9,7 @@ config :ex_nvr, ExNVR.Repo,
 
 config :ex_nvr,
   hls_directory: Path.expand("../data/hls", Path.dirname(__ENV__.file)),
-  run_pipelines: false
+  run_pipelines: true
 
 config :ex_nvr,
   integrated_turn_ip: {127, 0, 0, 1},
@@ -76,6 +76,7 @@ config :ex_nvr_web, dev_routes: true
 
 # Do not include metadata nor timestamps in development logs
 config :logger, :console,
+  level: :info,
   metadata: [:device_id, :user_id, :request_id],
   format: "$dateT$time [$level] $message\n"
 

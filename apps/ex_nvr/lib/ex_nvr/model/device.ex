@@ -120,7 +120,7 @@ defmodule ExNVR.Model.Device do
       field :generate_bif, :boolean, default: true
       field :storage_address, :string
       field :override_on_full_disk, :boolean, default: false
-      field :override_on_full_disk_threshold, :float, default: 90.0
+      field :override_on_full_disk_threshold, :float, default: 95.0
     end
 
     @spec changeset(t(), map()) :: Ecto.Changeset.t()

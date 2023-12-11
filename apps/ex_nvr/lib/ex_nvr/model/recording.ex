@@ -61,7 +61,7 @@ defmodule ExNVR.Model.Recording do
   def oldest_recordings_by_device(query \\ __MODULE__, device_id, limit) do
     from(r in query,
       where: r.device_id == ^device_id,
-      order_by: [desc: r.start_date],
+      order_by: r.start_date,
       limit: ^limit
     )
   end
