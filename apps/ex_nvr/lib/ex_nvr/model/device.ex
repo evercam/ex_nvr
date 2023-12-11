@@ -18,6 +18,10 @@ defmodule ExNVR.Model.Device do
           type: :ip | :file,
           timezone: binary(),
           state: state(),
+          vendor: binary() | nil,
+          mac: binary() | nil,
+          url: binary() | nil,
+          model: binary() | nil,
           credentials: Credentials.t() | nil,
           stream_config: StreamConfig.t() | nil,
           inserted_at: DateTime.t() | nil,
@@ -40,6 +44,7 @@ defmodule ExNVR.Model.Device do
       field :password, :string
     end
 
+    @spec changeset(t(), map()) :: Ecto.Changeset.t()
     def changeset(struct, params) do
       struct
       |> cast(params, __MODULE__.__schema__(:fields))
@@ -70,7 +75,7 @@ defmodule ExNVR.Model.Device do
 
     def changeset(struct, params, device_type) do
       struct
-      |> cast(params, [:stream_uri, :sub_stream_uri, :filename, :temporary_path, :duration])
+      |> cast(params, __MODULE__.__schema__(:fields))
       |> validate_device_config(device_type)
     end
 
@@ -144,6 +149,11 @@ defmodule ExNVR.Model.Device do
     field :timezone, :string, default: "UTC"
     field :state, Ecto.Enum, values: @states, default: :recording
 
+    field :vendor, :string
+    field :mac, :string
+    field :url, :string
+    field :model, :string
+
     embeds_one :credentials, Credentials, source: :credentials, on_replace: :update
     embeds_one :stream_config, StreamConfig, source: :config, on_replace: :update
     embeds_one :settings, Settings, on_replace: :update
@@ -207,7 +217,7 @@ defmodule ExNVR.Model.Device do
   # Changesets
   def create_changeset(device \\ %__MODULE__{}, params) do
     device
-    |> Changeset.cast(params, [:name, :type, :timezone, :state])
+    |> Changeset.cast(params, [:name, :type, :timezone, :state, :vendor, :mac, :url, :model])
     |> Changeset.cast_embed(:credentials)
     |> Changeset.cast_embed(:settings, required: true)
     |> common_config()
@@ -215,7 +225,7 @@ defmodule ExNVR.Model.Device do
 
   def update_changeset(device, params) do
     device
-    |> Changeset.cast(params, [:name, :timezone, :state])
+    |> Changeset.cast(params, [:name, :timezone, :state, :vendor, :mac, :url, :model])
     |> Changeset.cast_embed(:credentials)
     |> Changeset.cast_embed(:settings, required: true, with: &Settings.update_changeset/2)
     |> common_config()

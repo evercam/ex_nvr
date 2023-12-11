@@ -92,6 +92,18 @@ paths:
                   type: string
                   enum: [ip, file]
                   description: Device type
+                vendor:
+                  type: string
+                  description: Device vendor
+                mac:
+                  type: string
+                  description: Device mac address
+                url:
+                  type: string
+                  description: Device url
+                model:
+                  type: string
+                  description: Device model  
                 timezone:
                   type: string
                   description: Device timezone
@@ -161,6 +173,18 @@ paths:
                 name:
                   type: string
                   description: Device name
+                vendor:
+                  type: string
+                  description: Device vendor
+                mac:
+                  type: string
+                  description: Device mac address
+                url:
+                  type: string
+                  description: Device url
+                model:
+                  type: string
+                  description: Device model
                 timezone:
                   type: string
                   description: Device timezoned

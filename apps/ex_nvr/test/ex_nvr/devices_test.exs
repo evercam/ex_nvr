@@ -7,6 +7,10 @@ defmodule ExNVR.DevicesTest do
   import ExNVR.DevicesFixtures
 
   @valid_camera_name "camera 1"
+  @valid_vendor "Hikvision"
+  @valid_mac "00:1b:63:84:45:e6"
+  @valid_url "url.com"
+  @valid_model "DS-2CD2386G2-ISU/SL"
 
   @moduletag :tmp_dir
 
@@ -130,12 +134,20 @@ defmodule ExNVR.DevicesTest do
         Devices.create(
           valid_device_attributes(%{
             name: @valid_camera_name,
+            vendor: @valid_vendor,
+            mac: @valid_mac,
+            url: @valid_url,
+            model: @valid_model,
             settings: %{storage_address: tmp_dir}
-          })
+            })
         )
 
       assert device.id
       assert device.name == @valid_camera_name
+      assert device.vendor == @valid_vendor
+      assert device.mac == @valid_mac
+      assert device.url == @valid_url
+      assert device.model == @valid_model
       assert device.settings.storage_address == tmp_dir
 
       # assert folder created
@@ -165,12 +177,20 @@ defmodule ExNVR.DevicesTest do
         Devices.update(device, %{
           name: @valid_camera_name,
           stream_config: %{sub_stream_uri: stream_uri},
-          settings: %{generate_bif: true}
+          settings: %{generate_bif: true},
+          vendor: @valid_vendor,
+          mac: @valid_mac,
+          url: @valid_url,
+          model: @valid_model,
         })
 
       assert device.name == @valid_camera_name
       assert device.stream_config.sub_stream_uri == stream_uri
       assert device.settings.generate_bif
+      assert device.vendor == @valid_vendor
+      assert device.mac == @valid_mac
+      assert device.url == @valid_url
+      assert device.model == @valid_model
     end
   end
 

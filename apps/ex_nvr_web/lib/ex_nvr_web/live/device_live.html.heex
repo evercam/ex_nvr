@@ -45,6 +45,19 @@
         />
       </div>
 
+      <.input
+        :if={@device_type == "ip"}
+        field={@device_form[:vendor]}
+        id="device_vendor"
+        type="select"
+        options={[
+          "Hikvision",
+          "Milesight Technology Co.,Ltd",
+          "AXIS"
+        ]}
+        label="Vendor"
+        prompt="Choose your device vendor"
+      />
       <div class="flex flex-col">
         <p class="text-xl font-medium mb-4 text-gray-800 dark:text-white">
           Device Config
