@@ -14,7 +14,8 @@ defmodule ExNVRWeb.API.DeviceJSON do
     case user.role do
       :user ->
         device
-        |> Map.take([:id, :name, :type, :state, :timezone])
+        |> Map.from_struct()
+        |> Map.drop([:__meta__, :stream_config, :credentials, :settings])
 
       :admin ->
         device

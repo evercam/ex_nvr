@@ -41,7 +41,7 @@ sudo ./run
 ```
 
 The `sudo` is needed to create the database as the default location is `/var/lib/ex_nvr` which is not accessible to not-root users by default. If you want to run it as the current user, you have two choices:
-* Update the `DATABASE_PATH` env variables in the `env.sh` file in `releases/<version>` to point to another location.
+* Update the `DATABASE_PATH` env variable in the `env.sh` file in `releases/<version>` to point to another location.
 * Create the `/var/lib/ex_nvr` folder and make it owned by the current user `sudo chown $UID:$GID /var/lib/ex_nvr`
 
 For debian packages, just download the package and run:
@@ -51,7 +51,7 @@ sudo dpkg -i <package name>
 
 This will install `ex_nvr` as a `systemd` service under the name `ex_nvr`. To run it issue the command
 ```bash
-sudo systemctl start ex_nvr
+sudo systemctl start ex_nvr.service
 ```
 
 To start it on boot
@@ -61,7 +61,7 @@ sudo systemctl enable ex_nvr.service
 
 To delete the package, first stop the service and the use `dpkg` to delete it
 ```bash
-sudo systemctl stop ex_nvr
+sudo systemctl stop ex_nvr.service
 sudo systemctl disable ex_nvr.service
 sudo dpkg -P ex-nvr
 ```

@@ -14,6 +14,7 @@ defmodule ExNVR.AccountsFixtures do
   def valid_language, do: Enum.random([:en])
   def valid_role, do: :admin
 
+  @spec valid_user_attributes(map()) :: map()
   def valid_user_attributes(attrs \\ %{}) do
     Enum.into(attrs, %{
       email: unique_user_email(),
@@ -21,27 +22,22 @@ defmodule ExNVR.AccountsFixtures do
     })
   end
 
+  @spec valid_user_full_attributes(map()) :: map()
   def valid_user_full_attributes(attrs \\ %{}) do
     Enum.into(attrs, %{
       email: unique_user_email(),
       password: valid_user_password(),
       first_name: valid_first_name(),
       last_name: valid_last_name(),
-      language: valid_language()
-    })
-  end
-
-  def valid_user_role(attrs \\ %{}) do
-    Enum.into(attrs, %{
-      role: Map.get(attrs, :role, :admin)
+      language: valid_language(),
+      role: valid_role()
     })
   end
 
   def user_fixture(attrs \\ %{}) do
     {:ok, user} =
       attrs
-      |> valid_user_attributes()
-      |> valid_user_role()
+      |> valid_user_full_attributes()
       |> ExNVR.Accounts.register_user()
 
     user

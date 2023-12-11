@@ -33,7 +33,7 @@ defmodule ExNVRWeb.API.DeviceControllerTest do
       assert response["code"] == "BAD_ARGUMENT"
     end
 
-    test "create a new device with Unauthorized role", %{conn: conn} do
+    test "create a new device with unauthorized role", %{conn: conn} do
       user_conn = log_in_user_with_access_token(conn, user_fixture(%{role: :user}))
 
       response =
@@ -132,14 +132,9 @@ defmodule ExNVRWeb.API.DeviceControllerTest do
         |> get(~p"/api/devices/#{device.id}")
         |> json_response(200)
 
-      assert Map.get(response, :settings, nil)
-             |> is_nil()
-
-      assert Map.get(response, :credentials, nil)
-             |> is_nil()
-
-      assert Map.get(response, :stream_config, nil)
-             |> is_nil()
+      refute Map.get(response, "settings")
+      refute Map.get(response, "credentials")
+      refute Map.get(response, "stream_config")
     end
 
     test "device not found", %{conn: conn} do
