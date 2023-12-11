@@ -33,8 +33,8 @@ defmodule ExNVRWeb.API.FallbackController do
 
   def call(conn, {:error, :unauthorized}) do
     conn
-    |> put_status(401)
-    |> json(%{message: "Unauthorized"})
+    |> put_status(403)
+    |> json(%{message: "Forbidden"})
   end
 
   defp changeset_to_details(errors) do
