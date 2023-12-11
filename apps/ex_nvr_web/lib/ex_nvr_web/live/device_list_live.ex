@@ -6,7 +6,7 @@ defmodule ExNVRWeb.DeviceListLive do
   import ExNVR.Authorization
 
   alias ExNVR.Model.Device
-  alias ExNVR.{Devices, DeviceSupervisor, Utils}
+  alias ExNVR.{Devices, DeviceSupervisor}
 
   def render(assigns) do
     ~H"""
