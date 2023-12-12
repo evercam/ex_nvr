@@ -8,8 +8,8 @@ defmodule ExNVRWeb.API.DeviceController do
   plug ExNVRWeb.Plug.Device, [field_name: "id"] when action in [:update, :show, :delete]
 
   import ExNVR.Authorization
-  alias ExNVR.{Devices, DeviceSupervisor, Utils}
 
+  alias ExNVR.{Devices, DeviceSupervisor}
   alias ExNVR.Model.Device
   alias Plug.Conn
 
@@ -56,7 +56,7 @@ defmodule ExNVRWeb.API.DeviceController do
     device = conn.assigns.device
     user = conn.assigns.current_user
 
-    with :ok <- authorize(user, :device, :create),
+    with :ok <- authorize(user, :device, :delete),
          :ok <- Devices.delete(device) do
       send_resp(conn, 200, "")
     else
