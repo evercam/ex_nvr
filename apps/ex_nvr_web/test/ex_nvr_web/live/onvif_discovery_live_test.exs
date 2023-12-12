@@ -132,6 +132,9 @@ defmodule ExNVRWeb.OnvifDiscoveryLiveTest do
 
            "http://192.168.1.100/onvif/Media", :get_profiles, _body, _opts ->
              profiles_response_mock()
+
+           "http://192.168.1.100/onvif/Media", :get_snapshot_uri, _body, _opts ->
+             snapshot_uri_response_mock()
          end,
          call: fn "http://192.168.1.100/onvif/device_service", :get_system_date_and_time ->
            date_time_response_mock()
@@ -163,7 +166,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLiveTest do
 
       assert_called_exactly(Onvif.call!(:_, :_, :_, :_), 2)
       assert_called_exactly(Onvif.call!(:_, :_), 1)
-      assert_called_exactly(Onvif.call(:_, :_, :_, :_), 3)
+      assert_called_exactly(Onvif.call(:_, :_, :_, :_), 5)
       assert_called_exactly(Onvif.call(:_, :_), 1)
     end
 
@@ -176,8 +179,28 @@ defmodule ExNVRWeb.OnvifDiscoveryLiveTest do
 
       assert_called_exactly(Onvif.call!(:_, :_, :_, :_), 2)
       assert_called_exactly(Onvif.call!(:_, :_), 1)
-      assert_called_exactly(Onvif.call(:_, :_, :_, :_), 3)
+      assert_called_exactly(Onvif.call(:_, :_, :_, :_), 5)
       assert_called_exactly(Onvif.call(:_, :_), 1)
+    end
+
+    test "redirect to add device form with discovred device details", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/onvif-discovery")
+
+      lv |> form("#discover_form") |> render_submit()
+      lv |> element("li[phx-click='device-details']") |> render_click()
+
+      {:ok, conn} =
+        lv
+        |> element("button[phx-click='add-device']")
+        |> render_click()
+        |> follow_redirect(conn, ~p"/devices/new")
+
+      device_params = Phoenix.Flash.get(conn.assigns.flash, :device_params)
+      assert device_params.name == "Camera 1"
+      assert device_params.type == :ip
+      assert device_params.stream_config.stream_uri == "rtsp://192.168.1.100:554/main"
+      assert device_params.stream_config.snapshot_uri == "http://192.168.1.100:80/snapshot"
+      assert device_params.vendor == "Evercam"
     end
   end
 
@@ -324,5 +347,9 @@ defmodule ExNVRWeb.OnvifDiscoveryLiveTest do
 
   defp stream_uri_response() do
     %{GetStreamUriResponse: %{Uri: "rtsp://192.168.1.100:554/main"}}
+  end
+
+  defp snapshot_uri_response_mock() do
+    {:ok, %{GetSnapshotUriResponse: %{Uri: "http://192.168.1.100:80/snapshot"}}}
   end
 end

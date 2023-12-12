@@ -26,7 +26,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
     socket
     |> assign_discovery_form()
     |> assign_discovered_devices()
-    |> assign(device_details: nil, device_details_cache: %{})
+    |> assign(selected_device: nil, device_details: nil, device_details_cache: %{})
     |> then(&{:ok, &1})
   end
 
@@ -62,7 +62,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
 
     case Map.fetch(device_details_cache, device.name) do
       {:ok, device_details} ->
-        {:noreply, assign(socket, device_details: device_details)}
+        {:noreply, assign(socket, selected_device: device, device_details: device_details)}
 
       :error ->
         opts = [username: device.username, password: device.password]
@@ -82,13 +82,48 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
           |> fetch_network_settings(device.url, opts)
           |> fetch_media_profiles(media_url, opts)
           |> fetch_stream_uris(media_url, opts)
+          |> fetch_snapshot_uris(media_url, opts)
 
         {:noreply,
          assign(socket,
+           selected_device: device,
            device_details: device_details,
            device_details_cache: Map.put(device_details_cache, device_name, device_details)
          )}
     end
+  end
+
+  def handle_event("add-device", _params, socket) do
+    selected_device = socket.assigns.selected_device
+    device_details = socket.assigns.device_details
+
+    stream_config =
+      case device_details.media_profiles do
+        [main_stream, sub_stream | _rest] ->
+          main_stream
+          |> Map.take([:stream_uri, :snapshot_uri])
+          |> Map.put(:sub_stream_uri, sub_stream.stream_uri)
+
+        [main_stream] ->
+          Map.take(main_stream, [:stream_uri, :snapshot_uri])
+
+        _other ->
+          %{}
+      end
+
+    socket
+    |> put_flash(:device_params, %{
+      name: selected_device.name,
+      type: :ip,
+      vendor: device_details.infos.manufacturer,
+      model: device_details.infos.model,
+      mac: device_details.network_interface.mac_address,
+      url: selected_device.url,
+      stream_config: stream_config,
+      credentials: %{username: selected_device.username, password: selected_device.password}
+    })
+    |> redirect(to: ~p"/devices/new")
+    |> then(&{:noreply, &1})
   end
 
   defp assign_discovery_form(socket, params \\ nil) do
@@ -157,6 +192,23 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
           ])
 
         %{profile | stream_uri: stream_uri}
+      end)
+
+    %{device_details | media_profiles: profiles}
+  end
+
+  defp fetch_snapshot_uris(%{media_profiles: profiles} = device_details, url, opts) do
+    profiles =
+      Enum.map(profiles, fn profile ->
+        body = %{"ProfileToken" => profile.id}
+        response = Onvif.call(url, :get_snapshot_uri, body, opts)
+
+        handle_response(
+          profile,
+          response,
+          "GetSnapshotUri",
+          &map_snapshot_uri_response/2
+        )
       end)
 
     %{device_details | media_profiles: profiles}
@@ -260,11 +312,16 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
             frame_rate: rate_control[:FrameRateLimit],
             max_bit_rate: rate_control[:BitrateLimit]
           },
-          stream_uri: nil
+          stream_uri: nil,
+          snapshot_uri: nil
         }
       end)
 
     %{device_details | media_profiles: profiles}
+  end
+
+  defp map_snapshot_uri_response(profile, %{GetSnapshotUriResponse: snapshot_uri_response}) do
+    %{profile | snapshot_uri: snapshot_uri_response[:Uri]}
   end
 
   defp display_key(key) do

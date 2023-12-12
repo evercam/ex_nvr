@@ -18,7 +18,8 @@ defmodule ExNVR.Onvif do
     get_capabilities: :device,
     get_network_interfaces: :device,
     get_profiles: :media,
-    get_stream_uri: :media
+    get_stream_uri: :media,
+    get_snapshot_uri: :media
   ]
 
   @doc """
