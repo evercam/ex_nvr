@@ -166,7 +166,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLiveTest do
 
       assert_called_exactly(Onvif.call!(:_, :_, :_, :_), 2)
       assert_called_exactly(Onvif.call!(:_, :_), 1)
-      assert_called_exactly(Onvif.call(:_, :_, :_, :_), 4)
+      assert_called_exactly(Onvif.call(:_, :_, :_, :_), 5)
       assert_called_exactly(Onvif.call(:_, :_), 1)
     end
 
@@ -179,7 +179,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLiveTest do
 
       assert_called_exactly(Onvif.call!(:_, :_, :_, :_), 2)
       assert_called_exactly(Onvif.call!(:_, :_), 1)
-      assert_called_exactly(Onvif.call(:_, :_, :_, :_), 4)
+      assert_called_exactly(Onvif.call(:_, :_, :_, :_), 5)
       assert_called_exactly(Onvif.call(:_, :_), 1)
     end
 
@@ -200,6 +200,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLiveTest do
       assert device_params.type == :ip
       assert device_params.stream_config.stream_uri == "rtsp://192.168.1.100:554/main"
       assert device_params.stream_config.snapshot_uri == "http://192.168.1.100:80/snapshot"
+      assert device_params.vendor == "Evercam"
     end
   end
 

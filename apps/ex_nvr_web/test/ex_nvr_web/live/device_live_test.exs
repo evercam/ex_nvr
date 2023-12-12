@@ -117,7 +117,7 @@ defmodule ExNVRWeb.DeviceLiveTest do
           "device" => %{
             "name" => "My Device",
             "type" => "ip",
-            "vendor" => "Hikvision",
+            "vendor" => "HIKVISION",
             "credentials" => %{
               "username" => "user",
               "password" => "pass"
