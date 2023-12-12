@@ -106,4 +106,28 @@ defmodule ExNVRWeb.DashboardTest do
       refute html =~ "No recordings found"
     end
   end
+
+  describe "download snapshot" do
+    @describetag :tmp_dir
+    @describetag :device
+
+    test "Snapshot button is shown", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard")
+
+      assert lv
+             |> element("#snapshot_button")
+             |> has_element?()
+    end
+
+    test "no errors", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard")
+
+      html =
+        lv
+        |> element("#snapshot_button")
+        |> render_click()
+
+      refute html =~ "Resource doesn't exists"
+    end
+  end
 end
