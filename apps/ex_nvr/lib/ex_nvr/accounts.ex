@@ -43,7 +43,7 @@ defmodule ExNVR.Accounts do
   end
 
   def change_user_registration(%User{} = user, attrs \\ %{}) do
-    User.registration_changeset(user, attrs)
+    User.registration_changeset(user, attrs, hash_password: false, validate_email: false)
   end
 
   def change_user_update(%User{} = user, attrs \\ %{}) do
