@@ -76,42 +76,70 @@ defmodule ExNVR.Recordings do
     )
   end
 
+
+
   @spec delete_oldest_recordings(Device.t(), integer()) ::
           {:ok, Ecto.Schema.t()} | {:error, Ecto.Changeset.t()}
   def delete_oldest_recordings(device, limit) do
-    recordings =
-      Recording.oldest_recordings_by_device(device.id, limit)
-      |> Repo.all()
-
-    oldest_recording = List.first(recordings)
-
-    runs =
-      Run.before_date(
-        device.id,
-        Map.get(oldest_recording, :start_date)
-      )
-      |> Repo.all()
-
     Multi.new()
+    #fetch recordings
+    |> Multi.run(:recordings, fn repo, _params ->
+      Recording.oldest_recordings_by_device(device.id, limit)
+      |> repo.all()
+      |> case do
+        [] -> {:error, "recordings not found"}
+        recordings -> {:ok, recordings}
+      end
+    end)
     # Delete recordings from db
     |> Multi.delete_all(
       :delete_recordings,
-      Recording.list_recordings(Enum.map(recordings, & &1.id))
+      fn %{recordings: recordings} ->
+        Recording.list_recordings(Enum.map(recordings, & &1.id))
+      end
     )
+    #fetch oldest recording
+    |> Multi.run(:oldest_recording, fn repo, %{recordings: recordings} ->
+      Recording.oldest_recordings_by_device(device.id, 1)
+      |> repo.one()
+      |> case do
+        nil -> {:ok, List.last(recordings)}
+        recording -> {:ok, recording}
+      end
+    end)
     # delete all the runs that have start date less than the start date of the oldest recording
+    |> Multi.run(:runs, fn repo, %{oldest_recording: oldest_recording} ->
+      Run.before_date(device.id, Map.get(oldest_recording, :start_date))
+      |> repo.all()
+      |> case do
+        [] -> {:error, "runs not found"}
+        runs -> {:ok, runs}
+      end
+    end)
     |> Multi.delete_all(
       :delete_runs,
-      Run.list_runs(Enum.map(Enum.drop(runs, -1), & &1.id))
+      fn %{runs: runs} ->
+        Run.list_runs_by_ids(Enum.map(runs, & &1.id))
+      end
     )
+    |> Multi.run(:oldest_run, fn repo, %{runs: runs} ->
+      Run.list_runs_by_device(device.id)
+      |> repo.one()
+      |> case do
+        nil -> {:ok, List.last(runs)}
+        run -> {:ok, run}
+      end
+    end)
     # update the oldest run start date to match the start date of the oldest recording
     |> Multi.insert(
       :update_run,
-      List.last(runs)
-      |> Map.put(:start_date, List.last(recordings) |> Map.get(:end_date)),
+      fn %{oldest_recording: oldest_recording, oldest_run: oldest_run} ->
+        Map.put(oldest_run, :start_date, Map.get(oldest_recording, :end_date))
+      end,
       on_conflict: :replace_all
     )
     # delete all the recording files
-    |> Multi.run(:delete_files, fn _repo, _params ->
+    |> Multi.run(:delete_files, fn _repo, %{recordings: recordings} ->
       Enum.each(recordings, fn recording ->
         recording_path(device, recording)
         |> File.rm!()
@@ -121,7 +149,7 @@ defmodule ExNVR.Recordings do
     end)
     |> Repo.transaction()
     |> case do
-      {:ok, _changes} ->
+      {:ok, %{recordings: recordings}} ->
         :telemetry.execute([:ex_nvr, :recording, :delete], %{count: length(recordings)}, %{
           device_id: device.id
         })
@@ -129,6 +157,7 @@ defmodule ExNVR.Recordings do
         :ok
 
       {:error, _, changeset, _} ->
+        IO.inspect(changeset)
         {:error, changeset}
     end
   end
