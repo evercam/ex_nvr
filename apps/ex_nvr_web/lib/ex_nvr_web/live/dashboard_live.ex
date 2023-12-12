@@ -290,6 +290,14 @@ defmodule ExNVRWeb.DashboardLive do
     end
   end
 
+  def handle_event("download_snapshot", %{"device" => device_id}, socket) do
+    socket
+    |> push_event("download-snapshot", %{
+      url: ~p"/api/devices/#{device_id}/snapshot"
+    })
+    |> then(&{:noreply, &1})
+  end
+
   defp assign_devices(socket) do
     assign(socket, devices: Devices.list())
   end

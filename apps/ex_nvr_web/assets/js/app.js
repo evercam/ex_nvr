@@ -125,4 +125,8 @@ window.addEventListener("phx:download-footage", (e) => {
     downloadFile(e.detail.url)
 })
 
+window.addEventListener("phx:download-snapshot", (e) => {
+    downloadFile(e.detail.url)
+})
+
 initDarkMode()
