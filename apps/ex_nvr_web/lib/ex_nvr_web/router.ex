@@ -91,9 +91,6 @@ defmodule ExNVRWeb.Router do
 
     live_session :require_authenticated_user,
       on_mount: [{ExNVRWeb.UserAuth, :ensure_authenticated}] do
-      live "/users", UserListLive, :list
-      live "/users/:id", UserLive, :edit
-
       live "/dashboard", DashboardLive, :new
 
       live "/devices", DeviceListLive, :list
@@ -114,7 +111,11 @@ defmodule ExNVRWeb.Router do
         {ExNVRWeb.UserAuth, :ensure_user_is_admin}
       ] do
       live "/devices/:id", DeviceLive, :edit
+
       live "/onvif-discovery", OnvifDiscoveryLive, :onvif_discovery
+
+      live "/users", UserListLive, :list
+      live "/users/:id", UserLive, :edit
     end
   end
 
