@@ -97,31 +97,34 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
     selected_device = socket.assigns.selected_device
     device_details = socket.assigns.device_details
 
-    %{stream_uri: stream_uri} = Enum.at(device_details.media_profiles, 0, %{stream_uri: nil})
-    %{stream_uri: sub_stream_uri} = Enum.at(device_details.media_profiles, 1, %{stream_uri: nil})
+    stream_config =
+      case device_details.media_profiles do
+        [main_stream, sub_stream | _rest] ->
+          main_stream
+          |> Map.take([:stream_uri, :snapshot_uri])
+          |> Map.put(:sub_stream_uri, sub_stream.stream_uri)
 
-    %{snapshot_uri: snapshot_uri} =
-      Enum.at(device_details.media_profiles, 0, %{snapshot_uri: nil})
+        [main_stream] ->
+          Map.take(main_stream, [:stream_uri, :snapshot_uri])
+
+        _other ->
+          %{}
+      end
 
     socket
     |> put_flash(:device_params, %{
       name: selected_device.name,
       type: :ip,
-      vendor: get_vendor_code(device_details.infos.manufacturer),
-      stream_config: %{
-        stream_uri: stream_uri,
-        sub_stream_uri: sub_stream_uri,
-        snapshot_uri: snapshot_uri
-      },
+      vendor: device_details.infos.manufacturer,
+      model: device_details.infos.model,
+      mac: device_details.network_interface.mac_address,
+      url: selected_device.url,
+      stream_config: stream_config,
       credentials: %{username: selected_device.username, password: selected_device.password}
     })
     |> redirect(to: ~p"/devices/new")
     |> then(&{:noreply, &1})
   end
-
-  defp get_vendor_code("Milesight Technology Co.,Ltd."), do: "Milesight Technology Co.,Ltd"
-  defp get_vendor_code("HIKVISION"), do: "Hikvision"
-  defp get_vendor_code(manufacturer), do: manufacturer
 
   defp assign_discovery_form(socket, params \\ nil) do
     assign(
@@ -318,9 +321,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
   end
 
   defp map_snapshot_uri_response(profile, %{GetSnapshotUriResponse: snapshot_uri_response}) do
-    snapshot_uri = snapshot_uri_response[:Uri]
-
-    %{profile | snapshot_uri: snapshot_uri}
+    %{profile | snapshot_uri: snapshot_uri_response[:Uri]}
   end
 
   defp display_key(key) do
