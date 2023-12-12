@@ -76,13 +76,11 @@ defmodule ExNVR.Recordings do
     )
   end
 
-
-
   @spec delete_oldest_recordings(Device.t(), integer()) ::
           {:ok, Ecto.Schema.t()} | {:error, Ecto.Changeset.t()}
   def delete_oldest_recordings(device, limit) do
     Multi.new()
-    #fetch recordings
+    # fetch recordings
     |> Multi.run(:recordings, fn repo, _params ->
       Recording.oldest_recordings_by_device(device.id, limit)
       |> repo.all()
@@ -98,7 +96,7 @@ defmodule ExNVR.Recordings do
         Recording.list_recordings(Enum.map(recordings, & &1.id))
       end
     )
-    #fetch oldest recording
+    # fetch oldest recording
     |> Multi.run(:oldest_recording, fn repo, %{recordings: recordings} ->
       Recording.oldest_recordings_by_device(device.id, 1)
       |> repo.one()

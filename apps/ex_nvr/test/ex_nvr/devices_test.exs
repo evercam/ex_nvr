@@ -214,7 +214,7 @@ defmodule ExNVR.DevicesTest do
           vendor: @valid_vendor,
           mac: @valid_mac,
           url: @valid_url,
-          model: @valid_model
+          model: @valid_model,
           settings: %{
             generate_bif: true,
             override_on_full_disk: true
