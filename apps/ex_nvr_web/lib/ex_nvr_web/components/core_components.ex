@@ -566,9 +566,7 @@ defmodule ExNVRWeb.CoreComponents do
             </td>
             <td :if={@action != []} class="relative w-14 p-0">
               <div>
-                <span
-                  :for={action <- @action}
-                >
+                <span :for={action <- @action}>
                   <%= render_slot(action, @row_item.(row)) %>
                 </span>
               </div>

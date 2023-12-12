@@ -104,7 +104,9 @@ defmodule ExNVRWeb.DeviceListLive do
         <:action :let={device}>
           <.modal id={"delete-device-modal-#{device.id}"}>
             <div class="bg-white dark:bg-gray-800 m-8 rounded">
-              <h2 class="text-xl text-white font-bold mb-4">Are you sure you want to delete this device?</h2>
+              <h2 class="text-xl text-white font-bold mb-4">
+                Are you sure you want to delete this device?
+              </h2>
               <div class="mt-4">
                 <button
                   phx-click="delete-device"
@@ -156,12 +158,14 @@ defmodule ExNVRWeb.DeviceListLive do
 
   defp delete_device(socket, device_id) do
     devices = socket.assigns.devices
+
     with %Device{} = device <- Enum.find(devices, &(&1.id == device_id)),
          :ok <- Devices.delete(device) do
       socket =
         socket
         |> assign(devices: Devices.list())
         |> put_flash(:info, "Device #{device.name} deleted")
+
       {:noreply, socket}
     else
       _other -> {:noreply, put_flash(socket, :error, "could not delete device")}
