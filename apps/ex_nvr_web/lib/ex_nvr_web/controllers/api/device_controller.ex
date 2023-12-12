@@ -54,9 +54,12 @@ defmodule ExNVRWeb.API.DeviceController do
 
   def delete(%Conn{} = conn, _params) do
     device = conn.assigns.device
+    user = conn.assigns.current_user
 
-    case Devices.delete(device) do
-      :ok -> send_resp(conn, 200, "")
+    with :ok <- authorize(user, :device, :create),
+         :ok <- Devices.delete(device) do
+      send_resp(conn, 200, "")
+    else
       _ -> send_resp(conn, 500, "Couldn't delete device")
     end
   end
