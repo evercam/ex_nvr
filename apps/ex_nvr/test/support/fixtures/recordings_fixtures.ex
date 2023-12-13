@@ -5,21 +5,26 @@ defmodule ExNVR.RecordingsFixtures do
   """
 
   alias ExNVR.Repo
+  alias ExNVR.Model.Run
 
   def valid_recording_attributes(attrs \\ %{}) do
     start_date = attrs[:start_date] || Faker.DateTime.backward(1)
+    end_date = attrs[:end_date] || DateTime.add(start_date, :rand.uniform(10) * 60)
 
     Enum.into(attrs, %{
       start_date: start_date,
-      end_date: DateTime.add(start_date, :rand.uniform(10) * 60),
+      end_date: end_date,
       path: "../../fixtures/big_buck.mp4" |> Path.expand(__DIR__)
     })
   end
 
   def valid_run_attributes(attrs \\ %{}) do
+    start_date = attrs[:start_date] || Faker.DateTime.backward(1)
+    end_date = attrs[:end_date] || Faker.DateTime.forward(1)
+
     Enum.into(attrs, %{
-      start_date: Faker.DateTime.backward(1),
-      end_date: Faker.DateTime.forward(1),
+      start_date: start_date,
+      end_date: end_date,
       active: false
     })
   end
@@ -40,7 +45,7 @@ defmodule ExNVR.RecordingsFixtures do
       attrs
       |> Enum.into(%{device_id: device.id})
       |> valid_run_attributes()
-      |> then(&struct(ExNVR.Model.Run, &1))
+      |> then(&Run.changeset(%Run{}, &1))
       |> Repo.insert()
 
     run
