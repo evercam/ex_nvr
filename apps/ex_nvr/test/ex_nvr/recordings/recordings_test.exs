@@ -1,4 +1,4 @@
-defmodule ExNVR.Recordings.RecordingTest do
+defmodule ExNVR.RecordingTest do
   use ExNVR.DataCase
 
   import ExNVR.DevicesFixtures
@@ -14,39 +14,76 @@ defmodule ExNVR.Recordings.RecordingTest do
     %{device: device}
   end
 
-  describe "Multiple recordings" do
-    test "delete multiple recordings", %{device: device} do
-      start_date = ~U(2023-06-23 10:00:00Z)
+  test "delete multiple recordings", %{device: device} do
+    run1_start_date = ~U(2023-12-12 10:00:00Z)
+    run2_start_date = ~U(2023-12-12 11:05:00Z)
 
-      run =
-        run_fixture(device, %{
-          start_date: start_date,
-          end_date:
-            DateTime.add(
-              start_date,
-              List.last(@recordings_range),
-              :minute
-            )
-        })
-
-      recordings =
-        Enum.map(@recordings_range, fn value ->
-          recording_fixture(device,
-            start_date: DateTime.add(start_date, value, :minute),
-            end_date: DateTime.add(start_date, value + 1, :minute),
-            run: run
+    run_1 =
+      run_fixture(device, %{
+        start_date: run1_start_date,
+        end_date:
+          DateTime.add(
+            run1_start_date,
+            40,
+            :minute
           )
-        end)
+      })
 
-      assert Recordings.delete_oldest_recordings(device, 30) == :ok
+    run_2 =
+      run_fixture(device, %{
+        start_date: run2_start_date,
+        end_date:
+          DateTime.add(
+            run2_start_date,
+            10,
+            :minute
+          )
+      })
 
-      assert length(Recordings.index(device.id)) == 10
+    recordings_1 =
+      Enum.map(
+        1..40,
+        &recording_fixture(
+          device,
+          start_date: DateTime.add(run1_start_date, &1 - 1, :minute),
+          end_date: DateTime.add(run1_start_date, &1, :minute),
+          run: run_1
+        )
+      )
 
-      assert :eq ==
-               Recordings.list_runs(device_id: device.id)
-               |> List.first()
-               |> Map.get(:start_date)
-               |> DateTime.compare(DateTime.add(start_date, 30, :minute))
-    end
+    recordings_1 =
+      Enum.map(
+        1..10,
+        &recording_fixture(
+          device,
+          start_date: DateTime.add(run2_start_date, &1 - 1, :minute),
+          end_date: DateTime.add(run2_start_date, &1, :minute),
+          run: run_2
+        )
+      )
+
+    assert length(Recordings.index(device.id)) == 50
+    assert {:ok, recordings} = Recordings.delete_oldest_recordings(device, 30)
+    assert length(Recordings.index(device.id)) == 20
+
+    assert :eq ==
+             Recordings.list_runs(device_id: device.id)
+             |> List.first()
+             |> Map.get(:start_date)
+             |> DateTime.compare(DateTime.add(run1_start_date, 30, :minute))
+
+    assert !Enum.all?(recordings, &File.exists?(&1.filename))
+
+    assert {:ok, recordings} = Recordings.delete_oldest_recordings(device, 15)
+    assert length(Recordings.index(device.id)) == 5
+    assert length(Recordings.list_runs(device_id: device.id)) == 1
+
+    assert :eq ==
+             Recordings.list_runs(device_id: device.id)
+             |> List.first()
+             |> Map.get(:start_date)
+             |> DateTime.compare(DateTime.add(run2_start_date, 5, :minute))
+
+    assert !Enum.all?(recordings, &File.exists?(&1.filename))
   end
 end

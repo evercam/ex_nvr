@@ -50,10 +50,6 @@ defmodule ExNVR.Model.Run do
     )
   end
 
-  def list_runs_by_ids(query \\ __MODULE__, ids) do
-    where(query, [r], r.id in ^ids)
-  end
-
   def filter(query \\ __MODULE__, params) do
     Enum.reduce(params, query, fn
       {:device_id, id}, q -> where(q, [r], r.device_id == ^id)

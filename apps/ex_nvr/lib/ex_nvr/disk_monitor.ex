@@ -16,7 +16,7 @@ defmodule ExNVR.DiskMonitor do
   @impl true
   def init(options) do
     Logger.metadata(device_id: options[:device].id)
-    Logger.info("Start disk monitor")
+    Logger.debug("Start disk monitor")
     send(self(), :tick)
     {:ok, %{device: options[:device], full_space_ticks: 0}}
   end

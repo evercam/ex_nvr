@@ -614,11 +614,11 @@ components:
         override_on_full_disk:
           type: boolean
           default: false
-          description: A boolean value to signal that when reaching the override_on_full_disk_threshold on the storage_address disk usage percentage some old recordings would be deleted
+          description: A boolean value to signal that when reaching the override_on_full_disk_threshold on the storage_address disk usage percentage the 30 oldest recordings would be deleted
         override_on_full_disk_threshold:
           type: float
           default: 90.0
-          description: A float value where if storage_address storage usage percentage reaches this value some old recordings will be deleted
+          description: A float value where if storage_address storage usage percentage reaches this value the 30 oldest recordings will be deleted
           oneOf:
             - minimum: 0
               maximum: 100

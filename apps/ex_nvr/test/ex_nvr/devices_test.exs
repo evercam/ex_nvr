@@ -176,13 +176,13 @@ defmodule ExNVR.DevicesTest do
         )
 
       assert device.id
-      assert device.settings.override_on_full_disk
       assert device.name == @valid_camera_name
       assert device.vendor == @valid_vendor
       assert device.mac == @valid_mac
       assert device.url == @valid_url
       assert device.model == @valid_model
       assert device.settings.storage_address == tmp_dir
+      assert device.settings.override_on_full_disk
 
       # assert folder created
       assert File.exists?(Device.base_dir(device))
@@ -222,12 +222,12 @@ defmodule ExNVR.DevicesTest do
         })
 
       assert device.name == @valid_camera_name
-      assert device.stream_config.sub_stream_uri == stream_uri
-      assert device.settings.generate_bif
       assert device.vendor == @valid_vendor
       assert device.mac == @valid_mac
       assert device.url == @valid_url
       assert device.model == @valid_model
+      assert device.stream_config.sub_stream_uri == stream_uri
+      assert device.settings.generate_bif
       assert device.settings.override_on_full_disk
     end
   end

@@ -2,12 +2,11 @@ defmodule ExNVR.Recordings do
   @moduledoc """
   Context to create/update/delete recordings and recordings metadata
   """
+  import Ecto.Query
 
   alias Ecto.Multi
   alias ExNVR.Model.{Device, Recording, Run}
   alias ExNVR.Repo
-
-  import Ecto.Query
 
   @type error :: {:error, Ecto.Changeset.t() | File.posix()}
 
@@ -100,10 +99,9 @@ defmodule ExNVR.Recordings do
       Run.changeset(run, %{start_date: recording.start_date})
     end)
     |> Multi.run(:delete_files, fn _repo, _params ->
-      Enum.each(recordings, fn recording ->
-        recording_path(device, recording)
-        |> File.rm!()
-      end)
+      recordings
+      |> Enum.map(&recording_path(device, &1))
+      |> Enum.each(&File.rm!/1)
 
       {:ok, nil}
     end)
@@ -114,10 +112,9 @@ defmodule ExNVR.Recordings do
           device_id: device.id
         })
 
-        :ok
+        {:ok, recordings}
 
       {:error, _, changeset, _} ->
-        IO.inspect(changeset)
         {:error, changeset}
     end
   end
