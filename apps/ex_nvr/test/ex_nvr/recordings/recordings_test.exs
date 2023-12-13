@@ -1,4 +1,4 @@
-defmodule ExNVR.Recordings.SnapshooterTest do
+defmodule ExNVR.Recordings.RecordingTest do
   use ExNVR.DataCase
 
   import ExNVR.DevicesFixtures
