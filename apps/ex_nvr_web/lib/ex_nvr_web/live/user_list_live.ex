@@ -64,10 +64,10 @@ defmodule ExNVRWeb.UserListLive do
                 </li>
                 <li>
                   <.link
+                    id={"delete_user_#{user.id}"}
                     href="#"
                     class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-red"
                     phx-click={JS.remove_class("hidden", to: "#confirm_delete_modal")}
-                    phx-value-confirm="Are you sure you want to delete this user?"
                   >
                     Delete
                   </.link>
