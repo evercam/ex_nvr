@@ -99,7 +99,7 @@ defmodule ExNVR.Recordings do
     |> Multi.update(:run, fn %{oldest_run: run, oldest_recording: recording} ->
       Run.changeset(run, %{start_date: recording.start_date})
     end)
-    |> Multi.run(:delete_files, fn _repo, _params->
+    |> Multi.run(:delete_files, fn _repo, _params ->
       Enum.each(recordings, fn recording ->
         recording_path(device, recording)
         |> File.rm!()
@@ -113,7 +113,9 @@ defmodule ExNVR.Recordings do
         :telemetry.execute([:ex_nvr, :recording, :delete], %{count: length(recordings)}, %{
           device_id: device.id
         })
+
         :ok
+
       {:error, _, changeset, _} ->
         IO.inspect(changeset)
         {:error, changeset}
