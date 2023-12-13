@@ -26,7 +26,11 @@ defmodule ExNVR.Umbrella.MixProject do
     [
       ex_nvr: [
         version: @version,
-        applications: [ex_nvr: :permanent, ex_nvr_web: :permanent],
+        applications: [
+          ex_nvr: :permanent,
+          ex_nvr_web: :permanent,
+          nerves_bootstrap: :permanent
+        ],
         include_executables_for: [:unix],
         steps: [:assemble, &copy_external_libs/1, &archive/1, &genererat_deb_package/1]
       ]
