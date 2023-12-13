@@ -11,12 +11,13 @@ defmodule ExNVRWeb.DeviceLive do
 
   def mount(%{"id" => "new"}, _session, socket) do
     device_params = get_device_params(socket.assigns.flash)
+    device = init_device(device_params)
     changeset = Devices.change_device_creation(%Device{}, device_params)
 
     {:ok,
      socket
      |> assign(
-       device: %Device{},
+       device: device,
        disks_data: get_disks_data(),
        device_form: to_form(changeset),
        device_type: "ip"
@@ -64,6 +65,14 @@ defmodule ExNVRWeb.DeviceLive do
   defp get_device_params(%{"device_params" => device_params}), do: device_params
   defp get_device_params(_flash), do: %{}
 
+  defp init_device(%{model: model, url: url, mac: mac}) do
+    %Device{model: model, url: url, mac: mac}
+  end
+
+  defp init_device(_device_params) do
+    %Device{}
+  end
+
   defp get_validation_assigns(%{id: id} = device, device_params) when not is_nil(id) do
     device_type = Atom.to_string(device.type)
     changeset = Devices.change_device_update(device, device_params)
@@ -77,6 +86,12 @@ defmodule ExNVRWeb.DeviceLive do
   end
 
   defp do_save_device(socket, device_params) do
+    device_params =
+      socket.assigns.device
+      |> Map.take([:mac, :model, :url])
+      |> Map.new(fn {k, v} -> {Atom.to_string(k), v} end)
+      |> Map.merge(device_params)
+
     socket
     |> handle_uploaded_file(device_params)
     |> Devices.create()
