@@ -66,8 +66,7 @@ defmodule ExNVRWeb.UserListLive do
                   <.link
                     href="#"
                     class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-red"
-                    phx-click="confirm-delete"
-                    phx-value-id={user.id}
+                    phx-click={JS.remove_class("hidden", to: "#confirm_delete_modal")}
                     phx-value-confirm="Are you sure you want to delete this user?"
                   >
                     Delete
@@ -76,28 +75,31 @@ defmodule ExNVRWeb.UserListLive do
               </ul>
             </div>
           </.button>
-          <%= if @confirm_delete && @user_id == user.id do %>
-            <div class="fixed top-0 right-0 bottom-0 left-0 flex justify-center items-center bg-black bg-opacity-70 z-50">
-              <div class="confirm-dialog bg-white p-4 rounded-lg text-center border-b border-gray-200 dark:bg-gray-800 dark:border-gray-700">
-                <p class="text-white mb-10 mt-10">
-                  <%= "Are you sure you want to delete the User: '#{user.email}'" %>
-                </p>
-                <.button
-                  phx-click="delete"
-                  phx-value-id={@user_id}
-                  class="bg-red-500 text-white px-4 py-2 mx-2 rounded hover:bg-red-600"
-                >
-                  Yes
-                </.button>
-                <.button
-                  phx-click="cancel-delete"
-                  class="bg-gray-500 text-white px-4 py-2 mx-2 rounded hover:bg-gray-600"
-                >
-                  No
-                </.button>
-              </div>
+          <div
+            id="confirm_delete_modal"
+            class="hidden fixed top-0 right-0 bottom-0 left-0 flex justify-center items-center bg-black bg-opacity-70 z-50"
+          >
+            <div class="confirm-dialog bg-white p-4 rounded-lg text-center border-b border-gray-200 dark:bg-gray-800 dark:border-gray-700">
+              <p class="text-white mb-10 mt-10">
+                <%= "Are you sure you want to delete the User: '#{user.email}'" %>
+              </p>
+              <.button
+                phx-click={
+                  JS.push("delete", value: %{id: user.id})
+                  |> JS.add_class("hidden", to: "#confirm_delete_modal")
+                }
+                class="bg-red-500 text-white px-4 py-2 mx-2 rounded hover:bg-red-600"
+              >
+                Yes
+              </.button>
+              <.button
+                phx-click={JS.add_class("hidden", to: "#confirm_delete_modal")}
+                class="bg-gray-500 text-white px-4 py-2 mx-2 rounded hover:bg-gray-600"
+              >
+                No
+              </.button>
             </div>
-          <% end %>
+          </div>
         </:action>
       </.table>
     </div>
@@ -105,11 +107,7 @@ defmodule ExNVRWeb.UserListLive do
   end
 
   def mount(_params, _session, socket) do
-    {:ok, assign(socket, users: Accounts.list(), confirm_delete: false, user_id: nil)}
-  end
-
-  def handle_event("confirm-delete", %{"id" => id}, socket) do
-    {:noreply, socket |> assign(confirm_delete: true, user_id: id)}
+    {:ok, assign(socket, users: Accounts.list())}
   end
 
   def handle_event("delete", %{"id" => id}, socket) do
@@ -121,7 +119,7 @@ defmodule ExNVRWeb.UserListLive do
         info = "User: '#{email}' has been deleted"
 
         socket
-        |> assign(confirm_delete: false, users: Accounts.list())
+        |> assign(users: Accounts.list())
         |> put_flash(:info, info)
         |> then(&{:noreply, &1})
 
@@ -129,13 +127,8 @@ defmodule ExNVRWeb.UserListLive do
         error = "An error has occured!"
 
         socket
-        |> assign(confirm_delete: false)
         |> put_flash(:error, error)
         |> then(&{:noreply, &1})
     end
-  end
-
-  def handle_event("cancel-delete", _params, socket) do
-    {:noreply, socket |> assign(confirm_delete: false)}
   end
 end
