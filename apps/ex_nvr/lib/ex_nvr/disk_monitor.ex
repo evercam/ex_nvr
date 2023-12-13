@@ -16,7 +16,7 @@ defmodule ExNVR.DiskMonitor do
   @impl true
   def init(options) do
     Logger.metadata(device_id: options[:device].id)
-    Logger.debug("Start disk monitor")
+    Logger.info("Start disk monitor")
     send(self(), :tick)
     {:ok, %{device: options[:device], full_space_ticks: 0}}
   end
@@ -25,7 +25,7 @@ defmodule ExNVR.DiskMonitor do
   def handle_info(:tick, %{device: device, full_space_ticks: full_space_ticks} = state)
       when device.settings.override_on_full_disk do
     used_space = get_device_disk_usage(device)
-    Logger.info("Disk usage #{used_space}")
+    Logger.debug("Disk usage #{used_space}")
 
     state =
       cond do

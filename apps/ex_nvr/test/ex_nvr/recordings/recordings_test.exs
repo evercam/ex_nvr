@@ -4,10 +4,10 @@ defmodule ExNVR.RecordingTest do
   import ExNVR.DevicesFixtures
   import ExNVR.RecordingsFixtures
 
+  alias ExNVR.Model.{Run, Recording}
   alias ExNVR.Recordings
 
   @moduletag :tmp_dir
-  @recordings_range Enum.to_list(0..39)
 
   setup ctx do
     device = device_fixture(%{settings: %{storage_address: ctx.tmp_dir}})
@@ -62,28 +62,47 @@ defmodule ExNVR.RecordingTest do
         )
       )
 
-    assert length(Recordings.index(device.id)) == 50
-    assert {:ok, recordings} = Recordings.delete_oldest_recordings(device, 30)
-    assert length(Recordings.index(device.id)) == 20
+    total_recordings = ExNVR.Repo.aggregate(Recording, :count)
+    assert Recordings.delete_oldest_recordings(device, 30) == :ok
+    assert ExNVR.Repo.aggregate(Recording, :count) == total_recordings - 30
 
-    assert :eq ==
-             Recordings.list_runs(device_id: device.id)
-             |> List.first()
-             |> Map.get(:start_date)
-             |> DateTime.compare(DateTime.add(run1_start_date, 30, :minute))
+    run = Recordings.list_runs(device_id: device.id) |> List.first()
+    assert DateTime.compare(run.start_date, ~U(2023-12-12 10:30:00Z)) == :eq
 
-    assert !Enum.all?(recordings, &File.exists?(&1.filename))
+    refute Enum.any?(
+             1..30,
+             &File.exists?(
+               Recordings.recording_path(device, %{
+                 start_date: DateTime.add(run1_start_date, &1 - 1, :minute)
+               })
+             )
+           )
 
-    assert {:ok, recordings} = Recordings.delete_oldest_recordings(device, 15)
-    assert length(Recordings.index(device.id)) == 5
-    assert length(Recordings.list_runs(device_id: device.id)) == 1
+    total_recordings = ExNVR.Repo.aggregate(Recording, :count)
+    total_runs = ExNVR.Repo.aggregate(Run, :count)
 
-    assert :eq ==
-             Recordings.list_runs(device_id: device.id)
-             |> List.first()
-             |> Map.get(:start_date)
-             |> DateTime.compare(DateTime.add(run2_start_date, 5, :minute))
+    assert Recordings.delete_oldest_recordings(device, 15) == :ok
+    assert ExNVR.Repo.aggregate(Recording, :count) == total_recordings - 15
+    assert ExNVR.Repo.aggregate(Run, :count) == total_runs - 1
 
-    assert !Enum.all?(recordings, &File.exists?(&1.filename))
+    run = Recordings.list_runs(device_id: device.id) |> List.first()
+    assert DateTime.compare(run.start_date, ~U(2023-12-12 11:10:00Z)) == :eq
+
+    refute Enum.any?(
+      1..40,
+      &File.exists?(
+        Recordings.recording_path(device, %{
+          start_date: DateTime.add(run1_start_date, &1 - 1, :minute)
+        })
+      )
+    )
+    refute Enum.any?(
+      1..5,
+      &File.exists?(
+        Recordings.recording_path(device, %{
+          start_date: DateTime.add(run2_start_date, &1 - 1, :minute)
+        })
+      )
+    )
   end
 end

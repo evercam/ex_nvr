@@ -78,7 +78,7 @@ defmodule ExNVR.Recordings do
   end
 
   @spec delete_oldest_recordings(Device.t(), integer()) ::
-          {:ok, Ecto.Schema.t()} | {:error, Ecto.Changeset.t()}
+          :ok | {:error, Ecto.Changeset.t()}
   def delete_oldest_recordings(device, limit) do
     recordings = Recording.oldest_recordings(device.id, limit) |> Repo.all()
 
@@ -111,8 +111,6 @@ defmodule ExNVR.Recordings do
         :telemetry.execute([:ex_nvr, :recording, :delete], %{count: length(recordings)}, %{
           device_id: device.id
         })
-
-        {:ok, recordings}
 
       {:error, _, changeset, _} ->
         {:error, changeset}

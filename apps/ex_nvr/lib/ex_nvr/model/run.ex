@@ -32,24 +32,6 @@ defmodule ExNVR.Model.Run do
     from(r in __MODULE__, where: r.device_id == ^device_id and r.active == true)
   end
 
-  def before_date(query \\ __MODULE__, device_id, date) do
-    from(r in query,
-      where: r.device_id == ^device_id and r.start_date < ^date,
-      order_by: r.start_date
-    )
-  end
-
-  def between_dates(query \\ __MODULE__, date, device_id) do
-    where(query, [r], r.device_id == ^device_id and r.start_date <= ^date and r.end_date >= ^date)
-  end
-
-  def list_runs_by_device(query \\ __MODULE__, device_id) do
-    from(r in query,
-      where: r.device_id == ^device_id,
-      order_by: r.start_date
-    )
-  end
-
   def filter(query \\ __MODULE__, params) do
     Enum.reduce(params, query, fn
       {:device_id, id}, q -> where(q, [r], r.device_id == ^id)
