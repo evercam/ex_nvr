@@ -23,8 +23,8 @@ defmodule ExNVRWeb.UserSessionControllerTest do
       conn = get(conn, ~p"/dashboard")
       response = html_response(conn, 200)
       assert response =~ user.email
-      assert response =~ ~p"/me/settings"
-      assert response =~ ~p"/me/logout"
+      assert response =~ ~p"/users/settings"
+      assert response =~ ~p"/users/logout"
     end
 
     test "logs the user in with remember me", %{conn: conn, user: user} do
@@ -82,7 +82,7 @@ defmodule ExNVRWeb.UserSessionControllerTest do
           }
         })
 
-      assert redirected_to(conn) == ~p"/me/settings"
+      assert redirected_to(conn) == ~p"/users/settings"
       assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "Password updated successfully"
     end
 
@@ -99,14 +99,14 @@ defmodule ExNVRWeb.UserSessionControllerTest do
 
   describe "DELETE /users/log_out" do
     test "logs the user out", %{conn: conn, user: user} do
-      conn = conn |> log_in_user(user) |> delete(~p"/me/logout")
+      conn = conn |> log_in_user(user) |> delete(~p"/users/logout")
       assert redirected_to(conn) == ~p"/"
       refute get_session(conn, :user_token)
       assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "Logged out successfully"
     end
 
     test "succeeds even if the user is not logged in", %{conn: conn} do
-      conn = delete(conn, ~p"/me/logout")
+      conn = delete(conn, ~p"/users/logout")
       assert redirected_to(conn) == ~p"/"
       refute get_session(conn, :user_token)
       assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "Logged out successfully"

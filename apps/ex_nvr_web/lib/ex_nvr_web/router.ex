@@ -97,8 +97,20 @@ defmodule ExNVRWeb.Router do
 
       live "/recordings", RecordingListLive, :list
 
-      live "/me/settings", UserSettingsLive, :edit
-      live "/me/settings/confirm-email/:token", UserSettingsLive, :confirm_email
+      live "/users/settings", UserSettingsLive, :edit
+      live "/users/settings/confirm-email/:token", UserSettingsLive, :confirm_email
+    end
+  end
+
+  scope "/", ExNVRWeb do
+    pipe_through [:browser]
+
+    delete "/users/logout", UserSessionController, :delete
+
+    live_session :current_user,
+      on_mount: [{ExNVRWeb.UserAuth, :mount_current_user}] do
+      live "/users/confirm/:token", UserConfirmationLive, :edit
+      live "/users/confirm", UserConfirmationInstructionsLive, :new
     end
   end
 
@@ -116,18 +128,6 @@ defmodule ExNVRWeb.Router do
 
       live "/users", UserListLive, :list
       live "/users/:id", UserLive, :edit
-    end
-  end
-
-  scope "/", ExNVRWeb do
-    pipe_through [:browser]
-
-    delete "/me/logout", UserSessionController, :delete
-
-    live_session :current_user,
-      on_mount: [{ExNVRWeb.UserAuth, :mount_current_user}] do
-      live "/me/confirm/:token", UserConfirmationLive, :edit
-      live "/me/confirm", UserConfirmationInstructionsLive, :new
     end
   end
 end
