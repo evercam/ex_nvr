@@ -36,7 +36,6 @@ defmodule ExNVR.DiskMonitor do
           %{state | full_space_ticks: 0}
 
         used_space >= device.settings.override_on_full_disk_threshold ->
-          Logger.info("Critical drive #{full_space_ticks}")
           %{state | full_space_ticks: full_space_ticks + 1}
 
         true ->
