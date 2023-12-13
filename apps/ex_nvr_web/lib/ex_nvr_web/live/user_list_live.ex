@@ -121,9 +121,8 @@ defmodule ExNVRWeb.UserListLive do
         info = "User: '#{email}' has been deleted"
 
         socket
-        |> assign(confirm_delete: false)
+        |> assign(confirm_delete: false, users: Accounts.list())
         |> put_flash(:info, info)
-        |> redirect(to: ~p"/users")
         |> then(&{:noreply, &1})
 
       {:error, _} ->
@@ -132,7 +131,6 @@ defmodule ExNVRWeb.UserListLive do
         socket
         |> assign(confirm_delete: false)
         |> put_flash(:error, error)
-        |> redirect(to: ~p"/users")
         |> then(&{:noreply, &1})
     end
   end
