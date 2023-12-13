@@ -51,7 +51,7 @@ defmodule ExNVRWeb.UserLiveTest do
             "email" => "with spaces",
             "password" => "short",
             "role" => "user",
-            "language" => "en",
+            "language" => "en"
           }
         })
         |> render_submit()
@@ -97,7 +97,7 @@ defmodule ExNVRWeb.UserLiveTest do
             "last_name" => "S",
             "email" => "with spaces",
             "role" => "user",
-            "language" => "en",
+            "language" => "en"
           }
         })
         |> render_submit()
@@ -117,7 +117,7 @@ defmodule ExNVRWeb.UserLiveTest do
             "last_name" => "updated_last_name",
             "email" => "updated_email@email.com",
             "role" => "admin",
-            "language" => "en",
+            "language" => "en"
           }
         })
         |> render_submit()

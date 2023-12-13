@@ -5,7 +5,6 @@ defmodule ExNVRWeb.UserListLiveTest do
   import ExNVR.{AccountsFixtures}
   import Phoenix.LiveViewTest
 
-
   describe "Users list page" do
     setup do
       %{admin: user_fixture()}
@@ -69,7 +68,6 @@ defmodule ExNVRWeb.UserListLiveTest do
       {:ok, lv, html} = live(conn, ~p"/users")
 
       assert html =~ "Delete"
-
 
       assert lv
              |> element("#delete_user_#{user.id}", "Delete")
