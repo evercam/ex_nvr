@@ -100,7 +100,7 @@ defmodule ExNVRWeb.UserSettingsLive do
           put_flash(socket, :error, "Email change link is invalid or it has expired.")
       end
 
-    {:ok, push_navigate(socket, to: ~p"/users/settings")}
+    {:ok, push_navigate(socket, to: ~p"/me/settings")}
   end
 
   def mount(_params, _session, socket) do
@@ -161,7 +161,7 @@ defmodule ExNVRWeb.UserSettingsLive do
         Accounts.deliver_user_update_email_instructions(
           applied_user,
           user.email,
-          &url(~p"/users/settings/confirm-email/#{&1}")
+          &url(~p"/me/settings/confirm-email/#{&1}")
         )
 
         info = "A link to confirm your email change has been sent to the new address."
