@@ -89,29 +89,24 @@ defmodule ExNVRWeb.DashboardLive do
             />
             <.button
               id="snapshot_button"
-              class="absolute top-0 right-0 m-4 dark:text-gray-750 dark:bg-gray-400 text-black px-4 py-2 rounded"
-              phx-disable-with="Downloading..."
-              phx-click="download_snapshot"
-              phx-value-device={@current_device.id}
+              class="absolute top-0 right-0 m-2 bg-blue-400 text-white px-4 py-2 rounded"
+              phx-hook="DownloadSnapshot"
             >
-              <span class="flex items-center">
-                Snapshot
-                <span title="Get a Snapshot" class="ml-2">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    class="w-5 h-5"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="1.5"
-                      d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"
-                    />
-                  </svg>
-                </span>
+              <span title="Get a Snapshot" class="flex items-center">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="w-6 h-6"
+                  fill="none"
+                  viewBox="0 0 18 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="1.5"
+                    d="M1 8a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 018.07 3h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0016.07 6H17a2 2 0 012 2v7a2 2 0 01-2 2H3a2 2 0 01-2-2V8zm13.5 3a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM10 14a3 3 0 100-6 3 3 0 000 6z"
+                  />
+                </svg>
               </span>
             </.button>
           </div>
@@ -288,14 +283,6 @@ defmodule ExNVRWeb.DashboardLive do
       {:error, changeset} ->
         {:noreply, assign_footage_form(socket, changeset)}
     end
-  end
-
-  def handle_event("download_snapshot", %{"device" => device_id}, socket) do
-    socket
-    |> push_event("download-snapshot", %{
-      url: ~p"/api/devices/#{device_id}/snapshot"
-    })
-    |> then(&{:noreply, &1})
   end
 
   defp assign_devices(socket) do
