@@ -1,4 +1,4 @@
-defmodule ExNVRWeb.UsersListLiveTest do
+defmodule ExNVRWeb.UserListLiveTest do
   @moduledoc false
   use ExNVRWeb.ConnCase
 
