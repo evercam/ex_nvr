@@ -54,6 +54,7 @@ defmodule ExNVRWeb.UserLive do
           user: updated_user,
           user_form: to_form(Accounts.change_user_registration(updated_user))
         )
+        |> redirect(to: ~p"/users")
         |> then(&{:noreply, &1})
 
       {:error, changeset} ->
