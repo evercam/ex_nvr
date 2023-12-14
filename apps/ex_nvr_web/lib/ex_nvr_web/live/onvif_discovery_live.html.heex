@@ -31,7 +31,7 @@
           class={
           [
           "mb-2 p-4 shadow-md rounded cursor-pointer"
-          ] ++ if @selected_device && @selected_device.name == new_device.name, do: ["dark:bg-gray-500"], else: ["dark:bg-gray-700"]}
+          ] ++ if @selected_device && @selected_device.url == new_device.url, do: ["dark:bg-gray-500"], else: ["dark:bg-gray-700"]}
           phx-click="device-details"
           phx-value-name={new_device.name}
         >

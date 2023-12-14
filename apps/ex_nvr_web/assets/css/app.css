@@ -45,7 +45,7 @@ video::-webkit-media-controls-current-time-display {
 
 /* custom scrollbar */
 ::-webkit-scrollbar {
-    width: 25px;
+    width: 15px;
 }
 
 ::-webkit-scrollbar-track {
