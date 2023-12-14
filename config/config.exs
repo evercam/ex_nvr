@@ -40,16 +40,6 @@ config :ex_nvr_web, ExNVRWeb.Endpoint,
   pubsub_server: ExNVR.PubSub,
   live_view: [signing_salt: "ASTBdstw"]
 
-# Configure esbuild (the version is required)
-config :esbuild,
-  version: "0.17.11",
-  default: [
-    args:
-      ~w(js/app.js --bundle --target=es2017 --outdir=../priv/static/assets --external:/fonts/* --external:/images/*),
-    cd: Path.expand("../apps/ex_nvr_web/assets", __DIR__),
-    env: %{"NODE_PATH" => Path.expand("../deps", __DIR__)}
-  ]
-
 # Configure tailwind (the version is required)
 config :tailwind,
   version: "3.2.7",

@@ -43,7 +43,6 @@ defmodule ExNVRWeb.MixProject do
       {:phoenix_live_view, "~> 0.20.0"},
       {:floki, ">= 0.30.0", only: :test},
       {:phoenix_live_dashboard, "~> 0.8.1"},
-      {:esbuild, "~> 0.7", runtime: Mix.env() == :dev},
       {:tailwind, "~> 0.2.0", runtime: Mix.env() == :dev},
       {:telemetry_metrics, "~> 0.6"},
       {:telemetry_poller, "~> 1.0"},
@@ -66,9 +65,9 @@ defmodule ExNVRWeb.MixProject do
     [
       setup: ["deps.get", "assets.setup", "assets.build"],
       test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"],
-      "assets.setup": ["tailwind.install --if-missing", "esbuild.install --if-missing"],
-      "assets.build": ["tailwind default", "esbuild default"],
-      "assets.deploy": ["tailwind default --minify", "esbuild default --minify", "phx.digest"],
+      "assets.setup": ["tailwind.install --if-missing", "cmd --cd assets npm install"],
+      "assets.build": ["tailwind default"],
+      "assets.deploy": ["tailwind default --minify", "cmd --cd assets node build.js --deploy", "phx.digest"],
       release: ["cmd --cd assets npm install", "assets.deploy"]
     ]
   end

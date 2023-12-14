@@ -9,8 +9,18 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@evercam/ui": "^0.0.45-beta.0",
     "d3": "^7.8.5",
     "flowbite": "^2.2.0",
-    "hls.js": "^1.4.13"
+    "hls.js": "^1.4.13",
+    "moment-timezone": "^0.5.43",
+    "phoenix": "file:../../../deps/phoenix",
+    "phoenix_html": "file:../../../deps/phoenix_html",
+    "phoenix_live_view": "file:../../../deps/phoenix_live_view",
+    "vue": "^2.7.14"
+  },
+  "devDependencies": {
+    "esbuild": "^0.19.9",
+    "esbuild-vue": "^1.2.2"
   }
 }
