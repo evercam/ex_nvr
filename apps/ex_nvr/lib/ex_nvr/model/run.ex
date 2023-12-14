@@ -10,6 +10,8 @@ defmodule ExNVR.Model.Run do
 
   import Ecto.Query
 
+  alias Ecto.Changeset
+
   @type t :: %__MODULE__{
           start_date: DateTime.t(),
           end_date: DateTime.t(),
@@ -37,5 +39,11 @@ defmodule ExNVR.Model.Run do
       _, q -> q
     end)
     |> order_by([r], asc: r.device_id, asc: r.start_date)
+  end
+
+  @spec changeset(t(), map()) :: Ecto.Changeset.t()
+  def changeset(struct, params) do
+    struct
+    |> Changeset.cast(params, __MODULE__.__schema__(:fields))
   end
 end

@@ -58,6 +58,14 @@ defmodule ExNVR.Model.Recording do
     from(r in query, where: r.device_id == ^device_id and r.filename == ^name)
   end
 
+  def oldest_recordings(query \\ __MODULE__, device_id, limit) do
+    from(r in query,
+      where: r.device_id == ^device_id,
+      order_by: r.start_date,
+      limit: ^limit
+    )
+  end
+
   def list_with_devices() do
     from(r in __MODULE__,
       join: d in assoc(r, :device),
@@ -69,6 +77,10 @@ defmodule ExNVR.Model.Recording do
         timezone: d.timezone
       }
     )
+  end
+
+  def list_recordings(query \\ __MODULE__, ids) do
+    where(query, [r], r.id in ^ids)
   end
 
   def filter(query \\ __MODULE__, params) do

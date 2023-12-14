@@ -5,6 +5,7 @@ defmodule ExNVR.RecordingsFixtures do
   """
 
   alias ExNVR.Repo
+  alias ExNVR.Model.Run
 
   def valid_recording_attributes(attrs \\ %{}) do
     start_date = attrs[:start_date] || Faker.DateTime.backward(1)
@@ -40,7 +41,7 @@ defmodule ExNVR.RecordingsFixtures do
       attrs
       |> Enum.into(%{device_id: device.id})
       |> valid_run_attributes()
-      |> then(&struct(ExNVR.Model.Run, &1))
+      |> then(&Run.changeset(%Run{}, &1))
       |> Repo.insert()
 
     run

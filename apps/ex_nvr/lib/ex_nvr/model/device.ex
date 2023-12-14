@@ -131,6 +131,8 @@ defmodule ExNVR.Model.Device do
     embedded_schema do
       field :generate_bif, :boolean, default: true
       field :storage_address, :string
+      field :override_on_full_disk, :boolean, default: false
+      field :override_on_full_disk_threshold, :float, default: 95.0
     end
 
     @spec changeset(t(), map()) :: Ecto.Changeset.t()
@@ -138,6 +140,11 @@ defmodule ExNVR.Model.Device do
       struct
       |> cast(params, __MODULE__.__schema__(:fields))
       |> validate_required([:storage_address])
+      |> validate_number(:override_on_full_disk_threshold,
+        less_than_or_equal_to: 100,
+        greater_than_or_equal_to: 0,
+        message: "value must be between 0 and 100"
+      )
       |> validate_change(:storage_address, fn :storage_address, mountpoint ->
         case File.stat(mountpoint) do
           {:ok, %File.Stat{access: :read_write}} -> []
@@ -149,7 +156,12 @@ defmodule ExNVR.Model.Device do
     @spec update_changeset(t(), map()) :: Ecto.Changeset.t()
     def update_changeset(struct, params) do
       struct
-      |> cast(params, [:generate_bif])
+      |> cast(params, [:generate_bif, :override_on_full_disk, :override_on_full_disk_threshold])
+      |> validate_number(:override_on_full_disk_threshold,
+        less_than_or_equal_to: 100,
+        greater_than_or_equal_to: 0,
+        message: "value must be between 0 and 100"
+      )
       |> validate_required([:storage_address])
     end
   end
