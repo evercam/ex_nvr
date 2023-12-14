@@ -30,7 +30,7 @@ defmodule ExNVR.Pipeline.Output.StoragePipelineTest do
   end
 
   defp perform_test(device, fixture) do
-    pid = start_pipeline(device.id, fixture)
+    pid = start_pipeline(device, fixture)
 
     assert_pipeline_notified(pid, :storage, {:segment_stored, segment1})
     assert_pipeline_notified(pid, :storage, {:segment_stored, segment2})

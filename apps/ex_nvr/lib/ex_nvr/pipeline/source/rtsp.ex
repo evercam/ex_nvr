@@ -150,11 +150,20 @@ defmodule ExNVR.Pipeline.Source.RTSP do
 
   defp get_parser(%{encoding: :H265} = track) do
     %Membrane.H265.Parser{
-      vpss: List.wrap(track.fmtp.sprop_vps),
-      spss: List.wrap(track.fmtp.sprop_sps),
-      ppss: List.wrap(track.fmtp.sprop_pps)
+      vpss: List.wrap(track.fmtp.sprop_vps) |> Enum.map(&clean_parameter_set/1),
+      spss: List.wrap(track.fmtp.sprop_sps) |> Enum.map(&clean_parameter_set/1),
+      ppss: List.wrap(track.fmtp.sprop_pps) |> Enum.map(&clean_parameter_set/1)
     }
   end
 
   defp get_parser(track), do: raise("Unsupported codec: #{track.encoding}")
+
+  # a strange issue with one of Milesight camera where the parameter sets has
+  # <<0, 0, 0, 1>> at the end
+  defp clean_parameter_set(ps) do
+    case :binary.part(ps, byte_size(ps), -4) do
+      <<0, 0, 0, 1>> -> :binary.part(ps, 0, byte_size(ps) - 4)
+      _other -> ps
+    end
+  end
 end

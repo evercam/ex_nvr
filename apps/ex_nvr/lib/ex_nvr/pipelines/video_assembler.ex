@@ -22,7 +22,7 @@ defmodule ExNVR.Pipelines.VideoAssembler do
       child(:source, struct(Elements.RecordingBin, options))
     ]
 
-    {[spec: spec], %{device_id: options[:device_id], destination: options[:destination]}}
+    {[spec: spec], %{device: options[:device], destination: options[:destination]}}
   end
 
   @impl true
@@ -38,7 +38,7 @@ defmodule ExNVR.Pipelines.VideoAssembler do
       })
     ]
 
-    {[spec: spec], %{device: options[:device]}}
+    {[spec: spec], state}
   end
 
   @impl true

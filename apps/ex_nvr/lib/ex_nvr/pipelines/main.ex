@@ -156,7 +156,7 @@ defmodule ExNVR.Pipelines.Main do
 
       spec =
         common_spec ++
-          build_main_stream_spec(state, stream_uri) ++
+          [child(:rtsp_source, %Source.RTSP{stream_uri: stream_uri})] ++
           if sub_stream_uri,
             do: build_sub_stream_spec(sub_stream_uri),
             else: []
@@ -191,6 +191,8 @@ defmodule ExNVR.Pipelines.Main do
       when track.encoding in @supported_video_codecs do
     state = maybe_update_device_and_report(state, :recording)
 
+    old_track = elem(state.video_tracks, 0)
+
     spec = [
       get_child(:rtsp_source)
       |> via_out(Pad.ref(:output, ssrc))
@@ -198,36 +200,36 @@ defmodule ExNVR.Pipelines.Main do
       |> get_child(:funnel)
     ]
 
-    spec =
-      if track.encoding == :H264 and not state.hls_pad_linked? do
-        spec ++
+    actions =
+      cond do
+        is_nil(old_track) and track.encoding == :H264 ->
           [
-            get_child(:video_tee)
-            |> via_out(:copy)
-            |> via_in(Pad.ref(:video, :main_stream), options: [encoding: :H264])
-            |> get_child(:hls_sink)
+            spec:
+              build_main_stream_spec(state, track) ++
+                spec ++
+                [
+                  get_child(:video_tee)
+                  |> via_out(:copy)
+                  |> via_in(Pad.ref(:input, :main_stream), options: [media_track: track])
+                  |> get_child(:webrtc)
+                ]
           ]
-      else
-        spec
-      end
 
-    spec =
-      if track.encoding == :H264 do
-        spec ++
-          [
-            get_child(:video_tee)
-            |> via_out(:copy)
-            |> via_in(Pad.ref(:input, :main_stream), options: [media_track: track])
-            |> get_child(:webrtc)
-          ]
-      else
-        spec
+        is_nil(old_track) and track.encoding == :H265 ->
+          [spec: build_main_stream_spec(state, track) ++ spec]
+
+        old_track.encoding != track.encoding and track.encoding == :H264 ->
+          [spec: link_hls_element()]
+
+        old_track.encoding != track.encoding and track.encoding == :H265 ->
+          [remove_link: {:hls_sink, Pad.ref(:video, :main_stream)}]
+
+        true ->
+          []
       end
 
     video_tracks = put_elem(state.video_tracks, 0, track)
-
-    {[spec: {spec, group: :main_stream}],
-     %{state | video_tracks: video_tracks, hls_pad_linked?: true}}
+    {actions, %{state | video_tracks: video_tracks}}
   end
 
   @impl true
@@ -250,7 +252,7 @@ defmodule ExNVR.Pipelines.Main do
       ) do
     if track.encoding != :H264 do
       Membrane.Logger.error("SubStream: only H264 streams are supported now")
-      {[remove_child: {:rtsp_source, :sub_stream}], state}
+      {[remove_children: {:rtsp_source, :sub_stream}], state}
     else
       spec = [
         get_child({:rtsp_source, :sub_stream})
@@ -376,21 +378,23 @@ defmodule ExNVR.Pipelines.Main do
     {[terminate: :normal], state}
   end
 
-  defp build_main_stream_spec(state, stream_uri) do
-    [
-      child(:rtsp_source, %Source.RTSP{stream_uri: stream_uri}),
-      child(:funnel, %Membrane.Funnel{end_of_stream: :never})
-      |> child(:video_tee, Membrane.Tee.Master)
-      |> via_out(:master)
-      |> child({:storage_bin, :main_stream}, %Output.Storage{
-        device: state.device,
-        target_segment_duration: state.segment_duration,
-        correct_timestamp: true
-      }),
-      get_child(:video_tee)
-      |> via_out(:copy)
-      |> child({:cvs_bufferer, :main_stream}, ExNVR.Elements.CVSBufferer)
-    ]
+  defp build_main_stream_spec(state, track) do
+    spec =
+      [
+        child(:funnel, %Membrane.Funnel{end_of_stream: :never})
+        |> child(:video_tee, Membrane.Tee.Master)
+        |> via_out(:master)
+        |> child({:storage_bin, :main_stream}, %Output.Storage{
+          device: state.device,
+          target_segment_duration: state.segment_duration,
+          correct_timestamp: true
+        }),
+        get_child(:video_tee)
+        |> via_out(:copy)
+        |> child({:cvs_bufferer, :main_stream}, ExNVR.Elements.CVSBufferer)
+      ]
+
+    if track.encoding == :H264, do: spec ++ link_hls_element(), else: spec
   end
 
   defp build_file_stream_spec(device) do
@@ -448,6 +452,15 @@ defmodule ExNVR.Pipelines.Main do
 
   # Pipeline process details
   defp pipeline_pid(device), do: Process.whereis(Utils.pipeline_name(device))
+
+  defp link_hls_element() do
+    [
+      get_child(:video_tee)
+      |> via_out(:copy)
+      |> via_in(Pad.ref(:video, :main_stream), options: [encoding: :H264])
+      |> get_child(:hls_sink)
+    ]
+  end
 
   def child_spec(arg) do
     %{

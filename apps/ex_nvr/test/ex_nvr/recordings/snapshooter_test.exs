@@ -80,7 +80,6 @@ defmodule ExNVR.Recordings.SnapshooterTest do
              ExNVR.Recordings.Snapshooter.snapshot(
                device,
                recording,
-               ExNVR.Utils.recording_dir(device.id),
                requested_datetime,
                method: method
              )

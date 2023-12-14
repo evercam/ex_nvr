@@ -46,7 +46,7 @@ defmodule ExNVR.Elements.RecordingPipelineTest do
         "../../fixtures/h264/reference-recording-keyframe-before.h264" |> Path.expand(__DIR__)
 
       source_params = %{
-        device_id: device.id,
+        device: device,
         start_date: ~U(2023-09-06 10:00:03Z),
         end_date: ~U(2023-09-06 10:01:16.98Z),
         strategy: :keyframe_before
@@ -62,7 +62,7 @@ defmodule ExNVR.Elements.RecordingPipelineTest do
         "../../fixtures/h264/reference-recording-keyframe-after.h264" |> Path.expand(__DIR__)
 
       source_params = %{
-        device_id: device.id,
+        device: device,
         start_date: ~U(2023-09-06 10:00:03Z),
         end_date: ~U(2023-09-06 10:01:16.98Z),
         strategy: :keyframe_after
@@ -78,7 +78,7 @@ defmodule ExNVR.Elements.RecordingPipelineTest do
         "../../fixtures/h264/reference-recording-exact.h264" |> Path.expand(__DIR__)
 
       source_params = %{
-        device_id: device.id,
+        device: device,
         start_date: ~U(2023-09-06 10:00:03Z),
         end_date: ~U(2023-09-10 10:00:00Z),
         duration: Membrane.Time.milliseconds(8950),
@@ -117,7 +117,7 @@ defmodule ExNVR.Elements.RecordingPipelineTest do
       ref_path = "../../fixtures/h265/ref-recording-keyframe-before.h265" |> Path.expand(__DIR__)
 
       source_params = %{
-        device_id: device.id,
+        device: device,
         start_date: ~U(2023-09-06 10:00:03Z),
         end_date: ~U(2023-09-06 10:01:16.98Z),
         strategy: :keyframe_before
@@ -131,7 +131,7 @@ defmodule ExNVR.Elements.RecordingPipelineTest do
       ref_path = "../../fixtures/h265/ref-recording-keyframe-after.h265" |> Path.expand(__DIR__)
 
       source_params = %{
-        device_id: device.id,
+        device: device,
         start_date: ~U(2023-09-06 10:00:03Z),
         end_date: ~U(2023-09-06 10:01:16.98Z),
         strategy: :keyframe_after
@@ -144,7 +144,7 @@ defmodule ExNVR.Elements.RecordingPipelineTest do
   describe "Read no recordings" do
     test "source notifies parent", %{device: device} do
       params = %{
-        device_id: device.id,
+        device: device,
         start_date: ~U(2023-09-05 10:00:03Z)
       }
 
@@ -181,28 +181,6 @@ defmodule ExNVR.Elements.RecordingPipelineTest do
         |> child(:sink, %Membrane.File.Sink{location: out_path})
       ]
     )
-
-  defp start_pipeline(
-         device,
-         out_file,
-         start_date,
-         end_date,
-         strategy,
-         duration
-       ) do
-    structure = [
-      child(:source, %RecordingBin{
-        device: device,
-        start_date: start_date,
-        end_date: end_date,
-        strategy: strategy,
-        duration: duration
-      })
-      |> via_out(:video)
-      |> child(:sink, %Membrane.File.Sink{location: out_file})
-    ]
-
-    Membrane.Testing.Pipeline.start_link_supervised!(structure: structure)
 
     assert_end_of_stream(pid, :sink, :input, 5_000)
     Pipeline.terminate(pid)
