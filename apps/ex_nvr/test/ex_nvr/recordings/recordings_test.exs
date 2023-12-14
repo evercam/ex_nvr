@@ -40,27 +40,25 @@ defmodule ExNVR.RecordingTest do
           )
       })
 
-    recordings_1 =
-      Enum.map(
-        1..40,
-        &recording_fixture(
-          device,
-          start_date: DateTime.add(run1_start_date, &1 - 1, :minute),
-          end_date: DateTime.add(run1_start_date, &1, :minute),
-          run: run_1
-        )
+    Enum.map(
+      1..40,
+      &recording_fixture(
+        device,
+        start_date: DateTime.add(run1_start_date, &1 - 1, :minute),
+        end_date: DateTime.add(run1_start_date, &1, :minute),
+        run: run_1
       )
+    )
 
-    recordings_1 =
-      Enum.map(
-        1..10,
-        &recording_fixture(
-          device,
-          start_date: DateTime.add(run2_start_date, &1 - 1, :minute),
-          end_date: DateTime.add(run2_start_date, &1, :minute),
-          run: run_2
-        )
+    Enum.map(
+      1..10,
+      &recording_fixture(
+        device,
+        start_date: DateTime.add(run2_start_date, &1 - 1, :minute),
+        end_date: DateTime.add(run2_start_date, &1, :minute),
+        run: run_2
       )
+    )
 
     total_recordings = ExNVR.Repo.aggregate(Recording, :count)
     assert Recordings.delete_oldest_recordings(device, 30) == :ok
