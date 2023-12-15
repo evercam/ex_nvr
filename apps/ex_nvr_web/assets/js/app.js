@@ -28,6 +28,33 @@ import Hls from "hls.js"
 const MANIFEST_LOAD_TIMEOUT = 60_000
 
 let Hooks = {
+    DownloadSnapshot: {
+        mounted() {
+            this.el.addEventListener("click", this.downloadSnapshot);
+        },
+        downloadSnapshot(event) {
+            const player = document.getElementById("live-video");
+            var canvas = document.createElement("canvas");
+
+            canvas.width = player.videoWidth;
+            canvas.height = player.videoHeight;
+            canvas.getContext('2d').drawImage(player, 0, 0, canvas.width, canvas.height);
+            
+            const dataUri = canvas.toDataURL('image/png');
+
+            const link = document.createElement("a");
+            link.style.display = "none";
+            link.download = "snapshot.png";
+            link.href = dataUri;
+
+            document.body.appendChild(link);
+            link.click();
+
+            document.body.removeChild(link);
+            canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+        }
+
+    },
     VideoPopup: {
         mounted() {
             this.el.addEventListener("click", this.showPopup);
