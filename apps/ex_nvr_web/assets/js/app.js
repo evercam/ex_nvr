@@ -24,9 +24,8 @@ import topbar from "../vendor/topbar"
 import createTimeline, { updateTimelineSegments } from "./timeline"
 import "flowbite/dist/flowbite.phoenix"
 import Hls from "hls.js"
-import VueWrapper from "./vueWrapper"
 
-import SimpleVue from "../vue/SimpleVue.vue"
+import Timeline from "../vue/Timeline.vue"
 import vueWrapper from "./vueWrapper"
 
 const MANIFEST_LOAD_TIMEOUT = 60_000
@@ -88,7 +87,7 @@ let Hooks = {
         mounted() {
             vueWrapper({
                 el: this.el,
-                component: SimpleVue,
+                component: Timeline,
             })
         }
     }

@@ -25,7 +25,13 @@ defmodule ExNVR.Recordings do
       |> Multi.insert(:run, run, on_conflict: {:replace_all_except, [:start_date]})
       |> Repo.transaction()
       |> case do
-        {:ok, %{recording: recording, run: run}} -> {:ok, recording, run}
+        {:ok, %{recording: recording, run: run}} ->
+          Phoenix.PubSub.broadcast(
+            ExNVR.PubSub,
+            "new_runs",
+            :runs
+          )
+          {:ok, recording, run}
         {:error, _, changeset, _} -> {:error, changeset}
       end
     end
@@ -108,6 +114,11 @@ defmodule ExNVR.Recordings do
     |> Repo.transaction()
     |> case do
       {:ok, _params} ->
+        Phoenix.PubSub.broadcast(
+          ExNVR.PubSub,
+          "new_runs",
+          :runs
+        )
         :telemetry.execute([:ex_nvr, :recording, :delete], %{count: length(recordings)}, %{
           device_id: device.id
         })

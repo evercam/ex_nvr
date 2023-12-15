@@ -196,7 +196,20 @@ defmodule ExNVRWeb.DashboardLive do
       |> maybe_push_stream_event(nil)
       |> push_timeline()
 
+    if connected?(socket) do
+      Phoenix.PubSub.subscribe(ExNVR.PubSub, "new_runs")
+    end
+
     {:ok, assign(socket, start_date: nil, custom_duration: false)}
+  end
+
+  def handle_info(:runs, socket) do
+    socket =
+      socket
+      |> assign_runs()
+      |> push_timeline()
+
+    {:noreply, socket}
   end
 
   def handle_event("switch_device", %{"device" => device_id}, socket) do
@@ -299,9 +312,9 @@ defmodule ExNVRWeb.DashboardLive do
     assign(socket, supported_streams: supported_streams)
   end
 
-  defp push_timeline(%{assigns: %{segments: nil}} = socket), do: socket
+  defp push_timeline(%{assigns: %{segments: nil, current_device: nil}} = socket), do: socket
 
-  defp push_timeline(%{assigns: %{segments: segments}} = socket) do
+  defp push_timeline(%{assigns: %{segments: segments, current_device: current_device}} = socket) do
     events = %{
       "Recording" => %{
         "label" => "Recordings",
@@ -318,7 +331,7 @@ defmodule ExNVRWeb.DashboardLive do
       }
     }
 
-    push_event(socket, "update-timeline", %{events: events})
+    push_event(socket, "update-timeline", %{events: events, device: current_device.id})
   end
 
   defp assign_runs(%{assigns: %{current_device: nil}} = socket), do: socket
