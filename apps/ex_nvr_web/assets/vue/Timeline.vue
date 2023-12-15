@@ -3,11 +3,29 @@
         <ETimeline
             :events-groups="events"
             :tooltip-top="false"
+            :showEventTooltip="false"
             dark 
+            @event-mouseover="(event) => hoveredEvent = event"
+            @event-mouseout="hoveredEvent = null"
         >
             <template #tooltip="{ timestamp, active }">
                 <div
-                    v-if="active"
+                    v-if="hoveredEvent && active"
+                    class="e-rounded-lg e-p-5 e-m-2 e-text-black e-w-60"
+                    :style="{ 
+                        background: events[hoveredEvent.eventType].color,
+                        transform: 'Translate(-50%)'
+                    }"
+                    >
+                    <strong>{{ hoveredEvent.eventType }}: </strong>
+                    <div v-if="hoveredEvent.eventData.startDate && hoveredEvent.eventData.endDate" class="e-text-xs">
+                        From : {{ new Date(hoveredEvent.eventData.startDate).toISOString() }} <br /> 
+                        to : {{ new Date(hoveredEvent.eventData.endDate).toISOString() }}
+                    </div>
+                    <img :src="`/api/devices/${deviceId}/snapshot?time=${new Date(timestamp).toISOString()}`" />
+                </div>
+                <div
+                    v-else-if="active"
                     class="e-rounded-lg e-p-5 e-m-2 e-text-black e-w-60"
                     :style="{ 
                         background: '#374151',
@@ -19,21 +37,7 @@
                 </div>
             </template>
             <template #eventTooltip="{ event, active, type }">
-                <div
-                    v-if="event && active"
-                    class="e-rounded-lg e-p-5 e-m-2 e-text-black e-w-60"
-                    :style="{ 
-                        background: events[type].color,
-                        transform: 'Translate(-50%)'
-                    }"
-                    >
-                    <strong>{{ type }}: </strong>
-                    <div v-if="event.startDate && event.endDate" class="e-text-xs">
-                        From : {{ new Date(event.startDate).toISOString() }} <br /> 
-                        to : {{ new Date(event.endDate).toISOString() }}
-                    </div>
-                    <img :src="`/api/devices/${deviceId}/snapshot`" />
-                </div>
+                
             </template>
         </ETimeline>
     </div>
@@ -54,7 +58,8 @@ export default {
                 events: []
             },
         },
-        deviceId: null
+        deviceId: null,
+        hoveredEvent: null
     }),
     mounted() {
         console.log("mounted")
@@ -62,9 +67,10 @@ export default {
     },
     methods: {
         updateEvents(e) {
+            console.log(e.detail)
             this.events = e.detail.events
             this.deviceId = e.detail.device
-        }
+        },
     }
 }
 </script>
