@@ -7,6 +7,7 @@
             dark 
             @event-mouseover="(event) => hoveredEvent = event"
             @event-mouseout="hoveredEvent = null"
+            @date-clicked="dateClicked"
         >
             <template #tooltip="{ timestamp, active }">
                 <div
@@ -62,15 +63,21 @@ export default {
         hoveredEvent: null
     }),
     mounted() {
-        console.log("mounted")
         window.addEventListener("phx:update-timeline", this.updateEvents)
     },
     methods: {
         updateEvents(e) {
-            console.log(e.detail)
             this.events = e.detail.events
             this.deviceId = e.detail.device
         },
+        dateClicked(date) {
+            if (!this.hoveredEvent) {
+                return
+            }
+            window.TimelineHook.pushEvent("datetime", {
+                value: new Date(date).toISOString(),
+            })
+        }
     }
 }
 </script>

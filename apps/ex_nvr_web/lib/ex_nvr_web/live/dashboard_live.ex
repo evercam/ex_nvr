@@ -251,6 +251,8 @@ defmodule ExNVRWeb.DashboardLive do
         |> assign_start_date(new_datetime)
         |> live_view_enabled?()
         |> maybe_push_stream_event(new_datetime)
+        |> assign_runs()
+        |> push_timeline()
       else
         socket
       end
