@@ -73,8 +73,7 @@ defmodule ExNVR.Pipelines.Main do
             supervisor_pid: pid(),
             live_snapshot_waiting_pids: list(),
             rtc_engine: pid() | atom(),
-            video_tracks: {Track.t(), Track.t()},
-            hls_pad_linked?: boolean()
+            video_tracks: {Track.t(), Track.t()}
           }
 
     @enforce_keys [:device]
@@ -85,8 +84,7 @@ defmodule ExNVR.Pipelines.Main do
                   supervisor_pid: nil,
                   live_snapshot_waiting_pids: [],
                   rtc_engine: nil,
-                  video_tracks: {nil, nil},
-                  hls_pad_linked?: false
+                  video_tracks: {nil, nil}
                 ]
   end
 
@@ -190,46 +188,31 @@ defmodule ExNVR.Pipelines.Main do
       )
       when track.encoding in @supported_video_codecs do
     state = maybe_update_device_and_report(state, :recording)
-
     old_track = elem(state.video_tracks, 0)
 
-    spec = [
+    rtsp_spec = [
       get_child(:rtsp_source)
       |> via_out(Pad.ref(:output, ssrc))
       |> via_in(Pad.ref(:input, make_ref()))
       |> get_child(:funnel)
     ]
 
-    actions =
-      cond do
-        is_nil(old_track) and track.encoding == :H264 ->
-          [
-            spec:
-              build_main_stream_spec(state, track) ++
-                spec ++
-                [
-                  get_child(:video_tee)
-                  |> via_out(:copy)
-                  |> via_in(Pad.ref(:input, :main_stream), options: [media_track: track])
-                  |> get_child(:webrtc)
-                ]
-          ]
+    spec = if is_nil(old_track), do: build_main_stream_spec(state, track), else: []
 
-        is_nil(old_track) and track.encoding == :H265 ->
-          [spec: build_main_stream_spec(state, track) ++ spec]
-
-        old_track.encoding != track.encoding and track.encoding == :H264 ->
-          [spec: link_hls_element()]
-
-        old_track.encoding != track.encoding and track.encoding == :H265 ->
-          [remove_link: {:hls_sink, Pad.ref(:video, :main_stream)}]
-
-        true ->
-          []
+    webrtc_spec =
+      if track.encoding == :H264 do
+        [
+          get_child(:video_tee)
+          |> via_out(:copy)
+          |> via_in(Pad.ref(:input, :main_stream), options: [media_track: track])
+          |> get_child(:webrtc)
+        ]
+      else
+        []
       end
 
     video_tracks = put_elem(state.video_tracks, 0, track)
-    {actions, %{state | video_tracks: video_tracks}}
+    {[spec: spec ++ rtsp_spec ++ webrtc_spec], %{state | video_tracks: video_tracks}}
   end
 
   @impl true
