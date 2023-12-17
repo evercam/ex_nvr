@@ -60,17 +60,36 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
   @spec snapshot(Plug.Conn.t(), map()) :: return_t()
   def snapshot(conn, params) do
     with {:ok, params} <- validate_snapshot_req_params(params) do
-      if params.time do
-        serve_snapshot_from_recorded_videos(conn, params)
-      else
-        serve_live_snapshot(conn, params)
+      %{stream_config: %{snapshot_uri: snapshot_uri}} = device = conn.assigns.device
+
+      cond do
+        params.time ->
+          serve_snapshot_from_recorded_videos(conn, params)
+
+        snapshot_uri ->
+          get_live_snapshot_from_device(conn, params, device)
+
+        true ->
+          serve_live_snapshot(conn, params, device)
       end
     end
   end
 
-  defp serve_live_snapshot(conn, params) do
-    device = conn.assigns.device
+  defp get_live_snapshot_from_device(conn, params, device) do
+    opts = [username: device.credentials.username, password: device.credentials.password]
 
+    case ExNVR.HTTP.get(device.stream_config.snapshot_uri, opts) do
+      {:ok, %{status: 200, body: body}} ->
+        conn
+        |> put_resp_content_type("image/jpeg")
+        |> send_resp(:ok, body)
+
+      _other ->
+        serve_live_snapshot(conn, params, device)
+    end
+  end
+
+  defp serve_live_snapshot(conn, params, device) do
     case device.state do
       :recording ->
         {:ok, snapshot} = Main.live_snapshot(device, params.format)
