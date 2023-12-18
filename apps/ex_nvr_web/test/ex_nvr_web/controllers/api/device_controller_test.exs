@@ -3,9 +3,9 @@ defmodule ExNVRWeb.API.DeviceControllerTest do
 
   use ExNVRWeb.ConnCase
 
-  import ExNVR.{AccountsFixtures, DevicesFixtures}
+  import ExNVR.{AccountsFixtures, DevicesFixtures, RecordingsFixtures}
 
-  alias ExNVR.Devices
+  alias ExNVR.{Devices, Recordings}
 
   @moduletag :tmp_dir
 
@@ -141,6 +141,26 @@ defmodule ExNVRWeb.API.DeviceControllerTest do
       conn
       |> get(~p"/api/devices/#{UUID.uuid4()}")
       |> response(404)
+    end
+  end
+
+  describe "DELETE /api/devices/:id" do
+    setup ctx do
+      %{device: device_fixture(%{settings: %{storage_address: ctx.tmp_dir}})}
+    end
+
+    test "Delete device", %{conn: conn, device: device} do
+      Enum.each(1..10, fn _value -> recording_fixture(device) end)
+      Enum.each(1..5, fn _value -> run_fixture(device) end)
+
+      response =
+        conn
+        |> delete(~p"/api/devices/#{device.id}")
+        |> response(200)
+
+      assert is_nil(Devices.get(device.id))
+      assert length(Recordings.index(device.id)) == 0
+      assert length(Recordings.list_runs(device_id: device.id)) == 0
     end
   end
 end

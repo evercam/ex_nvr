@@ -1,7 +1,7 @@
 defmodule ExNVR.DevicesTest do
   use ExNVR.DataCase
 
-  alias ExNVR.Devices
+  alias ExNVR.{Devices, Recordings}
   alias ExNVR.Model.Device
 
   import ExNVR.DevicesFixtures
@@ -229,6 +229,26 @@ defmodule ExNVR.DevicesTest do
       assert device.stream_config.sub_stream_uri == stream_uri
       assert device.settings.generate_bif
       assert device.settings.override_on_full_disk
+    end
+  end
+
+  describe "delete/1" do
+    setup ctx do
+      %{device: device_fixture(%{settings: ctx.settings})}
+    end
+
+    test "delete device", %{device: device} do
+      Enum.each(1..10, fn _value -> recording_fixture(device) end)
+      Enum.each(1..5, fn _value -> run_fixture(device) end)
+
+      assert length(Recordings.index(device.id)) > 0
+      assert length(Recordings.list_runs(device_id: device.id)) > 0
+
+      Devices.delete(device)
+
+      assert is_nil(Devices.get(device.id))
+      assert length(Recordings.index(device.id)) == 0
+      assert length(Recordings.list_runs(device_id: device.id)) == 0
     end
   end
 
