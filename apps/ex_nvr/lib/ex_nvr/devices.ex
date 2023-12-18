@@ -55,14 +55,12 @@ defmodule ExNVR.Devices do
           {:error, Ecto.Changeset.t()} | :ok
   def delete(device) do
     Multi.new()
-    |> Multi.delete_all(:delete_devices, Recording.with_device(device.id))
-    |> Multi.delete_all(:delete_runs, Run.with_device(device.id))
-    |> Multi.delete(:delete_device, device)
+    |> Multi.delete_all(:recordings, Recording.with_device(device.id))
+    |> Multi.delete_all(:runs, Run.with_device(device.id))
+    |> Multi.delete(:device, device)
     |> Multi.run(:stop_pipeline, fn _repo, _param ->
-      case DeviceSupervisor.stop(device) do
-        :ok -> {:ok, nil}
-        _ -> {:error, "Couldn't stop pipeline"}
-      end
+      DeviceSupervisor.stop(device)
+      {:ok, nil}
     end)
     |> Repo.transaction()
     |> case do

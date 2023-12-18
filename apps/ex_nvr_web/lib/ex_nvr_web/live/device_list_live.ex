@@ -105,8 +105,18 @@ defmodule ExNVRWeb.DeviceListLive do
           <.modal id={"delete-device-modal-#{device.id}"}>
             <div class="bg-white dark:bg-gray-800 m-8 rounded">
               <h2 class="text-xl text-white font-bold mb-4">
-                Are you sure you want to delete this device?
+                Are you sure you want to delete this device? <br />
               </h2>
+              <h3>
+                The actual recording files are not deleted. <br />
+                If you want to delete them delete the following folder: <br />
+                <div class="bg-gray-400 rounded-md p-4 mt-2">
+                  <code class="text-gray-800">
+                    <%= Device.recording_dir(device) %> <br />
+                    <%= Device.recording_dir(device, :low) %>
+                  </code>
+                </div>
+              </h3>
               <div class="mt-4">
                 <button
                   phx-click="delete-device"
@@ -158,8 +168,10 @@ defmodule ExNVRWeb.DeviceListLive do
 
   defp delete_device(socket, device_id) do
     devices = socket.assigns.devices
+    user = socket.assigns.current_user
 
-    with %Device{} = device <- Enum.find(devices, &(&1.id == device_id)),
+    with :ok <- authorize(user, :device, :delete),
+         %Device{} = device <- Enum.find(devices, &(&1.id == device_id)),
          :ok <- Devices.delete(device) do
       socket =
         socket
