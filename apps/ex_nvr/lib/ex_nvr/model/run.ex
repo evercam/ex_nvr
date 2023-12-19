@@ -13,10 +13,10 @@ defmodule ExNVR.Model.Run do
   alias Ecto.Changeset
 
   @type t :: %__MODULE__{
-          start_date: DateTime.t(),
-          end_date: DateTime.t(),
+          start_date: DateTime.t() | nil,
+          end_date: DateTime.t() | nil,
           active: boolean(),
-          device_id: binary()
+          device_id: binary() | nil
         }
 
   @foreign_key_type :binary_id

@@ -92,7 +92,7 @@ defmodule ExNVRWeb.DashboardLive do
               class="absolute top-1 right-1 rounded-sm bg-zinc-900 py-1 px-2 text-sm text-white dark:bg-gray-700 dark:bg-opacity-80 hover:cursor-pointer"
               phx-hook="DownloadSnapshot"
             >
-              <.icon name="hero-camera"/>
+              <.icon name="hero-camera" />
             </div>
           </div>
           <div
@@ -188,7 +188,6 @@ defmodule ExNVRWeb.DashboardLive do
       |> assign_streams()
       |> assign_form(nil)
       |> assign_footage_form(%{})
-      |> assign_start_date(nil)
       |> live_view_enabled?()
       |> assign_runs()
       |> assign_timezone()
@@ -206,6 +205,7 @@ defmodule ExNVRWeb.DashboardLive do
       |> assign_streams()
       |> assign_form(nil)
       |> assign_footage_form(%{})
+      |> assign(start_date: nil)
       |> live_view_enabled?()
       |> assign_runs()
       |> assign_timezone()
@@ -232,7 +232,7 @@ defmodule ExNVRWeb.DashboardLive do
     socket =
       if current_datetime != new_datetime do
         socket
-        |> assign_start_date(new_datetime)
+        |> assign(start_date: new_datetime)
         |> live_view_enabled?()
         |> maybe_push_stream_event(new_datetime)
       else
@@ -278,8 +278,6 @@ defmodule ExNVRWeb.DashboardLive do
     devices = socket.assigns.devices
     assign(socket, current_device: device || List.first(devices))
   end
-
-  defp assign_start_date(socket, start_date), do: assign(socket, start_date: start_date)
 
   defp assign_streams(%{assigns: %{current_device: nil}} = socket), do: socket
 
