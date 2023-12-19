@@ -14,7 +14,8 @@ defmodule ExNVR.Elements.Realtimer do
   def_options duration: [
                 spec: Membrane.Time.t(),
                 default: Membrane.Time.seconds(30),
-                description: "The duration of the video to allow before pausing auto demand"
+                description:
+                  "The duration of the video to allow before transitioning to realtime streaming"
               ]
 
   @impl true
