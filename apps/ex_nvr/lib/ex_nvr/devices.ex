@@ -5,7 +5,7 @@ defmodule ExNVR.Devices do
 
   alias Ecto.Multi
   alias ExNVR.Model.{Device, Recording, Run}
-  alias ExNVR.{Repo, DeviceSupervisor}
+  alias ExNVR.{HTTP, Repo, DeviceSupervisor}
   alias Ecto.Multi
 
   import Ecto.Query
@@ -77,6 +77,30 @@ defmodule ExNVR.Devices do
   @spec change_device_update(Device.t(), map()) :: Ecto.Changeset.t()
   def change_device_update(%Device{} = device, attrs \\ %{}) do
     Device.update_changeset(device, attrs)
+  end
+
+  @spec fetch_snapshot(Device.t()) :: binary()
+  def fetch_snapshot(%{stream_config: %{snapshot_uri: nil}}) do
+    {:error, "No value for snapshot uri"}
+  end
+
+  @spec fetch_snapshot(Device.t()) :: binary()
+  def fetch_snapshot(%Device{} = device) do
+    url = device.stream_config.snapshot_uri
+    username = device.credentials.username
+    password = device.credentials.password
+    opts = [username: username, password: password]
+
+    case HTTP.get(url, opts) do
+      {:ok, %{status: 200, body: body}} ->
+        {:ok, body}
+
+      {:ok, response} ->
+        {:error, response}
+
+      error ->
+        error
+    end
   end
 
   defp create_device_directories(device) do

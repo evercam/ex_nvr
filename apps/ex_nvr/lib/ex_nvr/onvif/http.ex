@@ -16,6 +16,7 @@ defmodule ExNVR.Onvif.Http do
 
     username = opts[:username] || ""
     password = opts[:password] || ""
+    opts = opts ++ [method: :post, url: url]
 
     if username == "" or password == "" do
       mockable(Soap).call(wsdl, operation, body)
@@ -24,11 +25,8 @@ defmodule ExNVR.Onvif.Http do
       result = mockable(Soap).call(wsdl, operation, body, http_headers)
 
       with {:ok, %{status_code: 401} = resp} <- result,
-           digest_opts when is_map(digest_opts) <-
-             HTTP.digest_auth_opts(resp, opts, "WWW-Authenticate"),
-           digest_opts <- Map.merge(digest_opts, %{method: "POST", uri: "/onvif/device_service"}),
-           http_headers <- [{"Authorization", HTTP.encode_digest(digest_opts)}] do
-        mockable(Soap).call(wsdl, operation, body, http_headers)
+           {:ok, digest_header} <- HTTP.build_digest_auth_header(resp, opts) do
+        mockable(Soap).call(wsdl, operation, body, [digest_header])
       else
         _other -> result
       end
