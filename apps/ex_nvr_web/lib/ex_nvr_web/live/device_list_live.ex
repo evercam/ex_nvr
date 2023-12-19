@@ -109,7 +109,7 @@ defmodule ExNVRWeb.DeviceListLive do
               </h2>
               <h3>
                 The actual recording files are not deleted. <br />
-                If you want to delete them delete the following folder: <br />
+                If you want to delete them delete the following folders: <br />
                 <div class="bg-gray-400 rounded-md p-4 mt-2">
                   <code class="text-gray-800">
                     <%= Device.recording_dir(device) %> <br />
