@@ -96,7 +96,7 @@ defmodule ExNVR.HTTP do
     md5([ha1, opts.nonce, nonce_count, client_nonce, opts.qop, ha2])
   end
 
-  defp do_call(method, url, headers \\ %{}, body \\ nil, opts \\ []) do
+  defp do_call(method, url, headers \\ [], body \\ nil, opts \\ []) do
     Finch.build(method, url, headers, body) |> Finch.request(ExNVR.Finch, opts)
   end
 

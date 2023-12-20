@@ -84,11 +84,13 @@ defmodule ExNVR.Devices do
     {:error, "No value for snapshot uri"}
   end
 
-  @spec fetch_snapshot(Device.t()) :: binary()
-  def fetch_snapshot(%Device{} = device) do
-    url = device.stream_config.snapshot_uri
-    username = device.credentials.username
-    password = device.credentials.password
+  def fetch_snapshot(
+        %Device{} =
+          %{
+            stream_config: %{snapshot_uri: url},
+            credentials: %{username: username, password: password}
+          }
+      ) do
     opts = [username: username, password: password]
 
     case HTTP.get(url, opts) do
