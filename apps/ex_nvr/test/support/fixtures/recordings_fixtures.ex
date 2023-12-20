@@ -5,8 +5,11 @@ defmodule ExNVR.RecordingsFixtures do
   """
 
   alias ExNVR.Repo
-  alias ExNVR.Model.Run
+  alias ExNVR.Model.{Device, Recording, Run}
 
+  @typep attr :: map() | keyword()
+
+  @spec valid_recording_attributes(attr()) :: map()
   def valid_recording_attributes(attrs \\ %{}) do
     start_date = attrs[:start_date] || Faker.DateTime.backward(1)
 
@@ -17,6 +20,7 @@ defmodule ExNVR.RecordingsFixtures do
     })
   end
 
+  @spec valid_run_attributes(attr()) :: map()
   def valid_run_attributes(attrs \\ %{}) do
     Enum.into(attrs, %{
       start_date: Faker.DateTime.backward(1),
@@ -25,6 +29,7 @@ defmodule ExNVR.RecordingsFixtures do
     })
   end
 
+  @spec recording_fixture(Device.t(), attr()) :: Recording.t()
   def recording_fixture(device, attrs \\ %{}) do
     {:ok, recording, _run} =
       attrs
@@ -36,6 +41,7 @@ defmodule ExNVR.RecordingsFixtures do
     recording
   end
 
+  @spec run_fixture(Device.t(), attr()) :: Run.t()
   def run_fixture(device, attrs \\ %{}) do
     {:ok, run} =
       attrs

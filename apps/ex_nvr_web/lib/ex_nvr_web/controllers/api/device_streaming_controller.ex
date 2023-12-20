@@ -97,6 +97,7 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
       |> send_resp(:ok, snapshot)
     else
       [] -> {:error, :not_found}
+      _other -> {:error, :no_jpeg}
     end
   end
 
@@ -274,12 +275,12 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
     path
   end
 
-  def remove_unused_stream(manifest_file, %{pos: pos}) when not is_nil(pos), do: manifest_file
-  def remove_unused_stream(manifest_file, %{stream: nil}), do: manifest_file
+  defp remove_unused_stream(manifest_file, %{pos: pos}) when not is_nil(pos), do: manifest_file
+  defp remove_unused_stream(manifest_file, %{stream: nil}), do: manifest_file
 
-  def remove_unused_stream(manifest_file, %{stream: 0}),
+  defp remove_unused_stream(manifest_file, %{stream: 0}),
     do: HLS.Processor.delete_stream(manifest_file, "live_sub_stream")
 
-  def remove_unused_stream(manifest_file, %{stream: 1}),
+  defp remove_unused_stream(manifest_file, %{stream: 1}),
     do: HLS.Processor.delete_stream(manifest_file, "live_main_stream")
 end
