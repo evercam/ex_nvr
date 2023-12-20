@@ -73,12 +73,49 @@ let Hooks = {
     },
     Timeline: {
         mounted() {
-            createTimeline(this.el)
-            window.TimelineHook = this
+            createTimeline(this.el);
+            window.TimelineHook = this;
         },
         updated() {
-            updateTimelineSegments(this.el)
+            updateTimelineSegments(this.el);
         },
+    },
+    PlaybackSpeed: {
+        mounted() {
+            this.el.addEventListener("ratechange", this.changePlaybackspeed);
+        },
+        changePlaybackspeed(event) {
+            console.log(event)
+            let video = document.getElementById("live-video");
+            var rate = video.playbackRate;
+            if (rate != 1) {
+                video.playbackRate = 1;
+                switch (rate) {
+                    case 0.25:
+                        rate = 4;
+                        break;
+                    case 0.5:
+                        rate = 2;
+                        break;
+                    case 0.75:
+                        rate = 1.5;
+                        break;
+                    case 1.5:
+                        rate = 0.75;
+                        break;
+                    case 2:
+                        rate = 0.5;
+                        break;
+                    case 4:
+                        rate = 0.25;
+                        break;
+                }
+                alert(rate)
+                window.TimelineHook.pushEvent("playback_speed", {
+                    speedRate: rate,
+                })
+            }
+        }
     },
 }
 

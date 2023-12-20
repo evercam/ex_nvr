@@ -86,6 +86,7 @@ defmodule ExNVRWeb.DashboardLive do
               autoplay
               controls
               muted
+              phx-hook="PlaybackSpeed"
             />
             <div
               id="snapshot-button"
@@ -193,7 +194,7 @@ defmodule ExNVRWeb.DashboardLive do
       |> assign_timezone()
       |> maybe_push_stream_event(nil)
 
-    {:ok, assign(socket, start_date: nil, custom_duration: false)}
+    {:ok, assign(socket, start_date: nil, custom_duration: false, current_datetime: nil)}
   end
 
   def handle_event("switch_device", %{"device" => device_id}, socket) do
@@ -238,6 +239,16 @@ defmodule ExNVRWeb.DashboardLive do
       else
         socket
       end
+
+    {:noreply, assign(socket, current_datetime: new_datetime)}
+  end
+
+  def handle_event("playback_speed", %{"speedRate" => speed_rate}, socket) do
+    socket =
+      socket
+      |> assign_start_date(socket.assigns.current_datetime)
+      |> live_view_enabled?()
+      |> maybe_push_stream_event(socket.assigns.current_datetime, speed_rate)
 
     {:noreply, socket}
   end
@@ -338,7 +349,7 @@ defmodule ExNVRWeb.DashboardLive do
     assign(socket, footage_form: to_form(params, as: "footage"))
   end
 
-  defp maybe_push_stream_event(socket, datetime) do
+  defp maybe_push_stream_event(socket, datetime, playback_speed \\ nil) do
     cond do
       not connected?(socket) ->
         socket
@@ -350,7 +361,7 @@ defmodule ExNVRWeb.DashboardLive do
         device = socket.assigns.current_device
         current_stream = if socket.assigns.form.params["stream"] == "main_stream", do: 0, else: 1
 
-        {stream_url, poster_url} = stream_url(device, datetime, current_stream)
+        {stream_url, poster_url} = stream_url(device, datetime, current_stream, playback_speed)
 
         push_event(socket, "stream", %{src: stream_url, poster: poster_url})
     end
@@ -381,9 +392,12 @@ defmodule ExNVRWeb.DashboardLive do
     end
   end
 
-  defp stream_url(device, datetime, current_stream) do
+  defp stream_url(device, datetime, current_stream, playback_speed \\ nil) do
     stream_url =
-      ~p"/api/devices/#{device.id}/hls/index.m3u8?#{%{pos: format_date(datetime), stream: current_stream}}"
+      if playback_speed, do:
+        ~p"/api/devices/#{device.id}/hls/index.m3u8?#{%{pos: format_date(datetime), stream: current_stream, playback_speed: playback_speed}}",
+      else:
+        ~p"/api/devices/#{device.id}/hls/index.m3u8?#{%{pos: format_date(datetime), stream: current_stream}}"
 
     if datetime do
       poster_url = ~p"/api/devices/#{device.id}/snapshot?#{%{time: format_date(datetime)}}"
