@@ -173,12 +173,13 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
   end
 
   defp validate_hls_stream_params(params) do
-    types = %{pos: :utc_datetime, stream: :integer, resolution: :integer}
+    types = %{pos: :utc_datetime, stream: :integer, resolution: :integer, playback_speed: :float}
 
-    {%{pos: nil, stream: nil, resolution: nil}, types}
+    {%{pos: nil, stream: nil, resolution: nil, playback_speed: nil}, types}
     |> Changeset.cast(params, Map.keys(types))
     |> Changeset.validate_inclusion(:stream, [0, 1])
     |> Changeset.validate_inclusion(:resolution, [240, 480, 640, 720, 1080])
+    |> Changeset.validate_number(:playback_speed, greater_than: 0, less_than: 6)
     |> Changeset.apply_action(:create)
   end
 
@@ -264,7 +265,8 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
       start_date: params.pos,
       resolution: params.resolution,
       directory: path,
-      segment_name_prefix: UUID.uuid4()
+      segment_name_prefix: UUID.uuid4(),
+      playback_speed: params.playback_speed
     ]
 
     {:ok, _, pid} = HlsPlayback.start(pipeline_options)
