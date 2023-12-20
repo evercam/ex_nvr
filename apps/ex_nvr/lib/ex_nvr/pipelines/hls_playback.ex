@@ -38,10 +38,13 @@ defmodule ExNVR.Pipelines.HlsPlayback do
     Logger.metadata(device_id: options[:device].id)
     Membrane.Logger.info("Start playback pipeline with options: #{inspect(options)}")
 
+    playback_speed =
+      if options[:playback_speed], do: options[:playback_speed], else: 1
     spec = [
       child(:source, %Elements.RecordingBin{
         device: options[:device],
-        start_date: options[:start_date]
+        start_date: options[:start_date],
+        playback_speed: playback_speed
       })
       |> via_out(:video)
       |> child(:realtimer, ExNVR.Elements.Realtimer)

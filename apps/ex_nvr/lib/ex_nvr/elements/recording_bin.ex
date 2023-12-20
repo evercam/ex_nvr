@@ -57,6 +57,16 @@ defmodule ExNVR.Elements.RecordingBin do
                 Note that if both `duration` and `end_date` are provided, an
                 `end_of_stream` will be sent on the first satisfied condition.
                 """
+              ],
+              playback_speed: [
+                spec: float(),
+                default: 1,
+                description: """
+                The playback speed rate to either speed up or slow down the stream.
+                * A value lower than 1: speeds up the stream.
+                * A value greater than 1: slows down the stream.
+                * 1 is the default value which is the normal stream speed.
+                """
               ]
 
   def_output_pad :video,
@@ -113,7 +123,8 @@ defmodule ExNVR.Elements.RecordingBin do
       |> add_depayloader(track, id)
       |> child({:timestamper, id}, %Timestamper{
         offset: state.recording_duration,
-        start_date: Membrane.Time.from_datetime(state.current_recording.start_date)
+        start_date: Membrane.Time.from_datetime(state.current_recording.start_date),
+        playback_speed: state.playback_speed
       })
       |> get_child(:funnel)
     ]
