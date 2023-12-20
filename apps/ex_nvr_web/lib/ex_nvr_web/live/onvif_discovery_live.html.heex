@@ -27,7 +27,7 @@
       <ul class="bg-white dark:bg-gray-800 h-200 dark:text-white">
         <li
           :for={new_device <- @discovered_devices}
-          id={new_device.name}
+          id={new_device.url}
           class={
             [
               "mb-2 p-4 shadow-md rounded cursor-pointer"
@@ -37,7 +37,7 @@
                 else: ["dark:bg-gray-700"]
           }
           phx-click="device-details"
-          phx-value-name={new_device.name}
+          phx-value-url={new_device.url}
         >
           <span class="text-xl font-bold"><%= new_device.name %></span>
           <br />

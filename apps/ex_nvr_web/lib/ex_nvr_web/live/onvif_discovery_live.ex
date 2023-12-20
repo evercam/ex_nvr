@@ -56,11 +56,11 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
     end
   end
 
-  def handle_event("device-details", %{"name" => device_name}, socket) do
-    device = Enum.find(socket.assigns.discovered_devices, &(&1.name == device_name))
+  def handle_event("device-details", %{"url" => device_url}, socket) do
+    device = Enum.find(socket.assigns.discovered_devices, &(&1.url == device_url))
     device_details_cache = socket.assigns.device_details_cache
 
-    case Map.fetch(device_details_cache, device.name) do
+    case Map.fetch(device_details_cache, device.url) do
       {:ok, device_details} ->
         {:noreply, assign(socket, selected_device: device, device_details: device_details)}
 
@@ -88,7 +88,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
          assign(socket,
            selected_device: device,
            device_details: device_details,
-           device_details_cache: Map.put(device_details_cache, device_name, device_details)
+           device_details_cache: Map.put(device_details_cache, device_url, device_details)
          )}
     end
   end
