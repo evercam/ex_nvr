@@ -21,9 +21,11 @@ import "phoenix_html"
 import { Socket } from "phoenix"
 import { LiveSocket } from "phoenix_live_view"
 import topbar from "../vendor/topbar"
-import createTimeline, { updateTimelineSegments } from "./timeline"
 import "flowbite/dist/flowbite.phoenix"
 import Hls from "hls.js"
+
+import Timeline from "../vue/Timeline.vue"
+import vueWrapper from "./vueWrapper"
 
 const MANIFEST_LOAD_TIMEOUT = 60_000
 
@@ -71,15 +73,15 @@ let Hooks = {
             videoElement.play();
         },
     },
-    Timeline: {
+    vueTimeLine: {
         mounted() {
-            createTimeline(this.el)
             window.TimelineHook = this
-        },
-        updated() {
-            updateTimelineSegments(this.el)
-        },
-    },
+            vueWrapper({
+                el: this.el,
+                component: Timeline,
+            })
+        }
+    }
 }
 
 let csrfToken = document

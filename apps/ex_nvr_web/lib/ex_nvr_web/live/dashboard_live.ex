@@ -5,7 +5,7 @@ defmodule ExNVRWeb.DashboardLive do
   alias ExNVR.Devices
   alias ExNVR.Recordings
   alias ExNVR.Model.Device
-  alias ExNVRWeb.TimelineComponent
+  # alias ExNVRWeb.TimelineComponent
 
   @durations [
     {"2 Minutes", "120"},
@@ -101,12 +101,13 @@ defmodule ExNVRWeb.DashboardLive do
           >
             Device is not recording, live view is not available
           </div>
-          <.live_component
+          <div id="vueTimeLine" phx-hook="vueTimeLine" />
+          <%!-- <.live_component
             module={TimelineComponent}
             id="tl"
             segments={@segments}
             timezone={@timezone}
-          />
+          /> --%>
         </div>
       </div>
 
@@ -192,8 +193,22 @@ defmodule ExNVRWeb.DashboardLive do
       |> assign_runs()
       |> assign_timezone()
       |> maybe_push_stream_event(nil)
+      |> push_timeline()
+
+    if connected?(socket) do
+      Phoenix.PubSub.subscribe(ExNVR.PubSub, "new_runs")
+    end
 
     {:ok, assign(socket, start_date: nil, custom_duration: false)}
+  end
+
+  def handle_info(:runs, socket) do
+    socket =
+      socket
+      |> assign_runs()
+      |> push_timeline()
+
+    {:noreply, socket}
   end
 
   def handle_event("switch_device", %{"device" => device_id}, socket) do
@@ -210,6 +225,7 @@ defmodule ExNVRWeb.DashboardLive do
       |> assign_runs()
       |> assign_timezone()
       |> maybe_push_stream_event(socket.assigns.start_date)
+      |> push_timeline()
 
     {:noreply, socket}
   end
@@ -235,6 +251,8 @@ defmodule ExNVRWeb.DashboardLive do
         |> assign(start_date: new_datetime)
         |> live_view_enabled?()
         |> maybe_push_stream_event(new_datetime)
+        |> assign_runs()
+        |> push_timeline()
       else
         socket
       end
@@ -294,6 +312,28 @@ defmodule ExNVRWeb.DashboardLive do
     assign(socket, supported_streams: supported_streams)
   end
 
+  defp push_timeline(%{assigns: %{segments: nil, current_device: nil}} = socket), do: socket
+
+  defp push_timeline(%{assigns: %{segments: segments, current_device: current_device}} = socket) do
+    events = %{
+      "Recording" => %{
+        "label" => "Recordings",
+        "color" => "#FF5733",
+        "events" => Enum.map(
+          segments,
+          fn segment ->
+            %{
+              "startDate" => DateTime.to_unix(segment.start_date, :millisecond),
+              "endDate" => DateTime.to_unix(segment.end_date, :millisecond),
+            }
+          end
+        )
+      }
+    }
+
+    push_event(socket, "update-timeline", %{events: events, device: current_device.id})
+  end
+
   defp assign_runs(%{assigns: %{current_device: nil}} = socket), do: socket
 
   defp assign_runs(socket) do
@@ -303,7 +343,6 @@ defmodule ExNVRWeb.DashboardLive do
       Recordings.list_runs(%{device_id: device.id})
       |> Enum.map(&Map.take(&1, [:start_date, :end_date]))
       |> shift_timezones(device.timezone)
-      |> Jason.encode!()
 
     assign(socket, segments: segments)
   end
@@ -311,8 +350,8 @@ defmodule ExNVRWeb.DashboardLive do
   defp shift_timezones(dates, timezone) do
     Enum.map(dates, fn %{start_date: start_date, end_date: end_date} ->
       %{
-        start_date: DateTime.shift_zone!(start_date, timezone) |> DateTime.to_naive(),
-        end_date: DateTime.shift_zone!(end_date, timezone) |> DateTime.to_naive()
+        start_date: DateTime.shift_zone!(start_date, timezone),
+        end_date: DateTime.shift_zone!(end_date, timezone)
       }
     end)
   end
