@@ -33,7 +33,7 @@ defmodule ExNVRWeb.UserListLive do
         <:action :let={user}>
           <.button
             :if={@current_user.role == :admin}
-            id={"dropdownMenuIconButton_#{user.id}"}
+            id={"dropdownMenuIconButton-#{user.id}"}
             data-dropdown-toggle={"dropdownDots-#{user.id}"}
             class="text-sm ml-3 hover:bg-gray-100 dark:bg-gray-800"
           >
@@ -52,7 +52,7 @@ defmodule ExNVRWeb.UserListLive do
             >
               <ul
                 class="py-2 text-sm text-gray-700 dark:text-gray-200"
-                aria-labelledby={"dropdownMenuIconButton_#{user.id}"}
+                aria-labelledby={"dropdownMenuIconButton-#{user.id}"}
               >
                 <li>
                   <.link
@@ -67,7 +67,7 @@ defmodule ExNVRWeb.UserListLive do
                     id={"delete_user-#{user.id}"}
                     href="#"
                     class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-red"
-                    phx-click={JS.remove_class("hidden", to: "#confirm_delete_modal")}
+                    phx-click={show_modal("delete-modal")}
                   >
                     Delete
                   </.link>
@@ -75,31 +75,26 @@ defmodule ExNVRWeb.UserListLive do
               </ul>
             </div>
           </.button>
-          <div
-            id="confirm_delete_modal"
-            class="hidden fixed top-0 right-0 bottom-0 left-0 flex justify-center items-center bg-black bg-opacity-70 z-50"
-          >
-            <div class="confirm-dialog bg-white p-4 rounded-lg text-center border-b border-gray-200 dark:bg-gray-800 dark:border-gray-700">
+          <.modal id="delete-modal">
+            <div class="bg-white p-4 rounded-lg text-center border-b border-gray-200 dark:bg-gray-800 dark:border-gray-700">
               <p class="text-white mb-10 mt-10">
                 <%= "Are you sure you want to delete the User: '#{user.email}'" %>
               </p>
               <.button
-                phx-click={
-                  JS.push("delete", value: %{id: user.id})
-                  |> JS.add_class("hidden", to: "#confirm_delete_modal")
-                }
+                phx-disable-with="Deleting..."
+                phx-click={JS.push("delete", value: %{id: user.id})}
                 class="bg-red-500 text-white px-4 py-2 mx-2 rounded hover:bg-red-600"
               >
                 Yes
               </.button>
               <.button
-                phx-click={JS.add_class("hidden", to: "#confirm_delete_modal")}
-                class="bg-gray-500 text-white px-4 py-2 mx-2 rounded hover:bg-gray-600"
+                phx-click={hide_modal("delete-modal")}
+                class="bg-red-500 text-white px-4 py-2 mx-2 rounded hover:bg-red-600"
               >
-                No
+                Cancel
               </.button>
             </div>
-          </div>
+          </.modal>
         </:action>
       </.table>
     </div>
