@@ -394,10 +394,11 @@ defmodule ExNVRWeb.DashboardLive do
 
   defp stream_url(device, datetime, current_stream, playback_speed \\ nil) do
     stream_url =
-      if playback_speed, do:
-        ~p"/api/devices/#{device.id}/hls/index.m3u8?#{%{pos: format_date(datetime), stream: current_stream, playback_speed: playback_speed}}",
-      else:
-        ~p"/api/devices/#{device.id}/hls/index.m3u8?#{%{pos: format_date(datetime), stream: current_stream}}"
+      if playback_speed,
+        do:
+          ~p"/api/devices/#{device.id}/hls/index.m3u8?#{%{pos: format_date(datetime), stream: current_stream, playback_speed: playback_speed}}",
+        else:
+          ~p"/api/devices/#{device.id}/hls/index.m3u8?#{%{pos: format_date(datetime), stream: current_stream}}"
 
     if datetime do
       poster_url = ~p"/api/devices/#{device.id}/snapshot?#{%{time: format_date(datetime)}}"

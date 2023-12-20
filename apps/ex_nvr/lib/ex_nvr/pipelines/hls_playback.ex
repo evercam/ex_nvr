@@ -40,6 +40,7 @@ defmodule ExNVR.Pipelines.HlsPlayback do
 
     playback_speed =
       if options[:playback_speed], do: options[:playback_speed], else: 1
+
     spec = [
       child(:source, %Elements.RecordingBin{
         device: options[:device],

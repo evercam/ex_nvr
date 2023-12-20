@@ -39,7 +39,7 @@ defmodule ExNVR.HLS.PlaybackSpeeder do
   def handle_process(:input, buffer, _ctx, state) do
     buffer = %{
       buffer
-      | pts: trunc(buffer.pts  * state.rate)
+      | pts: trunc(buffer.pts * state.rate)
     }
 
     {[buffer: {:output, buffer}], state}

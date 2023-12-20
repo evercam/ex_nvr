@@ -21,6 +21,7 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
       query_params = [stream_id: Utils.generate_token(), live: is_nil(params.pos)]
       path = start_hls_pipeline(conn.assigns.device, params, query_params[:stream_id])
       manifest_file = File.read!(Path.join(path, "index.m3u8"))
+
       conn
       |> put_resp_content_type("application/vnd.apple.mpegurl")
       |> send_resp(
