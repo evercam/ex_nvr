@@ -70,7 +70,7 @@ defmodule ExNVRWeb.UserListLiveTest do
       assert html =~ "Delete"
 
       assert lv
-             |> element("#delete_user_#{user.id}", "Delete")
+             |> element("#delete_user-#{user.id}", "Delete")
              |> has_element?()
 
       assert {:ok, _deleted_user} = ExNVR.Accounts.delete_user(user)

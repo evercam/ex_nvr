@@ -34,7 +34,7 @@ defmodule ExNVRWeb.UserListLive do
           <.button
             :if={@current_user.role == :admin}
             id={"dropdownMenuIconButton_#{user.id}"}
-            data-dropdown-toggle={"dropdownDots_#{user.id}"}
+            data-dropdown-toggle={"dropdownDots-#{user.id}"}
             class="text-sm ml-3 hover:bg-gray-100 dark:bg-gray-800"
           >
             <svg
@@ -47,7 +47,7 @@ defmodule ExNVRWeb.UserListLive do
               <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
             </svg>
             <div
-              id={"dropdownDots_#{user.id}"}
+              id={"dropdownDots-#{user.id}"}
               class="z-10 hidden text-left bg-white divide-y divide-gray-100 rounded-lg shadow w-44 dark:bg-gray-700 dark:divide-gray-600"
             >
               <ul
@@ -64,7 +64,7 @@ defmodule ExNVRWeb.UserListLive do
                 </li>
                 <li>
                   <.link
-                    id={"delete_user_#{user.id}"}
+                    id={"delete_user-#{user.id}"}
                     href="#"
                     class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-red"
                     phx-click={JS.remove_class("hidden", to: "#confirm_delete_modal")}
