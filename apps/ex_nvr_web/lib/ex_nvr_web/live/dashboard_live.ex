@@ -92,7 +92,7 @@ defmodule ExNVRWeb.DashboardLive do
               class="absolute top-1 right-1 rounded-sm bg-zinc-900 py-1 px-2 text-sm text-white dark:bg-gray-700 dark:bg-opacity-80 hover:cursor-pointer"
               phx-hook="DownloadSnapshot"
             >
-              <.icon name="hero-camera"/>
+              <.icon name="hero-camera" />
             </div>
           </div>
           <div

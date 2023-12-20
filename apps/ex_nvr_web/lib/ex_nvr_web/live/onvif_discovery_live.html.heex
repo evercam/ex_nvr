@@ -29,9 +29,13 @@
           :for={new_device <- @discovered_devices}
           id={new_device.name}
           class={
-          [
-          "mb-2 p-4 shadow-md rounded cursor-pointer"
-          ] ++ if @selected_device && @selected_device.url == new_device.url, do: ["dark:bg-gray-500"], else: ["dark:bg-gray-700"]}
+            [
+              "mb-2 p-4 shadow-md rounded cursor-pointer"
+            ] ++
+              if @selected_device && @selected_device.url == new_device.url,
+                do: ["dark:bg-gray-500"],
+                else: ["dark:bg-gray-700"]
+          }
           phx-click="device-details"
           phx-value-name={new_device.name}
         >
@@ -150,7 +154,9 @@
       </div>
     </div>
     <div class="w-full pr-5 pb-5 mb-5">
-      <.button :if={@selected_device} phx-click="add-device" class="float-right">Add device</.button>
+      <.button :if={@selected_device} phx-click="add-device" class="float-right">
+        Add device
+      </.button>
     </div>
   </.card>
 </div>

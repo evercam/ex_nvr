@@ -87,20 +87,21 @@ defmodule ExNVR.RecordingTest do
     assert DateTime.compare(run.start_date, ~U(2023-12-12 11:10:00Z)) == :eq
 
     refute Enum.any?(
-      1..40,
-      &File.exists?(
-        Recordings.recording_path(device, %{
-          start_date: DateTime.add(run1_start_date, &1 - 1, :minute)
-        })
-      )
-    )
+             1..40,
+             &File.exists?(
+               Recordings.recording_path(device, %{
+                 start_date: DateTime.add(run1_start_date, &1 - 1, :minute)
+               })
+             )
+           )
+
     refute Enum.any?(
-      1..5,
-      &File.exists?(
-        Recordings.recording_path(device, %{
-          start_date: DateTime.add(run2_start_date, &1 - 1, :minute)
-        })
-      )
-    )
+             1..5,
+             &File.exists?(
+               Recordings.recording_path(device, %{
+                 start_date: DateTime.add(run2_start_date, &1 - 1, :minute)
+               })
+             )
+           )
   end
 end
