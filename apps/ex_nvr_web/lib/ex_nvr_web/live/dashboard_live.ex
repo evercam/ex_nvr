@@ -246,7 +246,7 @@ defmodule ExNVRWeb.DashboardLive do
   def handle_event("playback_speed", %{"speedRate" => speed_rate}, socket) do
     socket =
       socket
-      |> assign_start_date(socket.assigns.current_datetime)
+      |> assign(start_date: socket.assigns.current_datetime)
       |> live_view_enabled?()
       |> maybe_push_stream_event(socket.assigns.current_datetime, speed_rate)
 

@@ -7,7 +7,7 @@ defmodule ExNVR.Pipelines.HlsPlayback do
 
   require Membrane.Logger
 
-  alias ExNVR.Elements
+  alias ExNVR.{Elements, HLS}
   alias ExNVR.Pipeline.Output
 
   @call_timeout :timer.seconds(10)
@@ -43,11 +43,11 @@ defmodule ExNVR.Pipelines.HlsPlayback do
     spec = [
       child(:source, %Elements.RecordingBin{
         device: options[:device],
-        start_date: options[:start_date],
-        playback_speed: playback_speed
+        start_date: options[:start_date]
       })
       |> via_out(:video)
-      |> child(:realtimer, ExNVR.Elements.Realtimer)
+      |> child(:realtimer, Elements.Realtimer)
+      |> child(:playback_speeder, %HLS.PlaybackSpeeder{rate: playback_speed})
       |> via_in(Pad.ref(:video, :playback), options: [resolution: options[:resolution]])
       |> child(:sink, %Output.HLS{
         location: options[:directory],

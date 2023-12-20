@@ -85,7 +85,6 @@ let Hooks = {
             this.el.addEventListener("ratechange", this.changePlaybackspeed);
         },
         changePlaybackspeed(event) {
-            console.log(event)
             let video = document.getElementById("live-video");
             var rate = video.playbackRate;
             if (rate != 1) {
@@ -110,7 +109,6 @@ let Hooks = {
                         rate = 0.25;
                         break;
                 }
-                alert(rate)
                 window.TimelineHook.pushEvent("playback_speed", {
                     speedRate: rate,
                 })
