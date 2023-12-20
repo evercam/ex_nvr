@@ -36,25 +36,23 @@
         placeholder="Password"
         required
       />
-      <div class="flex justify-around">
-        <.input
-          field={@user_form[:role]}
-          id="user_role"
-          type="select"
-          options={[{"Admin", "admin"}, {"User", "user"}]}
-          label="Role"
-          placeholder="Choose a role for the user"
-        />
+      <.input
+        field={@user_form[:role]}
+        id="user_role"
+        type="select"
+        options={[{"Admin", "admin"}, {"User", "user"}]}
+        label="Role"
+        placeholder="Choose a role for the user"
+      />
 
-        <.input
-          field={@user_form[:language]}
-          id="user_language"
-          type="select"
-          options={[{"English", "en"}]}
-          label="Language"
-          placeholder="Choose a Language for the user"
-        />
-      </div>
+      <.input
+        field={@user_form[:language]}
+        id="user_language"
+        type="select"
+        options={[{"English", "en"}]}
+        label="Language"
+        placeholder="Choose a Language for the user"
+      />
 
       <:actions>
         <.button :if={is_nil(@user.id)} class="w-full" phx-disable-with="Creating...">
