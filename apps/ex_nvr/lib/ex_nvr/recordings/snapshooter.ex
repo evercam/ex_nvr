@@ -5,8 +5,9 @@ defmodule ExNVR.Recordings.Snapshooter do
 
   alias ExNVR.Model.{Device, Recording}
   alias ExNVR.MP4.Reader
-  alias Membrane.{Buffer, H264}
-  alias Membrane.H264.FFmpeg.Decoder
+  alias Membrane.{Buffer, H264, H265}
+  alias Membrane.H264.FFmpeg.Decoder, as: H264Decoder
+  alias Membrane.H265.FFmpeg.Decoder, as: H265Decoder
   alias Membrane.Time
 
   @spec snapshot(Device.t(), Recording.t(), DateTime.t(), Keyword.t()) ::
@@ -65,7 +66,8 @@ defmodule ExNVR.Recordings.Snapshooter do
   end
 
   defp do_get_snapshot(frames, track) do
-    decoder = Decoder.Native.create!()
+    decoder_module = get_decoder(track)
+    decoder = decoder_module.create!()
 
     [first_frame | rest] =
       Enum.map(frames, fn frame -> %Buffer{frame | payload: to_annexb(frame.payload)} end)
@@ -75,13 +77,13 @@ defmodule ExNVR.Recordings.Snapshooter do
     last_frame =
       Enum.reduce([first_frame | rest], nil, fn frame, _last_frame ->
         {:ok, _pts, decoded_frames} =
-          Decoder.Native.decode(frame.payload, frame.pts, frame.dts, true, decoder)
+          decoder_module.decode(frame.payload, frame.pts, frame.dts, true, decoder)
 
         List.last(decoded_frames)
       end)
 
     last_frame =
-      case Decoder.Native.flush(true, decoder) do
+      case decoder_module.flush(true, decoder) do
         {:ok, _pts, []} -> last_frame
         {:ok, _pts, frames} -> List.last(frames)
       end
@@ -93,6 +95,14 @@ defmodule ExNVR.Recordings.Snapshooter do
     %{spss: spss, ppss: ppss} = H264.Parser.DecoderConfigurationRecord.parse(dcr)
     Enum.map_join(spss ++ ppss, &(<<0, 0, 0, 1>> <> &1))
   end
+
+  defp get_parameter_sets(%H265{stream_structure: {_hevc, dcr}}) do
+    %{vpss: vpss, spss: spss, ppss: ppss} = H265.Parser.DecoderConfigurationRecord.parse(dcr)
+    Enum.map_join(vpss ++ spss ++ ppss, &(<<0, 0, 0, 1>> <> &1))
+  end
+
+  defp get_decoder(%H264{}), do: H264Decoder.Native
+  defp get_decoder(%H265{}), do: H265Decoder.Native
 
   defp to_annexb(data) do
     for <<size::32, nal_unit::binary-size(size) <- data>>,

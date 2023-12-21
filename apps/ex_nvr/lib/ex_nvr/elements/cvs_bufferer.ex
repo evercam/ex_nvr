@@ -13,17 +13,25 @@ defmodule ExNVR.Elements.CVSBufferer do
   require ExNVR.Utils
 
   alias ExNVR.Utils
-  alias Membrane.H264
+  alias Membrane.{H264, H265}
 
   def_input_pad :input,
     demand_mode: :auto,
     demand_unit: :buffers,
-    accepted_format: %H264{alignment: :au},
+    accepted_format:
+      any_of(
+        %H264{alignment: :au},
+        %H265{alignment: :au}
+      ),
     availability: :always
 
   def_output_pad :output,
     demand_mode: :auto,
-    accepted_format: %H264{alignment: :au},
+    accepted_format:
+      any_of(
+        %H264{alignment: :au},
+        %H265{alignment: :au}
+      ),
     availability: :on_request
 
   @impl true

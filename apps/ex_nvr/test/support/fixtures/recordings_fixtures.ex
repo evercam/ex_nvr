@@ -9,14 +9,23 @@ defmodule ExNVR.RecordingsFixtures do
 
   @typep attr :: map() | keyword()
 
+  @avc1_file "../../fixtures/mp4/big_buck_avc.mp4" |> Path.expand(__DIR__)
+  @hvc1_file "../../fixtures/mp4/big_buck_hevc.mp4" |> Path.expand(__DIR__)
+
   @spec valid_recording_attributes(attr()) :: map()
   def valid_recording_attributes(attrs \\ %{}) do
     start_date = attrs[:start_date] || Faker.DateTime.backward(1)
 
+    file_path =
+      case Map.fetch(attrs, :encoding) do
+        {:ok, :H265} -> @hvc1_file
+        _other -> @avc1_file
+      end
+
     Enum.into(attrs, %{
       start_date: start_date,
       end_date: DateTime.add(start_date, :rand.uniform(10) * 60),
-      path: "../../fixtures/big_buck.mp4" |> Path.expand(__DIR__)
+      path: file_path
     })
   end
 

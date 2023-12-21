@@ -17,11 +17,10 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
 
   @spec hls_stream(Plug.Conn.t(), map()) :: return_t()
   def hls_stream(conn, params) do
-    with {:ok, params} <- validate_hls_stream_params(params) do
-      query_params = [stream_id: Utils.generate_token(), live: is_nil(params.pos)]
-      path = start_hls_pipeline(conn.assigns.device, params, query_params[:stream_id])
-      manifest_file = File.read!(Path.join(path, "index.m3u8"))
-
+    with {:ok, params} <- validate_hls_stream_params(params),
+         query_params <- [stream_id: Utils.generate_token(), live: is_nil(params.pos)],
+         path <- start_hls_pipeline(conn.assigns.device, params, query_params[:stream_id]),
+         {:ok, manifest_file} <- File.read(Path.join(path, "index.m3u8")) do
       conn
       |> put_resp_content_type("application/vnd.apple.mpegurl")
       |> send_resp(

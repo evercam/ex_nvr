@@ -11,53 +11,89 @@ defmodule ExNVR.Recordings.SnapshooterTest do
   setup ctx do
     device = device_fixture(%{settings: %{storage_address: ctx.tmp_dir}})
 
-    recording =
+    avc_recording =
       recording_fixture(device,
         start_date: ~U(2023-06-23 10:00:00Z),
         end_date: ~U(2023-06-23 10:00:05Z)
       )
 
-    %{device: device, recording: recording}
+    hevc_recording =
+      recording_fixture(device,
+        start_date: ~U(2023-06-23 10:00:10Z),
+        end_date: ~U(2023-06-23 10:00:15Z),
+        encoding: :H265
+      )
+
+    %{device: device, avc_recording: avc_recording, hevc_recording: hevc_recording}
   end
 
   test "get snapshot from closest keyframe before specified date time", %{
     device: device,
-    recording: recording
+    avc_recording: avc_recording,
+    hevc_recording: hevc_recording
   } do
-    ref_path = "../../fixtures/images/ref_snapshot_before_keyframe.jpeg" |> Path.expand(__DIR__)
+    perform_test(
+      device,
+      avc_recording,
+      ref_path(:h264, "before-keyframe"),
+      ~U(2023-06-23 10:00:03Z),
+      ~U(2023-06-23 10:00:02Z),
+      :before
+    )
 
+    perform_test(
+      device,
+      hevc_recording,
+      ref_path(:h265, "before-keyframe"),
+      ~U(2023-06-23 10:00:13Z),
+      ~U(2023-06-23 10:00:12Z),
+      :before
+    )
+  end
+
+  test "get snapshot at the specified date time", %{
+    device: device,
+    avc_recording: avc_recording,
+    hevc_recording: hevc_recording
+  } do
+    perform_test(
+      device,
+      avc_recording,
+      ref_path(:h264, "precise"),
+      ~U(2023-06-23 10:00:03Z),
+      ~U(2023-06-23 10:00:03Z),
+      :precise
+    )
+
+    perform_test(
+      device,
+      hevc_recording,
+      ref_path(:h265, "precise"),
+      ~U(2023-06-23 10:00:13.01Z),
+      ~U(2023-06-23 10:00:13Z),
+      :precise
+    )
+  end
+
+  defp perform_test(device, recording, ref_path, requested_datetime, snapshot_timestamp, method) do
     assert {:ok, timestamp, snapshot} =
              ExNVR.Recordings.Snapshooter.snapshot(
                device,
                recording,
-               ~U(2023-06-23 10:00:03Z)
+               requested_datetime,
+               method: method
              )
 
     assert snapshot == File.read!(ref_path)
 
     assert_in_delta(
       DateTime.to_unix(timestamp, :millisecond),
-      DateTime.to_unix(~U(2023-06-23 10:00:02Z), :millisecond),
+      DateTime.to_unix(snapshot_timestamp, :millisecond),
       100
     )
   end
 
-  test "get snapshot at the specified date time", %{
-    device: device,
-    recording: recording
-  } do
-    ref_path = "../../fixtures/images/ref_snapshot_exact_time.jpeg" |> Path.expand(__DIR__)
-    datetime = ~U(2023-06-23 10:00:03Z)
-
-    assert {:ok, start_date, snapshot} =
-             ExNVR.Recordings.Snapshooter.snapshot(
-               device,
-               recording,
-               datetime,
-               method: :precise
-             )
-
-    assert snapshot == File.read!(ref_path)
-    assert DateTime.compare(start_date, datetime) == :eq
+  defp ref_path(encoding, method) do
+    Path.expand("../../fixtures/images/#{encoding}/ref-#{method}.jpeg", __DIR__)
   end
 end

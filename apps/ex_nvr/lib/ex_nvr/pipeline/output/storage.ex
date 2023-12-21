@@ -9,14 +9,18 @@ defmodule ExNVR.Pipeline.Output.Storage do
 
   alias __MODULE__.{Segmenter, Segmenter.Segment}
   alias ExNVR.Model.{Device, Run}
-  alias Membrane.H264
+  alias Membrane.{H264, H265}
 
   @recordings_event [:ex_nvr, :recordings, :stop]
 
   def_input_pad :input,
     demand_mode: :auto,
     demand_unit: :buffers,
-    accepted_format: %H264{alignment: :au},
+    accepted_format:
+      any_of(
+        %H264{alignment: :au},
+        %H265{alignment: :au}
+      ),
     availability: :always
 
   def_options device: [
@@ -71,7 +75,7 @@ defmodule ExNVR.Pipeline.Output.Storage do
 
   @impl true
   def handle_child_notification(
-        {:new_media_segment, segment_ref},
+        {:new_media_segment, segment_ref, codec},
         :segmenter,
         _ctx,
         state
@@ -84,9 +88,7 @@ defmodule ExNVR.Pipeline.Output.Storage do
     spec = [
       get_child(:segmenter)
       |> via_out(Pad.ref(:output, segment_ref))
-      |> child({:h264_mp4_payloader, segment_ref}, %Membrane.H264.Parser{
-        output_stream_structure: :avc1
-      })
+      |> child({:mp4_payloader, segment_ref}, get_parser(codec))
       |> child({:mp4_muxer, segment_ref}, %Membrane.MP4.Muxer.ISOM{fast_start: true})
       |> child({:sink, segment_ref}, %Membrane.File.Sink{
         location: recording_path
@@ -137,6 +139,9 @@ defmodule ExNVR.Pipeline.Output.Storage do
       {[], %{state | terminating?: true}}
     end
   end
+
+  defp get_parser(:H264), do: %Membrane.H264.Parser{output_stream_structure: :avc1}
+  defp get_parser(:H265), do: %Membrane.H265.Parser{output_stream_structure: :hvc1}
 
   defp do_save_recording(state, recording_ref) do
     {segment, state} = pop_in(state, [:pending_segments, recording_ref])

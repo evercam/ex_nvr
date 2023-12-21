@@ -13,13 +13,20 @@ defmodule ExNVR.Pipelines.SnapshotTest do
   setup ctx do
     device = device_fixture(%{settings: %{storage_address: ctx.tmp_dir}})
 
-    recording =
+    avc_recording =
       recording_fixture(device,
         start_date: ~U(2023-06-23 10:00:00Z),
         end_date: ~U(2023-06-23 10:00:05Z)
       )
 
-    %{device: device, recording: recording}
+    hevc_recording =
+      recording_fixture(device,
+        start_date: ~U(2023-06-23 10:00:10Z),
+        end_date: ~U(2023-06-23 10:00:15Z),
+        encoding: :H265
+      )
+
+    %{device: device, avc_recording: avc_recording, hevc_recording: hevc_recording}
   end
 
   defp perform_test(device, recording, ref_path, method \\ :before) do
@@ -31,21 +38,30 @@ defmodule ExNVR.Pipelines.SnapshotTest do
              )
 
     assert_receive {:snapshot, snapshot}, 1_000, "No snapshot received"
-    assert snapshot == File.read!(ref_path)
+    assert snapshot == File.read!(ref_path), "Content not the same"
+  end
+
+  defp ref_path(encoding, method) do
+    Path.expand("../../fixtures/images/#{encoding}/ref-#{method}.jpeg", __DIR__)
   end
 
   describe "snapshot is created" do
     test "from closest keyframe before specified date time", %{
       device: device,
-      recording: recording
+      avc_recording: avc_recording,
+      hevc_recording: hevc_recording
     } do
-      ref_path = "../../fixtures/images/ref_snapshot_before_keyframe.jpeg" |> Path.expand(__DIR__)
-      perform_test(device, recording, ref_path)
+      perform_test(device, avc_recording, ref_path(:h264, "before-keyframe"))
+      perform_test(device, hevc_recording, ref_path(:h265, "before-keyframe"))
     end
 
-    test "with exact time", %{device: device, recording: recording} do
-      ref_path = "../../fixtures/images/ref_snapshot_exact_time.jpeg" |> Path.expand(__DIR__)
-      perform_test(device, recording, ref_path, :precise)
+    test "with exact time", %{
+      device: device,
+      avc_recording: avc_recording,
+      hevc_recording: hevc_recording
+    } do
+      perform_test(device, avc_recording, ref_path(:h264, "precise"), :precise)
+      perform_test(device, hevc_recording, ref_path(:h265, "precise"), :precise)
     end
   end
 end

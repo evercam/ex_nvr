@@ -1,19 +1,23 @@
 defmodule ExNVR.Elements.SnapshotBin do
   @moduledoc """
-  A bin element that receives an H264 access units and create a snapshot in
-  JPEG or PNG format by using the first or last access unit.
+  A bin element that receives an encoded video stream and create a snapshot in
+  JPEG format by using the first or last access unit.
 
   Once the snapshot is created a parent notification is sent: `{:notify_parent, {:snapshot, snapshot}}`
   """
 
   use Membrane.Bin
 
-  alias Membrane.H264
+  alias Membrane.{H264, H265}
 
   def_input_pad :input,
     demand_unit: :buffers,
     demand_mode: :auto,
-    accepted_format: %H264{alignment: :au},
+    accepted_format:
+      any_of(
+        %H264{alignment: :au},
+        %H265{alignment: :au}
+      ),
     availability: :on_request,
     options: [
       format: [
@@ -26,6 +30,10 @@ defmodule ExNVR.Elements.SnapshotBin do
         description: """
         Create a snapshot from the first or last access unit
         """
+      ],
+      encoding: [
+        spec: ExNVR.Pipelines.Main.encoding(),
+        description: "The video encoding"
       ]
     ]
 
@@ -36,9 +44,15 @@ defmodule ExNVR.Elements.SnapshotBin do
 
   @impl true
   def handle_pad_added(Pad.ref(:input, ref) = pad, ctx, state) do
+    decoder =
+      case ctx.options[:encoding] do
+        :H264 -> %Membrane.H264.FFmpeg.Decoder{use_shm?: true}
+        :H265 -> %Membrane.H265.FFmpeg.Decoder{use_shm?: true}
+      end
+
     spec = [
       bin_input(pad)
-      |> child({:decoder, ref}, %Membrane.H264.FFmpeg.Decoder{use_shm?: true})
+      |> child({:decoder, ref}, decoder)
       |> child({:filter, ref}, %ExNVR.Elements.OnePass{allow: ctx.options[:rank]})
       |> child({:jpeg, ref}, Turbojpeg.Filter)
       |> child({:sink, ref}, %ExNVR.Elements.Process.Sink{pid: self()})

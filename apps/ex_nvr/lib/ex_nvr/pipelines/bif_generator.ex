@@ -5,6 +5,8 @@ defmodule ExNVR.Pipelines.BifGenerator do
 
   use Membrane.Pipeline
 
+  alias Membrane.{H264, H265}
+
   def start(options) do
     Pipeline.start(__MODULE__, options)
   end
@@ -18,13 +20,29 @@ defmodule ExNVR.Pipelines.BifGenerator do
         end_date: options[:end_date],
         strategy: :exact
       })
+    ]
+
+    {[spec: spec], %{location: options[:location]}}
+  end
+
+  @impl true
+  def handle_child_notification({:track, track}, :source, _ctx, state) do
+    encoding =
+      case track do
+        %H264{} -> :H264
+        %H265{} -> :H265
+      end
+
+    spec = [
+      get_child(:source)
       |> via_out(:video)
       |> child(:bif, %ExNVR.Pipeline.Output.Bif{
-        location: options[:location]
+        location: state.location,
+        encoding: encoding
       })
     ]
 
-    {[spec: spec], %{}}
+    {[spec: spec], state}
   end
 
   @impl true

@@ -128,12 +128,9 @@ defmodule ExNVR.Pipeline.Source.RTSP do
   end
 
   defp get_specs(%Track{type: :video} = track, ssrc) do
-    sps = track.fmtp.sprop_parameter_sets.sps
-    pps = track.fmtp.sprop_parameter_sets.pps
-
     get_child(:rtp_session)
     |> via_out(Pad.ref(:output, ssrc), options: [depayloader: get_depayloader(track)])
-    |> child({:rtp_parser, ssrc}, %Membrane.H264.Parser{spss: [sps], ppss: [pps]})
+    |> child({:rtp_parser, ssrc}, get_parser(track))
   end
 
   defp get_specs(%Track{type: type}, _ssrc) do
@@ -141,5 +138,32 @@ defmodule ExNVR.Pipeline.Source.RTSP do
   end
 
   defp get_depayloader(%{encoding: :H264}), do: Membrane.RTP.H264.Depayloader
+  defp get_depayloader(%{encoding: :H265}), do: Membrane.RTP.H265.Depayloader
   defp get_depayloader(_track), do: nil
+
+  defp get_parser(%{encoding: :H264} = track) do
+    sps = track.fmtp.sprop_parameter_sets && track.fmtp.sprop_parameter_sets.sps
+    pps = track.fmtp.sprop_parameter_sets && track.fmtp.sprop_parameter_sets.pps
+
+    %Membrane.H264.Parser{spss: List.wrap(sps), ppss: List.wrap(pps)}
+  end
+
+  defp get_parser(%{encoding: :H265} = track) do
+    %Membrane.H265.Parser{
+      vpss: List.wrap(track.fmtp.sprop_vps) |> Enum.map(&clean_parameter_set/1),
+      spss: List.wrap(track.fmtp.sprop_sps) |> Enum.map(&clean_parameter_set/1),
+      ppss: List.wrap(track.fmtp.sprop_pps) |> Enum.map(&clean_parameter_set/1)
+    }
+  end
+
+  defp get_parser(track), do: raise("Unsupported codec: #{track.encoding}")
+
+  # a strange issue with one of Milesight camera where the parameter sets has
+  # <<0, 0, 0, 1>> at the end
+  defp clean_parameter_set(ps) do
+    case :binary.part(ps, byte_size(ps), -4) do
+      <<0, 0, 0, 1>> -> :binary.part(ps, 0, byte_size(ps) - 4)
+      _other -> ps
+    end
+  end
 end

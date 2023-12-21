@@ -25,7 +25,7 @@ defmodule ExNVR.Pipeline.Output.Storage.SegmenterPipelineTest do
     Pipeline.execute_actions(pid, playback: :playing)
 
     Enum.each(0..1, fn i ->
-      assert_pipeline_notified(pid, :segmenter, {:new_media_segment, ref})
+      assert_pipeline_notified(pid, :segmenter, {:new_media_segment, ref, :H264})
 
       Pipeline.execute_actions(pid,
         spec: [
@@ -68,8 +68,8 @@ defmodule ExNVR.Pipeline.Output.Storage.SegmenterPipelineTest do
           profile: nil
         }
       })
-      # The realtimer is needed to avoid buffering the whole input
-      # and send them all once the output pad of segmenter is linked
+      # The realtimer is needed to introduce latency and avoid buffering the
+      # whole input in the segmenter before the output pad of segmenter is linked
       # This will make the tests slower, a new approach is needed
       |> child(:realtimer, Realtimer)
       |> child(:segmenter, %Segmenter{target_duration: 1})

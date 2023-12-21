@@ -10,7 +10,7 @@ defmodule ExNVR.DevicesFixtures do
   def valid_rtsp_url(), do: "rtsp://example#{System.unique_integer()}:8541"
 
   @spec valid_file_location() :: Path.t()
-  def valid_file_location(), do: "../../fixtures/big_buck.mp4" |> Path.expand(__DIR__)
+  def valid_file_location(), do: "../../fixtures/mp4/big_buck_avc.mp4" |> Path.expand(__DIR__)
   def invalid_file_extenstion(), do: "../../fixtures/video-30-10s.h264" |> Path.expand(__DIR__)
 
   @spec valid_device_name() :: binary()

@@ -2,7 +2,7 @@ defmodule ExNVR.MP4.Reader do
   @moduledoc false
 
   alias ExNVR.MP4.Reader.SamplesInfo
-  alias Membrane.{Buffer, H264}
+  alias Membrane.{Buffer, H264, H265}
   alias Membrane.MP4.Container
 
   @type track_id :: non_neg_integer()
@@ -40,7 +40,7 @@ defmodule ExNVR.MP4.Reader do
   @spec close(t()) :: :ok
   def close(%__MODULE__{} = reader), do: File.close(reader.fd)
 
-  @spec get_video_track(t()) :: {track_id(), H264.t()} | nil
+  @spec get_video_track(t()) :: {track_id(), H264.t() | H265.t()} | nil
   def get_video_track(%__MODULE__{} = reader),
     do: SamplesInfo.get_video_track(reader.samples_info)
 

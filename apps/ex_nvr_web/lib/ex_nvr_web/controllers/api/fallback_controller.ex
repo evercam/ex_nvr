@@ -37,6 +37,16 @@ defmodule ExNVRWeb.API.FallbackController do
     |> json(%{message: "Forbidden"})
   end
 
+  def call(conn, {:error, reason}) do
+    conn
+    |> put_status(500)
+    |> json(%{
+      code: "INTERNAL_ERROR",
+      message: "internal server error",
+      details: inspect(reason)
+    })
+  end
+
   defp changeset_to_details(errors) do
     errors
     |> Enum.flat_map(&map_error/1)

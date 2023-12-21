@@ -23,7 +23,7 @@ defmodule ExNVR.Pipeline.Output.HLSPipelineTest do
       |> child(:parser, %Membrane.H264.Parser{
         generate_best_effort_timestamps: %{framerate: {30, 1}}
       })
-      |> via_in(Pad.ref(:video, :main_stream), options: [resolution: resolution])
+      |> via_in(Pad.ref(:video, :main_stream), options: [resolution: resolution, encoding: :H264])
       |> get_child(:sink)
     ]
 
@@ -35,7 +35,7 @@ defmodule ExNVR.Pipeline.Output.HLSPipelineTest do
             |> child(:parser2, %Membrane.H264.Parser{
               generate_best_effort_timestamps: %{framerate: {30, 1}}
             })
-            |> via_in(Pad.ref(:video, :sub_stream))
+            |> via_in(Pad.ref(:video, :sub_stream), options: [encoding: :H264])
             |> get_child(:sink)
           ]
       else
