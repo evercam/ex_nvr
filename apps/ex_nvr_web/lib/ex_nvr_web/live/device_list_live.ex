@@ -70,6 +70,15 @@ defmodule ExNVRWeb.DeviceListLive do
                 </li>
                 <li>
                   <.link
+                    phx-click={show_modal("delete-device-modal-#{device.id}")}
+                    phx-value-device={device.id}
+                    class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white"
+                  >
+                    Delete
+                  </.link>
+                </li>
+                <li>
+                  <.link
                     :if={not Device.recording?(device)}
                     phx-click="start-recording"
                     phx-value-device={device.id}
@@ -92,6 +101,39 @@ defmodule ExNVRWeb.DeviceListLive do
             </div>
           </.button>
         </:action>
+        <:action :let={device}>
+          <.modal id={"delete-device-modal-#{device.id}"}>
+            <div class="bg-white dark:bg-gray-800 m-8 rounded">
+              <h2 class="text-xl text-white font-bold mb-4">
+                Are you sure you want to delete this device? <br />
+              </h2>
+              <h3>
+                The actual recording files are not deleted. <br />
+                If you want to delete them delete the following folders: <br />
+                <div class="bg-gray-400 rounded-md p-4 mt-2">
+                  <code class="text-gray-800">
+                    <%= Device.base_dir(device) %>
+                  </code>
+                </div>
+              </h3>
+              <div class="mt-4">
+                <button
+                  phx-click="delete-device"
+                  phx-value-device={device.id}
+                  class="bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded mr-4"
+                >
+                  Confirm Delete
+                </button>
+                <button
+                  phx-click={hide_modal("delete-device-modal-#{device.id}")}
+                  class="bg-gray-300 hover:bg-gray-400 text-gray-800 py-2 px-4 rounded"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </.modal>
+        </:action>
       </.table>
     </div>
     """
@@ -99,6 +141,10 @@ defmodule ExNVRWeb.DeviceListLive do
 
   def mount(_params, _session, socket) do
     {:ok, assign(socket, devices: Devices.list())}
+  end
+
+  def handle_event("delete-device", %{"device" => device_id}, socket) do
+    delete_device(socket, device_id)
   end
 
   def handle_event("stop-recording", %{"device" => device_id}, socket) do
@@ -116,6 +162,24 @@ defmodule ExNVRWeb.DeviceListLive do
     case authorize(user, :device, :update) do
       :ok -> update_device_state(socket, device_id, :recording)
       {:error, :unauthorized} -> unauthorized(socket, :noreply)
+    end
+  end
+
+  defp delete_device(socket, device_id) do
+    devices = socket.assigns.devices
+    user = socket.assigns.current_user
+
+    with :ok <- authorize(user, :device, :delete),
+         %Device{} = device <- Enum.find(devices, &(&1.id == device_id)),
+         :ok <- Devices.delete(device) do
+      socket =
+        socket
+        |> assign(devices: Devices.list())
+        |> put_flash(:info, "Device #{device.name} deleted")
+
+      {:noreply, socket}
+    else
+      _other -> {:noreply, put_flash(socket, :error, "could not delete device")}
     end
   end
 

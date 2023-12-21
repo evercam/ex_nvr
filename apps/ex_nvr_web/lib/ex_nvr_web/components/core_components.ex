@@ -565,12 +565,8 @@ defmodule ExNVRWeb.CoreComponents do
               </div>
             </td>
             <td :if={@action != []} class="relative w-14 p-0">
-              <div class="relative whitespace-nowrap text-right text-sm font-medium">
-                <span class="absolute -inset-y-px -right-4 left-0 group-hover:bg-zinc-50 sm:rounded-r-xl" />
-                <span
-                  :for={action <- @action}
-                  class="relative ml-4 font-semibold leading-6 text-zinc-900 hover:text-zinc-700"
-                >
+              <div>
+                <span :for={action <- @action}>
                   <%= render_slot(action, @row_item.(row)) %>
                 </span>
               </div>

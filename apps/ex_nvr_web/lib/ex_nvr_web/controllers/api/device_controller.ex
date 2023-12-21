@@ -5,7 +5,7 @@ defmodule ExNVRWeb.API.DeviceController do
 
   action_fallback ExNVRWeb.API.FallbackController
 
-  plug ExNVRWeb.Plug.Device, [field_name: "id"] when action in [:update, :show]
+  plug ExNVRWeb.Plug.Device, [field_name: "id"] when action in [:update, :show, :delete]
 
   import ExNVR.Authorization
 
@@ -49,6 +49,16 @@ defmodule ExNVRWeb.API.DeviceController do
       end
 
       render(conn, :show, device: device, user: conn.assigns.current_user)
+    end
+  end
+
+  def delete(%Conn{} = conn, _params) do
+    device = conn.assigns.device
+    user = conn.assigns.current_user
+
+    with :ok <- authorize(user, :device, :delete),
+         :ok <- Devices.delete(device) do
+      send_resp(conn, 204, "")
     end
   end
 

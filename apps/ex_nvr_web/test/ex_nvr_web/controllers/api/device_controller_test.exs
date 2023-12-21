@@ -3,9 +3,9 @@ defmodule ExNVRWeb.API.DeviceControllerTest do
 
   use ExNVRWeb.ConnCase
 
-  import ExNVR.{AccountsFixtures, DevicesFixtures}
+  import ExNVR.{AccountsFixtures, DevicesFixtures, RecordingsFixtures}
 
-  alias ExNVR.Devices
+  alias ExNVR.{Devices, Recordings}
 
   @moduletag :tmp_dir
 
@@ -141,6 +141,30 @@ defmodule ExNVRWeb.API.DeviceControllerTest do
       conn
       |> get(~p"/api/devices/#{UUID.uuid4()}")
       |> response(404)
+    end
+  end
+
+  describe "DELETE /api/devices/:id" do
+    setup ctx do
+      %{device: device_fixture(%{settings: %{storage_address: ctx.tmp_dir}})}
+    end
+
+    test "Delete device", %{conn: conn, device: device} do
+      response =
+        conn
+        |> delete(~p"/api/devices/#{device.id}")
+        |> response(204)
+
+      refute Devices.get(device.id)
+    end
+
+    test "delete a device by unauthorized user", %{conn: conn, device: device} do
+      user_conn = log_in_user_with_access_token(conn, user_fixture(%{role: :user}))
+
+      response =
+        user_conn
+        |> delete(~p"/api/devices/#{device.id}")
+        |> response(403)
     end
   end
 end

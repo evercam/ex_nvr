@@ -4,8 +4,9 @@ defmodule ExNVR.Devices do
   """
 
   alias Ecto.Multi
-  alias ExNVR.Model.Device
-  alias ExNVR.Repo
+  alias ExNVR.Model.{Device, Recording, Run}
+  alias ExNVR.{Repo, DeviceSupervisor}
+  alias Ecto.Multi
 
   import Ecto.Query
 
@@ -47,6 +48,24 @@ defmodule ExNVR.Devices do
     case get(device_id) do
       %Device{} = device -> device
       nil -> raise "device does not exists"
+    end
+  end
+
+  @spec delete(Device.t()) ::
+          :ok | {:error, Ecto.Changeset.t()}
+  def delete(device) do
+    Multi.new()
+    |> Multi.delete_all(:recordings, Recording.with_device(device.id))
+    |> Multi.delete_all(:runs, Run.with_device(device.id))
+    |> Multi.delete(:device, device)
+    |> Multi.run(:stop_pipeline, fn _repo, _param ->
+      DeviceSupervisor.stop(device)
+      {:ok, nil}
+    end)
+    |> Repo.transaction()
+    |> case do
+      {:ok, _} -> :ok
+      {:error, _, changeset, _} -> {:error, changeset}
     end
   end
 

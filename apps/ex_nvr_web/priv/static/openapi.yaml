@@ -215,6 +215,22 @@ paths:
                 $ref: '#/components/schemas/Device'
         '400':
           $ref: "#/components/responses/BadArg"
+    delete: 
+      summary: Delete device
+      description: |
+        Delete a device giving the device id
+
+        The actual recording files are not deleted. 
+        If you want to delete them delete the folder:
+        {device_storage_address}/ex_nvr/{device.id}
+      operationId: deleteDevice
+      tags:
+        - Device
+      responses:
+        '200':
+            description: Success
+        '404':
+          $ref: "#/components/responses/NotFound"
   /api/recordings/chunks:
     get:
       summary: Get recordings chunks
