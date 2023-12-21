@@ -2,7 +2,7 @@ defmodule ExNVR.DevicesTest do
   use ExNVR.DataCase
 
   alias ExNVR.{Devices, Recordings}
-  alias ExNVR.Model.Device
+  alias ExNVR.Model.{Device, Recording, Run}
 
   import ExNVR.DevicesFixtures
 
@@ -238,17 +238,17 @@ defmodule ExNVR.DevicesTest do
     end
 
     test "delete device", %{device: device} do
-      Enum.each(1..10, fn _value -> recording_fixture(device) end)
-      Enum.each(1..5, fn _value -> run_fixture(device) end)
+      for _idx <- 1..10, do: recording_fixture(device)
 
-      assert length(Recordings.index(device.id)) > 0
-      assert length(Recordings.list_runs(device_id: device.id)) > 0
+      assert ExNVR.Repo.get(Device, device.id)
+      assert ExNVR.Repo.aggregate(Recording.with_device(device.id), :count) > 0
+      assert ExNVR.Repo.aggregate(Run.with_device(device.id), :count) > 0
 
-      Devices.delete(device)
+      assert :ok == Devices.delete(device)
 
-      assert is_nil(Devices.get(device.id))
-      assert length(Recordings.index(device.id)) == 0
-      assert length(Recordings.list_runs(device_id: device.id)) == 0
+      refute ExNVR.Repo.get(Device, device.id)
+      assert ExNVR.Repo.aggregate(Recording.with_device(device.id), :count) == 0
+      assert ExNVR.Repo.aggregate(Run.with_device(device.id), :count) == 0
     end
   end
 

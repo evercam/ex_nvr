@@ -51,8 +51,8 @@ defmodule ExNVR.Devices do
     end
   end
 
-  @spec delete(atom() | %{:id => any(), optional(any()) => any()}) ::
-          {:error, Ecto.Changeset.t()} | :ok
+  @spec delete(Device.t()) ::
+          :ok | {:error, Ecto.Changeset.t()}
   def delete(device) do
     Multi.new()
     |> Multi.delete_all(:recordings, Recording.with_device(device.id))
