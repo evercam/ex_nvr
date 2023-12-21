@@ -112,8 +112,7 @@ defmodule ExNVRWeb.DeviceListLive do
                 If you want to delete them delete the following folders: <br />
                 <div class="bg-gray-400 rounded-md p-4 mt-2">
                   <code class="text-gray-800">
-                    <%= Device.recording_dir(device) %> <br />
-                    <%= Device.recording_dir(device, :low) %>
+                    <%= Device.base_dir(device) %>
                   </code>
                 </div>
               </h3>
