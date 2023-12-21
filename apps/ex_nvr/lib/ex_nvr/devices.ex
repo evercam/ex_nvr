@@ -3,6 +3,8 @@ defmodule ExNVR.Devices do
   Context to manipulate devices
   """
 
+  require Logger
+
   alias Ecto.Multi
   alias ExNVR.Model.{Device, Recording, Run}
   alias ExNVR.{HTTP, Repo, DeviceSupervisor}
@@ -81,26 +83,31 @@ defmodule ExNVR.Devices do
 
   @spec fetch_snapshot(Device.t()) :: binary()
   def fetch_snapshot(%{stream_config: %{snapshot_uri: nil}}) do
-    {:error, "No value for snapshot uri"}
+    {:error, :no_snapshot_uri}
   end
 
-  def fetch_snapshot(
-        %Device{} =
-          %{
-            stream_config: %{snapshot_uri: url},
-            credentials: %{username: username, password: password}
-          }
-      ) do
-    opts = [username: username, password: password]
+  def fetch_snapshot(%Device{credentials: credentials} = device) do
+    opts = [username: credentials.username, password: credentials.password]
+    url = device.stream_config.snapshot_uri
 
     case HTTP.get(url, opts) do
       {:ok, %{status: 200, body: body}} ->
         {:ok, body}
 
       {:ok, response} ->
+        Logger.error("""
+        Devices: could not fetch live snapshot for device #{inspect(device)}
+        #{inspect(response)}
+        """)
+
         {:error, response}
 
       error ->
+        Logger.error("""
+        Devices: could not fetch live snapshot for device #{inspect(device)}
+        #{inspect(error)}
+        """)
+
         error
     end
   end

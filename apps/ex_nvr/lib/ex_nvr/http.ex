@@ -27,7 +27,7 @@ defmodule ExNVR.HTTP do
 
   @spec build_digest_auth_header(map(), Keyword.t()) :: {:ok, tuple()} | {:error, binary()}
   def build_digest_auth_header(resp, opts) do
-    with {:ok, digest_opts} <- digest_auth_opts(resp, opts),
+    with digest_opts when is_map(digest_opts) <- digest_auth_opts(resp, opts),
          digest_header <- {"Authorization", encode_digest(digest_opts)} do
       {:ok, digest_header}
     end
@@ -40,19 +40,18 @@ defmodule ExNVR.HTTP do
     |> Map.fetch("www-authenticate")
     |> case do
       {:ok, "Digest " <> digest} ->
-        {:ok,
-         %{
-           nonce: match_pattern("nonce", digest),
-           realm: match_pattern("realm", digest),
-           qop: match_pattern("qop", digest),
-           username: opts[:username],
-           password: opts[:password],
-           method: Atom.to_string(opts[:method]) |> String.upcase(),
-           path: URI.parse(opts[:url]).path
-         }}
+        %{
+          nonce: match_pattern("nonce", digest),
+          realm: match_pattern("realm", digest),
+          qop: match_pattern("qop", digest),
+          username: opts[:username],
+          password: opts[:password],
+          method: Atom.to_string(opts[:method]) |> String.upcase(),
+          path: URI.parse(opts[:url]).path
+        }
 
       _other ->
-        {:error, "Digest auth is disabled or not supported"}
+        nil
     end
   end
 

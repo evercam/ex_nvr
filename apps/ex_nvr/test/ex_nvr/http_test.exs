@@ -21,7 +21,6 @@ defmodule ExNVR.HttpTest do
           |> Conn.resp(401, "")
 
         ["Digest " <> _token] ->
-
           conn
           |> Conn.put_resp_content_type("application/json")
           |> Conn.resp(200, ~s(success))
