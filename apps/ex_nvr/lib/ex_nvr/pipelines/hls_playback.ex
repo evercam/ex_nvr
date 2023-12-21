@@ -72,7 +72,7 @@ defmodule ExNVR.Pipelines.HlsPlayback do
     spec = [
       get_child(:source)
       |> via_out(:video)
-      |> child(:realtimer, Membrane.Realtimer)
+      |> child(:realtimer, Elements.Realtimer)
       |> via_in(Pad.ref(:video, :playback),
         options: [resolution: state.resolution, encoding: encoding]
       )
