@@ -25,8 +25,6 @@ defmodule ExNVR.Pipeline.Output.WebRTC do
   alias Membrane.RTC.Engine
   alias Membrane.RTC.Engine.Endpoint.WebRTC
 
-  @mix_env Mix.env()
-
   def_input_pad :input,
     demand_unit: :buffers,
     flow_control: :auto,
@@ -238,7 +236,9 @@ defmodule ExNVR.Pipeline.Output.WebRTC do
 
   defp integrated_turn_options() do
     turn_mock_ip = Application.fetch_env!(:ex_nvr, :integrated_turn_ip)
-    turn_ip = if @mix_env == :prod, do: {0, 0, 0, 0}, else: turn_mock_ip
+
+    turn_ip =
+      if Application.fetch_env!(:ex_nvr, :env) == :prod, do: {0, 0, 0, 0}, else: turn_mock_ip
 
     turn_cert_file =
       case Application.fetch_env(:ex_nvr, :integrated_turn_cert_pkey) do

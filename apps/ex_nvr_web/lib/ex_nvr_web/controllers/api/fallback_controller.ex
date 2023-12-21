@@ -58,15 +58,17 @@ defmodule ExNVRWeb.API.FallbackController do
 
       false ->
         Enum.map(errors, fn {msg, options} ->
-          error_msg =
-            Regex.replace(~r/%{(\w+)}/, msg, fn _, key ->
-              options
-              |> Keyword.get(String.to_existing_atom(key), key)
-              |> to_string()
-            end)
-
+          error_msg = format_error_message(msg, options)
           {field, options[:validation] || options[:constraint], error_msg}
         end)
     end
+  end
+
+  defp format_error_message(message, options) do
+    Regex.replace(~r/%{(\w+)}/, message, fn _, key ->
+      options
+      |> Keyword.get(String.to_existing_atom(key), key)
+      |> to_string()
+    end)
   end
 end

@@ -10,7 +10,7 @@ defmodule ExNVR.Pipelines.HlsPlayback do
   alias ExNVR.Elements
   alias ExNVR.Pipeline.Output
 
-  @call_timeout 60_000
+  @call_timeout :timer.seconds(10)
 
   @spec start_link(Keyword.t()) :: Pipeline.on_start()
   def start_link(opts) do
@@ -44,7 +44,7 @@ defmodule ExNVR.Pipelines.HlsPlayback do
         start_date: options[:start_date]
       })
       |> via_out(:video)
-      |> child(:realtimer, Membrane.Realtimer)
+      |> child(:realtimer, ExNVR.Elements.Realtimer)
       |> via_in(Pad.ref(:video, :playback), options: [resolution: options[:resolution]])
       |> child(:sink, %Output.HLS{
         location: options[:directory],

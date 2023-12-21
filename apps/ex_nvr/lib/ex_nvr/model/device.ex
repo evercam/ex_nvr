@@ -207,8 +207,7 @@ defmodule ExNVR.Model.Device do
   def has_sub_stream(_), do: true
 
   @spec recording?(t()) :: boolean()
-  def recording?(%__MODULE__{state: :stopped}), do: false
-  def recording?(_), do: true
+  def recording?(%__MODULE__{state: state}), do: state != :stopped
 
   # directories path
 

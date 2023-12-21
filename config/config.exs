@@ -11,6 +11,8 @@ import Config
 
 config :elixir, :time_zone_database, Tzdata.TimeZoneDatabase
 
+config :ex_nvr, env: :dev
+
 # Configure Mix tasks and generators
 config :ex_nvr,
   namespace: ExNVR,

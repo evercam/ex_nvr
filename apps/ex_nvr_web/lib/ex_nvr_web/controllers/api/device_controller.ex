@@ -35,13 +35,13 @@ defmodule ExNVRWeb.API.DeviceController do
     with :ok <- authorize(user, :device, :update),
          {:ok, updated_device} <- Devices.update(device, params) do
       cond do
-        device.state != updated_device.state and not Device.recording?(updated_device.state) ->
+        device.state != updated_device.state and not Device.recording?(updated_device) ->
           DeviceSupervisor.stop(updated_device)
 
-        device.state != updated_device.state and Device.recording?(updated_device.state) ->
+        device.state != updated_device.state and Device.recording?(updated_device) ->
           DeviceSupervisor.start(updated_device)
 
-        Device.config_updated(device, updated_device) and Device.recording?(updated_device.state) ->
+        Device.config_updated(device, updated_device) and Device.recording?(updated_device) ->
           DeviceSupervisor.restart(updated_device)
 
         true ->
