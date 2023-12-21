@@ -221,9 +221,8 @@ paths:
         Delete a device giving the device id
 
         The actual recording files are not deleted. 
-        If you want to delete them delete the following folder:
-        {device_storage_address}/ex_nvr/{device_id}/hi_quality
-        {device_storage_address}/ex_nvr/{device_id}/lo_quality
+        If you want to delete them delete the folder:
+        {device_storage_address}/ex_nvr/{device.id}
       operationId: deleteDevice
       tags:
         - Device
