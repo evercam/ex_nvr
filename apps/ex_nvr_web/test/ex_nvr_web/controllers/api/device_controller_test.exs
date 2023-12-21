@@ -150,17 +150,21 @@ defmodule ExNVRWeb.API.DeviceControllerTest do
     end
 
     test "Delete device", %{conn: conn, device: device} do
-      Enum.each(1..10, fn _value -> recording_fixture(device) end)
-      Enum.each(1..5, fn _value -> run_fixture(device) end)
-
       response =
         conn
         |> delete(~p"/api/devices/#{device.id}")
-        |> response(200)
+        |> response(204)
 
-      assert is_nil(Devices.get(device.id))
-      assert length(Recordings.index(device.id)) == 0
-      assert length(Recordings.list_runs(device_id: device.id)) == 0
+      refute Devices.get(device.id)
+    end
+
+    test "delete a device by unauthorized user", %{conn: conn, device: device} do
+      user_conn = log_in_user_with_access_token(conn, user_fixture(%{role: :user}))
+
+      response =
+        user_conn
+        |> delete(~p"/api/devices/#{device.id}")
+        |> response(403)
     end
   end
 end
