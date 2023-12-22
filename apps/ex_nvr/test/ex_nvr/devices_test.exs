@@ -1,7 +1,7 @@
 defmodule ExNVR.DevicesTest do
   use ExNVR.DataCase
 
-  alias ExNVR.{Devices, Recordings}
+  alias ExNVR.Devices
   alias ExNVR.Model.{Device, Recording, Run}
 
   import ExNVR.DevicesFixtures
