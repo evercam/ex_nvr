@@ -77,7 +77,7 @@ defmodule ExNVRWeb.API.UserControllerTest do
       assert user.id == response["id"]
       assert user.first_name == response["first_name"]
       assert user.last_name == response["last_name"]
-      assert user.user_name == response["user_name"]
+      assert user.username == response["username"]
       assert user.email == response["email"]
       assert to_string(user.role) == response["role"]
       assert to_string(user.language) == response["language"]
@@ -165,19 +165,17 @@ defmodule ExNVRWeb.API.UserControllerTest do
     test "delete a user using an unauthorized role", %{conn: conn, user: user} do
       user_conn = log_in_user_with_access_token(conn, user_fixture(%{role: :user}))
 
-      response =
-        user_conn
-        |> delete(~p"/api/users/#{user.id}")
-        |> response(403)
+      user_conn
+      |> delete(~p"/api/users/#{user.id}")
+      |> response(403)
     end
 
     test "delete user successfully", %{conn: conn, user: user} do
-      response =
-        conn
-        |> delete(~p"/api/users/#{user.id}")
-        |> response(204)
+      conn
+      |> delete(~p"/api/users/#{user.id}")
+      |> response(204)
 
-      refute Accounts.get_user!(user.id)
+      refute Accounts.get_user(user.id)
     end
   end
 end
