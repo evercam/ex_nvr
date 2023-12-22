@@ -52,6 +52,163 @@ paths:
                     description: An access token to use to authorize subsequent requests
         '400':
           $ref: "#/components/responses/BadArg"
+  /api/users:
+    get: 
+      summary: Get all users.
+      description: Get all existing users.
+      operationId: getUsers
+      tags:
+        - User
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+    post:
+      summary: Create user
+      description: |
+        Create a new user.
+      operationId: createUser
+      tags:
+        - User
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                first_name:
+                  type: string
+                  description: User first name
+                last_name:
+                  type: string
+                  description: User last name
+                email:
+                  type: string
+                  description: User email
+                role:
+                  type: string
+                  enum: ["admin", "user"]
+                  default: admin
+                  description: |
+                    User's role.
+
+                    * `admin` - Has access to all features.
+                    * `user` - Has only "read" access to devices, recordings as well as streaming features.
+                      Does not have access to Onvif Discovery and users management.
+                language:
+                  type: string
+                  enum: ["en"]
+                  default: en
+                  description: |
+                    User's application language.
+
+                    * Only english available for now.              
+              required: [first_name, last_name, email]
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          $ref: "#/components/responses/BadArg"
+        '403':
+          $ref: "#/components/responses/Unauthorized"
+  /api/users/{user_id}:
+    parameters:
+      - $ref: '#/components/parameters/user_id'
+    get: 
+      summary: Get user
+      description: Get user by id.
+      operationId: getUser
+      tags:
+        - User
+      responses:
+        '200':
+            description: Success
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/User'
+        '404':
+          $ref: "#/components/responses/NotFound"
+        '403':
+          $ref: "#/components/responses/Unauthorized"
+    put:
+      summary: Update user
+      description: |
+        Update user details.
+      operationId: updateUser
+      tags:
+        - User
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                first_name:
+                  type: string
+                  description: User first name
+                last_name:
+                  type: string
+                  description: User last name
+                email:
+                  type: string
+                  description: User email
+                role:
+                  type: string
+                  enum: ["admin", "user"]
+                  default: admin
+                  description: |
+                    User's role.
+
+                    * `admin` - Has access to all features.
+                    * `user` - Has only "read" access to devices, recordings as well as streaming features.
+                      Does not have access to Onvif Discovery and users management.
+                language:
+                  type: string
+                  enum: ["en"]
+                  default: en
+                  description: |
+                    User's application language.
+
+                    * Only english available for now.
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          $ref: "#/components/responses/BadArg"
+        '403':
+          $ref: "#/components/responses/Unauthorized"
+    delete: 
+      summary: Delete user
+      description: |
+        Delete a user giving the user id
+
+        All associated will be removed along the user's deletion.
+      operationId: deleteUser
+      tags:
+        - User
+      responses:
+        '200':
+            description: Success
+        '404':
+          $ref: "#/components/responses/NotFound"
+        '403':
+          $ref: "#/components/responses/Unauthorized"
   /api/devices:
     get: 
       summary: Get all devices.
@@ -135,6 +292,8 @@ paths:
                 $ref: '#/components/schemas/Device'
         '400':
           $ref: "#/components/responses/BadArg"
+        '403':
+          $ref: "#/components/responses/Unauthorized"
   /api/devices/{device_id}:
     parameters:
       - $ref: '#/components/parameters/device_id'
@@ -215,6 +374,8 @@ paths:
                 $ref: '#/components/schemas/Device'
         '400':
           $ref: "#/components/responses/BadArg"
+        '403':
+          $ref: "#/components/responses/Unauthorized"
     delete: 
       summary: Delete device
       description: |
@@ -231,6 +392,8 @@ paths:
             description: Success
         '404':
           $ref: "#/components/responses/NotFound"
+        '403':
+          $ref: "#/components/responses/Unauthorized"
   /api/recordings/chunks:
     get:
       summary: Get recordings chunks
@@ -576,6 +739,41 @@ components:
       scheme: bearer
       bearerFormat: opaque
   schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: user ID
+        first_name:
+          type: string
+          description: User first name
+        last_name:
+          type: string
+          description: User last name
+        username:
+          type: string
+          description: User username
+        email:
+          type: string
+          description: User email
+        role:
+          type: string
+          enum: ["admin", "user"]
+          description: |
+            User's role.
+
+            * `admin` - Has access to all features (Default).
+            * `user` - Has only "read" access to devices, recordings as well as streaming features.
+              Does not have access to Onvif Discovery and users management.
+        language:
+          type: string
+          enum: ["en"]
+          description: |
+            User's application language.
+            Default to: en (English)
+            * Only english available for now.
     Credentials:
       type: object
       description: Streaming Device credentials (Only when Device type is ip)
@@ -702,6 +900,15 @@ components:
           format: path
           description: The Path of the file location to be used as a streaming source (Only when Device type is file)
   parameters:
+    user_id:
+      name: user_id
+      description: The id of the user
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      example: 1d7c7f47-63c1-4bef-91a6-124cbaf3ecea
     device_id:
       name: device_id
       description: The id of the device
@@ -800,6 +1007,15 @@ components:
             $ref: "#/components/schemas/Error"
     NotFound:
         description: Not Found
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+    Unauthorized:
+        description: Unauthorized access
         content:
           application/json:
             schema:
