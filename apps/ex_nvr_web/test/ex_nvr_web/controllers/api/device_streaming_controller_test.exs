@@ -5,6 +5,8 @@ defmodule ExNVRWeb.API.DeviceStreamingControllerTest do
 
   import ExNVR.{AccountsFixtures, DevicesFixtures, RecordingsFixtures}
 
+  alias Plug.Conn
+
   @moduletag :tmp_dir
   @moduletag :device
 
@@ -83,6 +85,11 @@ defmodule ExNVRWeb.API.DeviceStreamingControllerTest do
       %{recording: recording}
     end
 
+    setup do
+      bypass = Bypass.open()
+      {:ok, bypass: bypass}
+    end
+
     test "Get snapshot from recorded videos", %{conn: conn, device: device, recording: recording} do
       conn = get(conn, "/api/devices/#{device.id}/snapshot?time=#{recording.start_date}")
 
@@ -105,6 +112,35 @@ defmodule ExNVRWeb.API.DeviceStreamingControllerTest do
       conn
       |> get("/api/devices/#{device.id}/snapshot")
       |> response(404)
+    end
+
+    test "Get live snapshot from camera using snapshot uri", %{
+      conn: conn,
+      tmp_dir: tmp_dir,
+      bypass: bypass
+    } do
+      device =
+        device_fixture(%{
+          stream_config: %{
+            stream_uri: "rtsp://localhost:8541",
+            snapshot_uri: "http://localhost:#{bypass.port}/snapshot"
+          },
+          settings: %{storage_address: tmp_dir}
+        })
+
+      Bypass.expect(bypass, "GET", "/snapshot", fn conn ->
+        conn
+        |> Conn.put_resp_content_type("image/jpeg")
+        |> Conn.resp(200, <<20, 12, 23>>)
+      end)
+
+      conn = get(conn, "/api/devices/#{device.id}/snapshot")
+      assert get_resp_header(conn, "content-type") == ["image/jpeg; charset=utf-8"]
+
+      assert %{
+               status: 200,
+               resp_body: <<20, 12, 23>>
+             } = conn
     end
   end
 

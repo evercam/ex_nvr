@@ -9,7 +9,7 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
 
   alias Ecto.Changeset
   alias ExNVR.Pipelines.{HlsPlayback, Main}
-  alias ExNVR.{HLS, Model.Recording, Recordings, Utils}
+  alias ExNVR.{Devices, HLS, Model.Recording, Recordings, Utils}
 
   @type return_t :: Plug.Conn.t() | {:error, Changeset.t()}
 
@@ -71,12 +71,17 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
   defp serve_live_snapshot(conn, params) do
     device = conn.assigns.device
 
-    case device.state do
-      :recording ->
-        {:ok, snapshot} = Main.live_snapshot(device, params.format)
+    with {:error, _details} <- Devices.fetch_snapshot(device),
+         :recording <- device.state do
+      {:ok, snapshot} = Main.live_snapshot(device, params.format)
 
+      conn
+      |> put_resp_content_type("image/#{params.format}")
+      |> send_resp(:ok, snapshot)
+    else
+      {:ok, snapshot} ->
         conn
-        |> put_resp_content_type("image/#{params.format}")
+        |> put_resp_content_type("image/jpeg")
         |> send_resp(:ok, snapshot)
 
       _ ->
