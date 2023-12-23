@@ -78,7 +78,7 @@ defmodule ExNVR.Pipeline.Source.RTSP do
         _other -> false
       end)
 
-    {[remove_child: childs], %{state | ssrc_to_track: %{}, tracks: []}}
+    {[remove_children: childs], %{state | ssrc_to_track: %{}, tracks: []}}
   end
 
   @impl true

@@ -95,7 +95,7 @@ defmodule ExNVR.Pipeline.Output.WebRTC do
   @impl true
   def handle_pad_removed(Pad.ref(:input, :main_stream), _ctx, state) do
     Engine.message_endpoint(state.rtc_engine, state.stream_endpoint_id, :remove_track)
-    {[remove_child: :sink], %{state | media_track: nil}}
+    {[remove_children: :sink], %{state | media_track: nil}}
   end
 
   @impl true

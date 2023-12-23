@@ -2,7 +2,7 @@ openapi: 3.0.0
 info:
   title: ExNVR API
   description: Manage ExNVR via API endpoints
-  version: 0.6.0
+  version: 0.7.0
 servers:
   - url: '{protocol}://{host}:{port}'
     variables:
@@ -227,8 +227,8 @@ paths:
       tags:
         - Device
       responses:
-        '200':
-            description: Success
+        '204':
+          description: Success
         '404':
           $ref: "#/components/responses/NotFound"
   /api/recordings/chunks:

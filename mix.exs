@@ -1,7 +1,7 @@
 defmodule ExNVR.Umbrella.MixProject do
   use Mix.Project
 
-  @version "0.6.0"
+  @version "0.7.0"
 
   def project do
     [
@@ -138,6 +138,7 @@ defmodule ExNVR.Umbrella.MixProject do
         RestartSec=1
         SyslogIdentifier=ex_nvr
         WorkingDirectory=/opt/ex_nvr
+        LimitNOFILE=8192
 
         [Install]
         WantedBy=multi-user.target

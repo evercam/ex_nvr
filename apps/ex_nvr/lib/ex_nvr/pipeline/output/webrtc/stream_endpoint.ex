@@ -103,7 +103,7 @@ defmodule ExNVR.Pipeline.Output.WebRTC.StreamEndpoint do
 
   @impl true
   def handle_pad_removed(Pad.ref(:output, {track_id, :high}), _ctx, state) do
-    {[remove_child: track_id], state}
+    {[remove_children: track_id], state}
   end
 
   @impl true
