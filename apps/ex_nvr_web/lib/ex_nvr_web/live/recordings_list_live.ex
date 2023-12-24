@@ -152,7 +152,7 @@ defmodule ExNVRWeb.RecordingListLive do
 
     case Recordings.list(params) do
       {:ok, {recordings, %{total_pages: total_pages} = meta}} ->
-        current_page = Map.get(params, "page", "1") |> String.to_integer()
+        current_page = Map.get(params, "page", "0") |> String.to_integer()
 
         if current_page > total_pages do
           {:noreply,
