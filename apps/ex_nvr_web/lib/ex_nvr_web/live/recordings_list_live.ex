@@ -141,15 +141,18 @@ defmodule ExNVRWeb.RecordingListLive do
        devices: Devices.list(),
        popup_open: false,
        filter_params: params,
-       pagination_params: %{}
+       pagination_params: %{},
+       sort_params: %{}
      )}
   end
 
   @impl true
   def handle_params(params, _uri, socket) do
+    sort_params = Map.take(params, ["order_by", "order_directions"])
+
     case Recordings.list(params) do
       {:ok, {recordings, meta}} ->
-        {:noreply, assign(socket, meta: meta, recordings: recordings)}
+        {:noreply, assign(socket, meta: meta, recordings: recordings, sort_params: sort_params)}
 
       {:error, meta} ->
         {:noreply, assign(socket, meta: meta)}
@@ -163,28 +166,27 @@ defmodule ExNVRWeb.RecordingListLive do
         socket.assigns.filter_params,
         socket.assigns.pagination_params
       )
+      |> Map.merge(socket.assigns.sort_params)
 
     {:noreply, push_navigate(socket, to: Routes.recording_list_path(socket, :list, params))}
   end
 
   @impl true
   def handle_event("filter-recordings", filter_params, socket) do
-    params =
-      Map.merge(
-        filter_params,
-        socket.assigns.pagination_params
-      )
-
     {:noreply,
      socket
      |> assign(:filter_params, filter_params)
-     |> push_patch(to: Routes.recording_list_path(socket, :list, params))}
+     |> assign(:pagination_params, %{})
+     |> push_patch(to: Routes.recording_list_path(socket, :list, filter_params))}
   end
 
   @impl true
   def handle_event("paginate", pagination_params, socket) do
     pagination_params = Map.merge(socket.assigns.pagination_params, pagination_params)
-    params = Map.merge(socket.assigns.filter_params, pagination_params)
+
+    params =
+      Map.merge(socket.assigns.filter_params, pagination_params)
+      |> Map.merge(socket.assigns.sort_params)
 
     {:noreply,
      socket

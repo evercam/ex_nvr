@@ -3,9 +3,9 @@ defmodule ExNVRWeb.API.DeviceControllerTest do
 
   use ExNVRWeb.ConnCase
 
-  import ExNVR.{AccountsFixtures, DevicesFixtures, RecordingsFixtures}
+  import ExNVR.{AccountsFixtures, DevicesFixtures}
 
-  alias ExNVR.{Devices, Recordings}
+  alias ExNVR.Devices
 
   @moduletag :tmp_dir
 
@@ -150,10 +150,9 @@ defmodule ExNVRWeb.API.DeviceControllerTest do
     end
 
     test "Delete device", %{conn: conn, device: device} do
-      response =
-        conn
-        |> delete(~p"/api/devices/#{device.id}")
-        |> response(204)
+      conn
+      |> delete(~p"/api/devices/#{device.id}")
+      |> response(204)
 
       refute Devices.get(device.id)
     end
@@ -161,10 +160,9 @@ defmodule ExNVRWeb.API.DeviceControllerTest do
     test "delete a device by unauthorized user", %{conn: conn, device: device} do
       user_conn = log_in_user_with_access_token(conn, user_fixture(%{role: :user}))
 
-      response =
-        user_conn
-        |> delete(~p"/api/devices/#{device.id}")
-        |> response(403)
+      user_conn
+      |> delete(~p"/api/devices/#{device.id}")
+      |> response(403)
     end
   end
 end
