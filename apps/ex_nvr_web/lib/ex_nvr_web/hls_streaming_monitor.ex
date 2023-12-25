@@ -11,7 +11,7 @@ defmodule ExNVRWeb.HlsStreamingMonitor do
   require Logger
 
   @cleanup_interval :timer.seconds(3)
-  @stale_time 30
+  @stale_time 45
 
   def start_link(_opts) do
     GenServer.start_link(__MODULE__, nil, name: __MODULE__)
