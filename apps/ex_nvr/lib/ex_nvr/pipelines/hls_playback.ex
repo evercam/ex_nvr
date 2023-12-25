@@ -47,8 +47,8 @@ defmodule ExNVR.Pipelines.HlsPlayback do
         start_date: options[:start_date]
       })
       |> via_out(:video)
-      |> child(:realtimer, Elements.Realtimer)
       |> child(:playback_speeder, %HLS.PlaybackSpeeder{rate: playback_speed})
+      |> child(:realtimer, Elements.Realtimer)
       |> via_in(Pad.ref(:video, :playback), options: [resolution: options[:resolution]])
       |> child(:sink, %Output.HLS{
         location: options[:directory],
