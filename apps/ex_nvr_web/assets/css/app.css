@@ -66,3 +66,8 @@ video::-webkit-media-controls-current-time-display {
 .break-anywhere {
     overflow-wrap: anywhere;
 }
+
+#webRtcPlayer {
+    width: 100vw;
+    height: 100vh;
+}

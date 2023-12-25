@@ -83,6 +83,13 @@ defmodule ExNVRWeb.Router do
     post "/users/login", UserSessionController, :create
   end
 
+  # public routes
+  scope "/", ExNVRWeb do
+    pipe_through :browser
+
+    get "/webrtc/:device_id", PageController, :webrtc
+  end
+
   scope "/", ExNVRWeb do
     pipe_through [:browser, :require_authenticated_user]
 
