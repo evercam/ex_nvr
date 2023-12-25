@@ -151,19 +151,8 @@ defmodule ExNVRWeb.RecordingListLive do
     sort_params = Map.take(params, ["order_by", "order_directions"])
 
     case Recordings.list(params) do
-      {:ok, {recordings, %{total_pages: total_pages} = meta}} ->
-        current_page = Map.get(params, "page", "0") |> String.to_integer()
-
-        if current_page > total_pages do
-          {:noreply,
-           socket
-           |> assign(pagination_params: %{})
-           |> push_patch(
-             to: Routes.recording_list_path(socket, :list, Map.drop(params, ["page"]))
-           )}
-        else
-          {:noreply, assign(socket, meta: meta, recordings: recordings, sort_params: sort_params)}
-        end
+      {:ok, {recordings, meta}} ->
+        {:noreply, assign(socket, meta: meta, recordings: recordings, sort_params: sort_params)}
 
       {:error, meta} ->
         {:noreply, assign(socket, meta: meta)}
@@ -184,16 +173,11 @@ defmodule ExNVRWeb.RecordingListLive do
 
   @impl true
   def handle_event("filter-recordings", filter_params, socket) do
-    params =
-      Map.merge(
-        filter_params,
-        socket.assigns.pagination_params
-      )
-
     {:noreply,
      socket
      |> assign(:filter_params, filter_params)
-     |> push_patch(to: Routes.recording_list_path(socket, :list, params))}
+     |> assign(:pagination_params, %{})
+     |> push_patch(to: Routes.recording_list_path(socket, :list, filter_params))}
   end
 
   @impl true
