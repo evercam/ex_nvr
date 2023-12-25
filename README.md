@@ -108,9 +108,9 @@ The main feature of this project is to store video streams retrieved from `devic
 * **Devices**: read video streams from
    - [x] IP Cameras
    - [ ] USB / Webcams
-   - [ ] Raspberry Cameras
+   - [ ] Raspberry Pi Cameras
    - [x] Plain RTSP stream
-   - [ ] File Upload (Helpful for debug, benchmarking & demos)
+   - [x] File Upload (Helpful for debug, benchmarking & demos)
 
 * **Camera Streams**: save and playback
    - [x] Main stream
@@ -121,7 +121,7 @@ The main feature of this project is to store video streams retrieved from `devic
 
 * **Video Codecs**: allow storing and streaming videos with following codecs
    - [x] H264
-   - [ ] H265
+   - [x] H265 (Live stream disabled, videos are transcoded for playback)
 
 * **Streaming**: live view and playback
    - [x] HLS

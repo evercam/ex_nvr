@@ -81,7 +81,7 @@ defmodule ExNVR.Devices do
     Device.update_changeset(device, attrs)
   end
 
-  @spec fetch_snapshot(Device.t()) :: binary()
+  @spec fetch_snapshot(Device.t()) :: {:ok, binary} | {:error, term()}
   def fetch_snapshot(%{stream_config: %{snapshot_uri: nil}}) do
     {:error, :no_snapshot_uri}
   end
@@ -96,7 +96,7 @@ defmodule ExNVR.Devices do
 
       {:ok, response} ->
         Logger.error("""
-        Devices: could not fetch live snapshot for device #{inspect(device)}
+        Devices: could not fetch live snapshot"
         #{inspect(response)}
         """)
 
@@ -104,7 +104,7 @@ defmodule ExNVR.Devices do
 
       error ->
         Logger.error("""
-        Devices: could not fetch live snapshot for device #{inspect(device)}
+        Devices: could not fetch live snapshot"
         #{inspect(error)}
         """)
 

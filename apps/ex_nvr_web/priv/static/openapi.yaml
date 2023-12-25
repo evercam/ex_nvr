@@ -222,7 +222,8 @@ paths:
 
         The actual recording files are not deleted. 
         If you want to delete them delete the folder:
-        {device_storage_address}/ex_nvr/{device.id}
+
+          `{device.settings.storage_address}/ex_nvr/{device.id}`
       operationId: deleteDevice
       tags:
         - Device
