@@ -115,7 +115,7 @@ defmodule ExNVR.Pipeline.Output.Storage do
   def handle_element_end_of_stream({:sink, seg_ref}, _pad, _ctx, state) do
     {state, segment} = do_save_recording(state, seg_ref)
 
-    actions = [remove_child: seg_ref, notify_parent: {:segment_stored, segment}]
+    actions = [remove_children: seg_ref, notify_parent: {:segment_stored, segment}]
     terminate_action = if state.terminating?, do: [terminate: :normal], else: []
 
     {actions ++ terminate_action, state}

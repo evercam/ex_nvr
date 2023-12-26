@@ -2,7 +2,7 @@ openapi: 3.0.0
 info:
   title: ExNVR API
   description: Manage ExNVR via API endpoints
-  version: 0.6.0
+  version: 0.7.0
 servers:
   - url: '{protocol}://{host}:{port}'
     variables:
@@ -222,13 +222,14 @@ paths:
 
         The actual recording files are not deleted. 
         If you want to delete them delete the folder:
-        {device_storage_address}/ex_nvr/{device.id}
+
+          `{device.settings.storage_address}/ex_nvr/{device.id}`
       operationId: deleteDevice
       tags:
         - Device
       responses:
-        '200':
-            description: Success
+        '204':
+          description: Success
         '404':
           $ref: "#/components/responses/NotFound"
   /api/recordings/chunks:

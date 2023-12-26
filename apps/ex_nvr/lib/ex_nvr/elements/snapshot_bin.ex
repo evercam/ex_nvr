@@ -68,7 +68,7 @@ defmodule ExNVR.Elements.SnapshotBin do
       {_, ^ref} -> true
       _ -> false
     end)
-    |> then(&{[remove_child: &1], state})
+    |> then(&{[remove_children: &1], state})
   end
 
   @impl true
