@@ -88,7 +88,6 @@ let Hooks = {
             let video = document.getElementById("live-video");
             var rate = video.playbackRate;
             if (rate != 1) {
-                video.playbackRate = 1;
                 switch (rate) {
                     case 0.25:
                         rate = 4;
