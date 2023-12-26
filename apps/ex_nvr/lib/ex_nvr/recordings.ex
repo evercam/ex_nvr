@@ -7,6 +7,7 @@ defmodule ExNVR.Recordings do
   alias Ecto.Multi
   alias ExNVR.Model.{Device, Recording, Run}
   alias ExNVR.Repo
+  alias Phoenix.PubSub
 
   @type error :: {:error, Ecto.Changeset.t() | File.posix()}
 
@@ -25,8 +26,12 @@ defmodule ExNVR.Recordings do
       |> Multi.insert(:run, run, on_conflict: {:replace_all_except, [:start_date]})
       |> Repo.transaction()
       |> case do
-        {:ok, %{recording: recording, run: run}} -> {:ok, recording, run}
-        {:error, _, changeset, _} -> {:error, changeset}
+        {:ok, %{recording: recording, run: run}} ->
+          broadcast_recordings_event(:created)
+          {:ok, recording, run}
+
+        {:error, _, changeset, _} ->
+          {:error, changeset}
       end
     end
   end
@@ -108,6 +113,8 @@ defmodule ExNVR.Recordings do
     |> Repo.transaction()
     |> case do
       {:ok, _params} ->
+        broadcast_recordings_event(:deleted)
+
         :telemetry.execute([:ex_nvr, :recording, :delete], %{count: length(recordings)}, %{
           device_id: device.id
         })
@@ -121,5 +128,9 @@ defmodule ExNVR.Recordings do
 
   defp copy_file(device, params, true) do
     File.cp(params.path, recording_path(device, params))
+  end
+
+  defp broadcast_recordings_event(event) do
+    PubSub.broadcast(ExNVR.PubSub, "recordings", {event, nil})
   end
 end

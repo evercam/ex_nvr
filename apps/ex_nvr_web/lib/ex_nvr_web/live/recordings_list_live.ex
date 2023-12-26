@@ -5,6 +5,7 @@ defmodule ExNVRWeb.RecordingListLive do
 
   alias ExNVRWeb.Router.Helpers, as: Routes
   alias ExNVR.{Recordings, Devices}
+  alias Phoenix.PubSub
 
   @impl true
   def render(assigns) do
@@ -136,6 +137,8 @@ defmodule ExNVRWeb.RecordingListLive do
 
   @impl true
   def mount(params, _session, socket) do
+    PubSub.subscribe(ExNVR.PubSub, "recordings")
+
     {:ok,
      assign(socket,
        devices: Devices.list(),
@@ -144,6 +147,15 @@ defmodule ExNVRWeb.RecordingListLive do
        pagination_params: %{},
        sort_params: %{}
      )}
+  end
+
+  @impl true
+  def handle_info(_msg, socket) do
+    params =
+      Map.merge(socket.assigns.filter_params, socket.assigns.pagination_params)
+      |> Map.merge(socket.assigns.sort_params)
+
+    {:noreply, push_patch(socket, to: Routes.recording_list_path(socket, :list, params))}
   end
 
   @impl true
