@@ -263,5 +263,28 @@ defmodule ExNVRWeb.RecordingListLiveTest do
 
       assert_recording_info(lv, html, new_device, List.last(new_recordings))
     end
+
+    test "Real time refresh of recording list", %{
+      conn: conn,
+      device: device
+    } do
+      logged_in_conn =
+        conn
+        |> log_in_user(user_fixture())
+
+      {:ok, lv, _html} =
+        logged_in_conn
+        |> live(~p"/recordings")
+
+      recording =
+        recording_fixture(device,
+          start_date: ~U(2023-09-12 00:00:00Z),
+          end_date: ~U(2023-09-14 00:00:00Z)
+        )
+
+      html = render(lv)
+
+      assert_recording_info(lv, html, device, recording)
+    end
   end
 end
