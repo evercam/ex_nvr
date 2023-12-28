@@ -16,6 +16,8 @@ defmodule ExNVRWeb.UserAuth do
   @remember_me_cookie "_ex_nvr_user_remember_me"
   @remember_me_options [sign: true, max_age: @max_age, same_site: "Lax"]
 
+  @spec log_in_user(Plug.Conn.t(), atom() | %{:id => any(), optional(any()) => any()}) ::
+          Plug.Conn.t()
   @doc """
   Logs the user in.
 
