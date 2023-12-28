@@ -30,7 +30,7 @@ defmodule ExNVRWeb.Api.EventsControllerTest do
         |> json_response(201)
 
       assert event["plate_number"] == @lpr_event_parameter["plate"]
-      assert event["direction"] = @lpr_event_parameter["direction"]
+      assert event["direction"] == @lpr_event_parameter["direction"]
     end
 
     test "create a new random event", %{conn: conn, device: device} do
