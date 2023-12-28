@@ -1,10 +1,9 @@
 defmodule ExNVR.Events do
-
   alias ExNVR.Model.{Device, Event}
   alias Ecto.Multi
   alias ExNVR.Repo
 
-  def create(params, device, "lpr") do
+  def create(params, device, :lpr) do
     formated_event =
       params
       |> rename_milesight_keys(device)
@@ -14,7 +13,7 @@ defmodule ExNVR.Events do
     |> Multi.insert(:event, Event.changeset(formated_event))
     |> Multi.run(:create_thumbnail, fn _repo, %{event: event} ->
       event
-      |> event_dir(device)
+      |> base_dir(device)
       |> tap(&File.mkdir_p!/1)
       |> Path.join("#{event.plate_number}_#{event.id}.jpg")
       |> File.write!(Base.decode64!(params["plate_image"]))
@@ -30,20 +29,8 @@ defmodule ExNVR.Events do
 
   def create(_, _, _), do: {:error, "Event type isn't supported"}
 
-  @spec event_dir(
-          atom()
-          | %{
-              :type =>
-                binary()
-                | maybe_improper_list(
-                    binary() | maybe_improper_list(any(), binary() | []) | char(),
-                    binary() | []
-                  ),
-              optional(any()) => any()
-            },
-          ExNVR.Model.Device.t()
-        ) :: binary()
-  def event_dir(event, device) do
+  @spec base_dir(Event.t(), Device.t()) :: binary()
+  def base_dir(event, device) do
     device
     |> Device.base_dir()
     |> Path.join("thumbnails")
@@ -71,5 +58,6 @@ defmodule ExNVR.Events do
     )
     |> DateTime.shift_zone!("Etc/UTC")
   end
+
   defp parse_capture_time(_, _), do: DateTime.utc_now()
 end

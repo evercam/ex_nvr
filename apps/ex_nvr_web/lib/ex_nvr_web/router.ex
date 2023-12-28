@@ -47,11 +47,11 @@ defmodule ExNVRWeb.Router do
     end
   end
 
-  #username password api endpoints
+  # username password api endpoints
   scope "/api", ExNVRWeb do
     pipe_through :api
 
-    post "/events/:device_id", API.EventController, :create
+    resources "/events", API.EventController, only: [:create]
   end
 
   scope "/api", ExNVRWeb do

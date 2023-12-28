@@ -6,11 +6,11 @@ defmodule ExNVR.Model.Event do
   alias Ecto.Changeset
 
   @type t :: %__MODULE__{
-    capture_time: DateTime.t(),
-    plate_number: binary(),
-    direction: binary(),
-    device_id: binary()
-  }
+          capture_time: DateTime.t(),
+          plate_number: binary(),
+          direction: binary(),
+          device_id: binary()
+        }
 
   @foreign_key_type :binary_id
   schema "events" do
