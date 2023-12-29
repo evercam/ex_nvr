@@ -33,21 +33,26 @@ defmodule ExNVRWeb.API.EventController do
     |> Map.get("device_id")
     |> Devices.get()
     |> case do
-      nil -> conn
-      device -> assign(conn, :device, device)
+      nil ->
+        conn
+        |> Conn.resp(422, "")
+        |> Conn.halt()
+
+      device ->
+        assign(conn, :device, device)
     end
   end
 
   defp ensure_type(%Conn{query_params: params} = conn, _) do
-    type = Map.get(params, "type")
-    cond do
-      Enum.member?(@events_types, type) ->
-        conn
-        |> Conn.assign(:type, String.to_atom(type))
-      true ->
+    case Map.get(params, "type") do
+      nil ->
         conn
         |> Conn.resp(422, "")
         |> Conn.halt()
+
+      type ->
+        conn
+        |> Conn.assign(:type, type)
     end
   end
 end

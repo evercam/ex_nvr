@@ -7,11 +7,10 @@ defmodule ExNVRWeb.Api.EventsControllerTest do
 
   alias ExNVR.Events
 
-  @lpr_event_parameter %{
-    "plate" => "sfdsfd",
-    "direction" => "forward",
-    "plate_image" => ""
-  }
+  @lpr_plate "01-D-12345"
+  @lpr_direction "forward"
+  @lpr_time ~U"2023-12-12T10:00:00Z"
+  @lpr_plate_image ""
 
   setup do
     device = device_fixture(%{settings: %{storage_address: "/tmp"}})
@@ -22,28 +21,50 @@ defmodule ExNVRWeb.Api.EventsControllerTest do
   describe "POST /api/events" do
     test "create a new lpr event", %{conn: conn, device: device} do
       assert %{"event" => event} =
-        conn
-        |> post(
-          ~p"/api/events?type=lpr&device_id=#{device.id}",
-          @lpr_event_parameter
-        )
-        |> json_response(201)
+               conn
+               |> post(
+                 ~p"/api/events?type=lpr&device_id=#{device.id}",
+                 %{
+                   "plate" => @lpr_plate,
+                   "direction" => @lpr_direction,
+                   "plate_image" => @lpr_plate_image,
+                   "time" =>
+                     @lpr_time
+                     |> DateTime.to_iso8601()
+                     |> String.replace("T", " ")
+                 }
+               )
+               |> json_response(201)
 
-      assert event["plate_number"] == @lpr_event_parameter["plate"]
-      assert event["direction"] == @lpr_event_parameter["direction"]
+      assert event["plate_number"] == @lpr_plate
+      assert event["direction"] == @lpr_direction
+      assert {:ok, date_time, 0} = DateTime.from_iso8601(event["capture_time"])
+      assert DateTime.compare(@lpr_time, date_time) == :eq
     end
 
     test "create a new random event", %{conn: conn, device: device} do
-      conn
-      |> post(
-        ~p"/api/events?type=random&device_id=#{device.id}",
-        %{
-          "plate" => "sfdsfd",
-          "direction" => "forward",
-          "plate_image" => ""
-        }
-      )
-      |> response(422)
+      response =
+        conn
+        |> post(
+          ~p"/api/events?type=random&device_id=#{device.id}",
+          %{
+            "plate" => @lpr_plate,
+            "direction" => @lpr_direction,
+            "plate_image" => @lpr_plate_image,
+            "time" =>
+              @lpr_time
+              |> DateTime.to_iso8601()
+              |> String.replace("T", " ")
+          }
+        )
+        |> response(500)
+    end
+
+    test "Missing query params", %{conn: conn} do
+      response =
+        conn
+        |> post(~p"/api/events")
+        |> response(422)
     end
   end
 end

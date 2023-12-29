@@ -3,11 +3,12 @@ defmodule ExNVR.Events do
   alias Ecto.Multi
   alias ExNVR.Repo
 
-  def create(params, device, :lpr) do
+  def create(params, device, "lpr") do
     formated_event =
       params
       |> rename_milesight_keys(device)
       |> Map.put(:type, "lpr")
+      |> Map.put(:device_id, device.id)
 
     Multi.new()
     |> Multi.insert(:event, Event.changeset(formated_event))
@@ -37,7 +38,7 @@ defmodule ExNVR.Events do
     |> Path.join(event.type)
   end
 
-  defp rename_milesight_keys(entry, %Device{id: id, timezone: timezone}) do
+  defp rename_milesight_keys(entry, %Device{timezone: timezone}) do
     %{
       capture_time:
         entry
@@ -45,8 +46,7 @@ defmodule ExNVR.Events do
         |> String.split(" ")
         |> parse_capture_time(timezone),
       plate_number: entry["plate"],
-      direction: entry["direction"],
-      device_id: id
+      direction: entry["direction"]
     }
   end
 
@@ -59,5 +59,5 @@ defmodule ExNVR.Events do
     |> DateTime.shift_zone!("Etc/UTC")
   end
 
-  defp parse_capture_time(_, _), do: DateTime.utc_now()
+  defp parse_capture_time(_, _), do: nil
 end
