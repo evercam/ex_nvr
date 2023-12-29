@@ -51,7 +51,7 @@ defmodule ExNVRWeb.Router do
   scope "/api", ExNVRWeb do
     pipe_through :api
 
-    resources "/events", API.EventController, only: [:create]
+    resources "/events", API.EventController, only: [:create, :index]
   end
 
   scope "/api", ExNVRWeb do

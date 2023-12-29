@@ -1,30 +1,44 @@
 defmodule ExNVRWeb.API.EventController do
   use ExNVRWeb, :controller
 
-  @events_types ["lpr"]
-
   action_fallback ExNVRWeb.API.FallbackController
-  plug(:extract_device when action in [:create])
-  plug(:ensure_type when action in [:create])
+  plug(:extract_device when action in [:create, :index])
+  plug(:ensure_type when action in [:create, :index])
 
   alias Plug.Conn
   alias ExNVR.{Events, Devices}
 
-  @spec create(Conn.t(), map()) :: {:error, any()} | Conn.t()
+  @spec create(Conn.t(), map()) :: {:error, Ecto.Changeset.t()} | Conn.t()
   def create(%Conn{body_params: params} = conn, _) do
     device = conn.assigns.device
     type = conn.assigns.type
 
-    with {:ok, event} <- Events.create(params, device, type) do
-      event =
-        event
-        |> Map.drop([:__meta__, :device])
-        |> Map.from_struct()
-
+    with {:ok, event} <- Events.create(params, device, type),
+         event <- format_event(event) do
       conn
       |> put_status(201)
       |> json(%{event: event})
     end
+  end
+
+  @spec index(Conn.t(), map()) :: Conn.t() | {:error, Ecto.Changeset.t()}
+  def index(%Conn{} = conn, _params) do
+    device = conn.assigns.device
+    type = conn.assigns.type
+
+    events =
+      Events.list(device.id, type)
+      |> Enum.map(&format_event/1)
+
+    conn
+    |> put_status(200)
+    |> json(%{events: events})
+  end
+
+  defp format_event(event) do
+    event
+    |> Map.drop([:__meta__, :device])
+    |> Map.from_struct()
   end
 
   # Plugs

@@ -61,10 +61,36 @@ defmodule ExNVRWeb.Api.EventsControllerTest do
     end
 
     test "Missing query params", %{conn: conn} do
-      response =
-        conn
-        |> post(~p"/api/events")
-        |> response(422)
+      conn
+      |> post(~p"/api/events")
+      |> response(422)
+    end
+  end
+
+  describe "GET /api/events" do
+    setup %{device: device} = ctx do
+      {:ok, event} =
+        Events.create(
+          %{
+            "plate" => @lpr_plate,
+            "direction" => @lpr_direction,
+            "plate_image" => @lpr_plate_image,
+            "time" =>
+              @lpr_time
+              |> DateTime.to_iso8601()
+              |> String.replace("T", " ")
+          },
+          device,
+          "lpr"
+        )
+
+      Map.put(ctx, :event, event)
+    end
+
+    test "get events", %{conn: conn, device: device} do
+      conn
+      |> get(~p"/api/events?device_id=#{device.id}&type=lpr")
+      |> json_response(200)
     end
   end
 end

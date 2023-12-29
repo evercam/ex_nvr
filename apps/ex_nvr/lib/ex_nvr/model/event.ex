@@ -22,6 +22,14 @@ defmodule ExNVR.Model.Event do
     belongs_to :device, ExNVR.Model.Device
   end
 
+  def with_device(query \\ __MODULE__, device_id) do
+    where(query, [r], r.device_id == ^device_id)
+  end
+
+  def with_type(query \\ __MODULE__, type) do
+    where(query, [r], r.type == ^type)
+  end
+
   def changeset(event \\ %__MODULE__{}, params) do
     event
     |> Changeset.cast(params, __MODULE__.__schema__(:fields))

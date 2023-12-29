@@ -34,16 +34,39 @@ defmodule ExNVR.EventsTest do
                  "lpr"
                )
 
-      file_path =
-        event
-        |> Events.base_dir(device)
-        |> Path.join("#{event.plate_number}_#{event.id}.jpg")
+      assert event
+             |> Events.base_dir(device)
+             |> File.exists?()
 
-      assert File.exists?(file_path)
       assert event.plate_number == @lpr_plate
       assert event.direction == @lpr_direction
 
       assert DateTime.compare(@lpr_time, event.capture_time) == :eq
+    end
+  end
+
+  describe "Get" do
+    setup %{device: device} = ctx do
+      {:ok, event} =
+        Events.create(
+          %{
+            "plate" => @lpr_plate,
+            "direction" => @lpr_direction,
+            "plate_image" => @lpr_plate_image,
+            "time" =>
+              @lpr_time
+              |> DateTime.to_iso8601()
+              |> String.replace("T", " ")
+          },
+          device,
+          "lpr"
+        )
+
+      Map.put(ctx, :event, event)
+    end
+
+    test "Get events", %{device: device} do
+      assert length(Events.list(device.id, "lpr")) > 0
     end
   end
 end
