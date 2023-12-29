@@ -14,7 +14,7 @@ defmodule ExNVRWeb.API.EventController do
     type = conn.assigns.type
 
     with {:ok, event} <- Events.create(params, device, type),
-         event <- format_event(event) do
+         event <- format_event(event, device) do
       conn
       |> put_status(201)
       |> json(%{event: event})
@@ -28,17 +28,24 @@ defmodule ExNVRWeb.API.EventController do
 
     events =
       Events.list(device.id, type)
-      |> Enum.map(&format_event/1)
+      |> Enum.map(&format_event(&1, device))
 
     conn
     |> put_status(200)
     |> json(%{events: events})
   end
 
-  defp format_event(event) do
+  defp format_event(event, device) do
+    plate_image =
+      event
+      |> Events.thumbnail_filename(device)
+      |> File.read!()
+      |> Base.encode64()
+
     event
     |> Map.drop([:__meta__, :device])
     |> Map.from_struct()
+    |> Map.put(:plate_image, plate_image)
   end
 
   # Plugs

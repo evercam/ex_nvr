@@ -733,6 +733,36 @@ paths:
           $ref: '#/components/responses/BadArg'
         '404':
           $ref: '#/components/responses/NotFound'
+  /api/events:
+    get:
+      summary: Get all events
+      description: Get all events existing given a type and a device id in the query params
+      operationId: getEvents
+      tags:
+        - Event
+      parameters:
+        - $ref: '#/components/parameters/device_id'
+        - name: type
+          in: query
+          required: true
+          description: Filter by type
+          schema:
+            type: string
+            enum: [lpr]
+          example: lpr
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Event'
+        '422':
+          description: Missing device id or type
+        '500':
+          description: Unsupported event type
 components:
   securitySchemes:
     bearerAuth:
@@ -786,6 +816,42 @@ components:
           type: string
           format: password
           description: Password to authenticate
+    Event:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Event unique id
+        capture_time:
+          type: string
+          format: date-time
+          description: Capture time of the event
+        plate_number:
+          type: string
+          description: Event plate number
+        direction:
+          type: string
+          description: Event direction
+        device_id:
+          type: string
+          format: uuid
+          description: The device id where this event belongs
+    LPREvent:
+      type: object
+      properties:
+        time:
+          type: string
+          format: date-time
+          description: Capture time of the LPR event
+        plate:
+          type: string
+          description: Plate number of the LPR event
+        direction:
+          type: string
+          description: Direction of the LPR Event
+        plate_image:
+          type: string
+          description: Direction of the LPR Event
     Device:
       type: object
       properties:

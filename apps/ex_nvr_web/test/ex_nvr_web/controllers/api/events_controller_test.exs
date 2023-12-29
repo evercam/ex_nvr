@@ -10,7 +10,9 @@ defmodule ExNVRWeb.Api.EventsControllerTest do
   @lpr_plate "01-D-12345"
   @lpr_direction "forward"
   @lpr_time ~U"2023-12-12T10:00:00Z"
-  @lpr_plate_image ""
+  @lpr_plate_image "../fixtures/images/license-plate.jpg"
+                   |> Path.expand(__DIR__)
+                   |> Base.encode64()
 
   setup do
     device = device_fixture(%{settings: %{storage_address: "/tmp"}})
@@ -38,6 +40,7 @@ defmodule ExNVRWeb.Api.EventsControllerTest do
 
       assert event["plate_number"] == @lpr_plate
       assert event["direction"] == @lpr_direction
+      assert event["plate_image"] == @lpr_plate_image
       assert {:ok, date_time, 0} = DateTime.from_iso8601(event["capture_time"])
       assert DateTime.compare(@lpr_time, date_time) == :eq
     end
