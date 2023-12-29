@@ -9,6 +9,8 @@ defmodule ExNVR.Recordings do
   alias ExNVR.Repo
   alias Phoenix.PubSub
 
+  @recordings_topic "recordings"
+
   @type error :: {:error, Ecto.Changeset.t() | File.posix()}
 
   @spec create(Device.t(), Run.t(), map(), boolean()) :: {:ok, Recording.t(), Run.t()} | error()
@@ -27,7 +29,7 @@ defmodule ExNVR.Recordings do
       |> Repo.transaction()
       |> case do
         {:ok, %{recording: recording, run: run}} ->
-          broadcast_recordings_event(:created)
+          broadcast_recordings_event(:new)
           {:ok, recording, run}
 
         {:error, _, changeset, _} ->
@@ -113,7 +115,7 @@ defmodule ExNVR.Recordings do
     |> Repo.transaction()
     |> case do
       {:ok, _params} ->
-        broadcast_recordings_event(:deleted)
+        broadcast_recordings_event(:delete)
 
         :telemetry.execute([:ex_nvr, :recording, :delete], %{count: length(recordings)}, %{
           device_id: device.id
@@ -131,6 +133,6 @@ defmodule ExNVR.Recordings do
   end
 
   defp broadcast_recordings_event(event) do
-    PubSub.broadcast(ExNVR.PubSub, "recordings", {event, nil})
+    PubSub.broadcast(ExNVR.PubSub, @recordings_topic, {event, nil})
   end
 end

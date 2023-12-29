@@ -7,6 +7,8 @@ defmodule ExNVRWeb.RecordingListLive do
   alias ExNVR.{Recordings, Devices}
   alias Phoenix.PubSub
 
+  @recordings_topic "recordings"
+
   @impl true
   def render(assigns) do
     ~H"""
@@ -137,7 +139,7 @@ defmodule ExNVRWeb.RecordingListLive do
 
   @impl true
   def mount(params, _session, socket) do
-    PubSub.subscribe(ExNVR.PubSub, "recordings")
+    subscribe_to_recording_events()
 
     {:ok,
      assign(socket,
@@ -204,6 +206,10 @@ defmodule ExNVRWeb.RecordingListLive do
      socket
      |> assign(pagination_params: pagination_params)
      |> push_patch(to: Routes.recording_list_path(socket, :list, params))}
+  end
+
+  defp subscribe_to_recording_events() do
+    PubSub.subscribe(ExNVR.PubSub, @recordings_topic)
   end
 
   defp format_date(date, timezone) do
