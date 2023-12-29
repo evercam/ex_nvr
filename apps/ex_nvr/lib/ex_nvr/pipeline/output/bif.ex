@@ -41,14 +41,14 @@ defmodule ExNVR.Pipeline.Output.Bif do
   @impl true
   def handle_init(_ctx, options) do
     spec = [
-      bin_input()
-      |> child(:key_frame_filter, %KeyFrameSelector{interval: options.interval})
-      |> via_in(:input, auto_demand_size: 10)
-      |> child(:decoder, get_decoder(options.encoding))
-      |> child(:scaler, %FFmpeg.SWScale.Scaler{output_width: options.image_width, use_shm?: true})
-      |> child(:image_encoder, Turbojpeg.Filter)
-      |> child(:archiver, Archiver)
-      |> child(:sink, %File.Sink{location: options.location})
+      # bin_input()
+      # |> child(:key_frame_filter, %KeyFrameSelector{interval: options.interval})
+      # |> via_in(:input, auto_demand_size: 10)
+      # |> child(:decoder, get_decoder(options.encoding))
+      # |> child(:scaler, %FFmpeg.SWScale.Scaler{output_width: options.image_width, use_shm?: true})
+      # |> child(:image_encoder, Turbojpeg.Filter)
+      # |> child(:archiver, Archiver)
+      # |> child(:sink, %File.Sink{location: options.location})
     ]
 
     {[spec: spec], %{}}
