@@ -19,13 +19,15 @@ defmodule ExNVR.Pipeline.Output.Thumbnailer.Sink do
 
   @impl true
   def handle_buffer(:input, buffer, _ctx, state) do
-    path =
-      Path.join(
-        state.dest,
-        "#{Membrane.Time.to_datetime(buffer.pts) |> DateTime.to_unix()}.jpg"
-      )
-
-    File.write!(path, buffer.payload)
+    File.write!(get_filename(state.dest, buffer), buffer.payload)
     {[], state}
+  end
+
+  defp get_filename(dest_folder, buffer) do
+    if Application.get_env(:ex_nvr, :env) == :test do
+      Path.join(dest_folder, "#{Membrane.Buffer.get_dts_or_pts(buffer)}.jpg")
+    else
+      Path.join(dest_folder, "#{DateTime.utc_now() |> DateTime.to_unix()}.jpg")
+    end
   end
 end

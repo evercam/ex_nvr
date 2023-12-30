@@ -1,9 +1,9 @@
-defmodule ExNVR.Pipeline.Output.Bif.KeyFrameSelectorTest do
+defmodule ExNVR.Pipeline.Output.Thumbnailer.KeyFrameSelectorTest do
   @moduledoc false
 
   use ExUnit.Case
 
-  alias ExNVR.Pipeline.Output.Bif.KeyFrameSelector
+  alias ExNVR.Pipeline.Output.Thumbnailer.KeyFrameSelector
   alias Membrane.{Buffer, Time}
 
   test "Select key frames" do
@@ -33,12 +33,7 @@ defmodule ExNVR.Pipeline.Output.Bif.KeyFrameSelectorTest do
     %Buffer{
       payload: String.duplicate(<<1>>, 10),
       pts: Time.milliseconds(pts_in_ms),
-      metadata: %{
-        timestamp: Time.milliseconds(pts_in_ms),
-        h264: %{
-          key_frame?: key_frame?
-        }
-      }
+      metadata: %{h264: %{key_frame?: key_frame?}}
     }
   end
 end

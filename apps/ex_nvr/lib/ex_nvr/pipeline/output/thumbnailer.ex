@@ -57,6 +57,16 @@ defmodule ExNVR.Pipeline.Output.Thumbnailer do
     {[spec: spec], %{}}
   end
 
+  @impl true
+  def handle_element_end_of_stream(:sink, _pad, _ctx, state) do
+    {[notify_parent: :end_of_stream], state}
+  end
+
+  @impl true
+  def handle_element_end_of_stream(_element, _pad, _ctx, state) do
+    {[], state}
+  end
+
   defp get_decoder(:H264), do: %H264.FFmpeg.Decoder{use_shm?: true}
   defp get_decoder(:H265), do: %H265.FFmpeg.Decoder{use_shm?: true}
 end

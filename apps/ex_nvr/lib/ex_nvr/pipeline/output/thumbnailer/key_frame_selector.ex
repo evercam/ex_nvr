@@ -33,7 +33,7 @@ defmodule ExNVR.Pipeline.Output.Thumbnailer.KeyFrameSelector do
   def handle_process(:input, buffer, _ctx, state) when ExNVR.Utils.keyframe(buffer) do
     if is_nil(state.last_keyframe_pts) or diff(buffer, state) >= state.interval do
       state = %{state | last_keyframe_pts: Time.round_to_seconds(buffer.pts)}
-      {[buffer: {:output, %{buffer | pts: Membrane.Time.os_time()}}], state}
+      {[buffer: {:output, buffer}], state}
     else
       {[], state}
     end
