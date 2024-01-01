@@ -14,10 +14,17 @@ defmodule ExNVRWeb.Api.EventsControllerTest do
                    |> Path.expand(__DIR__)
                    |> Base.encode64()
 
-  setup do
+  setup %{conn: conn} do
     device = device_fixture(%{settings: %{storage_address: "/tmp"}})
 
-    %{device: device}
+    user_conn =
+      log_in_user_with_username_password(
+        conn,
+        user_fixture(%{password: "Password1"}),
+        "Password1"
+      )
+
+    %{device: device, conn: user_conn}
   end
 
   describe "POST /api/events" do

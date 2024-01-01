@@ -92,7 +92,15 @@ defmodule ExNVRWeb.UserAuth do
   @doc """
   Authenticates the user by looking into the session
   and remember me token.
+  Or by a username password combination
   """
+  def fetch_current_user(conn, user_pass: true) do
+    username = fetch_username_from_header(conn)
+    password = fetch_password_from_header(conn)
+
+    assign(conn, :current_user, fetch_user_by_username_and_pass(username, password))
+  end
+
   def fetch_current_user(conn, _opts) do
     {user_token, context, conn} = ensure_user_token(conn)
     user = fetch_user_by_token(user_token, context)
@@ -100,6 +108,17 @@ defmodule ExNVRWeb.UserAuth do
     if user, do: Logger.metadata(user_id: user.id)
 
     assign(conn, :current_user, user)
+  end
+
+  defp fetch_username_from_header(conn), do: conn |> get_req_header("username") |> List.first()
+  defp fetch_password_from_header(conn), do: conn |> get_req_header("password") |> List.first()
+
+  defp fetch_user_by_username_and_pass(username, password)
+       when is_nil(username) or is_nil(password),
+       do: nil
+
+  defp fetch_user_by_username_and_pass(username, password) do
+    Accounts.get_user_by_email_and_password(username, password)
   end
 
   defp ensure_user_token(conn) do
