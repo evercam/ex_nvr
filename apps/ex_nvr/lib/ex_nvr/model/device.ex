@@ -231,6 +231,11 @@ defmodule ExNVR.Model.Device do
     Path.join([base_dir(device), "thumbnails", "bif"])
   end
 
+  @spec thumbnails_dir(t()) :: Path.t()
+  def thumbnails_dir(%__MODULE__{} = device) do
+    Path.join([base_dir(device), "thumbnails"])
+  end
+
   def filter(query \\ __MODULE__, params) do
     Enum.reduce(params, query, fn
       {:state, value}, q when is_atom(value) -> where(q, [d], d.state == ^value)

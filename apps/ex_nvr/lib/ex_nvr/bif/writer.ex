@@ -1,6 +1,6 @@
 defmodule ExNVR.BIF.Writer do
   @moduledoc """
-  Bundle images as BIF (Base Index Files).
+  Bundle images as BIF (Base Index Frames) files.
   """
 
   alias ExNVR.BIF.Index
