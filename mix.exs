@@ -28,7 +28,7 @@ defmodule ExNVR.Umbrella.MixProject do
         version: @version,
         applications: [ex_nvr: :permanent, ex_nvr_web: :permanent],
         include_executables_for: [:unix],
-        steps: [:assemble, &copy_external_libs/1, &archive/1, &genererat_deb_package/1]
+        steps: [:assemble, &copy_external_libs/1, &archive/1, &generate_deb_package/1]
       ]
     ]
   end
@@ -95,7 +95,7 @@ defmodule ExNVR.Umbrella.MixProject do
     release
   end
 
-  defp genererat_deb_package(release) do
+  defp generate_deb_package(release) do
     generate_deb? = System.get_env("GENERATE_DEB_PACKAGE", "false") |> String.to_existing_atom()
     {arch, os, abi} = get_target()
 

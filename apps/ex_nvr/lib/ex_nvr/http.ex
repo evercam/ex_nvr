@@ -81,8 +81,7 @@ defmodule ExNVR.HTTP do
         "nc" => nonce_count
       }
       |> Map.filter(fn {_key, value} -> value != nil end)
-      |> Enum.map(fn {key, value} -> ~s(#{key}="#{value}") end)
-      |> Enum.join(", ")
+      |> Enum.map_join(", ", fn {key, value} -> ~s(#{key}="#{value}") end)
 
     "Digest " <> digest_token
   end

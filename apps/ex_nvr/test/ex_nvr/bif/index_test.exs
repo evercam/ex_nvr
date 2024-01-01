@@ -1,9 +1,9 @@
-defmodule ExNVR.Pipeline.Output.Bif.IndexTest do
+defmodule ExNVR.Pipeline.BIF.IndexTest do
   @moduledoc false
 
   use ExUnit.Case
 
-  alias ExNVR.Pipeline.Output.Bif.Archiver.Index
+  alias ExNVR.BIF.Index
 
   test "serialize entries" do
     index = Index.new()
