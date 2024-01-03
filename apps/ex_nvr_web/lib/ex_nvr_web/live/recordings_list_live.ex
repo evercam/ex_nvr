@@ -5,9 +5,6 @@ defmodule ExNVRWeb.RecordingListLive do
 
   alias ExNVRWeb.Router.Helpers, as: Routes
   alias ExNVR.{Recordings, Devices}
-  alias Phoenix.PubSub
-
-  @recordings_topic "recordings"
 
   @impl true
   def render(assigns) do
@@ -39,8 +36,7 @@ defmodule ExNVRWeb.RecordingListLive do
                   viewBox="0 0 24 24"
                   fill="currentColor"
                   class="w-6 h-6 mr-2 cursor-pointer thumbnail"
-                  phx-hook="VideoPopup"
-                  phx-value-url={"/api/devices/#{recording.device_id}/recordings/#{recording.filename}/blob"}
+                  phx-click={open_popup(recording)}
                   id={"thumbnail-#{recording.id}"}
                   alt="Thumbnail"
                 >
@@ -85,18 +81,13 @@ defmodule ExNVRWeb.RecordingListLive do
     </div>
     <!-- Popup container -->
     <div
-      class={
-        [
-          "popup-container fixed top-0 left-0 w-full h-full bg-black bg-opacity-75 flex justify-center items-center"
-        ] ++ if not @popup_open, do: ["hidden"], else: [""]
-      }
       id="popup-container"
+      class="popup-container fixed top-0 left-0 w-full h-full bg-black bg-opacity-75 flex justify-center items-center hidden"
     >
-      <button class="popup-close absolute top-4 right-4 text-white" phx-click="close-popup">×</button>
-      <video autoplay class="w-full h-auto max-w-full max-h-[80%]">
-        <source src="" type="video/mp4" phx-value-video-url />
-        Your browser does not support the video tag.
-      </video>
+      <button class="popup-close absolute top-4 right-4 text-white" phx-click={close_popup()}>
+        ×
+      </button>
+      <video id="recording-player" autoplay class="w-full h-auto max-w-full max-h-[80%]"></video>
     </div>
     """
   end
@@ -139,12 +130,11 @@ defmodule ExNVRWeb.RecordingListLive do
 
   @impl true
   def mount(params, _session, socket) do
-    subscribe_to_recording_events()
+    Recordings.subscribe_to_recording_events()
 
     {:ok,
      assign(socket,
        devices: Devices.list(),
-       popup_open: false,
        filter_params: params,
        pagination_params: %{},
        sort_params: %{}
@@ -157,32 +147,12 @@ defmodule ExNVRWeb.RecordingListLive do
       Map.merge(socket.assigns.filter_params, socket.assigns.pagination_params)
       |> Map.merge(socket.assigns.sort_params)
 
-    {:noreply, push_patch(socket, to: Routes.recording_list_path(socket, :list, params))}
+    load_recordings(params, socket)
   end
 
   @impl true
   def handle_params(params, _uri, socket) do
-    sort_params = Map.take(params, ["order_by", "order_directions"])
-
-    case Recordings.list(params) do
-      {:ok, {recordings, meta}} ->
-        {:noreply, assign(socket, meta: meta, recordings: recordings, sort_params: sort_params)}
-
-      {:error, meta} ->
-        {:noreply, assign(socket, meta: meta)}
-    end
-  end
-
-  @impl true
-  def handle_event("close-popup", _params, socket) do
-    params =
-      Map.merge(
-        socket.assigns.filter_params,
-        socket.assigns.pagination_params
-      )
-      |> Map.merge(socket.assigns.sort_params)
-
-    {:noreply, push_navigate(socket, to: Routes.recording_list_path(socket, :list, params))}
+    load_recordings(params, socket)
   end
 
   @impl true
@@ -208,8 +178,29 @@ defmodule ExNVRWeb.RecordingListLive do
      |> push_patch(to: Routes.recording_list_path(socket, :list, params))}
   end
 
-  defp subscribe_to_recording_events() do
-    PubSub.subscribe(ExNVR.PubSub, @recordings_topic)
+  defp load_recordings(params, socket) do
+    sort_params = Map.take(params, ["order_by", "order_directions"])
+
+    case Recordings.list(params) do
+      {:ok, {recordings, meta}} ->
+        {:noreply, assign(socket, meta: meta, recordings: recordings, sort_params: sort_params)}
+
+      {:error, meta} ->
+        {:noreply, assign(socket, meta: meta)}
+    end
+  end
+
+  defp open_popup(recording) do
+    JS.remove_class("hidden", to: "#popup-container")
+    |> JS.set_attribute(
+      {"src", "/api/devices/#{recording.device_id}/recordings/#{recording.filename}/blob"},
+      to: "#recording-player"
+    )
+  end
+
+  defp close_popup() do
+    JS.add_class("hidden", to: "#popup-container")
+    |> JS.set_attribute({"src", nil}, to: "#recording-player")
   end
 
   defp format_date(date, timezone) do

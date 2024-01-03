@@ -55,22 +55,6 @@ let Hooks = {
         }
 
     },
-    VideoPopup: {
-        mounted() {
-            this.el.addEventListener("click", this.showPopup);
-        },
-        showPopup(event) {
-            event.preventDefault();
-            const popupContainer = document.getElementById("popup-container");
-            const videoElement = popupContainer.querySelector("video");
-            const videoUrl = event.currentTarget.getAttribute("phx-value-url");
-            videoElement.src = videoUrl;
-
-            // Display the popup container
-            popupContainer.classList.remove("hidden");
-            videoElement.play();
-        },
-    },
     Timeline: {
         mounted() {
             createTimeline(this.el)

@@ -126,6 +126,10 @@ defmodule ExNVR.Recordings do
     end
   end
 
+  def subscribe_to_recording_events() do
+    PubSub.subscribe(ExNVR.PubSub, @recordings_topic)
+  end
+
   defp copy_file(_device, _params, false), do: :ok
 
   defp copy_file(device, params, true) do
