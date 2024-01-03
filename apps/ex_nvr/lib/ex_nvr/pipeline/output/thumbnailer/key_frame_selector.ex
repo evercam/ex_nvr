@@ -1,4 +1,4 @@
-defmodule ExNVR.Pipeline.Output.Bif.KeyFrameSelector do
+defmodule ExNVR.Pipeline.Output.Thumbnailer.KeyFrameSelector do
   @moduledoc false
 
   use Membrane.Filter
@@ -32,10 +32,8 @@ defmodule ExNVR.Pipeline.Output.Bif.KeyFrameSelector do
   @impl true
   def handle_process(:input, buffer, _ctx, state) when ExNVR.Utils.keyframe(buffer) do
     if is_nil(state.last_keyframe_pts) or diff(buffer, state) >= state.interval do
-      pts = rem(buffer.metadata.timestamp, 3600 * 10 ** 9)
       state = %{state | last_keyframe_pts: Time.round_to_seconds(buffer.pts)}
-
-      {[buffer: {:output, %{buffer | pts: pts}}], state}
+      {[buffer: {:output, buffer}], state}
     else
       {[], state}
     end

@@ -156,7 +156,7 @@ defmodule ExNVR.Pipelines.Main do
         common_spec ++
           [child(:rtsp_source, %Source.RTSP{stream_uri: stream_uri})] ++
           if sub_stream_uri,
-            do: build_sub_stream_spec(sub_stream_uri),
+            do: build_sub_stream_spec(device, sub_stream_uri),
             else: []
 
       {[spec: spec], state}
@@ -394,15 +394,30 @@ defmodule ExNVR.Pipelines.Main do
     ]
   end
 
-  defp build_sub_stream_spec(sub_stream_uri) do
-    [
-      child({:rtsp_source, :sub_stream}, %Source.RTSP{stream_uri: sub_stream_uri}),
-      child({:funnel, :sub_stream}, %Membrane.Funnel{end_of_stream: :never})
-      |> child({:tee, :sub_stream}, Membrane.Tee.Master)
-      |> via_out(:master)
-      |> via_in(Pad.ref(:video, :sub_stream), options: [encoding: :H264])
-      |> get_child(:hls_sink)
-    ]
+  defp build_sub_stream_spec(device, sub_stream_uri) do
+    spec =
+      [
+        child({:rtsp_source, :sub_stream}, %Source.RTSP{stream_uri: sub_stream_uri}),
+        child({:funnel, :sub_stream}, %Membrane.Funnel{end_of_stream: :never})
+        |> child({:tee, :sub_stream}, Membrane.Tee.Master)
+        |> via_out(:master)
+        |> via_in(Pad.ref(:video, :sub_stream), options: [encoding: :H264])
+        |> get_child(:hls_sink)
+      ]
+
+    if device.settings.generate_bif do
+      spec ++
+        [
+          get_child({:tee, :sub_stream})
+          |> via_out(:copy)
+          |> child({:thumbnailer, :sub_stream}, %Output.Thumbnailer{
+            dest: Device.bif_thumbnails_dir(device),
+            encoding: :H264
+          })
+        ]
+    else
+      spec
+    end
   end
 
   defp link_live_snapshot_elements(state, image_format) do

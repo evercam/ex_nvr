@@ -1,4 +1,4 @@
-defmodule ExNVR.Pipeline.Output.Bif.Archiver.Index do
+defmodule ExNVR.BIF.Index do
   @moduledoc false
 
   @type timestamp :: non_neg_integer()
@@ -20,6 +20,9 @@ defmodule ExNVR.Pipeline.Output.Bif.Archiver.Index do
       | entries: [{timestamp, image_size} | index.entries]
     }
   end
+
+  @spec count(t()) :: non_neg_integer()
+  def count(%__MODULE__{entries: entries}), do: length(entries)
 
   @spec serialize(t(), non_neg_integer()) :: binary()
   def serialize(%__MODULE__{} = index, starting_offset \\ 64) do
