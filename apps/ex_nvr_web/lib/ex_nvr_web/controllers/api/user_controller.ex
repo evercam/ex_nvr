@@ -50,7 +50,7 @@ defmodule ExNVRWeb.Plug.Authorization do
 
       {:error, :unauthorized} ->
         conn
-        |> unauthorized()
+        |> forbidden()
         |> Conn.halt()
     end
   end
