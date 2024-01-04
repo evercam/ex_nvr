@@ -4,6 +4,7 @@ defmodule ExNVR.Authorization do
   """
   alias ExNVR.Accounts.User
 
+  @spec authorize(User.t(), atom(), atom()) :: :ok | {:error, :unauthorized}
   def authorize(%User{role: :admin}, _resource, _action), do: :ok
   def authorize(%User{role: :user}, :user, _action), do: {:error, :unauthorized}
   def authorize(%User{role: :user}, _resource, :read), do: :ok
