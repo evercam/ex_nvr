@@ -45,7 +45,9 @@ defmodule ExNVRWeb.Plug.Authorization do
     user = conn.assigns.current_user
 
     case authorize(user, :user, :any) do
-      :ok -> conn
+      :ok ->
+        conn
+
       {:error, :unauthorized} ->
         conn
         |> unauthorized()
