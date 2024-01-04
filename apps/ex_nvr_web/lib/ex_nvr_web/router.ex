@@ -26,7 +26,7 @@ defmodule ExNVRWeb.Router do
   scope "/api", ExNVRWeb do
     pipe_through [:api, :api_require_authenticated_user]
 
-    resources "/users", API.UserController
+    resources "/users", API.UserController, except: [:new, :edit]
 
     resources "/devices", API.DeviceController, except: [:new, :edit]
 
