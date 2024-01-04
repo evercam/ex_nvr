@@ -13,6 +13,6 @@ defmodule ExNVRWeb.API.UserJSON do
   defp serialize_user(user) do
     user
     |> Map.from_struct()
-    |> Map.take([:id, :first_name, :last_name, :username, :email, :role, :language])
+    |> Map.drop([:__meta__])
   end
 end
