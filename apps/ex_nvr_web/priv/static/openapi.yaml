@@ -203,7 +203,7 @@ paths:
       tags:
         - User
       responses:
-        '200':
+        '204':
             description: Success
         '404':
           $ref: "#/components/responses/NotFound"
