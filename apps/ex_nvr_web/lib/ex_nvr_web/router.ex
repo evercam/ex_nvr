@@ -36,6 +36,8 @@ defmodule ExNVRWeb.Router do
 
     resources "/devices", API.DeviceController, except: [:new, :edit]
 
+    get "/events", API.EventController, :index
+
     get "/recordings/chunks", API.RecordingController, :chunks
 
     scope "/devices/:device_id" do
@@ -57,7 +59,7 @@ defmodule ExNVRWeb.Router do
   scope "/api", ExNVRWeb do
     pipe_through [:api_user_pass, :api_require_authenticated_user]
 
-    resources "/events", API.EventController, only: [:create, :index]
+    post "/events", API.EventController, :create
   end
 
   scope "/api", ExNVRWeb do

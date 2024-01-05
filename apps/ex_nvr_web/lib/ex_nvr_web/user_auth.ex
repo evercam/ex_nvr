@@ -95,8 +95,7 @@ defmodule ExNVRWeb.UserAuth do
   Or by a username password combination
   """
   def fetch_current_user(conn, user_pass: true) do
-    username = fetch_username_from_header(conn)
-    password = fetch_password_from_header(conn)
+    {username, password} = fetch_basic_auth_from_headers(conn)
 
     assign(conn, :current_user, fetch_user_by_username_and_pass(username, password))
   end
@@ -109,9 +108,6 @@ defmodule ExNVRWeb.UserAuth do
 
     assign(conn, :current_user, user)
   end
-
-  defp fetch_username_from_header(conn), do: conn |> get_req_header("username") |> List.first()
-  defp fetch_password_from_header(conn), do: conn |> get_req_header("password") |> List.first()
 
   defp fetch_user_by_username_and_pass(username, password)
        when is_nil(username) or is_nil(password),
@@ -154,6 +150,16 @@ defmodule ExNVRWeb.UserAuth do
     end
   end
 
+  defp fetch_basic_auth_from_headers(conn) do
+    conn
+    |> get_req_header("authorization")
+    |> List.first()
+    |> case do
+      nil -> nil
+      token -> String.trim_leading(token, "Basic ") |> decode_basic_token()
+    end
+  end
+
   defp fetch_from_query_params(%{query_params: query_params}),
     do: decode_access_token(query_params["access_token"])
 
@@ -167,6 +173,16 @@ defmodule ExNVRWeb.UserAuth do
     case Base.url_decode64(token) do
       {:ok, decoded_token} -> decoded_token
       _ -> nil
+    end
+  end
+
+  defp decode_basic_token(token) do
+    case Base.url_decode64(token) do
+      {:ok, decoded_token} ->
+        decoded_token
+        |> String.split(":")
+        |> then(&{Enum.at(&1, 0, nil), Enum.at(&1, 1, nil)})
+      _ -> {nil, nil}
     end
   end
 
