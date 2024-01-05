@@ -769,6 +769,9 @@ components:
       type: http
       scheme: bearer
       bearerFormat: opaque
+    basicAuth:
+      type: http
+      scheme: basic
   schemas:
     User:
       type: object
