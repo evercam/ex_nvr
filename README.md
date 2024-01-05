@@ -65,6 +65,13 @@ sudo systemctl stop ex_nvr.service
 sudo systemctl disable ex_nvr.service
 sudo dpkg -P ex-nvr
 ```
+## WebRTC
+
+You can access the webrtc page of a a specific device by going to the following url:
+
+```url
+{base_url}/webrtc/#{device_id}
+```
 
 ## Environment Variables
 

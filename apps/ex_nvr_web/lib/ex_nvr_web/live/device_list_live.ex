@@ -97,15 +97,6 @@ defmodule ExNVRWeb.DeviceListLive do
                     Stop recording
                   </.link>
                 </li>
-                <li>
-                  <.link
-                    :if={Device.recording?(device)}
-                    href={~p"/webrtc/#{device.id}"}
-                    class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white"
-                  >
-                    webRTC
-                  </.link>
-                </li>
               </ul>
             </div>
           </.button>
