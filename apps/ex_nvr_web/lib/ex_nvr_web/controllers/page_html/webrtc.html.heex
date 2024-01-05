@@ -1,13 +1,5 @@
 <div>
-    <video
-      id="webRtcPlayer"
-      data-device={@device.id}
-      controls
-    >
-    </video>
-    <pre
-      :if={Mix.env() == :dev} 
-      id="webRtcLogs" 
-    />
-    <script defer phx-track-static type="text/javascript" src={~p"/assets/webrtc.js"} />
+  <video id="webRtcPlayer" data-device={@device.id} controls></video>
+  <pre :if={Mix.env() == :dev} id="webRtcLogs" />
+  <script defer phx-track-static type="text/javascript" src={~p"/assets/webrtc.js"} />
 </div>

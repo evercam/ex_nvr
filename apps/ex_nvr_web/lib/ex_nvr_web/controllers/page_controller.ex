@@ -9,7 +9,9 @@ defmodule ExNVRWeb.PageController do
 
   def webrtc(conn, %{"device_id" => device_id}) do
     case Devices.get(device_id) do
-      nil -> send_resp(conn, 404, "")
+      nil ->
+        send_resp(conn, 404, "")
+
       device ->
         render(conn, :webrtc, device: device, layout: false)
     end
