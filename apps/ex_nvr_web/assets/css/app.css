@@ -71,3 +71,16 @@ video::-webkit-media-controls-current-time-display {
     width: 100vw;
     height: 100vh;
 }
+
+#webRtcLogs {
+    position: fixed;
+    bottom: 100px;
+    left: 50%;
+    z-index: 10;
+    transform: translateX(-50%);
+    color: white;
+    width: 80vw;
+    max-height: 150px;
+    overflow-x: scroll;
+    overflow-x: hidden;
+}
