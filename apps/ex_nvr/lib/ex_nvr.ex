@@ -47,7 +47,7 @@ defmodule ExNVR do
         #{inspect(changeset)}
         """)
 
-        System.halt(-1)
+        System.halt(:abort)
       end
     end
   end
