@@ -46,8 +46,14 @@ defmodule ExNVR.DeviceSupervisor do
     |> supervisor_name()
     |> Process.whereis()
     |> case do
-      nil -> :ok
-      pid -> Supervisor.stop(pid)
+      nil ->
+        :ok
+
+      pid ->
+        # We terminate the pipeline first to allow it to do cleanup.
+        # Without this, the pipeline is killed directly.
+        terminate_pipeline(device)
+        Supervisor.stop(pid)
     end
   end
 
@@ -55,6 +61,13 @@ defmodule ExNVR.DeviceSupervisor do
   def restart(device) do
     stop(device)
     start(device)
+  end
+
+  defp terminate_pipeline(device) do
+    device
+    |> ExNVR.Utils.pipeline_name()
+    |> Process.whereis()
+    |> Membrane.Pipeline.terminate()
   end
 
   defp supervisor_name(device), do: :"#{device.id}"

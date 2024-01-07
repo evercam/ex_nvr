@@ -40,7 +40,7 @@ defmodule ExNVR.Pipeline.Source.RTSP do
       })
     ]
 
-    {[spec: spec], %{tracks: [], ssrc_to_track: %{}, link_source?: false}}
+    {[spec: spec], %{tracks: [], ssrc_to_track: %{}, link_source?: false, ref: make_ref()}}
   end
 
   @impl true
@@ -69,22 +69,26 @@ defmodule ExNVR.Pipeline.Source.RTSP do
 
     ssrcs = Map.keys(state.ssrc_to_track)
 
-    childs =
+    children =
       ctx.children
       |> Map.keys()
       |> Enum.filter(fn
+        {:rtp_session, _ref} -> true
         {_, ssrc} -> ssrc in ssrcs
-        :rtp_session -> true
         _other -> false
       end)
 
-    {[remove_children: childs], %{state | ssrc_to_track: %{}, tracks: []}}
+    # Postpone the deletion of the children to allow the `Membrane.Event.Discontinuity` to propagate
+    # to the other elements in the pipeline using this element.
+    Process.send_after(self(), {:remove_children, children}, :timer.seconds(1))
+
+    {[], %{state | ssrc_to_track: %{}, tracks: [], ref: make_ref()}}
   end
 
   @impl true
   def handle_child_notification(
         {:new_rtp_stream, ssrc, pt, _extensions},
-        :rtp_session,
+        {:rtp_session, _ref},
         _ctx,
         state
       ) do
@@ -104,8 +108,18 @@ defmodule ExNVR.Pipeline.Source.RTSP do
   @impl true
   def handle_pad_added(Pad.ref(:output, ssrc) = pad, _ctx, state) do
     track = Map.fetch!(state.ssrc_to_track, ssrc)
-    spec = [get_specs(track, ssrc) |> bin_output(pad)]
+    spec = [get_specs(track, ssrc, state) |> bin_output(pad)]
     {[spec: spec], state}
+  end
+
+  @impl true
+  def handle_info({:remove_children, children}, _ctx, state) do
+    {[remove_children: children], state}
+  end
+
+  @impl true
+  def handle_info(_message, _ctx, state) do
+    {[], state}
   end
 
   defp link_source(state) do
@@ -121,19 +135,19 @@ defmodule ExNVR.Pipeline.Source.RTSP do
       get_child(:source)
       |> via_out(Pad.ref(:output, ref))
       |> via_in(Pad.ref(:rtp_input, ref))
-      |> child(:rtp_session, %Membrane.RTP.SessionBin{
+      |> child({:rtp_session, state.ref}, %Membrane.RTP.SessionBin{
         fmt_mapping: fmt_mapping
       })
     ]
   end
 
-  defp get_specs(%Track{type: :video} = track, ssrc) do
-    get_child(:rtp_session)
+  defp get_specs(%Track{type: :video} = track, ssrc, state) do
+    get_child({:rtp_session, state.ref})
     |> via_out(Pad.ref(:output, ssrc), options: [depayloader: get_depayloader(track)])
     |> child({:rtp_parser, ssrc}, get_parser(track))
   end
 
-  defp get_specs(%Track{type: type}, _ssrc) do
+  defp get_specs(%Track{type: type}, _ssrc, _state) do
     raise "Support for tracks for type '#{type}' not yet implemented"
   end
 
