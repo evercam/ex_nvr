@@ -41,7 +41,7 @@ defmodule ExNVR.MixProject do
       {:jason, "~> 1.2"},
       {:swoosh, "~> 1.3"},
       {:finch, "~> 0.13"},
-      {:ex_sdp, "~> 0.12.0", override: true},
+      {:ex_sdp, "~> 0.14.0", override: true},
       {:membrane_core, "~> 0.12.9"},
       {:membrane_rtsp, "~> 0.5.0"},
       {:membrane_rtp_plugin, "~> 0.23.0"},
