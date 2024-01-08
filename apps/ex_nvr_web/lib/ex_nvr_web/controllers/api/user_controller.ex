@@ -1,18 +1,34 @@
-defmodule ExNVRWeb.Plug.User do
-  @moduledoc """
-  Loads the user instance from database
-  """
+defmodule ExNVRWeb.API.UserController do
+  @moduledoc false
+
+  use ExNVRWeb, :controller
+
+  action_fallback ExNVRWeb.API.FallbackController
+
+  plug :authorization_plug
+  plug :user_plug, [field_name: "id"] when action in [:update, :show, :delete]
 
   import ExNVRWeb.Controller.Helpers
-
-  require Logger
+  import ExNVR.Authorization
 
   alias ExNVR.Accounts
   alias Plug.Conn
 
-  def init(opts), do: opts
+  def authorization_plug(%Conn{} = conn, _opts) do
+    user = conn.assigns.current_user
 
-  def call(%Conn{} = conn, opts) do
+    case authorize(user, :user, :any) do
+      :ok ->
+        conn
+
+      {:error, :unauthorized} ->
+        conn
+        |> forbidden()
+        |> Conn.halt()
+    end
+  end
+
+  def user_plug(%Conn{} = conn, opts) do
     field_name = Keyword.get(opts, :field_name, "user_id")
     user_id = conn.path_params[field_name]
 
@@ -27,47 +43,6 @@ defmodule ExNVRWeb.Plug.User do
         |> Conn.halt()
     end
   end
-end
-
-defmodule ExNVRWeb.Plug.Authorization do
-  @moduledoc """
-  Check if user is authorized.
-  """
-
-  import ExNVRWeb.Controller.Helpers
-  import ExNVR.Authorization
-
-  alias Plug.Conn
-
-  def init(opts), do: opts
-
-  def call(%Conn{} = conn, _opts) do
-    user = conn.assigns.current_user
-
-    case authorize(user, :user, :any) do
-      :ok ->
-        conn
-
-      {:error, :unauthorized} ->
-        conn
-        |> forbidden()
-        |> Conn.halt()
-    end
-  end
-end
-
-defmodule ExNVRWeb.API.UserController do
-  @moduledoc false
-
-  use ExNVRWeb, :controller
-
-  action_fallback ExNVRWeb.API.FallbackController
-
-  plug ExNVRWeb.Plug.User, [field_name: "id"] when action in [:update, :show, :delete]
-  plug ExNVRWeb.Plug.Authorization
-
-  alias ExNVR.Accounts
-  alias Plug.Conn
 
   @spec create(Conn.t(), map()) :: Conn.t() | {:error, Ecto.Changeset.t()}
   def create(%Conn{} = conn, params) do
