@@ -44,7 +44,6 @@ window.onload = function (_event) {
 
             webrtc.on("trackReady", (track_context) => {
                 log("Track is ready: \n" + track_context.stream)
-                // let video = document.createElement("video")
                 player.srcObject = track_context.stream
             })
 

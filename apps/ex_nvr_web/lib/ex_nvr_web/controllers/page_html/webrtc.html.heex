@@ -1,5 +1,5 @@
 <div>
   <video id="webRtcPlayer" data-device={@device.id} controls></video>
-  <pre :if={Mix.env() == :dev} id="webRtcLogs" />
+  <pre :if={Application.get_env(:ex_nvr, :env) == :dev} id="webRtcLogs" />
   <script defer phx-track-static type="text/javascript" src={~p"/assets/webrtc.js"} />
 </div>
