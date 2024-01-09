@@ -110,7 +110,7 @@ defmodule ExNVRWeb.RemoteStorageLive do
   end
 
   def mount(%{"id" => "new"}, _session, socket) do
-    changeset = RemoteStorages.change_remote_storage(%RemoteStorage{})
+    changeset = RemoteStorages.change_remote_storage_creation(%RemoteStorage{})
 
     {:ok,
      assign(socket,
@@ -122,7 +122,7 @@ defmodule ExNVRWeb.RemoteStorageLive do
 
   def mount(%{"id" => remote_storage_id}, _session, socket) do
     remote_storage = RemoteStorages.get!(remote_storage_id)
-    changeset = RemoteStorages.change_remote_storage(remote_storage)
+    changeset = RemoteStorages.change_remote_storage_update(remote_storage)
 
     {:ok,
      assign(socket,

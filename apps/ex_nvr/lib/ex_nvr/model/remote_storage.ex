@@ -70,9 +70,15 @@ defmodule ExNVR.Model.RemoteStorage do
     timestamps(type: :utc_datetime_usec)
   end
 
-  def changeset(remote_storage \\ %__MODULE__{}, params) do
+  def create_changeset(remote_storage \\ %__MODULE__{}, params) do
     remote_storage
     |> Changeset.cast(params, [:name, :type])
+    |> common_config()
+  end
+
+  def update_changeset(remote_storage, params) do
+    remote_storage
+    |> Changeset.cast(params, [])
     |> common_config()
   end
 
