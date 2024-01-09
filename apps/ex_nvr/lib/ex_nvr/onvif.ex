@@ -19,7 +19,20 @@ defmodule ExNVR.Onvif do
     get_network_interfaces: :device,
     get_profiles: :media,
     get_stream_uri: :media,
-    get_snapshot_uri: :media
+    get_snapshot_uri: :media,
+    get_status: :ptz,
+    get_nodes: :ptz,
+    get_configurations: :ptz,
+    get_presets: :ptz,
+    goto_preset: :ptz,
+    set_preset: :ptz,
+    remove_preset: :ptz,
+    goto_home_position: :ptz,
+    set_home_position: :ptz,
+    relative_move: :ptz,
+    absolute_move: :ptz,
+    continuous_move: :ptz,
+    stop: :ptz
   ]
 
   @doc """
