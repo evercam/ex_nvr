@@ -8,6 +8,7 @@ defmodule ExNVR.Onvif.Http do
   @onvif_path Path.join([Application.app_dir(:ex_nvr), "priv", "onvif"])
   @device_wsdl Soap.init_model(Path.join(@onvif_path, "devicemgmt.wsdl")) |> elem(1)
   @media_wsdl Soap.init_model(Path.join(@onvif_path, "media2.wsdl")) |> elem(1)
+  @ptz_wsdl Soap.init_model(Path.join(@onvif_path, "ptz.wsdl")) |> elem(1)
 
   @spec call(binary(), binary(), map(), Keyword.t()) ::
           {:ok, Soap.Response.t()} | {:error, term()}
@@ -35,4 +36,5 @@ defmodule ExNVR.Onvif.Http do
 
   defp get_model(:media, endpoint), do: %{@media_wsdl | endpoint: endpoint}
   defp get_model(:device, endpoint), do: %{@device_wsdl | endpoint: endpoint}
+  defp get_model(:ptz, endpoint), do: %{@ptz_wsdl | endpoint: endpoint}
 end
