@@ -3,13 +3,17 @@ defmodule ExNVR.Events do
   alias ExNVR.Model.{Device, LPREvent}
   alias ExNVR.Repo
 
-  def create_lpr_event(params, plate_picture \\ nil, full_picture \\ nil) do
+  @spec create_lpr_event(Device.t(), map(), binary() | nil, binary() | nil) ::
+          {:ok, LPREvent.t()} | {:error, Ecto.Changeset.t()}
+  def create_lpr_event(device, params, plate_picture \\ nil, full_picture \\ nil) do
     params
+    |> Map.put(:device_id, device.id)
     |> LPREvent.changeset()
     |> Repo.insert()
     |> case do
       {:ok, event} ->
         event = Repo.preload(event, :device)
+
         event
         |> lpr_event_filename()
         |> save_image(plate_picture)
@@ -19,7 +23,9 @@ defmodule ExNVR.Events do
         |> save_image(full_picture)
 
         {:ok, event}
-      error -> error
+
+      error ->
+        error
     end
   end
 
@@ -36,18 +42,16 @@ defmodule ExNVR.Events do
   end
 
   @spec lpr_event_filename(Event.t(), binary()) :: binary()
-  def lpr_event_filename(event, prefix \\ "thumbnails") do
+  def lpr_event_filename(event, suffix \\ "thumbnails") do
     event.device
-    |> Device.base_dir()
-    |> Path.join("lpr")
-    |> Path.join(prefix)
+    |> Device.lpr_dir(suffix)
     |> Path.join("#{event.plate_number}_#{event.id}.jpg")
   end
 
   defp save_image(_, nil), do: nil
 
   defp save_image(path, image) do
-    File.mkdir_p(Path.dirname(path))
-    File.write(path, image)
+    File.mkdir_p!(Path.dirname(path))
+    File.write!(path, image)
   end
 end

@@ -80,6 +80,7 @@ defmodule ExNVRWeb.ConnCase do
 
   def log_in_user_with_username_password(conn, user, password) do
     token = Base.encode64("#{user.email}:#{password}")
+
     conn
     |> Phoenix.ConnTest.init_test_session(%{})
     |> Plug.Conn.put_req_header("authorization", "Basic #{token}")

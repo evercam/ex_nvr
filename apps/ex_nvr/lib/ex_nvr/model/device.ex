@@ -236,6 +236,14 @@ defmodule ExNVR.Model.Device do
     Path.join([base_dir(device), "thumbnails"])
   end
 
+  @spec lpr_dir(t(), binary()) :: binary()
+  def lpr_dir(device, suffix) do
+    device
+    |> base_dir()
+    |> Path.join("lpr")
+    |> Path.join(suffix)
+  end
+
   def filter(query \\ __MODULE__, params) do
     Enum.reduce(params, query, fn
       {:state, value}, q when is_atom(value) -> where(q, [d], d.state == ^value)

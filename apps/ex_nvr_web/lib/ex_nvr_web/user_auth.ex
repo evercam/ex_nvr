@@ -182,7 +182,9 @@ defmodule ExNVRWeb.UserAuth do
         decoded_token
         |> String.split(":")
         |> then(&{Enum.at(&1, 0, nil), Enum.at(&1, 1, nil)})
-      _ -> {nil, nil}
+
+      _ ->
+        {nil, nil}
     end
   end
 

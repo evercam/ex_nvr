@@ -12,13 +12,11 @@ defmodule ExNVRWeb.API.EventController do
     device_id = Map.get(query_params, "device_id", "")
     event_type = Map.get(query_params, "type", "")
 
-    with %Device{} = device <- Devices.get(device_id),
-          true <- event_type == "lpr",
-          {:ok, params, plate_picture, full_picture} <- format_params(device, body_params),
-          {:ok, _event} <- Events.create_lpr_event(params, plate_picture, full_picture)do
+    with {:ok, device} <- get_device(device_id),
+         :ok <- check_event_type(event_type),
+         {:ok, params, plate_picture, full_picture} <- format_params(device, body_params),
+         {:ok, _event} <- Events.create_lpr_event(device, params, plate_picture, full_picture) do
       send_resp(conn, 201, "")
-    else
-      error -> {:error, error}
     end
   end
 
@@ -47,7 +45,7 @@ defmodule ExNVRWeb.API.EventController do
     end
   end
 
-  defp format_params(%Device{id: id, timezone: timezone, vendor: "milesight"}, entry) do
+  defp format_params(%Device{timezone: timezone, vendor: "milesight"}, entry) do
     params = %{
       capture_time:
         entry
@@ -65,19 +63,19 @@ defmodule ExNVRWeb.API.EventController do
         x1: entry["coordinate_x1"],
         y1: entry["coordinate_y1"],
         x2: entry["coordinate_x2"],
-        y2: entry["coordinate_y2"],
-      },
-      device_id: id
+        y2: entry["coordinate_y2"]
+      }
     }
+
     with {:ok, plate_picture} <- decode_image(params["plate_image"]),
          {:ok, full_picture} <- decode_image(params["full_image"]) do
       {:ok, params, plate_picture, full_picture}
     else
-      _ -> {:error, "wrong plate or full image format"}
+      _ -> {:error, :wrong_format}
     end
   end
 
-  defp format_params(_, _), do: %{}
+  defp format_params(_device, _params), do: {:error, :not_found}
 
   defp decode_image(nil), do: {:ok, nil}
   defp decode_image(image_base64), do: Base.decode64(image_base64)
@@ -98,4 +96,16 @@ defmodule ExNVRWeb.API.EventController do
     |> Map.drop([:__meta__, :device_name, :timezone])
     |> Map.put(:bounding_box, Map.from_struct(event.bounding_box))
   end
+
+  defp get_device(nil), do: {:error, :not_found}
+
+  defp get_device(device_id) do
+    case Devices.get(device_id) do
+      %Device{} = device -> {:ok, device}
+      _ -> {:error, :not_found}
+    end
+  end
+
+  defp check_event_type("lpr"), do: :ok
+  defp check_event_type(_), do: {:error, :not_found}
 end

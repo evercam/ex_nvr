@@ -18,7 +18,17 @@ defmodule ExNVR.Model.LPREvent do
   ]
 
   @derive {Flop.Schema,
-           filterable: [:capture_time, :plate_number, :direction, :list_type, :vehicle_type, :vehicle_color, :plate_color, :inserted_at, :device_id],
+           filterable: [
+             :capture_time,
+             :plate_number,
+             :direction,
+             :list_type,
+             :vehicle_type,
+             :vehicle_color,
+             :plate_color,
+             :inserted_at,
+             :device_id
+           ],
            sortable: [:inserted_at, :capture_time, :confidence],
            default_order: %{
              order_by: [:inserted_at, :capture_time, :confidence],
@@ -84,8 +94,8 @@ defmodule ExNVR.Model.LPREvent do
   schema "lpr_events" do
     field :capture_time, :utc_datetime_usec
     field :plate_number, :string
-    field :direction, :string
-    field :list_type, :string
+    field :direction, Ecto.Enum, values: [:forward, :reverse]
+    field :list_type, Ecto.Enum, values: [:white, :black, :visitor]
     field :confidence, :float
     field :vehicle_type, :string
     field :vehicle_color, :string
@@ -120,6 +130,6 @@ defmodule ExNVR.Model.LPREvent do
     event
     |> Changeset.cast(params, @fields)
     |> Changeset.cast_embed(:bounding_box)
-    |> Changeset.validate_required(@fields ++ [:bounding_box])
+    |> Changeset.validate_required([:capture_time, :plate_number])
   end
 end
