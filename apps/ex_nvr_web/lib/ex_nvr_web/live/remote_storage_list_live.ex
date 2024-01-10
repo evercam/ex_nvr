@@ -7,7 +7,7 @@ defmodule ExNVRWeb.RemoteStorageListLive do
   def render(assigns) do
     ~H"""
     <div class="grow">
-      <div :if={@current_user.role == :admin} class="ml-4 sm:ml-0">
+      <div class="ml-4 sm:ml-0">
         <.link href={~p"/remote-storages/new"}>
           <.button>Add remote storage</.button>
         </.link>
@@ -19,7 +19,6 @@ defmodule ExNVRWeb.RemoteStorageListLive do
         <:col :let={remote_storage} label="Type"><%= remote_storage.type %></:col>
         <:action :let={remote_storage}>
           <.button
-            :if={@current_user.role == :admin}
             id={"dropdownMenuIconButton_#{remote_storage.id}"}
             data-dropdown-toggle={"dropdownDots_#{remote_storage.id}"}
             class="text-sm ml-3 hover:bg-gray-100 dark:bg-gray-800"
