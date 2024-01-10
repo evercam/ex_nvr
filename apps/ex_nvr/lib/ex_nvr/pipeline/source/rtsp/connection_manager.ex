@@ -15,6 +15,7 @@ defmodule ExNVR.Pipeline.Source.RTSP.ConnectionManager do
                      )
   @content_type_header [{"accept", "application/sdp"}]
   @keep_alive_interval 15_000
+  @exponential_retry_factor 2
 
   defmodule ConnectionStatus do
     @moduledoc false
@@ -215,11 +216,12 @@ defmodule ExNVR.Pipeline.Source.RTSP.ConnectionManager do
            reconnect_delay: delay
          } = connection_status
        ) do
-    connection_status = %{connection_status | reconnect_attempt: attempt + 1}
+    new_delay = delay * @exponential_retry_factor
+    connection_status = %{connection_status | reconnect_attempt: attempt + 1, reconnect_delay: new_delay}
 
     # This works with :infinity, since integers < atoms
     if attempt < max_attempts do
-      {:backoff, delay, connection_status}
+      {:backoff, new_delay, connection_status}
     else
       Membrane.Logger.debug("ConnectionManager: Max reconnect attempts reached. Hibernating")
       send(endpoint, {:connection_info, :max_reconnects})
