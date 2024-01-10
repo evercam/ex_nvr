@@ -216,7 +216,7 @@ defmodule ExNVR.Pipeline.Source.RTSP.ConnectionManager do
            reconnect_delay: delay
          } = connection_status
        ) do
-    new_delay = delay * @exponential_retry_factor
+    new_delay = delay * :math.pow(2, attempt)
     connection_status = %{connection_status | reconnect_attempt: attempt + 1, reconnect_delay: new_delay}
 
     # This works with :infinity, since integers < atoms
