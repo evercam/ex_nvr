@@ -21,46 +21,78 @@ defmodule ExNVRWeb.DashboardLive do
   def render(assigns) do
     ~H"""
     <div
-      :if={@devices != [] && @live_view_enabled?}
+      :if={@devices != []}
       class="ptz relative my-80 mr-20 text-sm text-white dark:bg-transparent dark:bg-opacity-80 hover:cursor-pointer"
     >
       <div class="ptz-up">
-        <.button class="dark:bg-gray-700">
+        <.button
+          class="dark:bg-gray-700"
+          phx-click="handle-ptz"
+          phx-value-action="up"
+        >
           <.icon name="hero-arrow-up" />
         </.button>
       </div>
       <div class="ptz-left">
-        <.button class="dark:bg-gray-700">
+        <.button
+          class="dark:bg-gray-700"
+          phx-click="handle-ptz"
+          phx-value-action="left"
+        >
           <.icon name="hero-arrow-left" />
         </.button>
       </div>
       <div class="ptz-down">
-        <.button class="dark:bg-gray-700">
+        <.button
+          class="dark:bg-gray-700"
+          phx-click="handle-ptz"
+          phx-value-action="down"
+        >
           <.icon name="hero-arrow-down" />
         </.button>
       </div>
       <div class="ptz-home">
-        <.button class="dark:bg-gray-700">
+        <.button
+          class="dark:bg-gray-700"
+          phx-click="handle-ptz"
+          phx-value-action="home"
+        >
           <.icon name="hero-home" />
         </.button>
       </div>
       <div class="ptz-right">
-        <.button class="dark:bg-gray-700">
+        <.button
+          class="dark:bg-gray-700"
+          phx-click="handle-ptz"
+          phx-value-action="right"
+        >
           <.icon name="hero-arrow-right" />
         </.button>
       </div>
       <div class="ptz-zoom-in">
-        <.button class="dark:bg-gray-700">
+        <.button
+          class="dark:bg-gray-700"
+          phx-click="handle-ptz"
+          phx-value-action="zoom-in"
+        >
           <.icon name="hero-plus" />
         </.button>
       </div>
       <div class="ptz-zoom-out">
-        <.button class="dark:bg-gray-700">
+        <.button
+          class="dark:bg-gray-700"
+          phx-click="handle-ptz"
+          phx-value-action="zoom-out"
+        >
           <.icon name="hero-minus" />
         </.button>
       </div>
       <div class="ptz-presets">
-        <.button class="dark:bg-gray-700">
+        <.button
+          class="dark:bg-gray-700"
+          phx-click="handle-ptz"
+          phx-value-action="presets"
+        >
           <.icon name="hero-bars-3" />
         </.button>
       </div>
@@ -318,6 +350,19 @@ defmodule ExNVRWeb.DashboardLive do
     end
   end
 
+  def handle_event("handle-ptz", %{"action" => action}, socket) do
+    case action do
+      "presets" ->
+        socket
+        |> put_flash(:error, "Presets not implemented yet")
+        |> then(&{:noreply, &1})
+
+      "home" -> home(socket)
+
+      mode -> ptz_action(socket, mode)
+    end
+  end
+
   defp assign_devices(socket) do
     assign(socket, devices: Devices.list())
   end
@@ -519,6 +564,106 @@ defmodule ExNVRWeb.DashboardLive do
     case Recordings.get_recordings_between(device_id, start_date, start_date) do
       [] -> Changeset.add_error(changeset, :start_date, "No recordings found")
       _recordings -> changeset
+    end
+  end
+
+  defp get_onvif_access_info() do
+    opts = [
+      username: "admin",
+      password: "Permanex1",
+      url: "wg6.evercam.io:20974/onvif/ptz_service/",
+      profile_token: "Profile_1"
+    ]
+  end
+
+  defp home(socket) do
+    speed = []
+    opts = get_onvif_access_info()
+    profile_token = opts[:profile_token]
+
+    speed =
+      case pan_tilt_zoom_vector(speed) do
+        nil -> %{}
+        vector -> %{"Speed" => vector}
+      end
+
+    body = Map.merge(%{"ProfileToken" => profile_token}, speed)
+
+    case Onvif.call(opts[:url], :goto_home_position, body, opts) do
+      {:ok, _response} ->
+        socket
+        |> put_flash(:info, "Action succeeded")
+        |> then(&{:noreply, &1})
+
+      {:error, _SoapResponse} ->
+        socket
+        |> put_flash(:error, "Couldn't go to Home Position")
+        |> then(&{:noreply, &1})
+    end
+  end
+
+  defp ptz_action(socket, mode) do
+    opts = get_onvif_access_info()
+    profile_token = opts[:profile_token]
+
+    velocity =
+      case mode do
+        "zoom-in" -> [zoom: 0.03]
+        "zoom-out" -> [zoom: -0.03]
+        "left" -> [x: -0.4, y: 0.0]
+        "right" -> [x: 0.4, y: 0.0]
+        "up" -> [x: 0.0, y: 0.4]
+        "down" -> [x: 0.0, y: -0.4]
+      end
+
+    move_params =
+      case pan_tilt_zoom_vector(velocity) do
+        nil -> %{}
+        vector -> %{"Velocity" => vector}
+      end
+
+    body = Map.merge(%{"ProfileToken" => profile_token}, move_params)
+
+    case Onvif.call(opts[:url], :continuous_move, body, opts) do
+      {:ok, _response} ->
+        case Onvif.call(opts[:url], :stop, body, opts) do
+          {:ok, _respose} ->
+            socket
+            |> put_flash(:info, "Action succeeded")
+            |> then(&{:noreply, &1})
+
+          {:error, _SoapResponse} ->
+            socket
+            |> put_flash(:error, "Couldn't stop continuous move!")
+            |> then(&{:noreply, &1})
+        end
+
+      {:error, _SoapResponse} ->
+        socket
+        |> put_flash(:error, "Couldn't perform the requested action!")
+        |> then(&{:noreply, &1})
+    end
+  end
+
+  defp pan_tilt_zoom_vector(vector) do
+    pan_tilt =
+      case {vector[:x], vector[:y]} do
+        {nil, _} -> %{}
+        {_, nil} -> %{}
+        {x, y} -> %{"PanTilt" => %{"x" => x, "y" => y}}
+      end
+
+    zoom =
+      case vector[:zoom] do
+        nil -> %{}
+        zoom -> %{"Zoom" => %{"x" => zoom}}
+      end
+
+    pan_tilt_zoom = Map.merge(pan_tilt, zoom)
+    if pan_tilt_zoom == %{} do
+      nil
+    else
+      pan_tilt_zoom
     end
   end
 end
