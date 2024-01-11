@@ -44,6 +44,23 @@ defmodule ExNVRWeb.Router do
       get "/footage", API.DeviceStreamingController, :footage
 
       get "/bif/:hour", API.DeviceStreamingController, :bif
+
+      get "/ptz/status", API.ONVIFPTZController, :status
+      get "/ptz/presets", API.ONVIFPTZController, :presets
+      get "/ptz/nodes", API.ONVIFPTZController, :nodes
+      get "/ptz/configurations", API.ONVIFPTZController, :configurations
+
+      post "/ptz/home", API.ONVIFPTZController, :home
+      post "/ptz/home/set", API.ONVIFPTZController, :sethome
+
+      post "/ptz/presets/:preset_token/set", API.ONVIFPTZController, :setpreset
+      post "/ptz/presets/create", API.ONVIFPTZController, :createpreset
+      post "/ptz/presets/go/:preset_token", API.ONVIFPTZController, :gotopreset
+
+      post "/ptz/continuous/start/:direction", API.ONVIFPTZController, :continuousmove
+      post "/ptz/continuous/zoom/:mode", API.ONVIFPTZController, :continuouszoom
+      post "/ptz/continuous/stop", API.ONVIFPTZController, :stop
+      post "/ptz/relative", API.ONVIFPTZController, :relativemove
     end
   end
 
