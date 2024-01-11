@@ -213,7 +213,7 @@ defmodule ExNVR.Pipeline.Source.RTSP.ConnectionManager do
          %ConnectionStatus{
            endpoint: endpoint,
            reconnect_attempt: attempt,
-           max_reconnect_attempts: max_attempts,
+           max_reconnect_attempts: max_attempts
          } = connection_status
        ) do
     # This works with :infinity, since integers < atoms
@@ -227,17 +227,19 @@ defmodule ExNVR.Pipeline.Source.RTSP.ConnectionManager do
   end
 
   defp backoff(
-    %ConnectionStatus{
-      reconnect_attempt: attempt,
-      base_backoff_in_ms: base_backoff,
-      max_backoff_in_ms: max_backoff
-    } = connection_status
-  ) do
+         %ConnectionStatus{
+           reconnect_attempt: attempt,
+           base_backoff_in_ms: base_backoff,
+           max_backoff_in_ms: max_backoff
+         } = connection_status
+       ) do
     (base_backoff * :math.pow(2, attempt))
     |> min(max_backoff)
     |> trunc()
     |> :rand.uniform()
-    |> then(&{:backoff, &1, %ConnectionStatus{connection_status | reconnect_attempt: attempt + 1}})
+    |> then(
+      &{:backoff, &1, %ConnectionStatus{connection_status | reconnect_attempt: attempt + 1}}
+    )
   end
 
   defp start_rtsp_session(%ConnectionStatus{
