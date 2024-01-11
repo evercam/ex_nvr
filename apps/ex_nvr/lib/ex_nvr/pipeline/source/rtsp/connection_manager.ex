@@ -25,9 +25,10 @@ defmodule ExNVR.Pipeline.Source.RTSP.ConnectionManager do
             stream_uri: binary(),
             rtsp_session: pid(),
             endpoint: pid(),
-            reconnect_delay: non_neg_integer(),
             max_reconnect_attempts: non_neg_integer() | :infinity,
             reconnect_attempt: non_neg_integer(),
+            base_backoff_in_ms: non_neg_integer(),
+            max_backoff_in_ms: non_neg_integer(),
             keep_alive: pid(),
             tracks: [map()],
             stream_types: [atom()]
@@ -36,7 +37,6 @@ defmodule ExNVR.Pipeline.Source.RTSP.ConnectionManager do
     @enforce_keys [
       :stream_uri,
       :endpoint,
-      :reconnect_delay,
       :max_reconnect_attempts,
       :reconnect_attempt
     ]
@@ -46,7 +46,9 @@ defmodule ExNVR.Pipeline.Source.RTSP.ConnectionManager do
                   :rtsp_session,
                   :keep_alive,
                   :tracks,
-                  :stream_types
+                  :stream_types,
+                  base_backoff_in_ms: 10,
+                  max_backoff_in_ms: :timer.minutes(2)
                 ]
   end
 
@@ -79,7 +81,6 @@ defmodule ExNVR.Pipeline.Source.RTSP.ConnectionManager do
      %ConnectionStatus{
        stream_uri: opts[:stream_uri],
        endpoint: opts[:endpoint],
-       reconnect_delay: opts[:reconnect_delay],
        max_reconnect_attempts: opts[:max_reconnect_attempts],
        reconnect_attempt: 0,
        stream_types: opts[:stream_types]
@@ -213,20 +214,30 @@ defmodule ExNVR.Pipeline.Source.RTSP.ConnectionManager do
            endpoint: endpoint,
            reconnect_attempt: attempt,
            max_reconnect_attempts: max_attempts,
-           reconnect_delay: delay
          } = connection_status
        ) do
-    new_delay = delay * :math.pow(2, attempt)
-    connection_status = %{connection_status | reconnect_attempt: attempt + 1, reconnect_delay: new_delay}
-
     # This works with :infinity, since integers < atoms
     if attempt < max_attempts do
-      {:backoff, new_delay, connection_status}
+      backoff(connection_status)
     else
       Membrane.Logger.debug("ConnectionManager: Max reconnect attempts reached. Hibernating")
       send(endpoint, {:connection_info, :max_reconnects})
       {:ok, connection_status, :hibernate}
     end
+  end
+
+  defp backoff(
+    %ConnectionStatus{
+      reconnect_attempt: attempt,
+      base_backoff_in_ms: base_backoff,
+      max_backoff_in_ms: max_backoff
+    } = connection_status
+  ) do
+    (base_backoff * :math.pow(2, attempt))
+    |> min(max_backoff)
+    |> trunc()
+    |> :rand.uniform()
+    |> then(&{:backoff, &1, %ConnectionStatus{connection_status | reconnect_attempt: attempt + 1}})
   end
 
   defp start_rtsp_session(%ConnectionStatus{
