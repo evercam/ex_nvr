@@ -6,6 +6,7 @@ defmodule ExNVRWeb.DashboardLive do
   alias ExNVR.Recordings
   alias ExNVR.Model.Device
   alias ExNVRWeb.TimelineComponent
+  alias ExNVR.Onvif
 
   @durations [
     {"2 Minutes", "120"},
@@ -20,7 +21,7 @@ defmodule ExNVRWeb.DashboardLive do
   def render(assigns) do
     ~H"""
     <div
-      :if={@devices != []}
+      :if={@devices != [] && @live_view_enabled?}
       class="ptz relative my-80 mr-20 text-sm text-white dark:bg-transparent dark:bg-opacity-80 hover:cursor-pointer"
     >
       <div class="ptz-up">
