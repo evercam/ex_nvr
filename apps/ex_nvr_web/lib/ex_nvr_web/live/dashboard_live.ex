@@ -19,61 +19,48 @@ defmodule ExNVRWeb.DashboardLive do
 
   def render(assigns) do
     ~H"""
-    <div :if={@devices != []} class="ptz relative my-80 mr-20 text-sm text-white dark:bg-transparent dark:bg-opacity-80 hover:cursor-pointer">
+    <div
+      :if={@devices != []}
+      class="ptz relative my-80 mr-20 text-sm text-white dark:bg-transparent dark:bg-opacity-80 hover:cursor-pointer"
+    >
       <div class="ptz-up">
-        <.button
-          class="dark:bg-gray-700"
-        >
-          <.icon name="hero-arrow-up"/>
+        <.button class="dark:bg-gray-700">
+          <.icon name="hero-arrow-up" />
         </.button>
       </div>
       <div class="ptz-left">
-        <.button
-          class="dark:bg-gray-700"
-        >
-          <.icon name="hero-arrow-left"/>
+        <.button class="dark:bg-gray-700">
+          <.icon name="hero-arrow-left" />
         </.button>
       </div>
       <div class="ptz-down">
-        <.button
-          class="dark:bg-gray-700"
-        >
-          <.icon name="hero-arrow-down"/>
+        <.button class="dark:bg-gray-700">
+          <.icon name="hero-arrow-down" />
         </.button>
       </div>
       <div class="ptz-home">
-        <.button
-          class="dark:bg-gray-700"
-        >
-          <.icon name="hero-home"/>
+        <.button class="dark:bg-gray-700">
+          <.icon name="hero-home" />
         </.button>
       </div>
       <div class="ptz-right">
-        <.button
-          class="dark:bg-gray-700"
-        >
-          <.icon name="hero-arrow-right"/>
+        <.button class="dark:bg-gray-700">
+          <.icon name="hero-arrow-right" />
         </.button>
       </div>
       <div class="ptz-zoom-in">
-        <.button
-          class="dark:bg-gray-700"
-        >
-          <.icon name="hero-plus"/>
+        <.button class="dark:bg-gray-700">
+          <.icon name="hero-plus" />
         </.button>
       </div>
       <div class="ptz-zoom-out">
-        <.button
-          class="dark:bg-gray-700"
-        >
-          <.icon name="hero-minus"/>
+        <.button class="dark:bg-gray-700">
+          <.icon name="hero-minus" />
         </.button>
       </div>
       <div class="ptz-presets">
-        <.button
-          class="dark:bg-gray-700"
-        >
-          <.icon name="hero-bars-3"/>
+        <.button class="dark:bg-gray-700">
+          <.icon name="hero-bars-3" />
         </.button>
       </div>
     </div>
