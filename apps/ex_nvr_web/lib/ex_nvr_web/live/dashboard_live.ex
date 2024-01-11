@@ -19,154 +19,154 @@ defmodule ExNVRWeb.DashboardLive do
 
   def render(assigns) do
     ~H"""
+    <div :if={@devices != []} class="ptz relative my-80 mr-20 text-sm text-white dark:bg-transparent dark:bg-opacity-80 hover:cursor-pointer">
+      <div class="ptz-up">
+        <.button
+          class="dark:bg-gray-700"
+        >
+          <.icon name="hero-arrow-up"/>
+        </.button>
+      </div>
+      <div class="ptz-left">
+        <.button
+          class="dark:bg-gray-700"
+        >
+          <.icon name="hero-arrow-left"/>
+        </.button>
+      </div>
+      <div class="ptz-down">
+        <.button
+          class="dark:bg-gray-700"
+        >
+          <.icon name="hero-arrow-down"/>
+        </.button>
+      </div>
+      <div class="ptz-home">
+        <.button
+          class="dark:bg-gray-700"
+        >
+          <.icon name="hero-home"/>
+        </.button>
+      </div>
+      <div class="ptz-right">
+        <.button
+          class="dark:bg-gray-700"
+        >
+          <.icon name="hero-arrow-right"/>
+        </.button>
+      </div>
+      <div class="ptz-zoom-in">
+        <.button
+          class="dark:bg-gray-700"
+        >
+          <.icon name="hero-plus"/>
+        </.button>
+      </div>
+      <div class="ptz-zoom-out">
+        <.button
+          class="dark:bg-gray-700"
+        >
+          <.icon name="hero-minus"/>
+        </.button>
+      </div>
+      <div class="ptz-presets">
+        <.button
+          class="dark:bg-gray-700"
+        >
+          <.icon name="hero-bars-3"/>
+        </.button>
+      </div>
+    </div>
     <div class="bg-white sm:w-2/3 dark:bg-gray-800">
       <div :if={@devices == []} class="grid tracking-wide text-lg text-center dark:text-gray-200">
         You have no devices, you can create one
         <span><.link href={~p"/devices"} class="ml-2 dark:text-blue-600">here</.link></span>
       </div>
       <div :if={@devices != []}>
-        <div class="flex items-center justify-between invisible sm:visible">
-          <.simple_form for={@form} id="device_form">
-            <div class="flex items-center">
-              <div class="mr-4">
-                <.input
-                  field={@form[:device]}
-                  id="device_form_id"
-                  type="select"
-                  label="Device"
-                  options={Enum.map(@devices, &{&1.name, &1.id})}
-                  phx-change="switch_device"
-                />
-              </div>
-
-              <div class={[@start_date && "hidden"]}>
-                <.input
-                  field={@form[:stream]}
-                  type="select"
-                  label="Stream"
-                  options={@supported_streams}
-                  phx-change="switch_stream"
-                />
-              </div>
-            </div>
-          </.simple_form>
-
-          <div class="mt-20 mb-2">
-            <.button
-              id="download-footage-btn"
-              class="bg-blue-500 text-white px-4 py-2 rounded flex items-center"
-              phx-click={show_modal("download-modal")}
-            >
-              <span title="Download footage" class="mr-2">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  class="w-5 h-5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="1.5"
-                    d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"
+        <div>
+          <div class="flex items-center justify-between invisible sm:visible">
+            <.simple_form for={@form} id="device_form">
+              <div class="flex items-center">
+                <div class="mr-4">
+                  <.input
+                    field={@form[:device]}
+                    id="device_form_id"
+                    type="select"
+                    label="Device"
+                    options={Enum.map(@devices, &{&1.name, &1.id})}
+                    phx-change="switch_device"
                   />
-                </svg>
-              </span>
-              Download
-            </.button>
-          </div>
-        </div>
+                </div>
 
-        <div class="relative mt-4">
-          <div :if={@live_view_enabled?} class="relative">
-            <video
-              id="live-video"
-              class="w-full h-auto dark:bg-gray-500 rounded-tr rounded-tl"
-              autoplay
-              controls
-              muted
-            />
-            <div class="absolute top-11 right-1 rounded-sm py-1 px-2 text-sm text-white dark:bg-transparent dark:bg-opacity-80 hover:cursor-pointer">
-              <div class="ptz">
-                <div class="ptz-up">
-                  <.button
-                    class="dark:bg-gray-700"
-                  >
-                    <.icon name="hero-arrow-up"/>
-                  </.button>
+                <div class={[@start_date && "hidden"]}>
+                  <.input
+                    field={@form[:stream]}
+                    type="select"
+                    label="Stream"
+                    options={@supported_streams}
+                    phx-change="switch_stream"
+                  />
                 </div>
-                <div class="ptz-left">
-                  <.button
-                    class="dark:bg-gray-700"
+              </div>
+            </.simple_form>
+
+            <div class="mt-20 mb-2">
+              <.button
+                id="download-footage-btn"
+                class="bg-blue-500 text-white px-4 py-2 rounded flex items-center"
+                phx-click={show_modal("download-modal")}
+              >
+                <span title="Download footage" class="mr-2">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="w-5 h-5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
                   >
-                    <.icon name="hero-arrow-left"/>
-                  </.button>
-                </div>
-                <div class="ptz-down">
-                  <.button
-                    class="dark:bg-gray-700"
-                  >
-                    <.icon name="hero-arrow-down"/>
-                  </.button>
-                </div>
-                <div class="ptz-home">
-                  <.button
-                    class="dark:bg-gray-700"
-                  >
-                    <.icon name="hero-home"/>
-                  </.button>
-                </div>
-                <div class="ptz-right">
-                  <.button
-                    class="dark:bg-gray-700"
-                  >
-                    <.icon name="hero-arrow-right"/>
-                  </.button>
-                </div>
-                <div class="ptz-zoom-in">
-                  <.button
-                    class="dark:bg-gray-700"
-                  >
-                    <.icon name="hero-plus"/>
-                  </.button>
-                </div>
-                <div class="ptz-zoom-out">
-                  <.button
-                    class="dark:bg-gray-700"
-                  >
-                    <.icon name="hero-minus"/>
-                  </.button>
-                </div>
-                <div class="ptz-presets">
-                  <.button
-                    class="dark:bg-gray-700"
-                  >
-                    <.icon name="hero-bars-3"/>
-                  </.button>
-                </div>
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="1.5"
+                      d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"
+                    />
+                  </svg>
+                </span>
+                Download
+              </.button>
+            </div>
+          </div>
+
+          <div class="relative mt-4">
+            <div :if={@live_view_enabled?} class="relative">
+              <video
+                id="live-video"
+                class="w-full h-auto dark:bg-gray-500 rounded-tr rounded-tl"
+                autoplay
+                controls
+                muted
+              />
+              <div
+                id="snapshot-button"
+                class="absolute top-1 right-1 rounded-sm bg-zinc-900 py-1 px-2 text-sm text-white dark:bg-gray-700 dark:bg-opacity-80 hover:cursor-pointer"
+                phx-hook="DownloadSnapshot"
+              >
+                <.icon name="hero-camera" />
               </div>
             </div>
             <div
-              id="snapshot-button"
-              class="absolute top-1 right-1 rounded-sm bg-zinc-900 py-1 px-2 text-sm text-white dark:bg-gray-700 dark:bg-opacity-80 hover:cursor-pointer"
-              phx-hook="DownloadSnapshot"
+              :if={not @live_view_enabled?}
+              class="relative text-lg rounded-tr rounded-tl text-center dark:text-gray-200 mt-4 w-full dark:bg-gray-500 h-96 flex justify-center items-center d-flex"
             >
-              <.icon name="hero-camera" />
+              Device is not recording, live view is not available
             </div>
+            <.live_component
+              module={TimelineComponent}
+              id="tl"
+              segments={@segments}
+              timezone={@timezone}
+            />
           </div>
-          <div
-            :if={not @live_view_enabled?}
-            class="relative text-lg rounded-tr rounded-tl text-center dark:text-gray-200 mt-4 w-full dark:bg-gray-500 h-96 flex justify-center items-center d-flex"
-          >
-            Device is not recording, live view is not available
-          </div>
-          <.live_component
-            module={TimelineComponent}
-            id="tl"
-            segments={@segments}
-            timezone={@timezone}
-          />
         </div>
       </div>
 
