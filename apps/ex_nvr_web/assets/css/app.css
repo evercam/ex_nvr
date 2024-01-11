@@ -66,3 +66,20 @@ video::-webkit-media-controls-current-time-display {
 .break-anywhere {
     overflow-wrap: anywhere;
 }
+
+.ptz {
+    display: grid;
+    grid-template-columns: repeat(4, 0.01fr);
+    grid-template-rows: repeat(3, 0.01fr);
+    grid-column-gap: 32px;
+    grid-row-gap: 32px;
+}
+
+.ptz-up { grid-area: 1 / 2 / 2 / 3; }
+.ptz-left { grid-area: 2 / 1 / 3 / 2; }
+.ptz-down { grid-area: 3 / 2 / 4 / 3; }
+.ptz-home { grid-area: 2 / 2 / 3 / 3; }
+.ptz-right { grid-area: 2 / 3 / 3 / 4; }
+.ptz-zoom-in { grid-area: 1 / 4 / 2 / 5; }
+.ptz-zoom-out { grid-area: 2 / 4 / 3 / 5; }
+.ptz-presets { grid-area: 3 / 4 / 4 / 5; }

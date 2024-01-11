@@ -87,6 +87,66 @@ defmodule ExNVRWeb.DashboardLive do
               controls
               muted
             />
+            <div class="absolute top-11 right-1 rounded-sm py-1 px-2 text-sm text-white dark:bg-transparent dark:bg-opacity-80 hover:cursor-pointer">
+              <div class="ptz">
+                <div class="ptz-up">
+                  <.button
+                    class="dark:bg-gray-700"
+                  >
+                    <.icon name="hero-arrow-up"/>
+                  </.button>
+                </div>
+                <div class="ptz-left">
+                  <.button
+                    class="dark:bg-gray-700"
+                  >
+                    <.icon name="hero-arrow-left"/>
+                  </.button>
+                </div>
+                <div class="ptz-down">
+                  <.button
+                    class="dark:bg-gray-700"
+                  >
+                    <.icon name="hero-arrow-down"/>
+                  </.button>
+                </div>
+                <div class="ptz-home">
+                  <.button
+                    class="dark:bg-gray-700"
+                  >
+                    <.icon name="hero-home"/>
+                  </.button>
+                </div>
+                <div class="ptz-right">
+                  <.button
+                    class="dark:bg-gray-700"
+                  >
+                    <.icon name="hero-arrow-right"/>
+                  </.button>
+                </div>
+                <div class="ptz-zoom-in">
+                  <.button
+                    class="dark:bg-gray-700"
+                  >
+                    <.icon name="hero-plus"/>
+                  </.button>
+                </div>
+                <div class="ptz-zoom-out">
+                  <.button
+                    class="dark:bg-gray-700"
+                  >
+                    <.icon name="hero-minus"/>
+                  </.button>
+                </div>
+                <div class="ptz-presets">
+                  <.button
+                    class="dark:bg-gray-700"
+                  >
+                    <.icon name="hero-bars-3"/>
+                  </.button>
+                </div>
+              </div>
+            </div>
             <div
               id="snapshot-button"
               class="absolute top-1 right-1 rounded-sm bg-zinc-900 py-1 px-2 text-sm text-white dark:bg-gray-700 dark:bg-opacity-80 hover:cursor-pointer"
