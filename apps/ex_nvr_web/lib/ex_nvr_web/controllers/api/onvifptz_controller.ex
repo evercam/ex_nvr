@@ -33,7 +33,7 @@ defmodule ExNVRWeb.API.ONVIFPTZController do
     profile_token = opts[:profile_token]
     body = %{"ProfileToken" => profile_token}
 
-    with {:ok, response} <-  Onvif.call(opts[:url], :get_configurations, body, opts) do
+    with {:ok, response} <- Onvif.call(opts[:url], :get_configurations, body, opts) do
       respond_default(response, conn, :get_configurations)
     end
   end
@@ -54,7 +54,7 @@ defmodule ExNVRWeb.API.ONVIFPTZController do
     body = %{"ProfileToken" => profile_token}
 
     with {:ok, response} <- Onvif.call(opts[:url], :stop, body, opts) do
-      respond_default(response, conn, :stop)
+      respond(response, conn)
     end
   end
 
@@ -72,7 +72,7 @@ defmodule ExNVRWeb.API.ONVIFPTZController do
     body = Map.merge(%{"ProfileToken" => profile_token}, speed)
 
     with {:ok, response} <- Onvif.call(opts[:url], :goto_home_position, body, opts) do
-      respond_default(response, conn, :goto_home_position)
+      respond(response, conn)
     end
   end
 
@@ -82,7 +82,7 @@ defmodule ExNVRWeb.API.ONVIFPTZController do
     body = %{"ProfileToken" => profile_token}
 
     with {:ok, response} <- Onvif.call(opts[:url], :set_home_position, body, opts) do
-      respond_default(response, conn, :set_home_position)
+      respond(response, conn)
     end
   end
 
@@ -101,7 +101,7 @@ defmodule ExNVRWeb.API.ONVIFPTZController do
     body = Map.merge(body, speed)
 
     with {:ok, response} <- Onvif.call(opts[:url], :goto_preset, body, opts) do
-      respond_default(response, conn, :goto_preset)
+      respond(response, conn)
     end
   end
 
@@ -111,7 +111,7 @@ defmodule ExNVRWeb.API.ONVIFPTZController do
     body = %{"ProfileToken" => profile_token, "PresetToken" => token}
 
     with {:ok, response} <- Onvif.call(opts[:url], :set_preset, body, opts) do
-      respond_default(response, conn, :set_preset)
+      respond(response, conn)
     end
   end
 
@@ -128,7 +128,7 @@ defmodule ExNVRWeb.API.ONVIFPTZController do
     body = Map.merge(%{"ProfileToken" => profile_token}, preset_name)
 
     with {:ok, response} <- Onvif.call(opts[:url], :set_preset, body, opts) do
-      respond_default(response, conn, :set_preset)
+      respond(response, conn, :created)
     end
   end
 
@@ -154,7 +154,7 @@ defmodule ExNVRWeb.API.ONVIFPTZController do
     body = Map.merge(%{"ProfileToken" => profile_token}, move_params)
 
     with {:ok, response} <- Onvif.call(opts[:url], :continuous_move, body, opts) do
-      respond_default(response, conn, :continuous_move)
+      respond(response, conn)
     end
   end
 
@@ -178,7 +178,7 @@ defmodule ExNVRWeb.API.ONVIFPTZController do
     body = Map.merge(%{"ProfileToken" => profile_token}, zoom_params)
 
     with {:ok, response} <- Onvif.call(opts[:url], :continuous_move, body, opts) do
-      respond_default(response, conn, :continuous_move)
+      respond(response, conn)
     end
   end
 
@@ -214,7 +214,7 @@ defmodule ExNVRWeb.API.ONVIFPTZController do
     body = Map.merge(%{"ProfileToken" => profile_token}, move_params)
 
     with {:ok, response} <- Onvif.call(opts[:url], operation, body, opts) do
-      respond_default(response, conn, operation)
+      respond(response, conn)
     end
   end
 
@@ -229,11 +229,14 @@ defmodule ExNVRWeb.API.ONVIFPTZController do
     url = "#{ip_addr}:#{http_port}"
 
     [
-      username: "admin", #device.credentials.username,
-      password: "Mehcam4Mehcam", #device.credentials.password,
+      # device.credentials.username,
+      username: "admin",
+      # device.credentials.password,
+      password: "Mehcam4Mehcam",
       auth: "#{device.credentials.username}:#{device.credentials.username}",
       profile_token: profile_token,
-      url: "wg5.evercam.io:21339/onvif/ptz_service/" #url
+      # url
+      url: "wg5.evercam.io:21339/onvif/ptz_service/"
     ]
   end
 
@@ -254,39 +257,54 @@ defmodule ExNVRWeb.API.ONVIFPTZController do
     Map.merge(pan_tilt, zoom)
   end
 
+  defp respond(response, conn, code \\ 200) do
+    conn
+    |> put_status(code)
+    |> json(%{detail: :ok})
+  end
+
   defp respond_default(response, conn, operation) do
     formatted_response = format_response(response, operation)
+
     conn
     |> json(formatted_response)
   end
 
   defp format_response(response, operation) do
     case operation do
-      # :get_status -> format_status(response)
-      # :get_nodes -> format_nodes(response)
-      # :get_configurations -> format_configurations(response)
-      :get_presets -> format_presets(response)
+      :get_status ->
+        %{GetStatusResponse: status} = response
+        status
 
-      # :stop -> format_stop(response)
-      # :goto_home_position -> format_goto_home(response)
-      # :goto_preset -> format_goto_preset(response)
+      :get_nodes ->
+        format_nodes(response)
 
-      # :set_preset -> format_set_preset(response)
-      # :remove_preset -> format_remove_preset(response)
-      # :set_home_position -> format_goto_preset(response)
-      # :relative_move -> format_set_preset(response)
-      # :absolute_move -> format_remove_preset(response)
-      # :continuous_move -> format_continuous_move(response)
+      :get_configurations ->
+        %{GetConfigurationsResponse: configs} = response
+        configs
+
+      :get_presets ->
+        format_presets(response)
     end
   end
 
   defp format_presets(%{GetPresetsResponse: presets}) do
     Keyword.values(presets)
-      |> Enum.map(fn preset ->
-        %{
-          Name: preset[:Name],
-          Token: preset[:token]
-        }
-      end)
+    |> Enum.map(fn preset ->
+      %{
+        Name: preset[:Name],
+        Token: preset[:token]
+      }
+    end)
+  end
+
+  defp format_nodes(%{GetNodesResponse: nodes}) do
+    Enum.map(nodes, fn {:PTZNode, node_params} ->
+      %{
+        Name: node_params[:Name],
+        SupportedPTZSpaces: node_params[:SupportedPTZSpaces],
+        MaximumNumberOfPresets: node_params[:MaximumNumberOfPresets]
+      }
+    end)
   end
 end
