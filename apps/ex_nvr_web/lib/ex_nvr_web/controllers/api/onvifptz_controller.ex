@@ -65,7 +65,7 @@ defmodule ExNVRWeb.API.ONVIFPTZController do
 
     speed =
       case pan_tilt_zoom_vector(speed) do
-        %{} -> %{}
+        nil -> %{}
         vector -> %{"Speed" => vector}
       end
 
@@ -94,7 +94,7 @@ defmodule ExNVRWeb.API.ONVIFPTZController do
 
     speed =
       case pan_tilt_zoom_vector(speed) do
-        %{} -> %{}
+        nil -> %{}
         vector -> %{"Speed" => vector}
       end
 
@@ -147,7 +147,7 @@ defmodule ExNVRWeb.API.ONVIFPTZController do
 
     move_params =
       case pan_tilt_zoom_vector(velocity) do
-        %{} -> %{}
+        nil -> %{}
         vector -> %{"Velocity" => vector}
       end
 
@@ -171,7 +171,7 @@ defmodule ExNVRWeb.API.ONVIFPTZController do
 
     zoom_params =
       case pan_tilt_zoom_vector(velocity) do
-        %{} -> %{}
+        nil -> %{}
         vector -> %{"Velocity" => vector}
       end
 
@@ -202,12 +202,16 @@ defmodule ExNVRWeb.API.ONVIFPTZController do
 
     speed =
       case pan_tilt_zoom_vector(speed) do
-        %{} -> %{}
+        nil -> %{}
         vector -> %{"Speed" => vector}
       end
 
     translation = %{
-      "Translation" => pan_tilt_zoom_vector(x: x / 100.0, y: y / 100.0, zoom: zoom / 100.0)
+      "Translation" =>
+        case pan_tilt_zoom_vector(x: x / 100.0, y: y / 100.0, zoom: zoom / 100.0) do
+          nil -> %{}
+          translation_vector -> translation_vector
+        end
     }
 
     move_params = Map.merge(speed, translation)
@@ -226,17 +230,18 @@ defmodule ExNVRWeb.API.ONVIFPTZController do
     [_, ip_addr] = ip_addr |> String.split("//")
     http_port = "80"
 
-    url = "#{ip_addr}:#{http_port}"
+    url = "#{ip_addr}:#{http_port}/onvif/ptz_service/"
 
     [
       # device.credentials.username,
       username: "admin",
       # device.credentials.password,
-      password: "Mehcam4Mehcam",
+      # password: "Mehcam4Mehcam",
+      password: "Permanex1",
       auth: "#{device.credentials.username}:#{device.credentials.username}",
       profile_token: profile_token,
-      # url
-      url: "wg5.evercam.io:21339/onvif/ptz_service/"
+      # url: "wg5.evercam.io:21339/onvif/ptz_service/"
+      url: "wg6.evercam.io:20974/onvif/ptz_service/"
     ]
   end
 
@@ -254,7 +259,12 @@ defmodule ExNVRWeb.API.ONVIFPTZController do
         zoom -> %{"Zoom" => %{"x" => zoom}}
       end
 
-    Map.merge(pan_tilt, zoom)
+    pan_tilt_zoom = Map.merge(pan_tilt, zoom)
+    if pan_tilt_zoom == %{} do
+      nil
+    else
+      pan_tilt_zoom
+    end
   end
 
   defp respond(response, conn, code \\ 200) do
