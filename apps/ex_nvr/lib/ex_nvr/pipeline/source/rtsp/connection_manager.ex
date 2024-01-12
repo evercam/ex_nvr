@@ -15,6 +15,8 @@ defmodule ExNVR.Pipeline.Source.RTSP.ConnectionManager do
                      )
   @content_type_header [{"accept", "application/sdp"}]
   @keep_alive_interval 15_000
+  @base_back_off_in_ms 10
+  @max_back_off_in_ms :timer.minutes(2)
 
   defmodule ConnectionStatus do
     @moduledoc false
@@ -24,7 +26,6 @@ defmodule ExNVR.Pipeline.Source.RTSP.ConnectionManager do
             stream_uri: binary(),
             rtsp_session: pid(),
             endpoint: pid(),
-            reconnect_delay: non_neg_integer(),
             max_reconnect_attempts: non_neg_integer() | :infinity,
             reconnect_attempt: non_neg_integer(),
             keep_alive: pid(),
@@ -35,7 +36,6 @@ defmodule ExNVR.Pipeline.Source.RTSP.ConnectionManager do
     @enforce_keys [
       :stream_uri,
       :endpoint,
-      :reconnect_delay,
       :max_reconnect_attempts,
       :reconnect_attempt
     ]
@@ -78,7 +78,6 @@ defmodule ExNVR.Pipeline.Source.RTSP.ConnectionManager do
      %ConnectionStatus{
        stream_uri: opts[:stream_uri],
        endpoint: opts[:endpoint],
-       reconnect_delay: opts[:reconnect_delay],
        max_reconnect_attempts: opts[:max_reconnect_attempts],
        reconnect_attempt: 0,
        stream_types: opts[:stream_types]
@@ -211,14 +210,19 @@ defmodule ExNVR.Pipeline.Source.RTSP.ConnectionManager do
          %ConnectionStatus{
            endpoint: endpoint,
            reconnect_attempt: attempt,
-           max_reconnect_attempts: max_attempts,
-           reconnect_delay: delay
+           max_reconnect_attempts: max_attempts
          } = connection_status
        ) do
     connection_status = %{connection_status | reconnect_attempt: attempt + 1}
 
     # This works with :infinity, since integers < atoms
     if attempt < max_attempts do
+      delay =
+        :math.pow(2, connection_status.reconnect_attempt)
+        |> Kernel.*(@base_back_off_in_ms)
+        |> min(@max_back_off_in_ms)
+        |> trunc()
+
       {:backoff, delay, connection_status}
     else
       Membrane.Logger.debug("ConnectionManager: Max reconnect attempts reached. Hibernating")

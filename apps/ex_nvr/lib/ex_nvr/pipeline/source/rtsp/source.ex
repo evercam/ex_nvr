@@ -12,7 +12,6 @@ defmodule ExNVR.Pipeline.Source.RTSP.Source do
   alias Membrane.{Buffer, RemoteStream}
 
   @max_reconnect_attempts :infinity
-  @reconnect_delay 3_000
 
   def_options stream_uri: [
                 spec: binary(),
@@ -99,7 +98,6 @@ defmodule ExNVR.Pipeline.Source.RTSP.Source do
         endpoint: self(),
         stream_uri: state[:stream_uri],
         max_reconnect_attempts: @max_reconnect_attempts,
-        reconnect_delay: @reconnect_delay,
         stream_types: state.stream_types
       )
 
