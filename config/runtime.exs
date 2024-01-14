@@ -86,13 +86,21 @@ if config_env() == :prod do
 
   url = URI.parse(System.get_env("EXNVR_URL", "http://localhost:4000"))
 
+  check_origin =
+    case System.get_env("EXNVR_CHECK_ORIGIN", "true") do
+      "true" -> true
+      "false" -> false
+      origins -> String.split(origins, ",")
+    end
+
   config :ex_nvr_web, ExNVRWeb.Endpoint,
     http: [
       ip: {0, 0, 0, 0, 0, 0, 0, 0},
       port: String.to_integer(System.get_env("EXNVR_HTTP_PORT") || "4000")
     ],
     secret_key_base: secret_key_base,
-    url: [scheme: url.scheme, host: url.host, port: url.port]
+    url: [scheme: url.scheme, host: url.host, port: url.port],
+    check_origin: check_origin
 
   ## SSL Support
   enable_ssl = String.to_existing_atom(System.get_env("EXNVR_ENABLE_HTTPS", "false"))

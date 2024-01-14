@@ -78,6 +78,7 @@ If you want to configure some aspects of `ex_nvr`, you can set the following env
 | EXNVR_ADMIN_PASSWORD | The password of the admin user to create on first startup. Defaults to: `P@ssw0rd`. |
 | SECRET_KEY_BASE  | A 64 byte key that's used by **Pheonix** to encrypt cookies |
 | EXNVR_URL | The `url` to use for generating URLs. The `host` is used as a default value for `check_origin` of the websocket. Defaults to: `http://localhost:4000` |
+| EXNVR_CHECK_ORIGIN | if the transport should check the origin of requests when the origin header is present. May be true, false or a list of hosts that are allowed. Defaults to `true`. |
 | EXNVR_HTTP_PORT | Http `port`, defaults to: `4000` |
 | EXNVR_CORS_ALLOWED_ORIGINS | A space separated allowed origins for `CORS` requests. defaults to: `*` |
 | EXNVR_ENABLE_HTTPS | Enable `https`, default: `false` |
