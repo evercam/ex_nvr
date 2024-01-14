@@ -11,6 +11,10 @@ defmodule ExNVRWeb.ErrorJSON do
     %{message: "unauthorized"}
   end
 
+  def render("403.json", _assigns) do
+    %{message: "Forbidden"}
+  end
+
   # By default, Phoenix returns the status message from
   # the template name. For example, "404.json" becomes
   # "Not Found".

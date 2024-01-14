@@ -20,6 +20,8 @@ defmodule ExNVR.Accounts do
 
   def get_user!(id), do: Repo.get!(User, id)
 
+  def get_user(id), do: Repo.get(User, id)
+
   @spec list(map()) :: [User.t()]
   def list(_params \\ %{}), do: Repo.all(User |> order_by([u], u.inserted_at))
 
