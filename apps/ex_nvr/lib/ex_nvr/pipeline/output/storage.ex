@@ -12,6 +12,7 @@ defmodule ExNVR.Pipeline.Output.Storage do
   alias Membrane.{H264, H265}
 
   @recordings_event [:ex_nvr, :recordings, :stop]
+  @interval :timer.seconds(5)
 
   def_input_pad :input,
     demand_mode: :auto,
@@ -54,23 +55,37 @@ defmodule ExNVR.Pipeline.Output.Storage do
   def handle_init(_ctx, opts) do
     spec = [
       bin_input(:input)
-      |> child(:segmenter, %Segmenter{
-        target_duration: opts.target_segment_duration,
-        correct_timestamp: opts.correct_timestamp
-      })
+      |> child(:tee, Membrane.Tee.Parallel)
     ]
+
+    dest = Device.recording_dir(opts.device)
 
     state = %{
       device: opts.device,
-      directory: Device.recording_dir(opts.device),
+      directory: dest,
       pending_segments: %{},
       segment_extension: ".mp4",
       run: nil,
       terminating?: false,
-      end_of_stream?: false
+      end_of_stream?: false,
+      target_duration: opts.target_segment_duration,
+      correct_timestamp: opts.correct_timestamp
     }
 
-    {[spec: spec], state}
+    actions =
+      case ExNVR.Utils.writable(dest) do
+        :ok ->
+          [spec: spec ++ [get_child(:tee) |> segmenter_spec(state)]]
+
+        {:error, reason} ->
+          Membrane.Logger.error(
+            "Destination '#{dest}' is not writable, error: #{inspect(reason)}"
+          )
+
+          [spec: spec, start_timer: {:recording_dir, @interval}]
+      end
+
+    {actions, state}
   end
 
   @impl true
@@ -95,7 +110,7 @@ defmodule ExNVR.Pipeline.Output.Storage do
       })
     ]
 
-    {[spec: {spec, group: segment_ref}], state}
+    {[spec: {spec, group: segment_ref, crash_group_mode: :temporary}], state}
   end
 
   @impl true
@@ -132,12 +147,41 @@ defmodule ExNVR.Pipeline.Output.Storage do
   end
 
   @impl true
+  def handle_tick(:recording_dir, _ctx, state) do
+    case ExNVR.Utils.writable(state.directory) do
+      :ok ->
+        Membrane.Logger.info("Destination '#{state.directory}' is writable")
+        {[spec: [get_child(:tee) |> segmenter_spec(state)], stop_timer: :recording_dir], state}
+
+      _error ->
+        {[], state}
+    end
+  end
+
+  @impl true
+  def handle_crash_group_down(group_name, _ctx, state) do
+    Membrane.Logger.error("crash in storage bin: #{group_name}")
+
+    {[
+       start_timer: {:recording_dir, @interval},
+       remove_children: [:segmenter]
+     ], state}
+  end
+
+  @impl true
   def handle_terminate_request(_ctx, state) do
     if state.end_of_stream? do
       {[terminate: :normal], state}
     else
       {[], %{state | terminating?: true}}
     end
+  end
+
+  defp segmenter_spec(link_builder, state) do
+    child(link_builder, :segmenter, %Segmenter{
+      target_duration: state.target_duration,
+      correct_timestamp: state.correct_timestamp
+    })
   end
 
   defp get_parser(:H264), do: %Membrane.H264.Parser{output_stream_structure: :avc1}

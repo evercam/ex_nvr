@@ -59,7 +59,7 @@ To start it on boot
 sudo systemctl enable ex_nvr.service
 ```
 
-To delete the package, first stop the service and the use `dpkg` to delete it
+To delete the package, first stop the service and then run `dpkg` to delete it
 ```bash
 sudo systemctl stop ex_nvr.service
 sudo systemctl disable ex_nvr.service
@@ -77,7 +77,7 @@ If you want to configure some aspects of `ex_nvr`, you can set the following env
 | EXNVR_ADMIN_USERNAME | The username(email) of the admin user to create on first startup. Defaults to: `admin@localhost`. |
 | EXNVR_ADMIN_PASSWORD | The password of the admin user to create on first startup. Defaults to: `P@ssw0rd`. |
 | SECRET_KEY_BASE  | A 64 byte key that's used by **Pheonix** to encrypt cookies |
-| EXNVR_URL | The `url` to use for generating URLs and as a default value for `check_origins` of the websocket. Defaults to: `http://localhost:4000` |
+| EXNVR_URL | The `url` to use for generating URLs. The `host` is used as a default value for `check_origin` of the websocket. Defaults to: `http://localhost:4000` |
 | EXNVR_HTTP_PORT | Http `port`, defaults to: `4000` |
 | EXNVR_CORS_ALLOWED_ORIGINS | A space separated allowed origins for `CORS` requests. defaults to: `*` |
 | EXNVR_ENABLE_HTTPS | Enable `https`, default: `false` |
