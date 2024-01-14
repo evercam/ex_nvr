@@ -93,6 +93,16 @@ defmodule ExNVR.Pipeline.Output.Storage.Segmenter do
   end
 
   @impl true
+  def handle_pad_removed(Pad.ref(:output, ref), _ctx, %{start_time: ref}) do
+    {[], init_state()}
+  end
+
+  @impl true
+  def handle_pad_removed(_pad, _ctx, state) do
+    {[], state}
+  end
+
+  @impl true
   def handle_process(:input, buffer, _ctx, %{start_time: nil} = state)
       when not Utils.keyframe(buffer) do
     # ignore, we need to start recording from a keyframe

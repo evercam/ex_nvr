@@ -41,6 +41,23 @@ defmodule ExNVR.Utils do
 
   defp pad_number(number), do: String.pad_leading("#{number}", 2, "0")
 
+  @doc """
+  Check if destination exists and writable
+  """
+  @spec writable(Path.t()) :: :ok | {:error, term()}
+  def writable(dest) do
+    touch_file = Path.join(dest, ".ex_nvr_check")
+
+    case File.touch(touch_file) do
+      :ok ->
+        File.rm(touch_file)
+        :ok
+
+      error ->
+        error
+    end
+  end
+
   # Streaming & Codecs utilities
   defguard keyframe(buffer)
            when (is_map_key(buffer.metadata, :h264) and buffer.metadata.h264.key_frame?) or
