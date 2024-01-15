@@ -223,6 +223,8 @@ defmodule ExNVR.Pipeline.Source.RTSP.ConnectionManager do
         |> min(@max_back_off_in_ms)
         |> trunc()
 
+      Membrane.Logger.info("Retry rtsp connection in #{delay} ms")
+
       {:backoff, delay, connection_status}
     else
       Membrane.Logger.debug("ConnectionManager: Max reconnect attempts reached. Hibernating")

@@ -57,7 +57,7 @@ defmodule ExNVR.Pipeline.Output.Thumbnailer do
           "Could not make directory or directory not writable '#{state.dest}', error: #{inspect(reason)}"
         )
 
-        {[start_timer: {:check_directory, @interval}], state}
+        {[spec: spec, start_timer: {:check_directory, @interval}], state}
     end
   end
 
