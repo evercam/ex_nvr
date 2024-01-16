@@ -71,8 +71,8 @@ video::-webkit-media-controls-current-time-display {
     display: grid;
     grid-template-columns: repeat(4, 0.01fr);
     grid-template-rows: repeat(3, 0.01fr);
-    grid-column-gap: 32px;
-    grid-row-gap: 32px;
+    grid-column-gap: 5px;
+    grid-row-gap: 5px;
 }
 
 .ptz-up { grid-area: 1 / 2 / 2 / 3; }
