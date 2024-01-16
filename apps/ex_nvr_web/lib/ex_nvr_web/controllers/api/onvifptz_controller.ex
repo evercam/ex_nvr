@@ -8,6 +8,23 @@ defmodule ExNVRWeb.API.ONVIFPTZController do
   alias ExNVR.Onvif
   alias Plug.Conn
 
+  def media_profiles(conn, _params) do
+    opts = get_onvif_access_info(conn)
+    {:ok, %{GetProfilesResponse: profiles}} = Onvif.call(opts[:url], :get_profiles, %{"Type" => "All"}, opts)
+
+    profiles =
+      Keyword.values(profiles)
+      |> Enum.map(fn profile ->
+        %{
+          token: profile[:token],
+          name: profile[:Name]
+        }
+      end)
+
+    conn
+    |> json(profiles)
+  end
+
   def status(conn, _params) do
     opts = get_onvif_access_info(conn)
     profile_token = opts[:profile_token]

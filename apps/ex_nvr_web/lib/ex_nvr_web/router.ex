@@ -45,6 +45,7 @@ defmodule ExNVRWeb.Router do
 
       get "/bif/:hour", API.DeviceStreamingController, :bif
 
+      get "/ptz/profiles", API.ONVIFPTZController, :media_profiles
       get "/ptz/status", API.ONVIFPTZController, :status
       get "/ptz/presets", API.ONVIFPTZController, :presets
       get "/ptz/nodes", API.ONVIFPTZController, :nodes
