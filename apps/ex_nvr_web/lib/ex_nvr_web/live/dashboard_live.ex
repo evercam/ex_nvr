@@ -20,84 +20,7 @@ defmodule ExNVRWeb.DashboardLive do
 
   def render(assigns) do
     ~H"""
-    <div
-      :if={@devices != []}
-      class="ptz relative my-80 mr-20 text-sm text-white dark:bg-transparent dark:bg-opacity-80 hover:cursor-pointer"
-    >
-      <div class="ptz-up">
-        <.button
-          class="dark:bg-gray-700"
-          phx-click="handle-ptz"
-          phx-value-action="up"
-        >
-          <.icon name="hero-arrow-up" />
-        </.button>
-      </div>
-      <div class="ptz-left">
-        <.button
-          class="dark:bg-gray-700"
-          phx-click="handle-ptz"
-          phx-value-action="left"
-        >
-          <.icon name="hero-arrow-left" />
-        </.button>
-      </div>
-      <div class="ptz-down">
-        <.button
-          class="dark:bg-gray-700"
-          phx-click="handle-ptz"
-          phx-value-action="down"
-        >
-          <.icon name="hero-arrow-down" />
-        </.button>
-      </div>
-      <div class="ptz-home">
-        <.button
-          class="dark:bg-gray-700"
-          phx-click="handle-ptz"
-          phx-value-action="home"
-        >
-          <.icon name="hero-home" />
-        </.button>
-      </div>
-      <div class="ptz-right">
-        <.button
-          class="dark:bg-gray-700"
-          phx-click="handle-ptz"
-          phx-value-action="right"
-        >
-          <.icon name="hero-arrow-right" />
-        </.button>
-      </div>
-      <div class="ptz-zoom-in">
-        <.button
-          class="dark:bg-gray-700"
-          phx-click="handle-ptz"
-          phx-value-action="zoom-in"
-        >
-          <.icon name="hero-plus" />
-        </.button>
-      </div>
-      <div class="ptz-zoom-out">
-        <.button
-          class="dark:bg-gray-700"
-          phx-click="handle-ptz"
-          phx-value-action="zoom-out"
-        >
-          <.icon name="hero-minus" />
-        </.button>
-      </div>
-      <div class="ptz-presets">
-        <.button
-          class="dark:bg-gray-700"
-          phx-click="handle-ptz"
-          phx-value-action="presets"
-        >
-          <.icon name="hero-bars-3" />
-        </.button>
-      </div>
-    </div>
-    <div class="bg-white sm:w-2/3 dark:bg-gray-800">
+    <div class="bg-white w-full h-full dark:bg-gray-800">
       <div :if={@devices == []} class="grid tracking-wide text-lg text-center dark:text-gray-200">
         You have no devices, you can create one
         <span><.link href={~p"/devices"} class="ml-2 dark:text-blue-600">here</.link></span>
@@ -158,7 +81,7 @@ defmodule ExNVRWeb.DashboardLive do
           </div>
 
           <div class="relative mt-4">
-            <div :if={@live_view_enabled?} class="relative">
+            <div :if={@live_view_enabled?} class="relative w-full h-full">
               <video
                 id="live-video"
                 class="w-full h-auto dark:bg-gray-500 rounded-tr rounded-tl"
@@ -172,6 +95,81 @@ defmodule ExNVRWeb.DashboardLive do
                 phx-hook="DownloadSnapshot"
               >
                 <.icon name="hero-camera" />
+              </div>
+              <div
+                class="ptz absolute top-14 right-1 rounded-sm py-1 px-2 text-sm text-white dark:bg-transparent dark:bg-opacity-80 hover:cursor-pointer"
+              >
+                <div class="ptz-up">
+                  <.button
+                    class="dark:bg-gray-700"
+                    phx-click="handle-ptz"
+                    phx-value-action="up"
+                  >
+                    <.icon name="hero-arrow-up" />
+                  </.button>
+                </div>
+                <div class="ptz-left">
+                  <.button
+                    class="dark:bg-gray-700"
+                    phx-click="handle-ptz"
+                    phx-value-action="left"
+                  >
+                    <.icon name="hero-arrow-left" />
+                  </.button>
+                </div>
+                <div class="ptz-down">
+                  <.button
+                    class="dark:bg-gray-700"
+                    phx-click="handle-ptz"
+                    phx-value-action="down"
+                  >
+                    <.icon name="hero-arrow-down" />
+                  </.button>
+                </div>
+                <div class="ptz-home">
+                  <.button
+                    class="dark:bg-gray-700"
+                    phx-click="handle-ptz"
+                    phx-value-action="home"
+                  >
+                    <.icon name="hero-home" />
+                  </.button>
+                </div>
+                <div class="ptz-right">
+                  <.button
+                    class="dark:bg-gray-700"
+                    phx-click="handle-ptz"
+                    phx-value-action="right"
+                  >
+                    <.icon name="hero-arrow-right" />
+                  </.button>
+                </div>
+                <div class="ptz-zoom-in">
+                  <.button
+                    class="dark:bg-gray-700"
+                    phx-click="handle-ptz"
+                    phx-value-action="zoom-in"
+                  >
+                    <.icon name="hero-plus" />
+                  </.button>
+                </div>
+                <div class="ptz-zoom-out">
+                  <.button
+                    class="dark:bg-gray-700"
+                    phx-click="handle-ptz"
+                    phx-value-action="zoom-out"
+                  >
+                    <.icon name="hero-minus" />
+                  </.button>
+                </div>
+                <div class="ptz-presets">
+                  <.button
+                    class="dark:bg-gray-700"
+                    phx-click={JS.toggle(to: "#presets-sidebar")}
+                  >
+                    <.icon name="hero-bars-3" />
+                  </.button>
+                </div>
               </div>
             </div>
             <div
@@ -257,6 +255,40 @@ defmodule ExNVRWeb.DashboardLive do
         </div>
       </.modal>
     </div>
+    <aside
+      id="presets-sidebar"
+      class="hidden relative right-0 z-40 pt-20 transition-transform -translate-x-full bg-white border-r border-gray-200 sm:translate-x-0 dark:bg-gray-800 dark:border-gray-700"
+      aria-label="Sidebar"
+    >
+      <div class="flex flex-col justify-between h-full px-3 pb-4 overflow-y-auto bg-white dark:bg-gray-800">
+        <div>
+          <ul class="space-y-2 font-medium">
+              <li class="font-medium text-center dark:text-white">
+                Presets
+              </li>
+          </ul>
+          <ul class="pt-4 mt-4 space-y-2 font-medium border-t border-gray-200 dark:border-gray-700">
+            <li>
+              <.button
+                class="w-full dark:bg-transparent text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
+              >
+                <.icon name="hero-plus" class="w-6 h-6 text-gray-500 dark:text-gray-400" />
+                <span class="flex-1 ml-3 whitespace-nowrap">Add preset</span>
+              </.button>
+            </li>
+            <li :for={preset <- @presets}>
+              <.button
+                class="border-none w-full dark:bg-transparent text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
+                phx-click="goto-preset"
+                phx-value-token={preset.token}
+              >
+                <span class="flex-1 ml-3 whitespace-nowrap"><%= preset.name %></span>
+              </.button>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </aside>
     """
   end
 
@@ -272,6 +304,7 @@ defmodule ExNVRWeb.DashboardLive do
       |> assign_runs()
       |> assign_timezone()
       |> maybe_push_stream_event(nil)
+      |> assign_presets()
 
     {:ok, assign(socket, start_date: nil, custom_duration: false)}
   end
@@ -290,6 +323,7 @@ defmodule ExNVRWeb.DashboardLive do
       |> assign_runs()
       |> assign_timezone()
       |> maybe_push_stream_event(socket.assigns.start_date)
+      |> assign_presets()
 
     {:noreply, socket}
   end
@@ -352,15 +386,17 @@ defmodule ExNVRWeb.DashboardLive do
 
   def handle_event("handle-ptz", %{"action" => action}, socket) do
     case action do
-      "presets" ->
-        socket
-        |> put_flash(:error, "Presets not implemented yet")
-        |> then(&{:noreply, &1})
-
       "home" -> home(socket)
-
       mode -> ptz_action(socket, mode)
+      _ ->
+        socket
+        |> put_flash(:error, "Action not recognized!")
+        |> then(&{:noreply, &1})
     end
+  end
+
+  def handle_event("goto-preset", %{"token" => token}, socket) do
+    goto_preset(socket, token)
   end
 
   defp assign_devices(socket) do
@@ -429,6 +465,32 @@ defmodule ExNVRWeb.DashboardLive do
 
   defp assign_footage_form(socket, params) do
     assign(socket, footage_form: to_form(params, as: "footage"))
+  end
+
+  defp assign_presets(socket, _device \\ nil) do
+    opts = get_onvif_access_info()
+    profile_token = opts[:profile_token]
+    body = %{"ProfileToken" => profile_token}
+
+    case Onvif.call(opts[:url], :get_presets, body, opts) do
+      {:ok, %{GetPresetsResponse: presets}} ->
+        presets =
+          Keyword.values(presets)
+          |> Enum.map(fn preset ->
+            %{
+              name: preset[:Name],
+              token: preset[:token]
+            }
+          end)
+
+        socket
+        |> assign(presets: presets)
+
+      {:error, _SoapResponse} ->
+        socket
+        |> put_flash(:error, "Couldn't load presets!")
+        |> assign(presets: [])
+    end
   end
 
   defp maybe_push_stream_event(socket, datetime) do
@@ -567,15 +629,6 @@ defmodule ExNVRWeb.DashboardLive do
     end
   end
 
-  defp get_onvif_access_info() do
-    opts = [
-      username: "admin",
-      password: "Permanex1",
-      url: "wg6.evercam.io:20974/onvif/ptz_service/",
-      profile_token: "Profile_1"
-    ]
-  end
-
   defp home(socket) do
     speed = []
     opts = get_onvif_access_info()
@@ -629,7 +682,7 @@ defmodule ExNVRWeb.DashboardLive do
         case Onvif.call(opts[:url], :stop, body, opts) do
           {:ok, _respose} ->
             socket
-            |> put_flash(:info, "Action succeeded")
+            |> put_flash(:info, "Move: #{mode} succeeded!")
             |> then(&{:noreply, &1})
 
           {:error, _SoapResponse} ->
@@ -640,9 +693,44 @@ defmodule ExNVRWeb.DashboardLive do
 
       {:error, _SoapResponse} ->
         socket
-        |> put_flash(:error, "Couldn't perform the requested action!")
+        |> put_flash(:error, "Couldn't perform the move: #{mode}!")
         |> then(&{:noreply, &1})
     end
+  end
+
+  defp goto_preset(socket, token, speed \\ []) do
+    opts = get_onvif_access_info()
+    profile_token = opts[:profile_token]
+    body = %{"ProfileToken" => profile_token, "PresetToken" => token}
+
+    speed =
+      case pan_tilt_zoom_vector(speed) do
+        nil -> %{}
+        vector -> %{"Speed" => vector}
+      end
+
+    body = Map.merge(body, speed)
+
+    case Onvif.call(opts[:url], :goto_preset, body, opts) do
+      {:ok, _response} ->
+        socket
+        |> put_flash(:info, "Preset changed!")
+        |> then(&{:noreply, &1})
+
+      {:error, _SoapResponse} ->
+        socket
+        |> put_flash(:error, "Couldn't change preset!")
+        |> then(&{:noreply, &1})
+    end
+  end
+
+  defp get_onvif_access_info() do
+    opts = [
+      username: "admin",
+      password: "Permanex1",
+      url: "wg6.evercam.io:20974/onvif/ptz_service/",
+      profile_token: "Profile_1"
+    ]
   end
 
   defp pan_tilt_zoom_vector(vector) do
