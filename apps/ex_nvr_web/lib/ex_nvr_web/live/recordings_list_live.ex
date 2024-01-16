@@ -9,7 +9,7 @@ defmodule ExNVRWeb.RecordingListLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="grow">
+    <div class="grow mt-20">
       <.filter_form meta={@meta} devices={@devices} id="recording-filter-form" />
 
       <Flop.Phoenix.table
