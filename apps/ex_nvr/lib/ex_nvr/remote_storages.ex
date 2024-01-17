@@ -13,6 +13,7 @@ defmodule ExNVR.RemoteStorages do
   @spec create(map()) :: {:ok, RemoteStorage.t()} | {:error, Ecto.Changeset.t()}
   def create(params) do
     params
+    |> put_bucket_default_value()
     |> RemoteStorage.create_changeset()
     |> Repo.insert()
   end
@@ -20,6 +21,8 @@ defmodule ExNVR.RemoteStorages do
   @spec update(RemoteStorage.t(), map()) ::
           {:ok, RemoteStorage.t()} | {:error, Ecto.Changeset.t()}
   def update(%RemoteStorage{} = remote_storage, params) do
+    params = put_bucket_default_value(params)
+
     remote_storage
     |> RemoteStorage.update_changeset(params)
     |> Repo.update()
@@ -45,4 +48,12 @@ defmodule ExNVR.RemoteStorages do
   def change_remote_storage_update(%RemoteStorage{} = remote_storage, attrs \\ %{}) do
     RemoteStorage.update_changeset(remote_storage, attrs)
   end
+
+  defp put_bucket_default_value(%{"type" => "http"} = remote_storage), do: remote_storage
+
+  defp put_bucket_default_value(%{"config" => %{"bucket" => ""}} = remote_storage) do
+    put_in(remote_storage, ["config", "bucket"], "us-east-1")
+  end
+
+  defp put_bucket_default_value(remote_storage), do: remote_storage
 end

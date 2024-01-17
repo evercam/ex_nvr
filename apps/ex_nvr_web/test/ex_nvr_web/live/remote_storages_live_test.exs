@@ -69,7 +69,7 @@ defmodule ExNVRWeb.RemoteStoragesLiveTest do
   describe "Update a remote storage" do
     setup do
       %{
-        remote_storage: remote_storage_fixture(%{name: "My original remote storage"}, "seaweedfs")
+        remote_storage: remote_storage_fixture(%{name: "My original remote storage"}, "http")
       }
     end
 

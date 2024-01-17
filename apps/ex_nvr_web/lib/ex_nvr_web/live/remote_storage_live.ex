@@ -40,26 +40,43 @@ defmodule ExNVRWeb.RemoteStorageLive do
             field={@remote_storage_form[:type]}
             id="remote_storage_type"
             type="select"
-            options={["s3", "seaweedfs"]}
+            options={["s3", "http"]}
             label="Type"
             phx-change="update_type"
             disabled={@remote_storage.id != nil}
           />
+          <p class="text-xl font-medium mb-4 text-gray-800 dark:text-white">
+            Storage Config
+          </p>
+
           <.inputs_for :let={config} field={@remote_storage_form[:config]}>
             <.input
               field={config[:url]}
               id="remote_storage_url"
               type="text"
               label="Url"
-              required={@remote_storage_type == "seaweedfs"}
+              required={@remote_storage_type == "http"}
             />
             <.input
-              :if={@remote_storage_type == "seaweedfs"}
+              :if={@remote_storage_type == "http"}
+              field={config[:username]}
+              id="remote_storage_username"
+              type="text"
+              label="Username"
+            />
+            <.input
+              :if={@remote_storage_type == "http"}
+              field={config[:password]}
+              id="remote_storage_password"
+              type="password"
+              label="Password"
+            />
+            <.input
+              :if={@remote_storage_type == "http"}
               field={config[:token]}
               id="remote_storage_token"
               type="text"
               label="Token"
-              required
             />
             <.input
               :if={@remote_storage_type == "s3"}
@@ -75,7 +92,7 @@ defmodule ExNVRWeb.RemoteStorageLive do
               id="remote_storage_bucket"
               type="text"
               label="Bucket"
-              required
+              placeholder="default to us-east-1"
             />
             <.input
               :if={@remote_storage_type == "s3"}

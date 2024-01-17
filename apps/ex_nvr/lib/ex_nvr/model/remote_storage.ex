@@ -4,7 +4,7 @@ defmodule ExNVR.Model.RemoteStorage do
   alias Ecto.Changeset
 
   @type t :: %__MODULE__{
-          type: :s3 | :seaweedfs,
+          type: :s3 | :http,
           config: Config.t() | nil,
           inserted_at: DateTime.t() | nil,
           updated_at: DateTime.t() | nil
@@ -17,6 +17,8 @@ defmodule ExNVR.Model.RemoteStorage do
 
     @type t :: %__MODULE__{
             url: binary(),
+            username: binary(),
+            password: binary(),
             token: binary(),
             bucket: binary(),
             access_key_id: binary(),
@@ -27,6 +29,8 @@ defmodule ExNVR.Model.RemoteStorage do
     @primary_key false
     embedded_schema do
       field :url, :string
+      field :username, :string
+      field :password, :string
       field :token, :string
       field :bucket, :string
       field :access_key_id, :string
@@ -34,36 +38,55 @@ defmodule ExNVR.Model.RemoteStorage do
       field :region, :string
     end
 
-    def changeset(struct, params, remote_storage_type) do
+    def changeset(struct, params, :s3) do
       struct
       |> Changeset.cast(params, [
         :url,
-        :token,
         :bucket,
         :access_key_id,
         :secret_access_key,
         :region
       ])
-      |> validate_config(remote_storage_type)
-    end
-
-    defp validate_config(changeset, :s3) do
-      Changeset.validate_required(changeset, [
+      |> Changeset.validate_required([
         :bucket,
         :access_key_id,
         :secret_access_key,
         :region
       ])
+      |> Changeset.validate_change(:url, fn :url, url -> validate_url(:url, url) end)
     end
 
-    defp validate_config(changeset, :seaweedfs) do
-      Changeset.validate_required(changeset, [:url, :token])
+    def changeset(struct, params, :http) do
+      struct
+      |> Changeset.cast(params, [
+        :url,
+        :username,
+        :password,
+        :token
+      ])
+      |> Changeset.validate_required([:url])
+      |> Changeset.validate_change(:url, fn :url, url -> validate_url(:url, url) end)
+    end
+
+    defp validate_url(field, url) do
+      parsed_url = URI.parse(url)
+
+      cond do
+        parsed_url.scheme not in ["http", "https"] ->
+          [{field, "scheme should be http or https"}]
+
+        to_string(parsed_url.host) == "" ->
+          [{field, "invalid #{parsed_url.scheme} url"}]
+
+        true ->
+          []
+      end
     end
   end
 
   schema "remote_storages" do
     field :name, :string
-    field :type, Ecto.Enum, values: [:s3, :seaweedfs], default: :s3
+    field :type, Ecto.Enum, values: [:s3, :http], default: :s3
 
     embeds_one :config, Config, on_replace: :update
 
@@ -73,6 +96,7 @@ defmodule ExNVR.Model.RemoteStorage do
   def create_changeset(remote_storage \\ %__MODULE__{}, params) do
     remote_storage
     |> Changeset.cast(params, [:name, :type])
+    |> Changeset.unique_constraint(:name)
     |> common_config()
   end
 

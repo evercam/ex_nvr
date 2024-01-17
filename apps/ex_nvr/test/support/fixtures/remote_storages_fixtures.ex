@@ -43,7 +43,7 @@ defmodule ExNVR.RemoteStoragesFixtures do
     })
   end
 
-  defp build_config(stream_config, "seaweedfs") do
+  defp build_config(stream_config, "http") do
     Enum.into(stream_config, %{
       url: "https://example#{System.unique_integer()}",
       token: :crypto.strong_rand_bytes(16) |> Base.encode64()
