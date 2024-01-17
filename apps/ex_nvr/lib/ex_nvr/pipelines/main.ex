@@ -134,6 +134,11 @@ defmodule ExNVR.Pipelines.Main do
       rtc_engine: options[:rtc_engine]
     }
 
+    {[], state}
+  end
+
+  @impl true
+  def handle_setup(_ctx, %{device: device} = state) do
     common_spec = [
       child(:hls_sink, %Output.HLS{
         location: Path.join(Utils.hls_dir(device.id), "live"),
@@ -143,40 +148,38 @@ defmodule ExNVR.Pipelines.Main do
       child(:webrtc, %Output.WebRTC{stream_id: device.id})
     ]
 
-    if device.type == :ip do
-      {stream_uri, sub_stream_uri} = Device.streams(device)
+    actions =
+      if device.type == :ip do
+        {stream_uri, sub_stream_uri} = Device.streams(device)
 
-      Membrane.Logger.info("""
-      Start streaming for
-      main stream: #{stream_uri}
-      sub stream: #{sub_stream_uri}
-      """)
+        Membrane.Logger.info("""
+        Start streaming for
+        main stream: #{stream_uri}
+        sub stream: #{sub_stream_uri}
+        """)
 
-      spec =
-        common_spec ++
-          [child(:rtsp_source, %Source.RTSP{stream_uri: stream_uri})] ++
-          if sub_stream_uri,
-            do: build_sub_stream_spec(device, sub_stream_uri),
-            else: []
+        spec =
+          common_spec ++
+            [child(:rtsp_source, %Source.RTSP{stream_uri: stream_uri})] ++
+            if sub_stream_uri,
+              do: build_sub_stream_spec(device, sub_stream_uri),
+              else: []
 
-      {[spec: spec], state}
-    else
-      Membrane.Logger.info("""
-      Start streaming for
-      location: #{Device.file_location(device)}
-      """)
+        [spec: spec]
+      else
+        Membrane.Logger.info("""
+        Start streaming for
+        location: #{Device.file_location(device)}
+        """)
 
-      {[spec: common_spec ++ build_file_stream_spec(device)], state}
-    end
-  end
+        [spec: common_spec ++ build_file_stream_spec(device)]
+      end
 
-  @impl true
-  def handle_setup(_ctx, state) do
     # Set device state and make last active run inactive
     # may happens on application crash
     device_state = if state.device.type == :file, do: :recording, else: :failed
     Recordings.deactivate_runs(state.device)
-    {[], maybe_update_device_and_report(state, device_state)}
+    {actions, maybe_update_device_and_report(state, device_state)}
   end
 
   @impl true
