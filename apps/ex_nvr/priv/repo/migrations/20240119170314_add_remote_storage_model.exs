@@ -5,6 +5,7 @@ defmodule ExNVR.Repo.Migrations.AddRemoteStorageModel do
     create table("remote_storages") do
       add :name, :string, null: false, collate: :nocase
       add :type, :string, null: false
+      add :url, :string
       add :config, :map
 
       timestamps(type: :utc_datetime_usec)

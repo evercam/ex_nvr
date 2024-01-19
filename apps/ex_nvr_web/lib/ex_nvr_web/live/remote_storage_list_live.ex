@@ -17,6 +17,7 @@ defmodule ExNVRWeb.RemoteStorageListLive do
         <:col :let={remote_storage} label="Id"><%= remote_storage.id %></:col>
         <:col :let={remote_storage} label="Name"><%= remote_storage.name %></:col>
         <:col :let={remote_storage} label="Type"><%= remote_storage.type %></:col>
+        <:col :let={remote_storage} label="Url"><%= remote_storage.url %></:col>
         <:action :let={remote_storage}>
           <.button
             id={"dropdownMenuIconButton_#{remote_storage.id}"}

@@ -45,58 +45,51 @@ defmodule ExNVRWeb.RemoteStorageLive do
             phx-change="update_type"
             disabled={@remote_storage.id != nil}
           />
+          <.input field={@remote_storage_form[:url]} id="remote_storage_url" type="text" label="Url" />
+
           <p class="text-xl font-medium mb-4 text-gray-800 dark:text-white">
             Storage Config
           </p>
 
-          <.inputs_for :let={config} field={@remote_storage_form[:config]}>
+          <.inputs_for
+            :let={http_config}
+            :if={@remote_storage_type == "http"}
+            field={@remote_storage_form[:http_config]}
+          >
             <.input
-              field={config[:url]}
-              id="remote_storage_url"
-              type="text"
-              label="Url"
-              required={@remote_storage_type == "http"}
-            />
-            <.input
-              :if={@remote_storage_type == "http"}
-              field={config[:username]}
+              field={http_config[:username]}
               id="remote_storage_username"
               type="text"
               label="Username"
             />
             <.input
-              :if={@remote_storage_type == "http"}
-              field={config[:password]}
+              field={http_config[:password]}
               id="remote_storage_password"
               type="password"
               label="Password"
             />
-            <.input
-              :if={@remote_storage_type == "http"}
-              field={config[:token]}
-              id="remote_storage_token"
-              type="text"
-              label="Token"
-            />
+            <.input field={http_config[:token]} id="remote_storage_token" type="text" label="Token" />
+          </.inputs_for>
+          <.inputs_for :let={s3_config} field={@remote_storage_form[:s3_config]}>
             <.input
               :if={@remote_storage_type == "s3"}
-              field={config[:region]}
+              field={s3_config[:region]}
               id="remote_storage_region"
               type="text"
               label="Region"
-              required
-            />
-            <.input
-              :if={@remote_storage_type == "s3"}
-              field={config[:bucket]}
-              id="remote_storage_bucket"
-              type="text"
-              label="Bucket"
               placeholder="default to us-east-1"
             />
             <.input
               :if={@remote_storage_type == "s3"}
-              field={config[:access_key_id]}
+              field={s3_config[:bucket]}
+              id="remote_storage_bucket"
+              type="text"
+              label="Bucket"
+              required
+            />
+            <.input
+              :if={@remote_storage_type == "s3"}
+              field={s3_config[:access_key_id]}
               id="remote_storage_access_key_id"
               type="text"
               label="Access key"
@@ -104,7 +97,7 @@ defmodule ExNVRWeb.RemoteStorageLive do
             />
             <.input
               :if={@remote_storage_type == "s3"}
-              field={config[:secret_access_key]}
+              field={s3_config[:secret_access_key]}
               id="remote_storage_secret_access_key"
               type="text"
               label="Secret access key"
@@ -127,11 +120,12 @@ defmodule ExNVRWeb.RemoteStorageLive do
   end
 
   def mount(%{"id" => "new"}, _session, socket) do
-    changeset = RemoteStorages.change_remote_storage_creation(%RemoteStorage{})
+    remote_storage = %RemoteStorage{type: :s3}
+    changeset = RemoteStorages.change_remote_storage_creation(remote_storage)
 
     {:ok,
      assign(socket,
-       remote_storage: %RemoteStorage{},
+       remote_storage: remote_storage,
        remote_storage_form: to_form(changeset),
        remote_storage_type: "s3"
      )}
