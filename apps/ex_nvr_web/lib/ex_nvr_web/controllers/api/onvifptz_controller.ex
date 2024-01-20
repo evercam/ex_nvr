@@ -10,7 +10,9 @@ defmodule ExNVRWeb.API.ONVIFPTZController do
 
   def media_profiles(conn, _params) do
     opts = get_onvif_access_info(conn)
-    {:ok, %{GetProfilesResponse: profiles}} = Onvif.call(opts[:url], :get_profiles, %{"Type" => "All"}, opts)
+
+    {:ok, %{GetProfilesResponse: profiles}} =
+      Onvif.call(opts[:url], :get_profiles, %{"Type" => "All"}, opts)
 
     profiles =
       Keyword.values(profiles)
@@ -277,6 +279,7 @@ defmodule ExNVRWeb.API.ONVIFPTZController do
       end
 
     pan_tilt_zoom = Map.merge(pan_tilt, zoom)
+
     if pan_tilt_zoom == %{} do
       nil
     else
