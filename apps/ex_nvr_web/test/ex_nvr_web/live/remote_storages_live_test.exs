@@ -39,8 +39,8 @@ defmodule ExNVRWeb.RemoteStoragesLiveTest do
           "remote_storage" => %{
             "name" => "My remote storage",
             "type" => "s3",
-            "config" => %{
-              "url" => "https://localhost",
+            "url" => "https://localhost",
+            "s3_config" => %{
               "bucket" => "my-bucket",
               "region" => "us-east-1",
               "access_key_id" => "ACCESSKEYID",
@@ -58,9 +58,10 @@ defmodule ExNVRWeb.RemoteStoragesLiveTest do
 
       assert created_remote_storage.name == "My remote storage"
       assert created_remote_storage.type == :s3
-      assert created_remote_storage.config.bucket == "my-bucket"
-      assert created_remote_storage.config.access_key_id == "ACCESSKEYID"
-      assert created_remote_storage.config.secret_access_key == "SECRETACCESSKEY"
+      assert created_remote_storage.url == "https://localhost"
+      assert created_remote_storage.s3_config.bucket == "my-bucket"
+      assert created_remote_storage.s3_config.access_key_id == "ACCESSKEYID"
+      assert created_remote_storage.s3_config.secret_access_key == "SECRETACCESSKEY"
 
       assert Phoenix.Flash.get(conn.assigns.flash, :info) == "Remote storage created successfully"
     end
@@ -80,8 +81,8 @@ defmodule ExNVRWeb.RemoteStoragesLiveTest do
         lv
         |> form("#remote_storage_form", %{
           "remote_storage" => %{
-            "config" => %{
-              "url" => "https://example.com",
+            "url" => "https://example.com",
+            "http_config" => %{
               "token" => "token"
             }
           }
@@ -93,8 +94,8 @@ defmodule ExNVRWeb.RemoteStoragesLiveTest do
 
       updated_dremote_storage = RemoteStorages.get!(remote_storage.id)
       assert updated_dremote_storage.name == "My original remote storage"
-      assert updated_dremote_storage.config.url == "https://example.com"
-      assert updated_dremote_storage.config.token == "token"
+      assert updated_dremote_storage.url == "https://example.com"
+      assert updated_dremote_storage.http_config.token == "token"
     end
   end
 end

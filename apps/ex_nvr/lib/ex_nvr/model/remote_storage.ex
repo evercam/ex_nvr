@@ -34,17 +34,11 @@ defmodule ExNVR.Model.RemoteStorage do
 
     def changeset(struct, params) do
       struct
-      |> Changeset.cast(params, [
-        :bucket,
-        :region,
-        :access_key_id,
-        :secret_access_key
-      ])
+      |> Changeset.cast(params, __MODULE__.__schema__(:fields))
       |> Changeset.validate_required([
         :bucket,
         :access_key_id,
-        :secret_access_key,
-        :region
+        :secret_access_key
       ])
     end
   end
@@ -69,11 +63,7 @@ defmodule ExNVR.Model.RemoteStorage do
 
     def changeset(struct, params) do
       struct
-      |> Changeset.cast(params, [
-        :username,
-        :password,
-        :token
-      ])
+      |> Changeset.cast(params, __MODULE__.__schema__(:fields))
     end
   end
 

@@ -70,9 +70,12 @@ defmodule ExNVRWeb.RemoteStorageLive do
             />
             <.input field={http_config[:token]} id="remote_storage_token" type="text" label="Token" />
           </.inputs_for>
-          <.inputs_for :let={s3_config} field={@remote_storage_form[:s3_config]}>
+          <.inputs_for
+            :let={s3_config}
+            :if={@remote_storage_type == "s3"}
+            field={@remote_storage_form[:s3_config]}
+          >
             <.input
-              :if={@remote_storage_type == "s3"}
               field={s3_config[:region]}
               id="remote_storage_region"
               type="text"
@@ -80,7 +83,6 @@ defmodule ExNVRWeb.RemoteStorageLive do
               placeholder="default to us-east-1"
             />
             <.input
-              :if={@remote_storage_type == "s3"}
               field={s3_config[:bucket]}
               id="remote_storage_bucket"
               type="text"
@@ -88,7 +90,6 @@ defmodule ExNVRWeb.RemoteStorageLive do
               required
             />
             <.input
-              :if={@remote_storage_type == "s3"}
               field={s3_config[:access_key_id]}
               id="remote_storage_access_key_id"
               type="text"
@@ -96,10 +97,9 @@ defmodule ExNVRWeb.RemoteStorageLive do
               required
             />
             <.input
-              :if={@remote_storage_type == "s3"}
               field={s3_config[:secret_access_key]}
               id="remote_storage_secret_access_key"
-              type="text"
+              type="password"
               label="Secret access key"
               required
             />

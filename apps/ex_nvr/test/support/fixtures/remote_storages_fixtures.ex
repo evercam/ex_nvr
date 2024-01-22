@@ -12,15 +12,14 @@ defmodule ExNVR.RemoteStoragesFixtures do
 
   @spec valid_remote_storage_attributes(map(), binary()) :: map()
   def valid_remote_storage_attributes(attrs \\ %{}, type \\ "s3") do
-    {config, attrs} = Map.pop(attrs, :config, %{})
-
-    config = build_config(config, type)
+    config = build_config(attrs, type)
 
     Enum.into(attrs, %{
       name: valid_remote_storage_name(),
       type: type,
-      config: config
+      url: "https://example#{System.unique_integer()}"
     })
+    |> Enum.into(config)
   end
 
   @spec remote_storage_fixture(map(), binary()) :: RemoteStorage.t()
@@ -33,20 +32,33 @@ defmodule ExNVR.RemoteStoragesFixtures do
     remote_storage
   end
 
-  defp build_config(stream_config, "s3") do
-    Enum.into(stream_config, %{
-      url: "https://example#{System.unique_integer()}",
-      bucket: "remote-storage-bucket",
-      region: "us-east-1",
-      access_key_id: :crypto.strong_rand_bytes(16) |> Base.encode16(),
-      secret_access_key: :crypto.strong_rand_bytes(16) |> Base.encode16()
-    })
+  defp build_config(attrs, "s3") do
+    {config, _attrs} = Map.pop(attrs, :s3_config, %{})
+
+    s3_config =
+      Enum.into(config, %{
+        bucket: "remote-storage-bucket",
+        region: "us-east-1",
+        access_key_id: :crypto.strong_rand_bytes(16) |> Base.encode16(),
+        secret_access_key: :crypto.strong_rand_bytes(16) |> Base.encode16()
+      })
+
+    %{
+      s3_config: s3_config
+    }
   end
 
-  defp build_config(stream_config, "http") do
-    Enum.into(stream_config, %{
-      url: "https://example#{System.unique_integer()}",
-      token: :crypto.strong_rand_bytes(16) |> Base.encode64()
-    })
+  defp build_config(attrs, "http") do
+    {config, _attrs} = Map.pop(attrs, :http_config, %{})
+
+    http_config =
+      Enum.into(config, %{
+        url: "https://example#{System.unique_integer()}",
+        token: :crypto.strong_rand_bytes(16) |> Base.encode64()
+      })
+
+    %{
+      http_config: http_config
+    }
   end
 end
