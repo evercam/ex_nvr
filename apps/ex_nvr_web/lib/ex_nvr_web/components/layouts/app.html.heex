@@ -1,5 +1,5 @@
 <header>
-  <nav class="fixed top-0 z-50 w-full bg-white border-b border-gray-200 dark:bg-gray-800 dark:border-gray-700">
+  <nav class="fixed top-0 z-50 w-full bg-blue-500 border-b border-blue-400 dark:bg-gray-800 dark:border-gray-700">
     <div class="px-3 py-3 lg:px-5 lg:pl-3">
       <div class="flex items-center justify-between">
         <div class="flex items-center justify-start">
@@ -40,13 +40,14 @@
               <input id="light-switch" type="checkbox" name="light-switch" class="light-switch sr-only" phx-hook="SwitchDarkMode"/>
               <label class="relative cursor-pointer p-2" for="light-switch">
                   <svg class="dark:hidden" width="16" height="16" xmlns="http://www.w3.org/2000/svg">
-                      <path class="fill-slate-300" d="M7 0h2v2H7zM12.88 1.637l1.414 1.415-1.415 1.413-1.413-1.414zM14 7h2v2h-2zM12.95 14.433l-1.414-1.413 1.413-1.415 1.415 1.414zM7 14h2v2H7zM2.98 14.364l-1.413-1.415 1.414-1.414 1.414 1.415zM0 7h2v2H0zM3.05 1.706 4.463 3.12 3.05 4.535 1.636 3.12z" />
-                      <path class="fill-slate-400" d="M8 4C5.8 4 4 5.8 4 8s1.8 4 4 4 4-1.8 4-4-1.8-4-4-4Z" />
+                      <path class="fill-slate-700" d="M7 0h2v2H7zM12.88 1.637l1.414 1.415-1.415 1.413-1.413-1.414zM14 7h2v2h-2zM12.95 14.433l-1.414-1.413 1.413-1.415 1.415 1.414zM7 14h2v2H7zM2.98 14.364l-1.413-1.415 1.414-1.414 1.414 1.415zM0 7h2v2H0zM3.05 1.706 4.463 3.12 3.05 4.535 1.636 3.12z" />
+                      <path class="fill-slate-800" d="M8 4C5.8 4 4 5.8 4 8s1.8 4 4 4 4-1.8 4-4-1.8-4-4-4Z" />
                   </svg>
                   <svg class="hidden dark:block" width="16" height="16" xmlns="http://www.w3.org/2000/svg">
                       <path class="fill-slate-400" d="M6.2 1C3.2 1.8 1 4.6 1 7.9 1 11.8 4.2 15 8.1 15c3.3 0 6-2.2 6.9-5.2C9.7 11.2 4.8 6.3 6.2 1Z" />
                       <path class="fill-slate-500" d="M12.5 5a.625.625 0 0 1-.625-.625 1.252 1.252 0 0 0-1.25-1.25.625.625 0 1 1 0-1.25 1.252 1.252 0 0 0 1.25-1.25.625.625 0 1 1 1.25 0c.001.69.56 1.249 1.25 1.25a.625.625 0 1 1 0 1.25c-.69.001-1.249.56-1.25 1.25A.625.625 0 0 1 12.5 5Z" />
                   </svg>
+                  
                   <span class="sr-only">Switch to light / dark version</span>
               </label>
             </div>
@@ -67,7 +68,7 @@
               </button>
             </div>
             <div
-              class="z-50 hidden my-4 text-base list-none bg-white divide-y divide-gray-100 rounded shadow dark:bg-gray-700 dark:divide-gray-600"
+              class="z-50 hidden my-4 text-base list-none bg-blue-200 divide-y divide-gray-100 rounded shadow dark:bg-gray-700 dark:divide-gray-600"
               id="dropdown-user"
             >
               <div class="px-4 py-3" role="none">
@@ -86,7 +87,7 @@
                 <li>
                   <.link
                     href={~p"/users/settings"}
-                    class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-600 dark:hover:text-white"
+                    class="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-100 dark:text-gray-300 dark:hover:bg-gray-600 dark:hover:text-white"
                     role="menuitem"
                   >
                     Settings
@@ -96,7 +97,7 @@
                   <.link
                     href={~p"/users/logout"}
                     method="delete"
-                    class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-600 dark:hover:text-white"
+                    class="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-100 dark:text-gray-300 dark:hover:bg-gray-600 dark:hover:text-white"
                     role="menuitem"
                   >
                     Sign out
@@ -112,74 +113,74 @@
 
   <aside
     id="logo-sidebar"
-    class="fixed top-0 left-0 z-40 w-64 h-screen pt-20 transition-transform -translate-x-full bg-white border-r border-gray-200 sm:translate-x-0 dark:bg-gray-800 dark:border-gray-700"
+    class="fixed top-0 left-0 z-40 w-64 h-screen pt-20 transition-transform -translate-x-full bg-blue-300 border-r border-gray-500 sm:translate-x-0 dark:bg-gray-800 dark:border-gray-700"
     aria-label="Sidebar"
   >
-    <div class="flex flex-col justify-between h-full px-3 pb-4 overflow-y-auto bg-white dark:bg-gray-800">
+    <div class="flex flex-col justify-between h-full px-3 pb-4 overflow-y-auto bg-blue-300 dark:bg-gray-800">
       <div>
         <ul class="space-y-2 font-medium">
           <li>
             <.link
               href={~p"/dashboard"}
-              class="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
+              class="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-blue-200 dark:hover:bg-gray-700"
             >
-              <.icon name="hero-tv-solid" class="w-6 h-6 text-gray-500 dark:text-gray-400" />
+              <.icon name="hero-tv-solid" class="w-6 h-6 dark:text-gray-400" />
               <span class="ml-3">Dashboard</span>
             </.link>
           </li>
           <li>
             <.link
               href={~p"/recordings"}
-              class="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
+              class="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-blue-200 dark:hover:bg-gray-700"
             >
               <.icon
                 name="hero-video-camera-solid"
-                class="w-6 h-6 text-gray-500 dark:text-gray-400"
+                class="w-6 h-6 dark:text-gray-400"
               />
               <span class="flex-1 ml-3 whitespace-nowrap">Recordings</span>
             </.link>
           </li>
         </ul>
-        <ul class="pt-4 mt-4 space-y-2 font-medium border-t border-gray-200 dark:border-gray-700">
+        <ul class="pt-4 mt-4 space-y-2 font-medium border-t border-gray-500 dark:border-gray-700">
           <li>
             <.link
               href={~p"/devices"}
-              class="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
+              class="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-blue-200 dark:hover:bg-gray-700"
             >
-              <.icon name="hero-camera-solid" class="w-6 h-6 text-gray-500 dark:text-gray-400" />
+              <.icon name="hero-camera-solid" class="w-6 h-6 dark:text-gray-400" />
               <span class="flex-1 ml-3 whitespace-nowrap">Devices</span>
             </.link>
           </li>
           <li :if={@current_user && @current_user.role == :admin}>
             <.link
               href={~p"/users"}
-              class="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
+              class="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-blue-200 dark:hover:bg-gray-700"
             >
-              <.icon name="hero-users-solid" class="w-6 h-6 text-gray-500 dark:text-gray-400" />
+              <.icon name="hero-users-solid" class="w-6 h-6 dark:text-gray-400" />
               <span class="ml-3">Users </span>
             </.link>
           </li>
           <li :if={@current_user && @current_user.role == :admin}>
             <.link
               href={~p"/onvif-discovery"}
-              class="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
+              class="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-blue-200 dark:hover:bg-gray-700"
             >
               <.icon
                 name="hero-magnifying-glass-circle"
-                class="w-6 h-6 text-gray-500 dark:text-gray-400"
+                class="w-6 h-6 dark:text-gray-400"
               />
               <span class="flex-1 ml-3 whitespace-nowrap">Onvif Discovery</span>
             </.link>
           </li>
         </ul>
-        <ul class="pt-4 mt-4 space-y-2 font-medium border-t border-gray-200 dark:border-gray-700">
+        <ul class="pt-4 mt-4 space-y-2 font-medium border-t border-gray-500 dark:border-gray-700">
           <li>
             <.link
               href={~p"/live-dashboard"}
               target="_blank"
-              class="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
+              class="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-blue-200 dark:hover:bg-gray-700"
             >
-              <.icon name="hero-chart-bar-solid" class="w-6 h-6 text-gray-500 dark:text-gray-400" />
+              <.icon name="hero-chart-bar-solid" class="w-6 h-6 dark:text-gray-400" />
               <span class="flex-1 ml-3 whitespace-nowrap">Live Dashboard</span>
             </.link>
           </li>
@@ -187,9 +188,9 @@
             <.link
               href={~p"/swagger/index.html"}
               target="_blank"
-              class="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
+              class="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-blue-200 dark:hover:bg-gray-700"
             >
-              <.icon name="hero-document-solid" class="w-6 h-6 text-gray-500 dark:text-gray-400" />
+              <.icon name="hero-document-solid" class="w-6 h-6 dark:text-gray-400" />
               <span class="flex-1 ml-3 whitespace-nowrap">API Documentation</span>
             </.link>
           </li>
@@ -197,12 +198,12 @@
             <.link
               href="https://github.com/evercam/ex_nvr"
               target="_blank"
-              class="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
+              class="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-blue-200 dark:hover:bg-gray-700"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 fill="currentColor"
-                class="w-6 h-6 text-gray-500 transition duration-75 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white"
+                class="w-6 h-6 transition duration-75 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white"
                 viewBox="0 0 640 640"
                 aria-hidden="true"
               >
@@ -213,7 +214,7 @@
           </li>
         </ul>
       </div>
-      <ul class="pt-4 mt-4 space-y-2 font-medium border-t border-gray-200 dark:border-gray-700">
+      <ul class="pt-4 mt-4 space-y-2 font-medium border-t border-gray-500 dark:border-gray-700">
         <li class="font-medium text-center dark:text-white">
           Version <%= Application.spec(:ex_nvr, :vsn) %>
         </li>
@@ -221,8 +222,8 @@
     </div>
   </aside>
 </header>
-<main class="px-4 py-20 sm:px-6 lg:px-8">
-  <div class="flex justify-center mx-auto sm:ml-64">
+<main class="px-4 py-20 sm:px-6 lg:px-8 bg-blue-300 dark:bg-gray-800">
+  <div class="flex justify-center mx-auto sm:ml-64 bg-blue-300 dark:bg-gray-800">
     <.flash_group flash={@flash} />
     <%= @inner_content %>
   </div>
