@@ -1,14 +1,14 @@
 <div class="grow max-w-2xl">
-  <div class="px-6 lg:px-8 bg-white dark:bg-gray-800">
+  <div class="px-6 lg:px-8 bg-blue-300 dark:bg-gray-800">
     <h3
       :if={@device.id == nil}
-      class="mb-4 text-xl text-center font-medium text-gray-900 dark:text-white"
+      class="mb-4 text-xl text-center font-medium text-black dark:text-white"
     >
       Create a new device
     </h3>
     <h3
       :if={@device.id != nil}
-      class="mb-4 text-xl text-center font-medium text-gray-900 dark:text-white"
+      class="mb-4 text-xl text-center font-medium text-black dark:text-white"
     >
       Update a device
     </h3>
@@ -59,7 +59,7 @@
         prompt="Choose your device vendor"
       />
       <div class="flex flex-col">
-        <p class="text-xl font-medium mb-4 text-gray-800 dark:text-white">
+        <p class="text-xl font-medium mb-4 text-black dark:text-white">
           Device Config
         </p>
         <div class="flex flex-col">
@@ -142,12 +142,12 @@
       </div>
 
       <div id="device-settings" class="flex flex-col">
-        <p class="text-xl font-medium mb-4 text-gray-800 dark:text-white">
+        <p class="text-xl font-medium mb-4 text-black dark:text-white">
           Device Settings
         </p>
-        <div class="flex flex-col text-gray-900 dark:text-white">
+        <div class="flex flex-col text-black dark:text-white">
           <.inputs_for :let={settings} field={@device_form[:settings]}>
-            <div class="w-full mb-5 font-medium bg-white dark:bg-gray-800">
+            <div class="w-full mb-5 font-medium bg-blue-300 dark:bg-gray-800">
               <h2 class="mb-2">Select storage address</h2>
               <.input
                 :let={option}
@@ -159,16 +159,16 @@
               >
                 <div class="w-full px-2 font-normal text-xs">
                   <div class="flex justify-between mb-1">
-                    <span class="text-blue-700 dark:text-white">
+                    <span class="text-black dark:text-white">
                       <%= elem(option, 0) %>
                     </span>
-                    <span class="text-blue-700 dark:text-white">
+                    <span class="text-black dark:text-white">
                       <%= humanize_capacity(elem(option, 1)) %>
                     </span>
                   </div>
                   <div class="w-full bg-gray-200 rounded-full dark:bg-gray-700">
                     <div
-                      class="bg-blue-600 text-xs font-medium text-blue-100 text-center leading-none rounded-full"
+                      class="bg-blue-800 text-xs font-medium text-blue-100 text-center leading-none rounded-full"
                       style={"width: #{elem(option, 1) |> elem(1)}%"}
                     >
                       <%= elem(option, 1) |> elem(1) %>%
