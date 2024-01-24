@@ -44,7 +44,7 @@ RUN mix deps.compile
 RUN mix do compile, release
 
 # prepare release image
-FROM alpine:3.18.5 AS app
+FROM alpine:3 AS app
 
 # install runtime dependencies
 RUN \
