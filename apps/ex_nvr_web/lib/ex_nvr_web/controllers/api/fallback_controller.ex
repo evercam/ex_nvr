@@ -37,6 +37,16 @@ defmodule ExNVRWeb.API.FallbackController do
     |> json(%{message: "Forbidden"})
   end
 
+  def call(conn, {:error, %Soap.Response{body: body}}) do
+    conn
+    |> put_status(500)
+    |> json(%{
+      code: "INTERNAL_ERROR",
+      message: "bad onvif request",
+      details: body
+    })
+  end
+
   def call(conn, {:error, reason}) do
     conn
     |> put_status(500)
