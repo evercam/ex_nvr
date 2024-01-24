@@ -66,7 +66,7 @@ defmodule ExNVRWeb.CoreComponents do
               phx-window-keydown={JS.exec("data-cancel", to: "##{@id}")}
               phx-key="escape"
               phx-click-away={JS.exec("data-cancel", to: "##{@id}")}
-              class="shadow-zinc-700/10 ring-zinc-700/10 relative hidden rounded-lg bg-white p-2 shadow-lg ring-1 transition shadow dark:bg-gray-800"
+              class="shadow-zinc-700/10 ring-zinc-700/10 relative hidden rounded-lg bg-blue-300 p-2 shadow-lg ring-1 transition shadow dark:bg-gray-800"
             >
               <div class="absolute top-6 right-5">
                 <button
@@ -189,7 +189,7 @@ defmodule ExNVRWeb.CoreComponents do
   def simple_form(assigns) do
     ~H"""
     <.form :let={f} for={@for} as={@as} {@rest}>
-      <div class="mt-10 space-y-8 bg-white dark:bg-gray-800">
+      <div class="mt-10 space-y-8 border-gray-500 bg-blue-300 dark:bg-gray-800">
         <%= render_slot(@inner_block, f) %>
         <div :for={action <- @actions} class="mt-2 flex items-center justify-between gap-6">
           <%= render_slot(action, f) %>
@@ -218,9 +218,9 @@ defmodule ExNVRWeb.CoreComponents do
     <button
       type={@type}
       class={[
-        "phx-submit-loading:opacity-75 rounded-lg bg-zinc-900 hover:bg-zinc-700 py-2 px-3",
+        "phx-submit-loading:opacity-75 rounded-lg bg-blue-700 hover:bg-blue-400 py-2 px-3",
         "text-sm font-semibold leading-6 text-white active:text-white/80 dark:bg-blue-700",
-        "dark:border-gray-600 dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:focus:ring-offset-gray-80",
+        "dark:border-gray-600 dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:focus:ring-offset-gray-80 dark:hover:bg-blue-500",
         @class
       ]}
       {@rest}
@@ -282,7 +282,7 @@ defmodule ExNVRWeb.CoreComponents do
 
     ~H"""
     <div phx-feedback-for={@name}>
-      <label class="flex items-center gap-4 text-sm leading-6 text-zinc-600 dark:text-white">
+      <label class="flex items-center gap-4 text-sm leading-6 text-black dark:text-white">
         <input type="hidden" name={@name} value="false" />
         <input
           type="checkbox"
@@ -291,7 +291,7 @@ defmodule ExNVRWeb.CoreComponents do
           value="true"
           checked={@checked}
           class={[
-            "rounded text-zinc-900 border-gray-300 rounded bg-gray-50 focus:ring-3 focus:ring-blue-300",
+            "rounded text-black border-gray-300 rounded bg-gray-50 focus:ring-3 focus:ring-blue-300",
             "dark:bg-gray-700 dark:border-gray-600 dark:focus:ring-blue-600",
             "dark:ring-offset-gray-800 dark:focus:ring-offset-gray-80"
           ]}
@@ -440,10 +440,11 @@ defmodule ExNVRWeb.CoreComponents do
         id={@id}
         value={Phoenix.HTML.Form.normalize_value(@type, @value)}
         class={[
-          "mt-2 block w-full rounded-lg text-zinc-900 focus:ring-0 sm:text-sm sm:leading-6",
+          "mt-2 block w-full rounded-lg text-black focus:ring-0 sm:text-sm sm:leading-6",
           "phx-no-feedback:border-zinc-300 phx-no-feedback:focus:border-zinc-400",
           "border-zinc-300 focus:border-zinc-400 dark:bg-gray-700 dark:border-gray-600",
           "dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500",
+          "text-black",
           @errors != [] && "border-rose-400 focus:border-rose-400"
         ]}
         {@rest}
@@ -461,7 +462,7 @@ defmodule ExNVRWeb.CoreComponents do
 
   def label(assigns) do
     ~H"""
-    <label for={@for} class="block text-sm font-semibold leading-6 text-zinc-800 dark:text-white">
+    <label for={@for} class="block text-sm font-semibold leading-6 text-black dark:text-white">
       <%= render_slot(@inner_block) %>
     </label>
     """
@@ -540,7 +541,7 @@ defmodule ExNVRWeb.CoreComponents do
     ~H"""
     <div class="overflow-y-auto px-4 sm:overflow-visible sm:px-0">
       <table class="w-[40rem] mt-4 text-sm text-left sm:w-full text-gray-500 dark:text-gray-400">
-        <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
+        <thead class="text-xs text-black uppercase bg-blue-400 dark:bg-gray-700 dark:text-gray-400">
           <tr>
             <th :for={col <- @col} class="px-6 py-3"><%= col[:label] %></th>
             <th class="relative p-0 pb-4"><span class="sr-only"><%= gettext("Actions") %></span></th>
@@ -550,7 +551,7 @@ defmodule ExNVRWeb.CoreComponents do
           <tr
             :for={row <- @rows}
             id={@row_id && @row_id.(row)}
-            class="bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50"
+            class="text-black bg-blue-300 hover:bg-blue-200 border-b dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400"
           >
             <td
               :for={{col, i} <- Enum.with_index(@col)}
@@ -671,7 +672,7 @@ defmodule ExNVRWeb.CoreComponents do
 
   def card(assigns) do
     ~H"""
-    <div class={@class <> " p-4 bg-white border border-gray-200 rounded-lg shadow sm:p-6 md:p-8 dark:bg-gray-800 dark:border-gray-700"}>
+    <div class={@class <> " p-4 bg-white border border-gray-500 rounded-lg shadow sm:p-6 md:p-8 dark:bg-gray-800 dark:border-gray-700"}>
       <%= render_slot(@inner_block) %>
     </div>
     """
@@ -691,7 +692,7 @@ defmodule ExNVRWeb.CoreComponents do
                 "flex items-center justify-center px-3 h-8 ml-0 leading-tight bg-white border border-gray-300 rounded-l-lg"
               ] ++
                 if not @meta.has_previous_page?,
-                  do: ["pointer-events-none text-gray-400"],
+                  do: ["pointer-events-none text-gray-300"],
                   else: [
                     "text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
                   ]

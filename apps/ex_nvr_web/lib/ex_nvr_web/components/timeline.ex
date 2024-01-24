@@ -19,19 +19,19 @@ defmodule ExNVRWeb.TimelineComponent do
       data-segments={@segments}
       data-timezone={@timezone}
     >
-      <div id="background" class="bg-gray-900 w-full h-7 absolute top-0"></div>
+      <div id="background" class="bg-blue-600 dark:bg-gray-900 w-full h-7 absolute top-0"></div>
       <div
         id="timeline"
-        class="relative h-13 rounded-br rounded-bl select-none overflow-x-hidden"
+        class="relative h-13 rounded-br rounded-bl select-none overflow-x-hidden text-gray-900"
         phx-update="ignore"
       >
       </div>
       <div
         id="tooltip"
-        class="hidden absolute bg-gray-900 text-white border border-gray-700 rounded px-2"
+        class="hidden absolute bg-gray-100 text-gray-700 dark:text-white dark:bg-gray-900 border dark:border-gray-700 rounded px-2"
       >
       </div>
-      <div id="cursor" class="hidden absolute bg-red-600 w-px h-7 top-0 pointer-events-none"></div>
+      <div id="cursor" class="hidden absolute bg-red-800 dark:bg-red-600 w-px h-7 top-0 pointer-events-none"></div>
     </div>
     """
   end
