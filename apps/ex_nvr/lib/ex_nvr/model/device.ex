@@ -153,13 +153,119 @@ defmodule ExNVR.Model.Device do
     end
   end
 
+  defmodule SnapshotConfig do
+    use Ecto.Schema
+
+    import Ecto.Changeset
+
+    @type t :: %__MODULE__{
+            enabled: boolean(),
+            upload_interval: integer(),
+            remote_storage: binary(),
+            schedule: list()
+          }
+
+    defmodule DaySchedule do
+      use Ecto.Schema
+
+      import Ecto.Changeset
+
+      @time_regex ~r/^([01]\d|2[0-3]):([0-5]\d)$/
+      @week_days ~w(monday tuesday wednesday thursday friday saturday sunday)
+
+      @type t :: %__MODULE__{
+              day: binary(),
+              time_intervals: list()
+            }
+
+      @primary_key false
+      embedded_schema do
+        field :day, :string
+        field :time_intervals, {:array, :string}
+      end
+
+      @spec changeset(t(), map()) :: Ecto.Changeset.t()
+      def changeset(struct, params) do
+        struct
+        |> cast(params, __MODULE__.__schema__(:fields))
+        |> validate_required(__MODULE__.__schema__(:fields))
+        |> validate_inclusion(:day, @week_days)
+        |> validate_time_intervals()
+      end
+
+      defp validate_time_intervals(changeset) do
+        changeset
+        |> get_field(:time_intervals)
+        |> Enum.map(&String.split(&1, "-"))
+        |> Enum.map(&parse_to_time/1)
+      end
+
+      defp validate_time_interval(changeset) do
+        start_time = get_field(changeset, :start_time) |> parse_to_time()
+        end_time = get_field(changeset, :end_time) |> parse_to_time()
+
+        if Time.compare(start_time, end_time) == :lt do
+          changeset
+        else
+          add_error(changeset, :start_date, "must be less than end date")
+        end
+      end
+
+      defp parse_to_time([start_time, end_time]) do
+        [start_hour, start_minute] =
+          start_time |> String.split(":") |> Enum.map(&String.to_integer/1)
+
+        [end_hour, end_minute] = end_time |> String.split(":") |> Enum.map(&String.to_integer/1)
+
+        %{
+          start_time: %Time{hour: start_hour, minute: start_minute, second: 0},
+          end_time: %Time{hour: end_hour, minute: end_minute, second: 0}
+        }
+      end
+    end
+
+    @primary_key false
+    embedded_schema do
+      field :enabled, :boolean, default: false
+      field :upload_interval, :integer
+      field :remote_storage, :string
+
+      embeds_many :schedule, DaySchedule, on_replace: :delete
+    end
+
+    @spec changeset(t(), map()) :: Ecto.Changeset.t()
+    def changeset(struct, params) do
+      changeset =
+        struct
+        |> cast(params, [:enabled, :upload_interval, :remote_storage])
+
+      enabled = get_field(changeset, :enabled)
+      validate_config(changeset, enabled)
+    end
+
+    defp validate_config(changeset, true) do
+      changeset
+      |> validate_required([:enabled, :interval, :remote_storage])
+      |> validate_number(:upload_interval,
+        greater_than_or_equal_to: 5,
+        less_than_or_equal_to: 3600
+      )
+      |> cast_embed(:schedule, required: true, with: &DaySchedule.changeset(&1, &2))
+    end
+
+    defp validate_config(changeset, _enabled) do
+      changeset
+      |> put_change(:interval, nil)
+      |> put_change(:remote_storage, nil)
+    end
+  end
+
   @primary_key {:id, :binary_id, autogenerate: true}
   schema "devices" do
     field :name, :string
     field :type, Ecto.Enum, values: [:ip, :file], default: :ip
     field :timezone, :string, default: "UTC"
     field :state, Ecto.Enum, values: @states, default: :recording
-
     field :vendor, :string
     field :mac, :string
     field :url, :string
@@ -168,6 +274,7 @@ defmodule ExNVR.Model.Device do
     embeds_one :credentials, Credentials, source: :credentials, on_replace: :update
     embeds_one :stream_config, StreamConfig, source: :config, on_replace: :update
     embeds_one :settings, Settings, on_replace: :update
+    embeds_one :snapshot_config, SnapshotConfig, on_replace: :update
 
     timestamps(type: :utc_datetime_usec)
   end
