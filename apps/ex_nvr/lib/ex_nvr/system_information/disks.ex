@@ -36,12 +36,22 @@ defmodule ExNVR.SystemInformation.Disks do
     {~r/ECM./, "ECM"},
     {~r/INTEL./, "INTEL"},
     {~r/EVO./, "Samsung"},
-    {~r/APPLE./, "Apple"}
+    {~r/APPLE./, "Apple"},
+    {~r/^VIRTUAL DISK./, "Virtual Disk"}
   ]
 
   require Logger
 
   alias ExNVR.SystemInformation.Disk
+
+  alias ExNVR.Repo
+
+  @spec create(map() | Disk.t()) :: {:ok, Ecto.Schema.t()} | {:error, Ecto.Changeset.t()}
+  def create(params) do
+    params
+    |> Disk.changeset()
+    |> Repo.insert()
+  end
 
   @spec list(binary() | nil) :: [Disk.t()]
   def list(mountpoint \\ nil) do
@@ -59,7 +69,7 @@ defmodule ExNVR.SystemInformation.Disks do
          {:ok, data} <- Jason.decode(data) do
       data
       |> Map.get("blockdevices", [])
-      |> Enum.reject(&String.match?(&1["name"], ~r/^(loop|ram)/))
+      #|> Enum.reject(&String.match?(&1["name"], ~r/^(loop|ram)/))
       |> maybe_filter_by_mountpoint(mountpoint)
       |> Enum.map(&map_linux_device_to_disk/1)
     else
@@ -94,7 +104,7 @@ defmodule ExNVR.SystemInformation.Disks do
   end
 
   defp map_linux_device_to_disk(device) do
-    %Disk{
+    %{
       vendor: get_vendor(device),
       model: device["model"],
       serial: device["serial"],
@@ -106,7 +116,7 @@ defmodule ExNVR.SystemInformation.Disks do
   end
 
   defp get_vendor(device) do
-    model = String.upcase(device["model"])
+    model = String.upcase("#{device["model"]}")
     default_value = String.trim("#{device["vendor"]}")
 
     Enum.find_value(@manufacturers, default_value, fn {pattern, manufacturer} ->

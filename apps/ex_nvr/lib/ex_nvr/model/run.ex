@@ -16,16 +16,17 @@ defmodule ExNVR.Model.Run do
           start_date: DateTime.t() | nil,
           end_date: DateTime.t() | nil,
           active: boolean(),
-          device_id: binary() | nil
+          device_id: binary() | nil,
+          disk_id: integer() | nil
         }
 
-  @foreign_key_type :binary_id
   schema "runs" do
-    field(:start_date, :utc_datetime_usec)
-    field(:end_date, :utc_datetime_usec)
-    field(:active, :boolean, default: false)
+    field :start_date, :utc_datetime_usec
+    field :end_date, :utc_datetime_usec
+    field :active, :boolean, default: false
 
-    belongs_to :device, ExNVR.Model.Device
+    belongs_to :device, ExNVR.Model.Device, references: :binary_id, type: :string
+    belongs_to :disk, ExNVR.SystemInformation.Disk
   end
 
   def deactivate_query(device_id) do
