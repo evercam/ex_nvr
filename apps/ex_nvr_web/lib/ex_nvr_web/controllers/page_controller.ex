@@ -1,19 +1,15 @@
 defmodule ExNVRWeb.PageController do
   use ExNVRWeb, :controller
 
-  alias ExNVR.Devices
+  plug ExNVRWeb.Plug.Device when action == :webrtc
 
   def home(conn, _params) do
     redirect(conn, to: ~p"/dashboard")
   end
 
-  def webrtc(conn, %{"device_id" => device_id}) do
-    case Devices.get(device_id) do
-      nil ->
-        send_resp(conn, 404, "")
-
-      device ->
-        render(conn, :webrtc, device: device, layout: false)
-    end
+  def webrtc(conn, _params) do
+    %{device: device, current_user: user} = conn.assigns
+    token = Phoenix.Token.sign(conn, "user socket", user.id)
+    render(conn, :webrtc, device: device, user_token: token, layout: false)
   end
 end

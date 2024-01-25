@@ -7,7 +7,7 @@ window.onload = function (_event) {
     const deviceId = player.dataset.device
     const webrtc = new WebRTCEndpoint()
     
-    const socket = new Socket("/socket", {params: {}})
+    const socket = new Socket("/socket", {params: {token: window.token}})
     const channel = socket.channel(`device:${deviceId}`)
 
     function log(message) {
@@ -15,26 +15,26 @@ window.onload = function (_event) {
             return
         }
 
-        logsComponent.innerHTML += "\n" + message
+        logsComponent.innerHTML += "\n\n" + message
         logsComponent.scrollTop = logsComponent.scrollHeight
     }
 
     channel.on("media_event", ({ data }) => {
-        log("Received event from channel: \n", data)
+        log("Received event from channel: \n" + data + "\n")
         webrtc.receiveMediaEvent(data)
     })
 
     channel.join()
         .receive("ok", resp => {
-            log("Joined successfully: ", resp)
+            log("Joined device channel successfully ", resp)
 
             // WebRTC
             webrtc.on("connected", (endpoint_id) => {
-                log("Peer connected successfully: \n" + endpoint_id)
+                log("Peer connected successfully: " + endpoint_id)
             })
 
             webrtc.on("connectionError", (message) => {
-                log("Unable to connect peer: \n" + message)
+                log("Unable to connect peer: " + message)
             })
             
             webrtc.on("sendMediaEvent", event => {
@@ -43,7 +43,7 @@ window.onload = function (_event) {
             })
 
             webrtc.on("trackReady", (track_context) => {
-                log("Track is ready: \n" + track_context.stream)
+                log("Track is ready, playing...")
                 player.srcObject = track_context.stream
             })
 
