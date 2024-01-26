@@ -173,7 +173,10 @@
             </.link>
           </li>
         </ul>
-        <ul  :if={@current_user && @current_user.role == :admin} class="pt-4 mt-4 space-y-2 font-medium border-t border-white dark:border-gray-700">
+        <ul
+          :if={@current_user && @current_user.role == :admin}
+          class="pt-4 mt-4 space-y-2 font-medium border-t border-white dark:border-gray-700"
+        >
           <li>
             <.link
               href={~p"/remote-storages"}

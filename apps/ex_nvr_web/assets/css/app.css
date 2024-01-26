@@ -66,3 +66,21 @@ video::-webkit-media-controls-current-time-display {
 .break-anywhere {
     overflow-wrap: anywhere;
 }
+
+#webRtcPlayer {
+    width: 100vw;
+    height: 100vh;
+}
+
+#webRtcLogs {
+    position: fixed;
+    padding: 0px 10px;
+    right: 0%;
+    z-index: 10;
+    text-wrap: pretty;
+    max-width: 15vw;
+    max-height: 50vw;
+    overflow-y: scroll;
+    background-color: #101111;
+    opacity: 0.7;
+}

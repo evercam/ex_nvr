@@ -87,6 +87,7 @@ defmodule ExNVRWeb.Router do
     pipe_through [:browser, :require_authenticated_user]
 
     get "/", PageController, :home
+    get "/webrtc/:device_id", PageController, :webrtc
 
     import Phoenix.LiveDashboard.Router
     live_dashboard "/live-dashboard", metrics: ExNVRWeb.Telemetry
