@@ -551,7 +551,7 @@ defmodule ExNVRWeb.CoreComponents do
           <tr
             :for={row <- @rows}
             id={@row_id && @row_id.(row)}
-            class="text-black bg-gray-200 hover:bg-blue-200 border-b dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400"
+            class="text-black bg-gray-200 border-b dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400"
           >
             <td
               :for={{col, i} <- Enum.with_index(@col)}
