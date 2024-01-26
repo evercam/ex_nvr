@@ -23,6 +23,7 @@ defmodule ExNVR.Pipeline.Output.WebRTC do
   alias Membrane.H264
   alias Membrane.ICE.TURNManager
   alias Membrane.RTC.Engine
+  alias Membrane.RTC.Engine.Message
   alias Membrane.RTC.Engine.Endpoint.WebRTC
 
   def_input_pad :input,
@@ -154,7 +155,7 @@ defmodule ExNVR.Pipeline.Output.WebRTC do
 
   @impl true
   def handle_info(
-        %Engine.Message.EndpointMessage{
+        %Message.EndpointMessage{
           endpoint_id: endpoint_id,
           message: {:media_event, media_event}
         },
@@ -167,8 +168,23 @@ defmodule ExNVR.Pipeline.Output.WebRTC do
   end
 
   @impl true
+  def handle_info(%Message.EndpointAdded{} = msg, _ctx, state) do
+    Membrane.Logger.info(
+      "new peer of type #{inspect(msg.endpoint_type)} joined with id '#{msg.endpoint_id}'"
+    )
+
+    {[], state}
+  end
+
+  @impl true
+  def handle_info(%Message.EndpointRemoved{} = msg, _ctx, state) do
+    Membrane.Logger.info("peer with id '#{msg.endpoint_id}' removed")
+    {[], state}
+  end
+
+  @impl true
   def handle_info(
-        %Engine.Message.EndpointMessage{endpoint_id: _, message: {:source_pid, source_pid}},
+        %Message.EndpointMessage{endpoint_id: _, message: {:source_pid, source_pid}},
         _ctx,
         state
       ) do
@@ -177,7 +193,7 @@ defmodule ExNVR.Pipeline.Output.WebRTC do
 
   @impl true
   def handle_info(
-        %Engine.Message.EndpointCrashed{endpoint_id: endpoint_id},
+        %Message.EndpointCrashed{endpoint_id: endpoint_id},
         _ctx,
         %{stream_endpoint_id: endpoint_id} = state
       ) do

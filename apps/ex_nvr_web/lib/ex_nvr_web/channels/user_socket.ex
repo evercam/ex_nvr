@@ -3,20 +3,17 @@ defmodule ExNVRWeb.UserSocket do
 
   channel("device:*", ExNVRWeb.DeviceRoomChannel)
 
-  alias ExNVR.Accounts
-
   @impl true
-  def connect(params, socket, _connect_info) do
-    with access_token <- params["access_token"] || "",
-         {:ok, decodec_token} <- Base.url_decode64(access_token),
-         user when not is_nil(user) <- Accounts.get_user_by_access_token(decodec_token) do
-      {:ok, assign(socket, current_user: user)}
-    else
-      _ ->
-        {:error, :unauthorized}
+  def connect(%{"token" => token}, socket, _connect_info) do
+    case Phoenix.Token.verify(socket, "user socket", token, max_age: 3_600 * 24) do
+      {:ok, user_id} ->
+        {:ok, assign(socket, user_id: user_id)}
+
+      {:error, _reason} ->
+        :error
     end
   end
 
   @impl true
-  def id(socket), do: socket.assigns[:current_user].id
+  def id(socket), do: socket.assigns[:user_id]
 end
