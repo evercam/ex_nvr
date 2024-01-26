@@ -10,6 +10,9 @@ defmodule ExNVRWeb.PageController do
   def webrtc(conn, _params) do
     %{device: device, current_user: user} = conn.assigns
     token = Phoenix.Token.sign(conn, "user socket", user.id)
-    render(conn, :webrtc, device: device, user_token: token, layout: false)
+
+    conn
+    |> delete_resp_header("x-frame-options")
+    |> render(:webrtc, device: device, user_token: token, layout: false)
   end
 end

@@ -4,6 +4,20 @@ NVR (Network Video Recorder) for Elixir using [Membrane Framework](https://githu
 
 ![ExNVR dashboard](/screenshots/ex_nvr.png)
 
+## Contents
+- [ExNVR](#exnvr)
+  - [Contents](#contents)
+  - [Installation](#installation)
+    - [Docker](#docker)
+      - [Arm/v7](#armv7)
+    - [Releases](#releases)
+  - [Environment Variables](#environment-variables)
+  - [WebRTC](#webrtc)
+    - [WebRTC Configuration](#webrtc-configuration)
+    - [Page URL](#page-url)
+    - [Embedding](#embedding)
+  - [Features](#features)
+
 ## Installation
 
 ### Docker
@@ -65,13 +79,6 @@ sudo systemctl stop ex_nvr.service
 sudo systemctl disable ex_nvr.service
 sudo dpkg -P ex-nvr
 ```
-## WebRTC
-
-You can access the webrtc page of a a specific device by going to the following url:
-
-```url
-{base_url}/webrtc/#{device_id}
-```
 
 ## Environment Variables
 
@@ -94,7 +101,9 @@ If you want to configure some aspects of `ex_nvr`, you can set the following env
 | EXNVR_SSL_CERT_PATH | The path to the SSL certificate. |
 | EXNVR_JSON_LOGGER | Enable json logging, defaults to: `true` |
 
-* **WebRTC Configuration**
+## WebRTC
+
+### WebRTC Configuration
 
 | **Env variable** | **descritpion** |
 |------------------|-----------------|
@@ -108,6 +117,21 @@ If you want to configure some aspects of `ex_nvr`, you can set the following env
 > *Note*
 > 
 > Actually even if private and certificate files are provided, TURN server will not handle TLS connections. We'll support this in the near future.
+
+### Page URL
+You can access the webrtc page using the following url:
+
+```url
+http://localhost:4000/webrtc/{device_id}
+```
+
+### Embedding
+A webrtc player can be embedded in web page by using `iframe`
+```html
+<iframe width="640" height="480" src="http://localhost:4000/webrtc/device_id?access_token=token" title="ex_nvr" allowfullscreen></iframe>
+```
+
+> The `access_token` will eventually expire and must be updated to ensure the proper functionning of the embedded page. We plan to enhance this by introducing the capability to make the page public or generate non-expiring tokens with view privileges. 
 
 ## Features
 
@@ -133,7 +157,7 @@ The main feature of this project is to store video streams retrieved from `devic
 
 * **Streaming**: live view and playback
    - [x] HLS
-   - [ ] WebRTC
+   - [x] WebRTC (only mainstream, disabled for H265)
    - [ ] Webm
    - [ ] RTSP
    - [ ] RTMP
