@@ -1,5 +1,5 @@
 <div class="grow max-w-2xl">
-  <div class="px-6 lg:px-8 bg-blue-300 dark:bg-gray-800">
+  <div class="px-6 lg:px-8 bg-gray-300 dark:bg-gray-800">
     <h3
       :if={@device.id == nil}
       class="mb-4 text-xl text-center font-medium text-black dark:text-white"
@@ -147,7 +147,7 @@
         </p>
         <div class="flex flex-col text-black dark:text-white">
           <.inputs_for :let={settings} field={@device_form[:settings]}>
-            <div class="w-full mb-5 font-medium bg-blue-300 dark:bg-gray-800">
+            <div class="w-full mb-5 font-medium bg-gray-300 dark:bg-gray-800">
               <h2 class="mb-2">Select storage address</h2>
               <.input
                 :let={option}

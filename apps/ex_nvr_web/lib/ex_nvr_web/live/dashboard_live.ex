@@ -19,7 +19,7 @@ defmodule ExNVRWeb.DashboardLive do
 
   def render(assigns) do
     ~H"""
-    <div class="bg-blue-300 sm:w-2/3 dark:bg-gray-800">
+    <div class="bg-gray-300 sm:w-2/3 dark:bg-gray-800">
       <div :if={@devices == []} class="grid tracking-wide text-lg text-center dark:text-gray-200">
         You have no devices, you can create one
         <span><.link href={~p"/devices"} class="ml-2 dark:text-blue-600">here</.link></span>
@@ -27,7 +27,7 @@ defmodule ExNVRWeb.DashboardLive do
       <div :if={@devices != []}>
         <div class="flex items-center justify-between invisible sm:visible">
           <.simple_form for={@form} id="device_form">
-            <div class="flex items-center bg-blue-300 dark:bg-gray-800">
+            <div class="flex items-center bg-gray-300 dark:bg-gray-800">
               <div class="mr-4">
                 <.input
                   field={@form[:device]}
@@ -54,7 +54,7 @@ defmodule ExNVRWeb.DashboardLive do
           <div class="mt-20 mb-2">
             <.button
               id="download-footage-btn"
-              class="hover:bg-white text-white dark:text-white px-4 py-2 rounded flex items-center"
+              class="text-white dark:text-white px-4 py-2 rounded flex items-center"
               phx-click={show_modal("download-modal")}
             >
               <span title="Download footage" class="mr-2">
@@ -111,8 +111,8 @@ defmodule ExNVRWeb.DashboardLive do
       </div>
 
       <.modal id="download-modal">
-        <div class="bg-blue-300 dark:bg-gray-800 p-8 rounded">
-          <h2 class="text-xl text-gray-700 dark:text-white font-bold mb-4">Download Footage</h2>
+        <div class="bg-gray-300 dark:bg-gray-800 p-8 rounded">
+          <h2 class="text-xl text-black dark:text-white font-bold mb-4">Download Footage</h2>
           <.simple_form
             for={@footage_form}
             id="footage_form"

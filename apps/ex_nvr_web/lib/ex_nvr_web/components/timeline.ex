@@ -19,7 +19,7 @@ defmodule ExNVRWeb.TimelineComponent do
       data-segments={@segments}
       data-timezone={@timezone}
     >
-      <div id="background" class="bg-blue-600 dark:bg-gray-900 w-full h-7 absolute top-0"></div>
+      <div id="background" class="bg-zinc-800 dark:bg-gray-900 w-full h-7 absolute top-0"></div>
       <div
         id="timeline"
         class="relative h-13 rounded-br rounded-bl select-none overflow-x-hidden text-gray-900"

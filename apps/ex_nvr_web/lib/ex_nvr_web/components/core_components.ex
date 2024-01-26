@@ -66,7 +66,7 @@ defmodule ExNVRWeb.CoreComponents do
               phx-window-keydown={JS.exec("data-cancel", to: "##{@id}")}
               phx-key="escape"
               phx-click-away={JS.exec("data-cancel", to: "##{@id}")}
-              class="shadow-zinc-700/10 ring-zinc-700/10 relative hidden rounded-lg bg-blue-300 p-2 shadow-lg ring-1 transition shadow dark:bg-gray-800"
+              class="shadow-zinc-700/10 ring-zinc-700/10 relative hidden rounded-lg bg-gray-300 p-2 shadow-lg ring-1 transition shadow dark:bg-gray-800"
             >
               <div class="absolute top-6 right-5">
                 <button
@@ -189,7 +189,7 @@ defmodule ExNVRWeb.CoreComponents do
   def simple_form(assigns) do
     ~H"""
     <.form :let={f} for={@for} as={@as} {@rest}>
-      <div class="mt-10 space-y-8 border-gray-500 bg-blue-300 dark:bg-gray-800">
+      <div class="mt-10 space-y-8 border-gray-500 bg-gray-300 dark:bg-gray-800">
         <%= render_slot(@inner_block, f) %>
         <div :for={action <- @actions} class="mt-2 flex items-center justify-between gap-6">
           <%= render_slot(action, f) %>
@@ -551,7 +551,7 @@ defmodule ExNVRWeb.CoreComponents do
           <tr
             :for={row <- @rows}
             id={@row_id && @row_id.(row)}
-            class="text-black bg-blue-300 hover:bg-blue-200 border-b dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400"
+            class="text-black bg-gray-200 hover:bg-blue-200 border-b dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400"
           >
             <td
               :for={{col, i} <- Enum.with_index(@col)}
@@ -672,7 +672,7 @@ defmodule ExNVRWeb.CoreComponents do
 
   def card(assigns) do
     ~H"""
-    <div class={@class <> " p-4 bg-white border border-gray-500 rounded-lg shadow sm:p-6 md:p-8 dark:bg-gray-800 dark:border-gray-700"}>
+    <div class={@class <> " p-4 bg-gray-300 border border-gray-500 rounded-lg shadow sm:p-6 md:p-8 dark:bg-gray-800 dark:border-gray-700"}>
       <%= render_slot(@inner_block) %>
     </div>
     """
