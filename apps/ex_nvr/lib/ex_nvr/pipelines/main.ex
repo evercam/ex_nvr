@@ -55,6 +55,7 @@ defmodule ExNVR.Pipelines.Main do
 
     alias ExNVR.Media.Track
     alias ExNVR.Model.Device
+    alias ExNVR.Pipelines.Main
 
     @default_segment_duration 60
 
@@ -73,7 +74,8 @@ defmodule ExNVR.Pipelines.Main do
             supervisor_pid: pid(),
             live_snapshot_waiting_pids: list(),
             rtc_engine: pid() | atom(),
-            video_tracks: {Track.t(), Track.t()}
+            video_tracks: {Track.t(), Track.t()},
+            video_encoding: Main.encoding()
           }
 
     @enforce_keys [:device]
@@ -84,7 +86,8 @@ defmodule ExNVR.Pipelines.Main do
                   supervisor_pid: nil,
                   live_snapshot_waiting_pids: [],
                   rtc_engine: nil,
-                  video_tracks: {nil, nil}
+                  video_tracks: {nil, nil},
+                  video_encoding: nil
                 ]
   end
 
@@ -227,6 +230,14 @@ defmodule ExNVR.Pipelines.Main do
 
     state = maybe_update_device_and_report(state, :stopped)
     {[terminate: :normal], state}
+  end
+
+  @impl true
+  def handle_child_notification({:new_tracks, encoding}, :source, _ctx, state) do
+    if encoding in @supported_video_codecs do
+      spec = if is_nil(state.video_encoding), do: link_hls_element(encoding), else: []
+      {[spec: spec], %{state | video_encoding: encoding}}
+    end
   end
 
   @impl true
@@ -389,10 +400,6 @@ defmodule ExNVR.Pipelines.Main do
       |> via_out(:video)
       |> child(:video_tee, Membrane.Tee.Master)
       |> via_out(:master)
-      |> via_in(Pad.ref(:video, :main_stream))
-      |> get_child(:hls_sink),
-      get_child(:video_tee)
-      |> via_out(:copy)
       |> child({:cvs_bufferer, :main_stream}, ExNVR.Elements.CVSBufferer)
     ]
   end
@@ -454,11 +461,11 @@ defmodule ExNVR.Pipelines.Main do
   # Pipeline process details
   defp pipeline_pid(device), do: Process.whereis(Utils.pipeline_name(device))
 
-  defp link_hls_element() do
+  defp link_hls_element(encoding \\ :H264) do
     [
       get_child(:video_tee)
       |> via_out(:copy)
-      |> via_in(Pad.ref(:video, :main_stream), options: [encoding: :H264])
+      |> via_in(Pad.ref(:video, :main_stream), options: [encoding: encoding])
       |> get_child(:hls_sink)
     ]
   end
