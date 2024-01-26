@@ -193,34 +193,77 @@ defmodule ExNVR.Model.Device do
         |> validate_time_intervals()
       end
 
+      defp validate_time_intervals(%Changeset{valid?: false} = changeset), do: changeset
+
       defp validate_time_intervals(changeset) do
-        changeset
-        |> get_field(:time_intervals)
-        |> Enum.map(&String.split(&1, "-"))
-        |> Enum.map(&parse_to_time/1)
-      end
+        time_intervals = get_field(changeset, :time_intervals)
 
-      defp validate_time_interval(changeset) do
-        start_time = get_field(changeset, :start_time) |> parse_to_time()
-        end_time = get_field(changeset, :end_time) |> parse_to_time()
-
-        if Time.compare(start_time, end_time) == :lt do
-          changeset
+        with {:ok, parsed_time_intervals} <- parse_time_intervals(time_intervals),
+             true <- Enum.all?(parsed_time_intervals, &valid_time_interval?(&1)),
+             {_, true} <- no_overlapping_intervals(parsed_time_intervals) do
+          put_change(changeset, :time_intervals, Enum.sort(time_intervals))
         else
-          add_error(changeset, :start_date, "must be less than end date")
+          {:invalid_time, _} ->
+            add_error(changeset, :time_intervals, "Invalid time format")
+
+          false ->
+            add_error(changeset, :time_intervals, "start time must be before end time")
+
+          {_, false} ->
+            add_error(changeset, :start_date, "time intervals must not overlap")
         end
       end
 
-      defp parse_to_time([start_time, end_time]) do
-        [start_hour, start_minute] =
-          start_time |> String.split(":") |> Enum.map(&String.to_integer/1)
+      defp parse_time_intervals(time_intervals) do
+        time_intervals
+        |> Enum.sort()
+        |> Enum.map(&String.split(&1, "-"))
+        |> parse_to_time()
+      end
 
-        [end_hour, end_minute] = end_time |> String.split(":") |> Enum.map(&String.to_integer/1)
+      defp valid_time_interval?(%{start_time: start_time, end_time: end_time}) do
+        Time.compare(end_time, start_time) == :gt
+      end
 
-        %{
-          start_time: %Time{hour: start_hour, minute: start_minute, second: 0},
-          end_time: %Time{hour: end_hour, minute: end_minute, second: 0}
-        }
+      defp no_overlapping_intervals(intervals) do
+        Enum.reduce_while(intervals, {nil, true}, &check_overlap/2)
+      end
+
+      defp check_overlap(interval, {prev_end_time, acc}) do
+        start_time = Map.get(interval, :start_time)
+        end_time = Map.get(interval, :end_time)
+
+        cond do
+          is_nil(prev_end_time) -> {:cont, {end_time, acc}}
+          Time.compare(start_time, prev_end_time) == :gt -> {:cont, {end_time, acc}}
+          true -> {:halt, {prev_end_time, false}}
+        end
+      end
+
+      defp parse_to_time(time_intervals) do
+        Enum.reduce_while(time_intervals, {:ok, []}, fn [start_time, end_time], acc ->
+          with true <- Regex.match?(@time_regex, start_time),
+               true <- Regex.match?(@time_regex, end_time) do
+            [start_hour, start_minute] = split_time_parts(start_time)
+            [end_hour, end_minute] = split_time_parts(end_time)
+
+            {:cont,
+             {:ok,
+              [
+                acc
+                | %{
+                    start_time: %Time{hour: start_hour, minute: start_minute, second: 0},
+                    end_time: %Time{hour: end_hour, minute: end_minute, second: 0}
+                  }
+              ]}}
+          else
+            _ -> {:halt, {:invalid_time, []}}
+          end
+        end)
+      end
+
+      defp split_time_parts(time) do
+        String.split(time, ":") |> Enum.map(&String.to_integer/1)
       end
     end
 
