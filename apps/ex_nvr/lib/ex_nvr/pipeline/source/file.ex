@@ -18,7 +18,11 @@ defmodule ExNVR.Pipeline.Source.File do
 
   def_output_pad :video,
     demand_unit: :buffers,
-    accepted_format: %Membrane.H264{alignment: :au}
+    accepted_format:
+      any_of(
+        %Membrane.H264{alignment: :au},
+        %Membrane.H265{alignment: :au}
+      )
 
   @impl true
   def handle_init(_ctx, options) do
@@ -43,21 +47,44 @@ defmodule ExNVR.Pipeline.Source.File do
 
   @impl true
   def handle_child_notification({:new_tracks, tracks}, {:demuxer, id}, _ctx, state) do
-    spec =
+    spec_list =
       Enum.map(tracks, fn {track_id, track} ->
         case track do
           %Membrane.H264{} ->
-            get_child({:demuxer, id})
-            |> via_out(Pad.ref(:output, track_id))
-            |> child({:parser, id}, %Membrane.H264.Parser{
-              repeat_parameter_sets: true,
-              output_stream_structure: :annexb
-            })
-            |> child({:timestamper, id}, %Timestamper{
-              offset: state.iteration * state.duration,
-              start_date: Membrane.Time.os_time()
-            })
-            |> get_child(:funnel)
+            encoding = :H264
+
+            spec =
+              get_child({:demuxer, id})
+              |> via_out(Pad.ref(:output, track_id))
+              |> child({:parser, id}, %Membrane.H264.Parser{
+                repeat_parameter_sets: true,
+                output_stream_structure: :annexb
+              })
+              |> child({:timestamper, id}, %Timestamper{
+                offset: state.iteration * state.duration,
+                start_date: Membrane.Time.os_time()
+              })
+              |> get_child(:funnel)
+
+            {spec, encoding}
+
+          %Membrane.H265{} ->
+            encoding = :H265
+
+            spec =
+              get_child({:demuxer, id})
+              |> via_out(Pad.ref(:output, track_id))
+              |> child({:parser, id}, %Membrane.H265.Parser{
+                repeat_parameter_sets: true,
+                output_stream_structure: :annexb
+              })
+              |> child({:timestamper, id}, %Timestamper{
+                offset: state.iteration * state.duration,
+                start_date: Membrane.Time.os_time()
+              })
+              |> get_child(:funnel)
+
+            {spec, encoding}
 
           track ->
             Membrane.Logger.warning("""
@@ -65,14 +92,21 @@ defmodule ExNVR.Pipeline.Source.File do
             #{inspect(track)}
             """)
 
-            get_child({:demuxer, id})
-            |> via_out(Pad.ref(:output, track_id))
-            |> child({:realtimer, id}, Membrane.Realtimer)
-            |> child({:fake_sink, id}, Membrane.Fake.Sink.Buffers)
+            encoding = :unknown
+
+            spec =
+              get_child({:demuxer, id})
+              |> via_out(Pad.ref(:output, track_id))
+              |> child({:realtimer, id}, Membrane.Realtimer)
+              |> child({:fake_sink, id}, Membrane.Fake.Sink.Buffers)
+
+            {spec, encoding}
         end
       end)
 
-    {[spec: spec], state}
+    {spec, encoding} = hd(spec_list)
+
+    {[notify_parent: {:new_tracks, encoding}, spec: spec], state}
   end
 
   @impl true
