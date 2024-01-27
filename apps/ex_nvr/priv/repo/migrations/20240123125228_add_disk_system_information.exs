@@ -3,6 +3,7 @@ defmodule ExNVR.Repo.Migrations.AddDiskSystemInformation do
 
   def change do
     create table("storage_devices") do
+      add :id, :uuid, primary_key: true, null: false
       add :vendor, :string
       add :model, :string, null: false
       add :serial, :string, null: false
@@ -15,7 +16,7 @@ defmodule ExNVR.Repo.Migrations.AddDiskSystemInformation do
     end
 
     alter table("runs") do
-      add :disk_id, references("storage_devices")
+      add :disk_id, references("storage_devices", on_delete: :delete_all)
     end
   end
 end

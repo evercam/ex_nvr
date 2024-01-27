@@ -253,7 +253,7 @@ defmodule ExNVR.Pipeline.Output.Storage do
       start_date: Membrane.Time.to_datetime(segment.start_date),
       end_date: Membrane.Time.to_datetime(segment.end_date),
       device_id: state.device.id,
-      disk_id: disk_info && Map.get(disk_info, :id),
+      disk_id: Map.get(disk_info || %{}, :id),
       active: !end_run?
     }
 
@@ -280,9 +280,10 @@ defmodule ExNVR.Pipeline.Output.Storage do
   end
 
   defp maybe_get_disk_info(%Device{settings: %Device.Settings{storage_address: nil}}), do: %{}
+
   defp maybe_get_disk_info(%Device{settings: %Device.Settings{storage_address: storage_address}}) do
     storage_address
-    |> Disks.list()
+    |> Disks.list_available_disks()
     |> List.first(%{})
   end
 

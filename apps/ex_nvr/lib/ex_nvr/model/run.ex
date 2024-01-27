@@ -17,7 +17,7 @@ defmodule ExNVR.Model.Run do
           end_date: DateTime.t() | nil,
           active: boolean(),
           device_id: binary() | nil,
-          disk_id: integer() | nil
+          disk_id: binary() | nil
         }
 
   schema "runs" do
@@ -26,7 +26,7 @@ defmodule ExNVR.Model.Run do
     field :active, :boolean, default: false
 
     belongs_to :device, ExNVR.Model.Device, references: :binary_id, type: :string
-    belongs_to :disk, ExNVR.SystemInformation.Disk
+    belongs_to :disk, ExNVR.SystemInformation.Disk, references: Ecto.UUID, type: :string
   end
 
   def deactivate_query(device_id) do

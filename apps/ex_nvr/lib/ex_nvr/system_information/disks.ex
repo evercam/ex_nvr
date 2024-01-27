@@ -36,8 +36,7 @@ defmodule ExNVR.SystemInformation.Disks do
     {~r/ECM./, "ECM"},
     {~r/INTEL./, "INTEL"},
     {~r/EVO./, "Samsung"},
-    {~r/APPLE./, "Apple"},
-    {~r/^VIRTUAL DISK./, "Virtual Disk"}
+    {~r/APPLE./, "Apple"}
   ]
 
   require Logger
@@ -53,8 +52,12 @@ defmodule ExNVR.SystemInformation.Disks do
     |> Repo.insert()
   end
 
-  @spec list(binary() | nil) :: [Disk.t()]
-  def list(mountpoint \\ nil) do
+  def list() do
+    Repo.all(Disk)
+  end
+
+  @spec list_available_disks(binary() | nil) :: [Disk.t()]
+  def list_available_disks(mountpoint \\ nil) do
     case :os.type() do
       {:unix, :linux} ->
         list_linux_disks(mountpoint)
@@ -69,7 +72,7 @@ defmodule ExNVR.SystemInformation.Disks do
          {:ok, data} <- Jason.decode(data) do
       data
       |> Map.get("blockdevices", [])
-      #|> Enum.reject(&String.match?(&1["name"], ~r/^(loop|ram)/))
+      # |> Enum.reject(&String.match?(&1["name"], ~r/^(loop|ram)/))
       |> maybe_filter_by_mountpoint(mountpoint)
       |> Enum.map(&map_linux_device_to_disk/1)
     else
@@ -105,6 +108,7 @@ defmodule ExNVR.SystemInformation.Disks do
 
   defp map_linux_device_to_disk(device) do
     %{
+      id: device["uuid"],
       vendor: get_vendor(device),
       model: device["model"],
       serial: device["serial"],

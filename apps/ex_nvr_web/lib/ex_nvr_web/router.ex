@@ -50,6 +50,8 @@ defmodule ExNVRWeb.Router do
   scope "/api", ExNVRWeb do
     pipe_through :api
 
+    get "/system-information/disks", API.DiskController, :list
+
     post "/users/login", API.UserSessionController, :login
 
     scope "/devices/:device_id" do
