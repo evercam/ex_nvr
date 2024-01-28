@@ -38,7 +38,8 @@ defmodule ExNVR.DevicesFixtures do
       state: :recording,
       stream_config: stream_config,
       credentials: credentials,
-      settings: Enum.into(settings, valid_device_settings())
+      settings: Enum.into(settings, valid_device_settings()),
+      snapshot_config: %{enabled: false}
     })
   end
 

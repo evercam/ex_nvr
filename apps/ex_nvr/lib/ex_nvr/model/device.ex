@@ -235,13 +235,14 @@ defmodule ExNVR.Model.Device do
 
         cond do
           is_nil(prev_end_time) -> {:cont, {end_time, acc}}
-          Time.compare(start_time, prev_end_time) == :gt -> {:cont, {end_time, acc}}
+          Time.compare(start_time, prev_end_time) in [:gt, :eq] -> {:cont, {end_time, acc}}
           true -> {:halt, {prev_end_time, false}}
         end
       end
 
       defp parse_to_time(time_intervals) do
-        Enum.reduce_while(time_intervals, {:ok, []}, fn [start_time, end_time], acc ->
+        Enum.reduce_while(time_intervals, {:ok, []}, fn [start_time, end_time],
+                                                        {_, parsed_intervals} ->
           with true <- Regex.match?(@time_regex, start_time),
                true <- Regex.match?(@time_regex, end_time) do
             [start_hour, start_minute] = split_time_parts(start_time)
@@ -249,13 +250,13 @@ defmodule ExNVR.Model.Device do
 
             {:cont,
              {:ok,
-              [
-                acc
-                | %{
+              parsed_intervals ++
+                [
+                  %{
                     start_time: %Time{hour: start_hour, minute: start_minute, second: 0},
                     end_time: %Time{hour: end_hour, minute: end_minute, second: 0}
                   }
-              ]}}
+                ]}}
           else
             _ -> {:halt, {:invalid_time, []}}
           end
@@ -269,7 +270,7 @@ defmodule ExNVR.Model.Device do
 
     @primary_key false
     embedded_schema do
-      field :enabled, :boolean, default: false
+      field :enabled, :boolean
       field :upload_interval, :integer
       field :remote_storage, :string
 
@@ -288,17 +289,17 @@ defmodule ExNVR.Model.Device do
 
     defp validate_config(changeset, true) do
       changeset
-      |> validate_required([:enabled, :interval, :remote_storage])
+      |> validate_required([:enabled, :upload_interval, :remote_storage])
       |> validate_number(:upload_interval,
         greater_than_or_equal_to: 5,
         less_than_or_equal_to: 3600
       )
-      |> cast_embed(:schedule, required: true, with: &DaySchedule.changeset(&1, &2))
+      |> cast_embed(:schedule, required: true)
     end
 
     defp validate_config(changeset, _enabled) do
       changeset
-      |> put_change(:interval, nil)
+      |> put_change(:upload_interval, nil)
       |> put_change(:remote_storage, nil)
     end
   end
@@ -408,6 +409,7 @@ defmodule ExNVR.Model.Device do
     |> Changeset.cast(params, [:name, :type, :timezone, :state, :vendor, :mac, :url, :model])
     |> Changeset.cast_embed(:credentials)
     |> Changeset.cast_embed(:settings, required: true)
+    |> Changeset.cast_embed(:snapshot_config)
     |> common_config()
   end
 
