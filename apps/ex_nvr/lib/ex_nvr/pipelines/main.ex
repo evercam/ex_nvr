@@ -389,7 +389,7 @@ defmodule ExNVR.Pipelines.Main do
       |> via_out(:video)
       |> child(:video_tee, Membrane.Tee.Master)
       |> via_out(:master)
-      |> via_in(Pad.ref(:video, :main_stream))
+      |> via_in(Pad.ref(:video, :main_stream), options: [encoding: :H264])
       |> get_child(:hls_sink),
       get_child(:video_tee)
       |> via_out(:copy)
