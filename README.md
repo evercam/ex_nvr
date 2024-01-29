@@ -54,9 +54,9 @@ You can download the tar file and uncompress it. cd to the decompressed director
 sudo ./run
 ```
 
-The `sudo` is needed to create the database as the default location is `/var/lib/ex_nvr` which is not accessible to not-root users by default. If you want to run it as the current user, you have two choices:
+The `sudo` is needed to create the database as the default location is `/var/lib/ex_nvr` which is not accessible to not-root users by default. If you want to run it as the current user, either:
 * Update the `DATABASE_PATH` env variable in the `env.sh` file in `releases/<version>` to point to another location.
-* Create the `/var/lib/ex_nvr` folder and make it owned by the current user `sudo chown $UID:$GID /var/lib/ex_nvr`
+* Or create the `/var/lib/ex_nvr` folder and make it owned by the current user `sudo chown $UID:$GID /var/lib/ex_nvr`
 
 For debian packages, just download the package and run:
 ```bash

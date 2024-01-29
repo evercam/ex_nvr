@@ -1,7 +1,7 @@
 <div class="container mx-auto p-4">
   <div class="flex flex-wrap items-stretch justify-between content-between mb-4 gap-2">
     <!-- Discover devices -->
-    <.card class="w-full md:w-1/3">
+    <.card class="w-full md:w-1/3 bg-gray-300">
       <h2 class="text-2xl font-bold mb-4 dark:text-white">Discover Devices</h2>
       <.simple_form for={@discover_form} id="discover_form" phx-submit="discover">
         <.input field={@discover_form[:username]} type="text" label="Username" />
@@ -20,11 +20,11 @@
       </.simple_form>
     </.card>
     <!-- Found devices -->
-    <.card class="w-full md:w-3/5 p-4 h-[500px] overflow-y-auto">
+    <.card class="w-full md:w-3/5 p-4 h-[500px] overflow-y-auto bg-gray-300">
       <h2 class="text-2xl font-bold mb-4 dark:text-white">Found Devices</h2>
       <p :if={@discovered_devices == []} class="text-l dark:text-white">No devices found</p>
 
-      <ul class="bg-white dark:bg-gray-800 h-200 dark:text-white">
+      <ul class="bg-gray-300 dark:bg-gray-800 h-200 dark:text-white">
         <li
           :for={new_device <- @discovered_devices}
           id={new_device.url}
@@ -33,8 +33,8 @@
               "mb-2 p-4 shadow-md rounded cursor-pointer"
             ] ++
               if @selected_device && @selected_device.url == new_device.url,
-                do: ["dark:bg-gray-500"],
-                else: ["dark:bg-gray-700"]
+                do: ["bg-gray-300 dark:bg-gray-500"],
+                else: ["bg-gray-400 dark:bg-gray-700"]
           }
           phx-click="device-details"
           phx-value-url={new_device.url}
@@ -48,11 +48,11 @@
     </.card>
   </div>
   <!-- Device details -->
-  <.card class="p-4">
+  <.card class="p-4 bg-gray-300">
     <h2 class="text-2xl font-bold mb-4 gap-2 dark:text-white">Device Details</h2>
     <div class="flex flex-wrap items-stretch justify-between content-between p-4 dark:text-white">
       <!-- Device Information -->
-      <div class="md:w-1/3 p-5 card-shadow">
+      <div class="md:w-1/3 p-5 border border-gray-400 card-shadow">
         <h2 class="text-xl font-bold mb-4">Device Information</h2>
         <p :if={!@device_details[:infos]}>N/A</p>
         <div :if={@device_details[:infos]} class="mb-4 dark:text-gray-400">
@@ -65,7 +65,7 @@
         </div>
       </div>
       <!-- Time Settings -->
-      <div class="md:w-1/4 p-5 card-shadow">
+      <div class="md:w-1/4 p-5 border border-gray-400 card-shadow">
         <h2 class="text-xl font-bold mb-4">Time Settings</h2>
         <p :if={!@device_details[:time_settings]}>N/A</p>
         <div :if={@device_details[:time_settings]} class="dark:text-gray-400 mb-4">
@@ -78,7 +78,7 @@
         </div>
       </div>
       <!-- Network Interface -->
-      <div class="md:w-1/4 p-5 card-shadow">
+      <div class="md:w-1/4 p-5 border border-gray-400 card-shadow">
         <h2 class="text-xl font-bold mb-4">Network Interface</h2>
         <p :if={!@device_details[:network_interface]}>N/A</p>
         <div :if={@device_details[:network_interface]} class="dark:text-gray-400 mb-4">

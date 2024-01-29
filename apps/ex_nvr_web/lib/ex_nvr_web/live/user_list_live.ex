@@ -35,7 +35,7 @@ defmodule ExNVRWeb.UserListLive do
             :if={@current_user.role == :admin}
             id={"dropdownMenuIconButton-#{user.id}"}
             data-dropdown-toggle={"dropdownDots-#{user.id}"}
-            class="text-sm ml-3 hover:bg-gray-100 dark:bg-gray-800"
+            class="text-sm ml-3 bg-gray-200 hover:bg-gray-200 text-zinc-900 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-400"
           >
             <svg
               class="w-5 h-5"
@@ -76,20 +76,20 @@ defmodule ExNVRWeb.UserListLive do
             </div>
           </.button>
           <.modal id="delete-modal">
-            <div class="bg-white p-4 rounded-lg text-center border-b border-gray-200 dark:bg-gray-800 dark:border-gray-700">
-              <p class="text-white mb-10 mt-10">
+            <div class="bg-blue-300 p-4 rounded-lg text-center dark:bg-gray-800 dark:border-gray-700">
+              <p class="text-l text-black dark:text-white font-bold mb-4">
                 <%= "Are you sure you want to delete the User: '#{user.email}'" %>
               </p>
               <.button
                 phx-disable-with="Deleting..."
                 phx-click={JS.push("delete", value: %{id: user.id})}
-                class="bg-red-500 text-white px-4 py-2 mx-2 rounded hover:bg-red-600"
+                class="text-black bg-red-500 hover:bg-red-400 px-4 py-2 mx-2 rounded hover:bg-red-600 dark:text-white"
               >
                 Yes
               </.button>
               <.button
                 phx-click={hide_modal("delete-modal")}
-                class="bg-red-500 text-white px-4 py-2 mx-2 rounded hover:bg-red-600"
+                class="text-black bg-gray-300 hover:bg-gray-200 px-4 py-2 mx-2 rounded hover:bg-red-600 dark:text-white"
               >
                 Cancel
               </.button>

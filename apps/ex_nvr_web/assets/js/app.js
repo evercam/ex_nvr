@@ -28,6 +28,21 @@ import Hls from "hls.js"
 const MANIFEST_LOAD_TIMEOUT = 60_000
 
 let Hooks = {
+    SwitchDarkMode: {
+        mounted() {
+            this.el.addEventListener("change", this.switchDarkMode);
+        },
+        switchDarkMode(event) {
+            const lightSwitch = document.getElementById("light-switch")
+            if (lightSwitch.checked) {
+                document.documentElement.classList.add('dark');
+                localStorage.setItem('dark-mode', true);
+            } else {
+                document.documentElement.classList.remove('dark');
+                localStorage.setItem('dark-mode', false);
+            }
+        }
+    },
     DownloadSnapshot: {
         mounted() {
             this.el.addEventListener("click", this.downloadSnapshot);
@@ -53,7 +68,6 @@ let Hooks = {
             document.body.removeChild(link);
             canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
         }
-
     },
     Timeline: {
         mounted() {
@@ -89,7 +103,15 @@ liveSocket.connect()
 window.liveSocket = liveSocket
 
 function initDarkMode() {
-    document.documentElement.classList.add("dark")
+    const lightSwitch = document.getElementById("light-switch")
+    if (localStorage.getItem('dark-mode') === 'true' || (!('dark-mode' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.querySelector('html').classList.add('dark');
+        lightSwitch.checked = true;
+    } else {
+        document.querySelector('html').classList.remove('dark');
+        lightSwitch.checked = false;
+    }
+
 }
 
 startStreaming = (src, poster_url) => {
@@ -136,4 +158,4 @@ window.addEventListener("phx:download-footage", (e) => {
     downloadFile(e.detail.url)
 })
 
-initDarkMode()
+initDarkMode();

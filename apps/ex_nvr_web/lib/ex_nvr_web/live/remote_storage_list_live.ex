@@ -22,7 +22,7 @@ defmodule ExNVRWeb.RemoteStorageListLive do
           <.button
             id={"dropdownMenuIconButton_#{remote_storage.id}"}
             data-dropdown-toggle={"dropdownDots_#{remote_storage.id}"}
-            class="text-sm ml-3 hover:bg-gray-100 dark:bg-gray-800"
+            class="text-sm ml-3 bg-gray-200 hover:bg-gray-200 text-zinc-900 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-400"
           >
             <svg
               class="w-5 h-5"
