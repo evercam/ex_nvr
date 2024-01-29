@@ -96,7 +96,7 @@ defmodule ExNVR.RemoteStorage do
 
     changeset
     |> validate_required(type)
-    |> Changeset.validate_change(:url, fn :url, url -> validate_url(:url, url) end)
+    |> Changeset.validate_change(:url, &validate_url/2)
     |> validate_config(type)
   end
 

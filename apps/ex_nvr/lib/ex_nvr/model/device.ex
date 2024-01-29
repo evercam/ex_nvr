@@ -158,6 +158,9 @@ defmodule ExNVR.Model.Device do
 
     import Ecto.Changeset
 
+    @time_interval_regex ~r/^([01]\d|2[0-3]):([0-5]\d)-([01]\d|2[0-3]):([0-5]\d)$/
+    @days_of_week ~w(1 2 3 4 5 6 7)
+
     @type t :: %__MODULE__{
             enabled: boolean(),
             upload_interval: integer(),
@@ -165,123 +168,19 @@ defmodule ExNVR.Model.Device do
             schedule: list()
           }
 
-    defmodule DaySchedule do
-      use Ecto.Schema
-
-      import Ecto.Changeset
-
-      @time_regex ~r/^([01]\d|2[0-3]):([0-5]\d)$/
-      @week_days ~w(monday tuesday wednesday thursday friday saturday sunday)
-
-      @type t :: %__MODULE__{
-              day: binary(),
-              time_intervals: list()
-            }
-
-      @primary_key false
-      embedded_schema do
-        field :day, :string
-        field :time_intervals, {:array, :string}
-      end
-
-      @spec changeset(t(), map()) :: Ecto.Changeset.t()
-      def changeset(struct, params) do
-        struct
-        |> cast(params, __MODULE__.__schema__(:fields))
-        |> validate_required(__MODULE__.__schema__(:fields))
-        |> validate_inclusion(:day, @week_days)
-        |> validate_time_intervals()
-      end
-
-      defp validate_time_intervals(%Changeset{valid?: false} = changeset), do: changeset
-
-      defp validate_time_intervals(changeset) do
-        time_intervals = get_field(changeset, :time_intervals)
-
-        with {:ok, parsed_time_intervals} <- parse_time_intervals(time_intervals),
-             true <- Enum.all?(parsed_time_intervals, &valid_time_interval?(&1)),
-             {_, true} <- no_overlapping_intervals(parsed_time_intervals) do
-          put_change(changeset, :time_intervals, Enum.sort(time_intervals))
-        else
-          {:invalid_time, _} ->
-            add_error(changeset, :time_intervals, "Invalid time format")
-
-          false ->
-            add_error(changeset, :time_intervals, "start time must be before end time")
-
-          {_, false} ->
-            add_error(changeset, :start_date, "time intervals must not overlap")
-        end
-      end
-
-      defp parse_time_intervals(time_intervals) do
-        time_intervals
-        |> Enum.sort()
-        |> Enum.map(&String.split(&1, "-"))
-        |> parse_to_time()
-      end
-
-      defp valid_time_interval?(%{start_time: start_time, end_time: end_time}) do
-        Time.compare(end_time, start_time) == :gt
-      end
-
-      defp no_overlapping_intervals(intervals) do
-        Enum.reduce_while(intervals, {nil, true}, &check_overlap/2)
-      end
-
-      defp check_overlap(interval, {prev_end_time, acc}) do
-        start_time = Map.get(interval, :start_time)
-        end_time = Map.get(interval, :end_time)
-
-        cond do
-          is_nil(prev_end_time) -> {:cont, {end_time, acc}}
-          Time.compare(start_time, prev_end_time) in [:gt, :eq] -> {:cont, {end_time, acc}}
-          true -> {:halt, {prev_end_time, false}}
-        end
-      end
-
-      defp parse_to_time(time_intervals) do
-        Enum.reduce_while(time_intervals, {:ok, []}, fn [start_time, end_time],
-                                                        {_, parsed_intervals} ->
-          with true <- Regex.match?(@time_regex, start_time),
-               true <- Regex.match?(@time_regex, end_time) do
-            [start_hour, start_minute] = split_time_parts(start_time)
-            [end_hour, end_minute] = split_time_parts(end_time)
-
-            {:cont,
-             {:ok,
-              parsed_intervals ++
-                [
-                  %{
-                    start_time: %Time{hour: start_hour, minute: start_minute, second: 0},
-                    end_time: %Time{hour: end_hour, minute: end_minute, second: 0}
-                  }
-                ]}}
-          else
-            _ -> {:halt, {:invalid_time, []}}
-          end
-        end)
-      end
-
-      defp split_time_parts(time) do
-        String.split(time, ":") |> Enum.map(&String.to_integer/1)
-      end
-    end
-
     @primary_key false
     embedded_schema do
       field :enabled, :boolean
       field :upload_interval, :integer
       field :remote_storage, :string
-
-      embeds_many :schedule, DaySchedule, on_replace: :delete
+      field :schedule, :map
     end
 
     @spec changeset(t(), map()) :: Ecto.Changeset.t()
     def changeset(struct, params) do
       changeset =
         struct
-        |> cast(params, [:enabled, :upload_interval, :remote_storage])
+        |> cast(params, [:enabled, :upload_interval, :remote_storage, :schedule])
 
       enabled = get_field(changeset, :enabled)
       validate_config(changeset, enabled)
@@ -289,18 +188,173 @@ defmodule ExNVR.Model.Device do
 
     defp validate_config(changeset, true) do
       changeset
-      |> validate_required([:enabled, :upload_interval, :remote_storage])
+      |> validate_required([:enabled, :upload_interval, :remote_storage, :schedule])
       |> validate_number(:upload_interval,
         greater_than_or_equal_to: 5,
         less_than_or_equal_to: 3600
       )
-      |> cast_embed(:schedule, required: true)
+      |> validate_schedule()
     end
 
     defp validate_config(changeset, _enabled) do
       changeset
-      |> put_change(:upload_interval, nil)
+      |> put_change(:upload_interval, 0)
       |> put_change(:remote_storage, nil)
+      |> put_change(:schedule, %{})
+    end
+
+    defp validate_schedule(%Changeset{valid?: false} = changeset), do: changeset
+
+    defp validate_schedule(changeset) do
+      changeset
+      |> get_field(:schedule)
+      |> do_validate_schedule()
+      |> case do
+        {:ok, schedule} ->
+          put_change(changeset, :schedule, schedule)
+
+        {:error, :invalid_schedule} ->
+          add_error(changeset, :schedule, "Invalid schedule")
+
+        {:error, :invalid_schedule_days} ->
+          add_error(changeset, :schedule, "Invalid schedule days")
+
+        {:error, :invalid_time_intervals} ->
+          add_error(changeset, :schedule, "Invalid schedule time intervals format")
+
+        {:error, :invalid_time_interval_range} ->
+          add_error(
+            changeset,
+            :schedule,
+            "Invalid schedule time intervals range (start time must be before end time)"
+          )
+
+        {:error, :overlapping_intervals} ->
+          add_error(changeset, :schedule, "Schedule time intervals must not overlap")
+      end
+    end
+
+    defp do_validate_schedule(schedule) when is_map(schedule) do
+      schedule =
+        schedule
+        |> Enum.into(%{
+          "1" => [],
+          "2" => [],
+          "3" => [],
+          "4" => [],
+          "5" => [],
+          "6" => [],
+          "7" => []
+        })
+
+      with {:ok, schedule} <- validate_schedule_days(schedule),
+           {:ok, parsed_schedule} <- parse_schedule(schedule),
+           {:ok, _parsed_schedule} <- validate_schedule_intervals(parsed_schedule) do
+        schedule
+        |> Enum.map(fn {day, intervals} -> {day, Enum.sort(intervals)} end)
+        |> Map.new()
+        |> then(&{:ok, &1})
+      end
+    end
+
+    defp do_validate_schedule(_schedule) do
+      {:error, :invalid_schedule}
+    end
+
+    defp validate_schedule_days(schedule) do
+      schedule
+      |> Map.keys()
+      |> Enum.all?(&Enum.member?(@days_of_week, &1))
+      |> case do
+        true -> {:ok, schedule}
+        false -> {:error, :invalid_schedule_days}
+      end
+    end
+
+    defp parse_schedule(schedule) do
+      schedule
+      |> Enum.reduce_while(%{}, fn {day_of_week, time_intervals}, acc ->
+        case parse_day_schedule(time_intervals) do
+          :invalid_time_intervals ->
+            {:halt, :invalid_time_intervals}
+
+          parsed_time_intervals ->
+            {:cont, Map.put(acc, day_of_week, parsed_time_intervals)}
+        end
+      end)
+      |> case do
+        :invalid_time_intervals ->
+          {:error, :invalid_time_intervals}
+
+        parsed_schedule ->
+          {:ok, parsed_schedule}
+      end
+    end
+
+    defp parse_day_schedule(time_intervals) when is_list(time_intervals) do
+      Enum.reduce_while(time_intervals, [], fn time_interval, acc ->
+        case Regex.match?(@time_interval_regex, time_interval) do
+          false ->
+            {:halt, :invalid_time_intervals}
+
+          true ->
+            [start_time, end_time] = String.split(time_interval, "-")
+
+            {:cont,
+             acc ++
+               [
+                 %{
+                   start_time: Time.from_iso8601!(start_time <> ":00"),
+                   end_time: Time.from_iso8601!(end_time <> ":00")
+                 }
+               ]}
+        end
+      end)
+    end
+
+    defp parse_day_schedule({_day_of_week, _time_intervals}), do: :invalid_time_interval
+
+    defp validate_schedule_intervals(schedule) do
+      Enum.reduce_while(schedule, :ok, fn {_day_of_week, time_intervals}, _acc ->
+        sorted_intervals =
+          Enum.sort(time_intervals, &(Time.compare(&1.start_time, &2.start_time) == :lt))
+
+        with true <- Enum.all?(sorted_intervals, &valid_time_interval?/1),
+             :ok <- no_overlapping_intervals(sorted_intervals) do
+          {:cont, :ok}
+        else
+          false -> {:halt, :invalid_time_interval_range}
+          :overlapping_intervals -> {:halt, :overlapping_intervals}
+        end
+      end)
+      |> case do
+        :ok -> {:ok, schedule}
+        error -> {:error, error}
+      end
+    end
+
+    defp valid_time_interval?(%{start_time: start_time, end_time: end_time}) do
+      Time.compare(end_time, start_time) == :gt
+    end
+
+    defp no_overlapping_intervals(intervals) do
+      intervals
+      |> Enum.reduce_while(nil, &check_overlap/2)
+      |> case do
+        :overlapping_intervals ->
+          :overlapping_intervals
+
+        _end_time ->
+          :ok
+      end
+    end
+
+    defp check_overlap(%{start_time: start_time, end_time: end_time}, prev_end_time) do
+      cond do
+        is_nil(prev_end_time) -> {:cont, end_time}
+        Time.compare(start_time, prev_end_time) in [:gt, :eq] -> {:cont, end_time}
+        true -> {:halt, :overlapping_intervals}
+      end
     end
   end
 
