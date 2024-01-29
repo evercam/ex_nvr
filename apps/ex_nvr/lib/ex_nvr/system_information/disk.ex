@@ -35,8 +35,6 @@ defmodule ExNVR.SystemInformation.Disk do
 
   @spec changeset(map()) :: Changeset.t()
   def changeset(params) do
-    IO.inspect(params)
-
     %__MODULE__{}
     |> Changeset.cast(params, __MODULE__.__schema__(:fields))
     |> Changeset.validate_required([:model, :serial, :size])

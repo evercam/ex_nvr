@@ -72,7 +72,7 @@ defmodule ExNVR.SystemInformation.Disks do
          {:ok, data} <- Jason.decode(data) do
       data
       |> Map.get("blockdevices", [])
-      # |> Enum.reject(&String.match?(&1["name"], ~r/^(loop|ram)/))
+      |> Enum.reject(&String.match?(&1["name"], ~r/^(loop|ram)/))
       |> maybe_filter_by_mountpoint(mountpoint)
       |> Enum.map(&map_linux_device_to_disk/1)
     else

@@ -2,7 +2,7 @@ defmodule ExNVR.Repo.Migrations.AddDiskSystemInformation do
   use Ecto.Migration
 
   def change do
-    create table("storage_devices") do
+    create table("storage_devices", primary_key: false) do
       add :id, :uuid, primary_key: true, null: false
       add :vendor, :string
       add :model, :string, null: false

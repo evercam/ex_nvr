@@ -10,7 +10,6 @@ defmodule ExNVR.Pipeline.Output.Storage do
   alias __MODULE__.{Segmenter, Segmenter.Segment}
   alias ExNVR.Model.{Device, Run}
   alias Membrane.{H264, H265}
-  alias ExNVR.SystemInformation.{Disks}
 
   @recordings_event [:ex_nvr, :recordings, :stop]
   @interval :timer.seconds(5)
@@ -67,7 +66,6 @@ defmodule ExNVR.Pipeline.Output.Storage do
       pending_segments: %{},
       segment_extension: ".mp4",
       run: nil,
-      disk_info: nil,
       terminating?: false,
       end_of_stream?: false,
       target_duration: opts.target_segment_duration,
@@ -240,24 +238,14 @@ defmodule ExNVR.Pipeline.Output.Storage do
   end
 
   defp run_from_segment(%{run: nil} = state, segment, end_run?) do
-    disk_info =
-      state.device
-      |> maybe_get_disk_info()
-      |> Disks.create()
-      |> case do
-        {:ok, disk} -> disk
-        _ -> nil
-      end
-
     run = %Run{
       start_date: Membrane.Time.to_datetime(segment.start_date),
       end_date: Membrane.Time.to_datetime(segment.end_date),
       device_id: state.device.id,
-      disk_id: Map.get(disk_info || %{}, :id),
       active: !end_run?
     }
 
-    %{state | run: run, disk_info: disk_info}
+    %{state | run: run}
   end
 
   defp run_from_segment(state, segment, end_run?) do
@@ -268,23 +256,7 @@ defmodule ExNVR.Pipeline.Output.Storage do
           | end_date: Membrane.Time.to_datetime(segment.end_date),
             active: not end_run?
         },
-        disk_info:
-          state.disk_info
-          |> Map.merge(maybe_get_disk_info(state.device))
-          |> Disks.create()
-          |> case do
-            {:ok, disk} -> disk
-            _error -> nil
-          end
     }
-  end
-
-  defp maybe_get_disk_info(%Device{settings: %Device.Settings{storage_address: nil}}), do: %{}
-
-  defp maybe_get_disk_info(%Device{settings: %Device.Settings{storage_address: storage_address}}) do
-    storage_address
-    |> Disks.list_available_disks()
-    |> List.first(%{})
   end
 
   defp maybe_new_run(state, %Run{active: true} = run), do: %{state | run: run}
