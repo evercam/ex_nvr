@@ -29,14 +29,12 @@ defmodule ExNVRWeb.RecordingListLive do
         </:col>
         <:action :let={recording}>
           <div class="flex justify-end">
-            <div class="popup-container relative">
               <span title="Preview recording" phx-click={open_popup(recording)} id={"thumbnail-#{recording.id}"}>
                 <.icon
                   name="hero-eye-solid"
-                  class="w-6 h-6 mr-2 dark:text-gray-400 cursor-pointer thumbnail"
+                  class="w-6 h-6 z-auto mr-2 dark:text-gray-400 cursor-pointer thumbnail"
                 />
               </span>
-            </div>
             <div class="flex justify-end">
               <.link
                 href={~p"/api/devices/#{recording.device_id}/recordings/#{recording.filename}/blob"}
