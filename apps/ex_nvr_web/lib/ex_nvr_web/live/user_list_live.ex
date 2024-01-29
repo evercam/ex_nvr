@@ -35,7 +35,7 @@ defmodule ExNVRWeb.UserListLive do
             :if={@current_user.role == :admin}
             id={"dropdownMenuIconButton-#{user.id}"}
             data-dropdown-toggle={"dropdownDots-#{user.id}"}
-            class="text-sm ml-3 bg-blue-300 text-black hover:bg-blue-200 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-400"
+            class="text-sm ml-3 bg-gray-200 hover:bg-gray-200 text-zinc-900 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-400"
           >
             <svg
               class="w-5 h-5"
