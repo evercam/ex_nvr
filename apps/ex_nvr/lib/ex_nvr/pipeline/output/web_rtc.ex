@@ -73,7 +73,7 @@ defmodule ExNVR.Pipeline.Output.WebRTC do
 
   @impl true
   def handle_pad_added(Pad.ref(:input, :main_stream) = pad, ctx, state) do
-    media_track = ctx.options.media_track
+    media_track = ctx.pad_options[:media_track]
 
     Engine.message_endpoint(
       state.rtc_engine,

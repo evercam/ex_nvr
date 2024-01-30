@@ -343,7 +343,7 @@ defmodule ExNVR.Pipeline.Source.RTSP.ConnectionManager do
   end
 
   defp get_attribute(video_attributes, attribute, default \\ nil) do
-    case ExSDP.Media.get_attribute(video_attributes, attribute) do
+    case ExSDP.get_attribute(video_attributes, attribute) do
       {^attribute, value} -> value
       %^attribute{} = value -> value
       _other -> default
