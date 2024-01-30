@@ -22,7 +22,7 @@ defmodule ExNVR.Pipeline.Output.ThumbnailerPipelineTest do
   end
 
   defp perform_test(file, dest, encoding) do
-    structure = [
+    spec = [
       child(:source, %Membrane.File.Source{location: file})
       |> child(:parser, get_parser(encoding))
       |> child(:thumbnailer, %ExNVR.Pipeline.Output.Thumbnailer{
@@ -32,7 +32,7 @@ defmodule ExNVR.Pipeline.Output.ThumbnailerPipelineTest do
       })
     ]
 
-    pid = Pipeline.start_supervised!(structure: structure)
+    pid = Pipeline.start_supervised!(spec: spec)
 
     assert_end_of_stream(pid, :parser)
     assert_pipeline_notified(pid, :thumbnailer, :end_of_stream)

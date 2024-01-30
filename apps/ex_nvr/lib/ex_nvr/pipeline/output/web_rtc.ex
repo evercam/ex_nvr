@@ -27,8 +27,6 @@ defmodule ExNVR.Pipeline.Output.WebRTC do
   alias Membrane.RTC.Engine.Endpoint.WebRTC
 
   def_input_pad :input,
-    demand_unit: :buffers,
-    flow_control: :auto,
     accepted_format: %H264{alignment: :au},
     availability: :on_request,
     options: [

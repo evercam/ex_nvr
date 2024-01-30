@@ -11,8 +11,6 @@ defmodule ExNVR.Pipeline.Source.RTSP do
   alias ExNVR.Pipeline.Source.RTSP
 
   def_output_pad :output,
-    demand_mode: :auto,
-    demand_unit: :buffers,
     accepted_format: _any,
     availability: :on_request
 

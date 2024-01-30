@@ -16,9 +16,7 @@ defmodule ExNVR.Pipeline.Source.File do
                 description: "The file device"
               ]
 
-  def_output_pad :video,
-    demand_unit: :buffers,
-    accepted_format: %Membrane.H264{alignment: :au}
+  def_output_pad :video, accepted_format: %Membrane.H264{alignment: :au}
 
   @impl true
   def handle_init(_ctx, options) do

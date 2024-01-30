@@ -39,8 +39,7 @@ defmodule ExNVR.Pipeline.Output.Storage.Segmenter do
               ]
 
   def_input_pad :input,
-    demand_unit: :buffers,
-    demand_mode: :auto,
+    flow_control: :auto,
     accepted_format:
       any_of(
         %H264{alignment: :au},
@@ -49,7 +48,7 @@ defmodule ExNVR.Pipeline.Output.Storage.Segmenter do
     availability: :always
 
   def_output_pad :output,
-    demand_mode: :auto,
+    flow_control: :auto,
     accepted_format:
       any_of(
         %H264{alignment: :au},
@@ -103,14 +102,14 @@ defmodule ExNVR.Pipeline.Output.Storage.Segmenter do
   end
 
   @impl true
-  def handle_process(:input, buffer, _ctx, %{start_time: nil} = state)
+  def handle_buffer(:input, buffer, _ctx, %{start_time: nil} = state)
       when not Utils.keyframe(buffer) do
     # ignore, we need to start recording from a keyframe
     {[], state}
   end
 
   @impl true
-  def handle_process(:input, buffer, _ctx, %{start_time: nil} = state)
+  def handle_buffer(:input, buffer, _ctx, %{start_time: nil} = state)
       when Utils.keyframe(buffer) do
     # we chose the os_time instead of vm_time since the
     # VM will not adjust the time when the the system is suspended
@@ -132,7 +131,7 @@ defmodule ExNVR.Pipeline.Output.Storage.Segmenter do
   end
 
   @impl true
-  def handle_process(:input, %Buffer{} = buf, _ctx, state) do
+  def handle_buffer(:input, %Buffer{} = buf, _ctx, state) do
     state
     |> update_segment_duration(buf)
     |> handle_buffer(buf)

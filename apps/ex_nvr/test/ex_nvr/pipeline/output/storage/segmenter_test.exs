@@ -12,18 +12,18 @@ defmodule ExNVR.Pipeline.Output.Storage.SegmenterTest do
 
   test "ignore non keyframe buffers when starting" do
     state = init_element()
-    assert {[], ^state} = Segmenter.handle_process(:input, build_buffer(10), %{}, state)
+    assert {[], ^state} = Segmenter.handle_buffer(:input, build_buffer(10), %{}, state)
   end
 
   describe "First keyframe encountered" do
     test "is buffered and new segment event is sent" do
       state = init_element()
-      assert {[], ^state} = Segmenter.handle_process(:input, build_buffer(10), %{}, state)
+      assert {[], ^state} = Segmenter.handle_buffer(:input, build_buffer(10), %{}, state)
 
       buffer = build_buffer(10, true, 1_000)
 
       assert {[notify_parent: {:new_media_segment, _, :H264}], %{buffer: [^buffer]}} =
-               Segmenter.handle_process(:input, buffer, %{}, state)
+               Segmenter.handle_buffer(:input, buffer, %{}, state)
     end
 
     test "subsequent buffers are buffered if output pad is not linked" do
@@ -33,10 +33,10 @@ defmodule ExNVR.Pipeline.Output.Storage.SegmenterTest do
       buffer2 = build_buffer(10, false, 2_000)
 
       assert {[notify_parent: {:new_media_segment, _, :H264}], %{buffer: [^buffer1]} = state} =
-               Segmenter.handle_process(:input, buffer1, %{}, state)
+               Segmenter.handle_buffer(:input, buffer1, %{}, state)
 
       assert {[], %{buffer: [^buffer2, ^buffer1]}} =
-               Segmenter.handle_process(:input, buffer2, %{}, state)
+               Segmenter.handle_buffer(:input, buffer2, %{}, state)
     end
   end
 
@@ -47,8 +47,8 @@ defmodule ExNVR.Pipeline.Output.Storage.SegmenterTest do
       buffer1 = build_buffer(10, true, 1_000)
       buffer2 = build_buffer(10, true, 1_000)
 
-      assert {_, state} = Segmenter.handle_process(:input, buffer1, %{}, state)
-      assert {_, state} = Segmenter.handle_process(:input, buffer1, %{}, state)
+      assert {_, state} = Segmenter.handle_buffer(:input, buffer1, %{}, state)
+      assert {_, state} = Segmenter.handle_buffer(:input, buffer1, %{}, state)
 
       pad = Pad.ref(:output, state.start_time)
 
@@ -64,7 +64,7 @@ defmodule ExNVR.Pipeline.Output.Storage.SegmenterTest do
       buffer = build_buffer(10, true, 1_000)
 
       assert {[buffer: {Pad.ref(:output, 0), ^buffer}], _state} =
-               Segmenter.handle_process(:input, buffer, %{}, %{
+               Segmenter.handle_buffer(:input, buffer, %{}, %{
                  state
                  | buffer?: false,
                    start_time: 0,
@@ -75,7 +75,7 @@ defmodule ExNVR.Pipeline.Output.Storage.SegmenterTest do
 
     test "new segment is created when target duration is reached" do
       state = init_element()
-      {_, state} = Segmenter.handle_process(:input, build_buffer(10, true, 0), %{}, state)
+      {_, state} = Segmenter.handle_buffer(:input, build_buffer(10, true, 0), %{}, state)
 
       pad = Pad.ref(:output, state.start_time)
 
@@ -86,16 +86,16 @@ defmodule ExNVR.Pipeline.Output.Storage.SegmenterTest do
       buffer3 = build_buffer(10, true, Membrane.Time.milliseconds(2800))
 
       assert {[buffer: {^pad, ^buffer1}], state} =
-               Segmenter.handle_process(:input, buffer1, %{}, state)
+               Segmenter.handle_buffer(:input, buffer1, %{}, state)
 
       assert {[buffer: {^pad, ^buffer2}], state} =
-               Segmenter.handle_process(:input, buffer2, %{}, state)
+               Segmenter.handle_buffer(:input, buffer2, %{}, state)
 
       assert {[
                 notify_parent: {:new_media_segment, _, :H264},
                 end_of_stream: ^pad,
                 notify_parent: {:completed_segment, {_, %Segment{}, false}}
-              ], %{buffer: [^buffer3]}} = Segmenter.handle_process(:input, buffer3, %{}, state)
+              ], %{buffer: [^buffer3]}} = Segmenter.handle_buffer(:input, buffer3, %{}, state)
     end
   end
 
@@ -103,8 +103,8 @@ defmodule ExNVR.Pipeline.Output.Storage.SegmenterTest do
     state = init_element()
     assert {[], ^state} = Segmenter.handle_event(:input, %Event.Discontinuity{}, %{}, state)
 
-    {_, state} = Segmenter.handle_process(:input, build_buffer(10, true, 0), %{}, state)
-    {_, state} = Segmenter.handle_process(:input, build_buffer(10, false, 1000), %{}, state)
+    {_, state} = Segmenter.handle_buffer(:input, build_buffer(10, true, 0), %{}, state)
+    {_, state} = Segmenter.handle_buffer(:input, build_buffer(10, false, 1000), %{}, state)
 
     pad = Pad.ref(:output, state.start_time)
     {_, state} = Segmenter.handle_pad_added(pad, %{}, state)

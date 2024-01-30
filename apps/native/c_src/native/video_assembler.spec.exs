@@ -1,10 +1,10 @@
-module ExNVR.Recordings.VideoAssembler.Native
+module ExNVR.VideoAssembler.Native
 
 state_type "State"
 
 interface [NIF]
 
-type recording :: %ExNVR.Model.Recording.Download{
+type recording :: %ExNVR.VideoAssembler.Download{
   path: string,
   start_date: int64,
   end_date: int64

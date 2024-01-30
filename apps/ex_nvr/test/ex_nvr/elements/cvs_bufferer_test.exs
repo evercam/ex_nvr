@@ -25,7 +25,7 @@ defmodule ExNVR.Elements.CVSBuffererTest do
         buffers = if key_frame?, do: [buffer], else: [buffer | buffers]
 
         assert {[], %{cvs: ^buffers} = state} =
-                 CVSBufferer.handle_process(:input, buffer, @ctx, state)
+                 CVSBufferer.handle_buffer(:input, buffer, @ctx, state)
 
         {state, buffers}
       end)

@@ -26,7 +26,7 @@ defmodule ExNVR.Pipeline.Source.RTSP.Source do
 
   def_output_pad :output,
     accepted_format: %RemoteStream{type: :packetized},
-    mode: :push,
+    flow_control: :push,
     availability: :on_request
 
   @impl true

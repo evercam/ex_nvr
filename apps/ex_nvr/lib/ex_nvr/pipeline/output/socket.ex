@@ -33,10 +33,7 @@ defmodule ExNVR.Pipeline.Output.Socket do
                 description: "The video encoding"
               ]
 
-  def_input_pad :input,
-    demand_unit: :buffers,
-    demand_mode: :auto,
-    accepted_format: any_of(%H264{alignment: :au}, %H265{alignment: :au})
+  def_input_pad :input, accepted_format: any_of(%H264{alignment: :au}, %H265{alignment: :au})
 
   @impl true
   def handle_init(_ctx, opts) do

@@ -9,12 +9,12 @@ defmodule ExNVR.Elements.OnePass do
   use Membrane.Filter
 
   def_input_pad :input,
-    demand_mode: :manual,
+    flow_control: :manual,
     demand_unit: :buffers,
-    accepted_format: _any,
-    availability: :always
+    accepted_format: _any
 
   def_output_pad :output,
+    flow_control: :manual,
     accepted_format: _any,
     availability: :always
 
@@ -40,12 +40,12 @@ defmodule ExNVR.Elements.OnePass do
   end
 
   @impl true
-  def handle_process(:input, buffer, _ctx, %{allow: :first} = state) do
+  def handle_buffer(:input, buffer, _ctx, %{allow: :first} = state) do
     {[buffer: {:output, buffer}, end_of_stream: :output], state}
   end
 
   @impl true
-  def handle_process(:input, buffer, _ctx, state) do
+  def handle_buffer(:input, buffer, _ctx, state) do
     {[demand: :input], %{state | last_buffer: buffer}}
   end
 

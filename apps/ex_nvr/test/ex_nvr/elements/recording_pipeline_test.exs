@@ -79,7 +79,7 @@ defmodule ExNVR.Elements.RecordingPipelineTest do
 
       source_params = %{
         device: device,
-        start_date: ~U(2023-09-06 10:00:03Z),
+        start_date: ~U(2023-09-06 10:00:03.001Z),
         end_date: ~U(2023-09-10 10:00:00Z),
         duration: Membrane.Time.milliseconds(8950),
         strategy: :exact
@@ -150,10 +150,9 @@ defmodule ExNVR.Elements.RecordingPipelineTest do
 
       pid =
         Membrane.Testing.Pipeline.start_link_supervised!(
-          structure: [child(:source, struct(RecordingBin, params))]
+          spec: [child(:source, struct(RecordingBin, params))]
         )
 
-      assert_pipeline_play(pid)
       assert_pipeline_notified(pid, :source, :no_recordings)
 
       Membrane.Testing.Pipeline.terminate(pid)
@@ -163,10 +162,9 @@ defmodule ExNVR.Elements.RecordingPipelineTest do
   defp perform_test(encoding, out_path, ref_path, source_params) do
     pid =
       Membrane.Testing.Pipeline.start_link_supervised!(
-        structure: [child(:source, struct(RecordingBin, source_params))]
+        spec: [child(:source, struct(RecordingBin, source_params))]
       )
 
-    assert_pipeline_play(pid)
     assert_pipeline_notified(pid, :source, {:track, %module{}})
 
     case encoding do

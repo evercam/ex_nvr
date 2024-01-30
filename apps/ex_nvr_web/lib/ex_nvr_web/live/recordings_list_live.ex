@@ -29,12 +29,16 @@ defmodule ExNVRWeb.RecordingListLive do
         </:col>
         <:action :let={recording}>
           <div class="flex justify-end">
-              <span title="Preview recording" phx-click={open_popup(recording)} id={"thumbnail-#{recording.id}"}>
-                <.icon
-                  name="hero-eye-solid"
-                  class="w-6 h-6 z-auto mr-2 dark:text-gray-400 cursor-pointer thumbnail"
-                />
-              </span>
+            <span
+              title="Preview recording"
+              phx-click={open_popup(recording)}
+              id={"thumbnail-#{recording.id}"}
+            >
+              <.icon
+                name="hero-eye-solid"
+                class="w-6 h-6 z-auto mr-2 dark:text-gray-400 cursor-pointer thumbnail"
+              />
+            </span>
             <div class="flex justify-end">
               <.link
                 href={~p"/api/devices/#{recording.device_id}/recordings/#{recording.filename}/blob"}
@@ -42,10 +46,7 @@ defmodule ExNVRWeb.RecordingListLive do
                 id={"recording-#{recording.id}-link"}
               >
                 <span title="Download recording">
-                  <.icon
-                    name="hero-arrow-down-tray-solid"
-                    class="w-6 h-6 dark:text-gray-400"
-                  />
+                  <.icon name="hero-arrow-down-tray-solid" class="w-6 h-6 dark:text-gray-400" />
                 </span>
               </.link>
             </div>

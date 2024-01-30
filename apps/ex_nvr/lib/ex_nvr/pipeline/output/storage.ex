@@ -15,8 +15,6 @@ defmodule ExNVR.Pipeline.Output.Storage do
   @interval :timer.seconds(5)
 
   def_input_pad :input,
-    demand_mode: :auto,
-    demand_unit: :buffers,
     accepted_format:
       any_of(
         %H264{alignment: :au},
@@ -207,13 +205,13 @@ defmodule ExNVR.Pipeline.Output.Storage do
 
     case ExNVR.Recordings.create(state.device, state.run, recording, false) do
       {:ok, _, run} ->
-        duration_ms = Membrane.Time.round_to_milliseconds(Segment.duration(segment))
+        duration_ms = Membrane.Time.as_milliseconds(Segment.duration(segment))
 
         Membrane.Logger.info("""
         Segment saved successfully
           Media duration: #{duration_ms} ms
-          Realtime (monotonic) duration: #{Membrane.Time.round_to_milliseconds(Segment.realtime_duration(segment))} ms
-          Wallclock duration: #{Membrane.Time.round_to_milliseconds(Segment.wall_clock_duration(segment))} ms
+          Realtime (monotonic) duration: #{Membrane.Time.as_milliseconds(Segment.realtime_duration(segment))} ms
+          Wallclock duration: #{Membrane.Time.as_milliseconds(Segment.wall_clock_duration(segment))} ms
           Size: #{div(Segment.size(segment), 1024)} KiB
           Segment end date: #{recording.end_date}
           Current date time: #{Membrane.Time.to_datetime(segment.wallclock_end_date)}

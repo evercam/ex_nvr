@@ -4,7 +4,7 @@ defmodule ExNVR.Support.TestSource do
   use Membrane.Source
 
   def_output_pad :output,
-    mode: :push,
+    flow_control: :push,
     accepted_format: %Membrane.RemoteStream{type: :bytestream}
 
   @impl true

@@ -8,7 +8,6 @@ defmodule ExNVR.Elements.Process.Sink do
   alias Membrane.Buffer
 
   def_input_pad :input,
-    demand_unit: :buffers,
     flow_control: :auto,
     accepted_format: _any
 
@@ -23,7 +22,7 @@ defmodule ExNVR.Elements.Process.Sink do
   end
 
   @impl true
-  def handle_write(:input, %Buffer{} = buffer, _ctx, state) do
+  def handle_buffer(:input, %Buffer{} = buffer, _ctx, state) do
     send(state.pid, {:buffer, buffer.payload})
     {[], state}
   end

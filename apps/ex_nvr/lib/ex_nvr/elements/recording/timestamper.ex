@@ -15,13 +15,12 @@ defmodule ExNVR.Elements.Recording.Timestamper do
               ]
 
   def_input_pad :input,
-    demand_mode: :auto,
-    demand_unit: :buffers,
+    flow_control: :auto,
     accepted_format: _any,
     availability: :always
 
   def_output_pad :output,
-    demand_mode: :auto,
+    flow_control: :auto,
     accepted_format: _any
 
   @impl true
@@ -35,15 +34,15 @@ defmodule ExNVR.Elements.Recording.Timestamper do
   end
 
   @impl true
-  def handle_process(:input, buffer, ctx, %{last_buffer_dts_or_pts: nil} = state) do
-    handle_process(:input, buffer, ctx, %{
+  def handle_buffer(:input, buffer, ctx, %{last_buffer_dts_or_pts: nil} = state) do
+    handle_buffer(:input, buffer, ctx, %{
       state
       | last_buffer_dts_or_pts: Membrane.Buffer.get_dts_or_pts(buffer)
     })
   end
 
   @impl true
-  def handle_process(:input, buffer, _ctx, state) do
+  def handle_buffer(:input, buffer, _ctx, state) do
     buffer_duration = Membrane.Buffer.get_dts_or_pts(buffer) - state.last_buffer_dts_or_pts
     metadata = Map.put(buffer.metadata, :timestamp, state.start_date + buffer_duration)
 

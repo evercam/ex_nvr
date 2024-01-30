@@ -6,7 +6,6 @@ defmodule ExNVR.Pipeline.Output.WebRTC.Sink do
   alias Membrane.Buffer
 
   def_input_pad :input,
-    demand_unit: :buffers,
     flow_control: :auto,
     accepted_format: _any
 
@@ -43,12 +42,12 @@ defmodule ExNVR.Pipeline.Output.WebRTC.Sink do
   end
 
   @impl true
-  def handle_write(:input, _buffer, _ctx, %{pid: nil} = state) do
+  def handle_buffer(:input, _buffer, _ctx, %{pid: nil} = state) do
     {[], state}
   end
 
   @impl true
-  def handle_write(:input, %Buffer{} = buffer, _ctx, state) do
+  def handle_buffer(:input, %Buffer{} = buffer, _ctx, state) do
     send(state.pid, {:buffer, buffer})
     {[], state}
   end

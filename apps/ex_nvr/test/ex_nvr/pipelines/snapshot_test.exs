@@ -33,7 +33,7 @@ defmodule ExNVR.Pipelines.SnapshotTest do
     assert {:ok, _sup_pid, _pid} =
              Pipelines.Snapshot.start(
                device: device,
-               date: DateTime.add(recording.start_date, 3),
+               date: DateTime.add(recording.start_date, 3001, :millisecond),
                method: method
              )
 

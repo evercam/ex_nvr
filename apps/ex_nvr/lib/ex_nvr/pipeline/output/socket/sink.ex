@@ -6,8 +6,7 @@ defmodule ExNVR.Pipeline.Output.Socket.Sink do
   alias Membrane.RawVideo
 
   def_input_pad :input,
-    demand_unit: :buffers,
-    demand_mode: :auto,
+    flow_control: :auto,
     accepted_format: %RawVideo{aligned: true, pixel_format: :RGB}
 
   @impl true
@@ -26,12 +25,12 @@ defmodule ExNVR.Pipeline.Output.Socket.Sink do
   end
 
   @impl true
-  def handle_write(:input, _buffer, _ctx, %{sockets: []} = state) do
+  def handle_buffer(:input, _buffer, _ctx, %{sockets: []} = state) do
     {[], state}
   end
 
   @impl true
-  def handle_write(:input, buffer, _ctx, state) do
+  def handle_buffer(:input, buffer, _ctx, state) do
     message =
       <<System.os_time(:millisecond)::64, state.width::16, state.height::16, 3::8,
         buffer.payload::binary>>

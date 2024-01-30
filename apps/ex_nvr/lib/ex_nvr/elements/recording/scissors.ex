@@ -46,15 +46,8 @@ defmodule ExNVR.Elements.Recording.Scissors do
                 """
               ]
 
-  def_input_pad :input,
-    demand_mode: :auto,
-    demand_unit: :buffers,
-    accepted_format: _any,
-    availability: :always
-
-  def_output_pad :output,
-    demand_mode: :auto,
-    accepted_format: _any
+  def_input_pad :input, flow_control: :auto, accepted_format: _any
+  def_output_pad :output, flow_control: :auto, accepted_format: _any
 
   @impl true
   def handle_init(_ctx, opts) do

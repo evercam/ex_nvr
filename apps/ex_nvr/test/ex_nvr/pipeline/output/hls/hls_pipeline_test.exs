@@ -14,7 +14,7 @@ defmodule ExNVR.Pipeline.Output.HLSPipelineTest do
   @in_file "../../../../fixtures/video-30-10s.h264" |> Path.expand(__DIR__)
 
   defp start_pipeline(in_file, out_dir, nb_streams \\ 1, resolution \\ nil) do
-    structure = [
+    spec = [
       child(:sink, %ExNVR.Pipeline.Output.HLS{
         location: out_dir,
         segment_name_prefix: UUID.uuid4()
@@ -27,9 +27,9 @@ defmodule ExNVR.Pipeline.Output.HLSPipelineTest do
       |> get_child(:sink)
     ]
 
-    structure =
+    spec =
       if nb_streams > 1 do
-        structure ++
+        spec ++
           [
             child(:source2, %Membrane.File.Source{location: in_file})
             |> child(:parser2, %Membrane.H264.Parser{
@@ -39,17 +39,16 @@ defmodule ExNVR.Pipeline.Output.HLSPipelineTest do
             |> get_child(:sink)
           ]
       else
-        structure
+        spec
       end
 
-    Testing.Pipeline.start_link_supervised!(structure: structure)
+    Testing.Pipeline.start_link_supervised!(spec: spec)
   end
 
   describe "hls output element" do
     test "creates hls stream from single (h264) stream", %{tmp_dir: out_dir} do
       pid = start_pipeline(@in_file, out_dir)
 
-      assert_pipeline_play(pid)
       assert_pipeline_notified(pid, :sink, {:track_playable, :main_stream})
       assert_end_of_stream(pid, :parser)
 
@@ -61,7 +60,6 @@ defmodule ExNVR.Pipeline.Output.HLSPipelineTest do
     test "creates hls stream from single (h264) stream with transcoding", %{tmp_dir: out_dir} do
       pid = start_pipeline(@in_file, out_dir, 1, 320)
 
-      assert_pipeline_play(pid)
       assert_pipeline_notified(pid, :sink, {:track_playable, :main_stream}, 5_000)
       assert_end_of_stream(pid, :parser)
 
@@ -72,8 +70,6 @@ defmodule ExNVR.Pipeline.Output.HLSPipelineTest do
 
     test "creates hls stream from two (h264) streams", %{tmp_dir: out_dir} do
       pid = start_pipeline(@in_file, out_dir, 2)
-
-      assert_pipeline_play(pid)
 
       assert_pipeline_notified(pid, :sink, {:track_playable, :main_stream})
       assert_pipeline_notified(pid, :sink, {:track_playable, :sub_stream})

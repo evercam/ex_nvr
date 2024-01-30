@@ -11,8 +11,6 @@ defmodule ExNVR.Pipeline.Output.HLS do
   @segment_duration Membrane.Time.seconds(5)
 
   def_input_pad :video,
-    demand_unit: :buffers,
-    demand_mode: :auto,
     accepted_format: any_of(%H264{alignment: :au}, %H265{alignment: :au}),
     availability: :on_request,
     options: [
@@ -75,7 +73,7 @@ defmodule ExNVR.Pipeline.Output.HLS do
   def handle_pad_added(Pad.ref(:video, ref) = pad, ctx, state) do
     spec = [
       bin_input(pad)
-      |> add_transcoding_spec(ctx.options[:encoding], ref, ctx.options[:resolution])
+      |> add_transcoding_spec(ctx.pad_options[:encoding], ref, ctx.pad_options[:resolution])
       |> via_in(Pad.ref(:input, ref),
         options: [
           encoding: :H264,

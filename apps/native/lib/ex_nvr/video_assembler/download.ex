@@ -1,7 +1,5 @@
-defmodule ExNVR.Model.Recording.Download do
+defmodule ExNVR.VideoAssembler.Download do
   @moduledoc false
-
-  alias ExNVR.Model.Recording
 
   @type unix_timestamp_ms :: non_neg_integer()
 
@@ -13,12 +11,12 @@ defmodule ExNVR.Model.Recording.Download do
 
   defstruct path: nil, start_date: nil, end_date: nil
 
-  @spec new(Recording.t(), Path.t()) :: t()
-  def new(%Recording{} = recording, recording_path) do
+  @spec new(DateTime.t(), DateTime.t(), Path.t()) :: t()
+  def new(start_date, end_date, recording_path) do
     %__MODULE__{
       path: recording_path,
-      start_date: DateTime.to_unix(recording.start_date, :millisecond),
-      end_date: DateTime.to_unix(recording.end_date, :millisecond)
+      start_date: DateTime.to_unix(start_date, :millisecond),
+      end_date: DateTime.to_unix(end_date, :millisecond)
     }
   end
 end

@@ -280,7 +280,9 @@ defmodule ExNVR.Pipeline.Source.RTSP.ConnectionManager do
     connection_status.tracks
     |> Enum.with_index()
     |> Enum.reduce_while({:ok, connection_status}, fn {track, idx}, acc ->
-      transport_header = [{"Transport", "RTP/AVP/TCP;interleaved=#{idx * 2}-#{idx * 2 + 1}"}]
+      transport_header = [
+        {"Transport", "RTP/AVP/TCP;unicast;interleaved=#{idx * 2}-#{idx * 2 + 1}"}
+      ]
 
       case RTSP.setup(rtsp_session, track.control, transport_header) do
         {:ok, %{status: 200}} ->
