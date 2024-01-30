@@ -159,6 +159,107 @@ defmodule ExNVR.DevicesTest do
                errors_on(changeset)
     end
 
+    test "require upload_interval, remote_storage and schedule when snapshot config is enabled" do
+      {:error, changeset} =
+        Devices.create(%{snapshot_config: %{enabled: true}})
+
+      assert %{
+               snapshot_config: %{
+                 upload_interval: ["can't be blank"],
+                 remote_storage: ["can't be blank"],
+                 schedule: ["can't be blank"]
+               }
+             } =
+               errors_on(changeset)
+    end
+
+    test "validate snapshot config upload interval" do
+      {:error, changeset} =
+        Devices.create(%{snapshot_config: %{enabled: true, upload_interval: 1}})
+
+      assert %{snapshot_config: %{upload_interval: ["must be greater than or equal to 5"]}} =
+               errors_on(changeset)
+
+      {:error, changeset} =
+        Devices.create(%{snapshot_config: %{enabled: true, upload_interval: 5000}})
+
+      assert %{snapshot_config: %{upload_interval: ["must be less than or equal to 3600"]}} =
+               errors_on(changeset)
+    end
+
+    test "validate snapshot config schedule" do
+      {:error, changeset} =
+        Devices.create(%{
+          snapshot_config: %{
+            enabled: true,
+            upload_interval: 5,
+            remote_storage: "remote_storage",
+            schedule: %{"1" => "RANDOM"}
+          }
+        })
+
+      assert %{snapshot_config: %{schedule: ["Invalid schedule time intervals format"]}} =
+               errors_on(changeset)
+
+      {:error, changeset} =
+        Devices.create(%{
+          snapshot_config: %{
+            enabled: true,
+            upload_interval: 5,
+            remote_storage: "remote_storage",
+            schedule: %{"RANDOM" => ["08:00-12:00"]}
+          }
+        })
+
+      assert %{snapshot_config: %{schedule: ["Invalid schedule days"]}} =
+               errors_on(changeset)
+
+      {:error, changeset} =
+        Devices.create(%{
+          snapshot_config: %{
+            enabled: true,
+            upload_interval: 5,
+            remote_storage: "remote_storage",
+            schedule: %{"1" => ["08:00-32:00"]}
+          }
+        })
+
+      assert %{snapshot_config: %{schedule: ["Invalid schedule time intervals format"]}} =
+               errors_on(changeset)
+
+      {:error, changeset} =
+        Devices.create(%{
+          snapshot_config: %{
+            enabled: true,
+            upload_interval: 5,
+            remote_storage: "remote_storage",
+            schedule: %{"1" => ["18:00-12:00"]}
+          }
+        })
+
+      assert %{
+               snapshot_config: %{
+                 schedule: [
+                   "Invalid schedule time intervals range (start time must be before end time)"
+                 ]
+               }
+             } =
+               errors_on(changeset)
+
+      {:error, changeset} =
+        Devices.create(%{
+          snapshot_config: %{
+            enabled: true,
+            upload_interval: 5,
+            remote_storage: "remote_storage",
+            schedule: %{"1" => ["08:00-14:00", "12:00-18:00"]}
+          }
+        })
+
+      assert %{snapshot_config: %{schedule: ["Schedule time intervals must not overlap"]}} =
+               errors_on(changeset)
+    end
+
     test "create a new device", %{tmp_dir: tmp_dir} do
       {:ok, device} =
         Devices.create(
@@ -171,6 +272,12 @@ defmodule ExNVR.DevicesTest do
             settings: %{
               storage_address: tmp_dir,
               override_on_full_disk: true
+            },
+            snapshot_config: %{
+              enabled: true,
+              upload_interval: 5,
+              remote_storage: "remote_storage",
+              schedule: %{"1" => ["08:00-12:00"], "2" => ["09:00-12:00", "14:00-18:00"]}
             }
           })
         )
@@ -183,6 +290,19 @@ defmodule ExNVR.DevicesTest do
       assert device.model == @valid_model
       assert device.settings.storage_address == tmp_dir
       assert device.settings.override_on_full_disk
+      assert device.snapshot_config.enabled
+      assert device.snapshot_config.upload_interval == 5
+      assert device.snapshot_config.remote_storage == "remote_storage"
+
+      assert device.snapshot_config.schedule == %{
+               "1" => ["08:00-12:00"],
+               "2" => ["09:00-12:00", "14:00-18:00"],
+               "3" => [],
+               "4" => [],
+               "5" => [],
+               "6" => [],
+               "7" => []
+             }
 
       # assert folder created
       assert File.exists?(Device.base_dir(device))

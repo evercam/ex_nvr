@@ -213,9 +213,6 @@ defmodule ExNVR.Model.Device do
         {:ok, schedule} ->
           put_change(changeset, :schedule, schedule)
 
-        {:error, :invalid_schedule} ->
-          add_error(changeset, :schedule, "Invalid schedule")
-
         {:error, :invalid_schedule_days} ->
           add_error(changeset, :schedule, "Invalid schedule days")
 
@@ -234,7 +231,7 @@ defmodule ExNVR.Model.Device do
       end
     end
 
-    defp do_validate_schedule(schedule) when is_map(schedule) do
+    defp do_validate_schedule(schedule) do
       schedule =
         schedule
         |> Enum.into(%{
@@ -255,10 +252,6 @@ defmodule ExNVR.Model.Device do
         |> Map.new()
         |> then(&{:ok, &1})
       end
-    end
-
-    defp do_validate_schedule(_schedule) do
-      {:error, :invalid_schedule}
     end
 
     defp validate_schedule_days(schedule) do
@@ -312,7 +305,7 @@ defmodule ExNVR.Model.Device do
       end)
     end
 
-    defp parse_day_schedule({_day_of_week, _time_intervals}), do: :invalid_time_interval
+    defp parse_day_schedule(_time_intervals), do: :invalid_time_intervals
 
     defp validate_schedule_intervals(schedule) do
       Enum.reduce_while(schedule, :ok, fn {_day_of_week, time_intervals}, _acc ->
