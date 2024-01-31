@@ -33,7 +33,7 @@ defmodule ExNVRWeb.API.RemoteStorageController do
     field_name = Keyword.get(opts, :field_name, "remote_storage_id")
     remote_storage_id = conn.path_params[field_name]
 
-    case RemoteStorages.get!(remote_storage_id) do
+    case RemoteStorages.get(remote_storage_id) do
       %RemoteStorage{} = remote_storage ->
         Logger.metadata(remote_storage_id: remote_storage.id)
         Conn.assign(conn, :remote_storage_instance, remote_storage)
