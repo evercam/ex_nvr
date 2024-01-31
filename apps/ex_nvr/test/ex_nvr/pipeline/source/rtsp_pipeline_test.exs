@@ -39,10 +39,10 @@ defmodule ExNVR.Pipeline.Source.RTSPPipelineTest do
   end
 
   defp start_pipeline(stream_uri) do
-    structure = [
-      child(:source, %ExNVR.Pipeline.Source.RTSP{stream_uri: stream_uri})
-    ]
-
-    Testing.Pipeline.start_supervised!(structure: structure)
+    Testing.Pipeline.start_supervised!(
+      spec: [
+        child(:source, %ExNVR.Pipeline.Source.RTSP{stream_uri: stream_uri})
+      ]
+    )
   end
 end

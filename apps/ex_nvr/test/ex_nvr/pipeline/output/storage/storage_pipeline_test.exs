@@ -57,7 +57,7 @@ defmodule ExNVR.Pipeline.Output.StoragePipelineTest do
         ".h265" -> %Membrane.H265.Parser{generate_best_effort_timestamps: %{framerate: {20, 1}}}
       end
 
-    structure = [
+    spec = [
       child(:source, %Source{output: chunk_file(filename)})
       |> child(:parser, parser)
       |> child(:storage, %Storage{
@@ -66,7 +66,7 @@ defmodule ExNVR.Pipeline.Output.StoragePipelineTest do
       })
     ]
 
-    Pipeline.start_supervised!(structure: structure)
+    Pipeline.start_supervised!(spec: spec)
   end
 
   defp chunk_file(file) do

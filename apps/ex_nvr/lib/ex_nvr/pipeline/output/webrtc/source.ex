@@ -4,7 +4,6 @@ defmodule ExNVR.Pipeline.Output.WebRTC.Source do
   use Membrane.Source
 
   def_output_pad :output,
-    demand_unit: :buffers,
     accepted_format: _any,
     availability: :always,
     flow_control: :push

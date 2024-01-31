@@ -39,7 +39,7 @@ defmodule ExNVR.Elements.Recording.TimestamperTest do
 
     Enum.reduce(Enum.zip(buffers, expected_buffers), state, fn {buffer, expected_buffer}, state ->
       assert {[buffer: {:output, ^expected_buffer}], state} =
-               Timestamper.handle_process(:input, buffer, %{}, state)
+               Timestamper.handle_buffer(:input, buffer, %{}, state)
 
       state
     end)

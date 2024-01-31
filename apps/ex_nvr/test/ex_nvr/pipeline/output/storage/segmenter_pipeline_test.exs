@@ -22,8 +22,6 @@ defmodule ExNVR.Pipeline.Output.Storage.SegmenterPipelineTest do
       |> Source.output_from_buffers()
       |> start_pipeline()
 
-    Pipeline.execute_actions(pid, playback: :playing)
-
     Enum.each(0..1, fn i ->
       assert_pipeline_notified(pid, :segmenter, {:new_media_segment, ref, :H264})
 
@@ -56,7 +54,7 @@ defmodule ExNVR.Pipeline.Output.Storage.SegmenterPipelineTest do
   end
 
   defp start_pipeline(data) do
-    structure = [
+    spec = [
       child(:source, %Source{
         output: data,
         stream_format: %H264{
@@ -75,6 +73,6 @@ defmodule ExNVR.Pipeline.Output.Storage.SegmenterPipelineTest do
       |> child(:segmenter, %Segmenter{target_duration: 1})
     ]
 
-    Pipeline.start_link_supervised!(structure: structure)
+    Pipeline.start_link_supervised!(spec: spec)
   end
 end

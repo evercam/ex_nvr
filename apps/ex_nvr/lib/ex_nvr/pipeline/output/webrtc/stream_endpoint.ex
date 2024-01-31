@@ -13,8 +13,6 @@ defmodule ExNVR.Pipeline.Output.WebRTC.StreamEndpoint do
   alias Membrane.RTP
 
   def_output_pad :output,
-    demand_unit: :buffers,
-    flow_control: :auto,
     accepted_format: RTP,
     availability: :on_request
 

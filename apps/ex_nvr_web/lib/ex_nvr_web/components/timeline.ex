@@ -31,7 +31,11 @@ defmodule ExNVRWeb.TimelineComponent do
         class="hidden absolute bg-gray-100 text-gray-700 dark:text-white dark:bg-gray-900 border dark:border-gray-700 rounded px-2"
       >
       </div>
-      <div id="cursor" class="hidden absolute bg-red-800 dark:bg-red-600 w-px h-7 top-0 pointer-events-none"></div>
+      <div
+        id="cursor"
+        class="hidden absolute bg-red-800 dark:bg-red-600 w-px h-7 top-0 pointer-events-none"
+      >
+      </div>
     </div>
     """
   end

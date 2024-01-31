@@ -80,6 +80,8 @@ config :os_mon,
   disk_space_check_interval: {:second, 30},
   disk_almost_full_threshold: 0.9
 
+config :bundlex, :disable_precompiled_os_deps, apps: [:ex_libsrtp]
+
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
 import_config "#{config_env()}.exs"

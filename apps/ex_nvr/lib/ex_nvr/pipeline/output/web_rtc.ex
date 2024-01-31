@@ -27,8 +27,6 @@ defmodule ExNVR.Pipeline.Output.WebRTC do
   alias Membrane.RTC.Engine.Endpoint.WebRTC
 
   def_input_pad :input,
-    demand_unit: :buffers,
-    flow_control: :auto,
     accepted_format: %H264{alignment: :au},
     availability: :on_request,
     options: [
@@ -75,7 +73,7 @@ defmodule ExNVR.Pipeline.Output.WebRTC do
 
   @impl true
   def handle_pad_added(Pad.ref(:input, :main_stream) = pad, ctx, state) do
-    media_track = ctx.options.media_track
+    media_track = ctx.pad_options[:media_track]
 
     Engine.message_endpoint(
       state.rtc_engine,

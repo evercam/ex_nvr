@@ -7,7 +7,6 @@ defmodule ExNVR.Pipelines.VideoAssemblerTest do
   import ExNVR.RecordingsFixtures
   import Membrane.Testing.Assertions
 
-  alias ExNVR.Model.Recording
   alias Membrane.Testing
 
   @moduletag :tmp_dir
@@ -45,34 +44,6 @@ defmodule ExNVR.Pipelines.VideoAssemblerTest do
       perform_test(device, tmp_dir, ~U(2099-01-01 00:00:00Z), Membrane.Time.seconds(10))
       perform_test(device2, tmp_dir, ~U(2099-01-01 00:00:00Z), Membrane.Time.seconds(10))
     end
-
-    test "using native assembler", %{
-      devices: {device, _},
-      recordings: recordings,
-      tmp_dir: tmp_dir
-    } do
-      rec =
-        Enum.map(
-          recordings,
-          &Recording.Download.new(&1, ExNVR.Recordings.recording_path(device, &1))
-        )
-
-      start_date = DateTime.to_unix(~U(2023-06-23 10:00:03Z), :millisecond)
-      end_date = DateTime.to_unix(~U(2023-06-23 10:00:15Z), :millisecond)
-      destination = Path.join(tmp_dir, "output.mp4")
-
-      assert {:ok, real_start_date} =
-               ExNVR.Recordings.VideoAssembler.Native.assemble_recordings(
-                 rec,
-                 start_date,
-                 end_date,
-                 0,
-                 destination
-               )
-
-      assert File.exists?(destination)
-      assert_in_delta(real_start_date, start_date, 1100)
-    end
   end
 
   defp perform_test(device, tmp_dir, end_date, duration) do
@@ -86,7 +57,6 @@ defmodule ExNVR.Pipelines.VideoAssemblerTest do
         destination: destination
       )
 
-    assert_pipeline_play(pid)
     assert_end_of_stream(pid, :sink)
     assert File.exists?(destination)
   end

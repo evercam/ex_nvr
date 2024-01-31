@@ -14,25 +14,24 @@ defmodule ExNVR.Pipeline.Output.Thumbnailer.KeyFrameSelector do
               ]
 
   def_input_pad :input,
-    demand_mode: :auto,
-    demand_unit: :buffers,
+    flow_control: :auto,
     accepted_format: any_of(%H264{alignment: :au}, %H265{alignment: :au}),
     availability: :always
 
   def_output_pad :output,
-    demand_mode: :auto,
+    flow_control: :auto,
     accepted_format: any_of(%H264{alignment: :au}, %H265{alignment: :au}),
     availability: :always
 
   @impl true
   def handle_init(_ctx, opts) do
-    {[], %{interval: Time.round_to_seconds(opts.interval), last_keyframe_pts: nil}}
+    {[], %{interval: Time.as_seconds(opts.interval, :round), last_keyframe_pts: nil}}
   end
 
   @impl true
-  def handle_process(:input, buffer, _ctx, state) when ExNVR.Utils.keyframe(buffer) do
+  def handle_buffer(:input, buffer, _ctx, state) when ExNVR.Utils.keyframe(buffer) do
     if is_nil(state.last_keyframe_pts) or diff(buffer, state) >= state.interval do
-      state = %{state | last_keyframe_pts: Time.round_to_seconds(buffer.pts)}
+      state = %{state | last_keyframe_pts: Time.as_seconds(buffer.pts, :round)}
       {[buffer: {:output, buffer}], state}
     else
       {[], state}
@@ -40,11 +39,11 @@ defmodule ExNVR.Pipeline.Output.Thumbnailer.KeyFrameSelector do
   end
 
   @impl true
-  def handle_process(:input, _buffer, _ctx, state) do
+  def handle_buffer(:input, _buffer, _ctx, state) do
     {[], state}
   end
 
   defp diff(buffer, state) do
-    Membrane.Time.round_to_seconds(buffer.pts) - state.last_keyframe_pts
+    Membrane.Time.as_seconds(buffer.pts, :round) - state.last_keyframe_pts
   end
 end

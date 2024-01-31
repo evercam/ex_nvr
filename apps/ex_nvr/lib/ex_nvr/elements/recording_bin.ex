@@ -62,7 +62,6 @@ defmodule ExNVR.Elements.RecordingBin do
               ]
 
   def_output_pad :video,
-    demand_unit: :buffers,
     accepted_format:
       any_of(
         %Membrane.H264{alignment: :au},

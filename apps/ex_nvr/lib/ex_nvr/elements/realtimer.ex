@@ -8,8 +8,8 @@ defmodule ExNVR.Elements.Realtimer do
 
   alias Membrane.{Buffer, Realtimer}
 
-  def_input_pad :input, accepted_format: _any
-  def_output_pad :output, accepted_format: _any, mode: :push
+  def_input_pad :input, accepted_format: _any, flow_control: :manual, demand_unit: :buffers
+  def_output_pad :output, accepted_format: _any, flow_control: :push
 
   def_options duration: [
                 spec: Membrane.Time.t(),
@@ -29,7 +29,7 @@ defmodule ExNVR.Elements.Realtimer do
     timestamp = state.first_buffer_timestamp || Buffer.get_dts_or_pts(buffer)
 
     if Buffer.get_dts_or_pts(buffer) - timestamp >= state.duration do
-      Realtimer.handle_process(:input, buffer, ctx, state)
+      Realtimer.handle_buffer(:input, buffer, ctx, state)
     else
       {[buffer: {:output, buffer}, demand: {:input, 1}],
        %{state | first_buffer_timestamp: timestamp}}

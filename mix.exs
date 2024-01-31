@@ -67,7 +67,6 @@ defmodule ExNVR.Umbrella.MixProject do
     # Tried to use `File.cp` to copy dependencies however links are not copied correctly
     # which made the size of the destination folder 3 times the orginal size.
     libs = [
-      Path.join(["_build", "#{Mix.env()}", "bundlex_precompiled", "**", "lib", "*.so*"]),
       "/usr/lib/#{arch}-linux-gnu/libsrtp2.so*",
       "/usr/lib/#{arch}-linux-gnu/libturbojpeg.so*",
       "/usr/lib/#{arch}-linux-gnu/libssl.so*",

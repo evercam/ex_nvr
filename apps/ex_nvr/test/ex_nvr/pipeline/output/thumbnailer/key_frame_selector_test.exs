@@ -15,18 +15,18 @@ defmodule ExNVR.Pipeline.Output.Thumbnailer.KeyFrameSelectorTest do
     buffer = generate_buffer(1200)
 
     assert {[buffer: {:output, ^buffer}], %{last_keyframe_pts: 1} = state} =
-             KeyFrameSelector.handle_process(:input, buffer, %{}, state)
+             KeyFrameSelector.handle_buffer(:input, buffer, %{}, state)
 
     assert {[], %{last_keyframe_pts: 1} = state} =
-             KeyFrameSelector.handle_process(:input, generate_buffer(2500, false), %{}, state)
+             KeyFrameSelector.handle_buffer(:input, generate_buffer(2500, false), %{}, state)
 
     assert {[], %{last_keyframe_pts: 1} = state} =
-             KeyFrameSelector.handle_process(:input, generate_buffer(3300, false), %{}, state)
+             KeyFrameSelector.handle_buffer(:input, generate_buffer(3300, false), %{}, state)
 
     buffer = generate_buffer(4800)
 
     assert {[buffer: {:output, ^buffer}], %{last_keyframe_pts: 5}} =
-             KeyFrameSelector.handle_process(:input, buffer, %{}, state)
+             KeyFrameSelector.handle_buffer(:input, buffer, %{}, state)
   end
 
   defp generate_buffer(pts_in_ms, key_frame? \\ true) do

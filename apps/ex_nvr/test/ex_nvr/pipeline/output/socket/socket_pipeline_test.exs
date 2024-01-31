@@ -22,7 +22,6 @@ defmodule ExNVR.Pipeline.Output.SocketPipelineTest do
       {:ok, _server} = UnixSocketServer.start_link(device: device)
 
       pid = start_pipeline()
-      assert_pipeline_play(pid)
 
       {:ok, client_socket} =
         :gen_tcp.connect({:local, Utils.unix_socket_path(device.id)}, 0, [:binary, active: false])
@@ -54,13 +53,13 @@ defmodule ExNVR.Pipeline.Output.SocketPipelineTest do
     end
 
     defp start_pipeline() do
-      structure = [
+      spec = [
         child(:source, ExNVR.Support.TestSource)
         |> child(:parser, Membrane.H264.Parser)
         |> child(:sink, %ExNVR.Pipeline.Output.Socket{encoding: :H264})
       ]
 
-      Pipeline.start_supervised!(structure: structure)
+      Pipeline.start_supervised!(spec: spec)
     end
 
     defp chunk_file(file_path) do

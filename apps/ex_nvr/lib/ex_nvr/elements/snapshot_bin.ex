@@ -11,8 +11,6 @@ defmodule ExNVR.Elements.SnapshotBin do
   alias Membrane.{H264, H265}
 
   def_input_pad :input,
-    demand_unit: :buffers,
-    demand_mode: :auto,
     accepted_format:
       any_of(
         %H264{alignment: :au},
@@ -45,7 +43,7 @@ defmodule ExNVR.Elements.SnapshotBin do
   @impl true
   def handle_pad_added(Pad.ref(:input, ref) = pad, ctx, state) do
     decoder =
-      case ctx.options[:encoding] do
+      case ctx.pad_options[:encoding] do
         :H264 -> %Membrane.H264.FFmpeg.Decoder{use_shm?: true}
         :H265 -> %Membrane.H265.FFmpeg.Decoder{use_shm?: true}
       end
@@ -53,7 +51,7 @@ defmodule ExNVR.Elements.SnapshotBin do
     spec = [
       bin_input(pad)
       |> child({:decoder, ref}, decoder)
-      |> child({:filter, ref}, %ExNVR.Elements.OnePass{allow: ctx.options[:rank]})
+      |> child({:filter, ref}, %ExNVR.Elements.OnePass{allow: ctx.pad_options[:rank]})
       |> child({:jpeg, ref}, Turbojpeg.Filter)
       |> child({:sink, ref}, %ExNVR.Elements.Process.Sink{pid: self()})
     ]

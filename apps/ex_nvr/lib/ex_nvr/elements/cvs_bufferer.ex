@@ -16,8 +16,7 @@ defmodule ExNVR.Elements.CVSBufferer do
   alias Membrane.{H264, H265}
 
   def_input_pad :input,
-    demand_mode: :auto,
-    demand_unit: :buffers,
+    flow_control: :auto,
     accepted_format:
       any_of(
         %H264{alignment: :au},
@@ -26,7 +25,7 @@ defmodule ExNVR.Elements.CVSBufferer do
     availability: :always
 
   def_output_pad :output,
-    demand_mode: :auto,
+    flow_control: :auto,
     accepted_format:
       any_of(
         %H264{alignment: :au},
@@ -45,12 +44,12 @@ defmodule ExNVR.Elements.CVSBufferer do
   end
 
   @impl true
-  def handle_process(:input, buffer, _ctx, state) when Utils.keyframe(buffer) do
+  def handle_buffer(:input, buffer, _ctx, state) when Utils.keyframe(buffer) do
     {[], %{state | cvs: [buffer]}}
   end
 
   @impl true
-  def handle_process(:input, %Membrane.Buffer{} = buffer, _ctx, state) do
+  def handle_buffer(:input, %Membrane.Buffer{} = buffer, _ctx, state) do
     {[], %{state | cvs: [buffer | state.cvs]}}
   end
 

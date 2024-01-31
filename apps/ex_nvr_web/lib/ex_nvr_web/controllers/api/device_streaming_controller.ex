@@ -9,7 +9,7 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
 
   alias Ecto.Changeset
   alias ExNVR.Pipelines.{HlsPlayback, Main}
-  alias ExNVR.{Devices, HLS, Model.Recording, Recordings, Utils}
+  alias ExNVR.{Devices, HLS, Recordings, Utils, VideoAssembler}
 
   @type return_t :: Plug.Conn.t() | {:error, Changeset.t()}
 
@@ -124,7 +124,7 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
       end)
 
       {:ok, start_date} =
-        Recordings.VideoAssembler.Native.assemble_recordings(
+        VideoAssembler.Native.assemble_recordings(
           recordings,
           DateTime.to_unix(params.start_date, :millisecond),
           DateTime.to_unix(params.end_date || @default_end_date, :millisecond),
@@ -154,11 +154,17 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
         {:error, :not_found}
 
       recordings ->
-        {:ok,
-         Enum.map(
-           recordings,
-           &Recording.Download.new(&1, Recordings.recording_path(device, &1))
-         )}
+        recordings =
+          Enum.map(
+            recordings,
+            &VideoAssembler.Download.new(
+              &1.start_date,
+              &1.end_date,
+              Recordings.recording_path(device, &1)
+            )
+          )
+
+        {:ok, recordings}
     end
   end
 

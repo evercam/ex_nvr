@@ -11,8 +11,6 @@ defmodule ExNVR.Pipeline.Source.RTSP do
   alias ExNVR.Pipeline.Source.RTSP
 
   def_output_pad :output,
-    demand_mode: :auto,
-    demand_unit: :buffers,
     accepted_format: _any,
     availability: :on_request
 
@@ -159,14 +157,15 @@ defmodule ExNVR.Pipeline.Source.RTSP do
     sps = track.fmtp.sprop_parameter_sets && track.fmtp.sprop_parameter_sets.sps
     pps = track.fmtp.sprop_parameter_sets && track.fmtp.sprop_parameter_sets.pps
 
-    %Membrane.H264.Parser{spss: List.wrap(sps), ppss: List.wrap(pps)}
+    %Membrane.H264.Parser{spss: List.wrap(sps), ppss: List.wrap(pps), repeat_parameter_sets: true}
   end
 
   defp get_parser(%{encoding: :H265} = track) do
     %Membrane.H265.Parser{
       vpss: List.wrap(track.fmtp.sprop_vps) |> Enum.map(&clean_parameter_set/1),
       spss: List.wrap(track.fmtp.sprop_sps) |> Enum.map(&clean_parameter_set/1),
-      ppss: List.wrap(track.fmtp.sprop_pps) |> Enum.map(&clean_parameter_set/1)
+      ppss: List.wrap(track.fmtp.sprop_pps) |> Enum.map(&clean_parameter_set/1),
+      repeat_parameter_sets: true
     }
   end
 

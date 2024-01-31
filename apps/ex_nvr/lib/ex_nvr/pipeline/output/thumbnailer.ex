@@ -11,7 +11,6 @@ defmodule ExNVR.Pipeline.Output.Thumbnailer do
   alias Membrane.{FFmpeg, H264, H265}
 
   def_input_pad :input,
-    flow_control: :auto,
     accepted_format:
       any_of(
         %H264{alignment: :au},

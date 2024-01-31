@@ -69,7 +69,7 @@ defmodule ExNVR.Pipeline.Source.RTSP.MediaTCPSocket do
         handle_tcp_messages(socket, media_received, requester, acc)
 
       {:request, request, requester} ->
-        response = TCPSocket.execute(request, socket, [])
+        response = TCPSocket.execute(request, socket, get_response: true)
         send(requester, {:response, response})
         handle_tcp_messages(socket, media_received, false, requester, acc)
     after
