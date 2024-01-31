@@ -209,6 +209,125 @@ paths:
           $ref: "#/components/responses/NotFound"
         '403':
           $ref: "#/components/responses/Unauthorized"
+  /api/remote_storages:
+    get: 
+      summary: Get all remote_storages.
+      description: Get all existing remote_storages.
+      operationId: getRemoteStorages
+      tags:
+        - RemoteStorage
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RemoteStorage'
+    post:
+      summary: Create remote_storage
+      description: |
+        Create a new remote_storage.
+      operationId: createRemoteStorage
+      tags:
+        - RemoteStorage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: RemoteStorage name
+                url:
+                  type: string
+                  description: RemoteStorage url
+                type:
+                  type: string
+                  enum: ["s3", "http"]
+                  description: RemoteStorage's type (either s3 or http).   
+                s3_config:
+                  $ref: "#/components/schemas/S3Config"
+                http_config:
+                  $ref: "#/components/schemas/HttpConfig"
+
+              required: [name, url, type]
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RemoteStorage'
+        '400':
+          $ref: "#/components/responses/BadArg"
+        '403':
+          $ref: "#/components/responses/Unauthorized"
+  /api/remote_storages/{remote_storage_id}:
+    parameters:
+      - $ref: '#/components/parameters/remote_storage_id'
+    get: 
+      summary: Get remote_storage
+      description: Get remote_storage by id.
+      operationId: getRemoteStorage
+      tags:
+        - RemoteStorage
+      responses:
+        '200':
+            description: Success
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/RemoteStorage'
+        '404':
+          $ref: "#/components/responses/NotFound"
+        '403':
+          $ref: "#/components/responses/Unauthorized"
+    put:
+      summary: Update RemoteStorage
+      description: |
+        Update RemoteStorage details.
+      operationId: updateRemoteStorage
+      tags:
+        - RemoteStorage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                url:
+                  type: string
+                  description: RemoteStorage url
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RemoteStorage'
+        '400':
+          $ref: "#/components/responses/BadArg"
+        '403':
+          $ref: "#/components/responses/Unauthorized"
+    delete: 
+      summary: Delete remote_storage
+      description: |
+        Delete a remote_storage giving the remote_storage id
+      operationId: deleteRemoteStorage
+      tags:
+        - RemoteStorage
+      responses:
+        '204':
+            description: Success
+        '404':
+          $ref: "#/components/responses/NotFound"
+        '403':
+          $ref: "#/components/responses/Unauthorized"
   /api/devices:
     get: 
       summary: Get all devices.
@@ -926,6 +1045,51 @@ components:
             vehicle_color:
               type: string
               description: The vehicle color.
+    RemoteStorage:
+      type: object
+      properties:
+        id:
+          type: number
+          description: RemoteStorage id
+        name:
+          type: string
+          description: RemoteStorage name
+        url:
+          type: string
+          description: RemoteStorage url
+        type:
+          type: string
+          enum: ["s3", "http"]
+          description: RemoteStorage's type (either s3 or http).
+    S3Config:
+      type: object
+      properties:
+        bucket:
+          type: string
+          description: RemoteStorage bucket name
+        region:
+          type: string
+          description: RemoteStorage region
+          default: "us-east-1"
+        access_key_id:
+          type: string
+          description: RemoteStorage's access_key_id.
+        secret_access_key:
+          type: string
+          description: RemoteStorage's secret_access_key.
+    HttpConfig:
+      type: object
+      properties:
+        username:
+          type: string
+          description: RemoteStorage username
+        password:
+          type: string
+          description: RemoteStorage password
+        token:
+          type: string
+          description: RemoteStorage token
+
     Device:
       type: object
       properties:
@@ -1047,6 +1211,14 @@ components:
         type: string
         format: uuid
       example: 1d7c7f47-63c1-4bef-91a6-124cbaf3ecea
+    remote_storage_id:
+      name: remote_storage_id
+      description: The id of the remote_storage
+      in: path
+      required: true
+      schema:
+        type: number
+      example: 11
     device_id:
       name: device_id
       description: The id of the device
