@@ -39,7 +39,7 @@ defmodule ExNVR.MixProject do
       {:ecto_sql, "~> 3.6"},
       {:ecto_sqlite3, ">= 0.0.0"},
       {:jason, "~> 1.2"},
-      {:swoosh, "~> 1.3"},
+      {:swoosh, "~> 1.15"},
       {:finch, "~> 0.13"},
       {:ex_sdp, "~> 0.14.0", override: true},
       {:membrane_core, "~> 1.0"},
