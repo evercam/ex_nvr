@@ -147,6 +147,7 @@ function downloadFile(url) {
     const anchor = document.createElement("a");
     anchor.style.display = "none";
     anchor.href = url;
+    anchor.target="_blank"
 
     document.body.appendChild(anchor);
     anchor.click();
