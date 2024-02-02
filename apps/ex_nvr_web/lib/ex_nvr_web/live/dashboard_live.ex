@@ -402,7 +402,7 @@ defmodule ExNVRWeb.DashboardLive do
     types = %{
       device_id: :string,
       start_date: :naive_datetime,
-      end_date: :native_datetime,
+      end_date: :naive_datetime,
       duration: :integer
     }
 
@@ -444,8 +444,8 @@ defmodule ExNVRWeb.DashboardLive do
         )
 
       not is_nil(end_date) and
-          (NaiveDateTime.diff(start_date, end_date) < 5 or
-             NaiveDateTime.diff(start_date, end_date) > 7200) ->
+          (NaiveDateTime.diff(end_date, start_date) < 5 or
+             NaiveDateTime.diff(end_date, start_date) > 7200) ->
         Changeset.add_error(
           changeset,
           :end_date,
