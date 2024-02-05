@@ -119,6 +119,7 @@ defmodule ExNVR.Devices do
     File.mkdir_p!(Device.recording_dir(device, :low))
     File.mkdir_p!(Device.bif_dir(device))
     File.mkdir_p!(Device.bif_thumbnails_dir(device))
+    File.mkdir_p!(Device.lpr_thumbnails_dir(device))
   end
 
   defp copy_device_file(%Device{type: :file, stream_config: stream_config} = device) do

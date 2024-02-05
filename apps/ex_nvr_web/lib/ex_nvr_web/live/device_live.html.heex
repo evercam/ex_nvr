@@ -50,11 +50,7 @@
         field={@device_form[:vendor]}
         id="device_vendor"
         type="select"
-        options={[
-          "HIKVISION",
-          "Milesight Technology Co.,Ltd.",
-          "AXIS"
-        ]}
+        options={ExNVR.Model.Device.vendors()}
         label="Vendor"
         prompt="Choose your device vendor"
       />

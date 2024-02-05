@@ -19,14 +19,14 @@ defmodule ExNVRWeb.Router do
     plug :fetch_current_user
   end
 
-  pipeline :api_user_pass do
-    plug :accepts, ["json", "jpg", "mp4"]
-    plug :fetch_session
-    plug :fetch_current_user, user_pass: true
-  end
-
   pipeline :api_require_authenticated_user do
     plug :require_authenticated_user, api: true
+  end
+
+  scope "/api", ExNVRWeb do
+    pipe_through [:api, ExNVRWeb.Plug.Device]
+
+    post "/devices/:device_id/events", API.EventController, :create
   end
 
   scope "/api", ExNVRWeb do
@@ -53,13 +53,6 @@ defmodule ExNVRWeb.Router do
 
       get "/bif/:hour", API.DeviceStreamingController, :bif
     end
-  end
-
-  # username password api endpoints
-  scope "/api", ExNVRWeb do
-    pipe_through [:api_user_pass, :api_require_authenticated_user]
-
-    post "/events", API.EventController, :create
   end
 
   scope "/api", ExNVRWeb do

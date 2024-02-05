@@ -7,11 +7,7 @@ defmodule ExNVR.Repo.Migrations.AddEventTable do
       add :plate_number, :string, null: false
       add :direction, :string
       add :list_type, :string
-      add :confidence, :float
-      add :vehicle_type, :string
-      add :vehicle_color, :string
-      add :plate_color, :string
-      add :bounding_box, :map
+      add :metadata, :map
 
       add :device_id, references("devices"), null: false
       timestamps(type: :utc_datetime_usec)

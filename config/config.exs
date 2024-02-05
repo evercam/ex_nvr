@@ -72,8 +72,6 @@ config :logger, :console,
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason
 
-config :opentelemetry, traces_exporter: :none
-
 config :soap, :globals, version: "1.2"
 
 config :os_mon,
