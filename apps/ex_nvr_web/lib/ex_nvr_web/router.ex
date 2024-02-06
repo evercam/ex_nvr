@@ -24,7 +24,7 @@ defmodule ExNVRWeb.Router do
   end
 
   scope "/api", ExNVRWeb do
-    pipe_through [:api, ExNVRWeb.Plug.Device]
+    pipe_through [:api, :require_webhook_token, ExNVRWeb.Plug.Device]
 
     post "/devices/:device_id/events", API.EventController, :create
   end

@@ -2,7 +2,7 @@ defmodule ExNVRWeb.Api.EventControllerTest do
   @moduledoc false
   use ExNVRWeb.ConnCase
 
-  import ExNVR.DevicesFixtures
+  import ExNVR.{AccountsFixtures, DevicesFixtures}
 
   @moduletag :tmp_dir
 
@@ -33,25 +33,48 @@ defmodule ExNVRWeb.Api.EventControllerTest do
   end
 
   describe "POST /api/device/:device/events" do
-    test "create a new lpr event", %{conn: conn, device: device} do
+    setup do
+      %{token: ExNVR.Accounts.generate_webhook_token(user_fixture())}
+    end
+
+    test "create a new lpr event", %{conn: conn, device: device, token: token} do
       conn
-      |> post(~p"/api/devices/#{device.id}/events?event_type=lpr", @milesight_lpr_event)
+      |> post(
+        ~p"/api/devices/#{device.id}/events?event_type=lpr&token=#{token}",
+        @milesight_lpr_event
+      )
       |> response(201)
 
       assert {:ok, [_plate]} = File.ls(ExNVR.Model.Device.lpr_thumbnails_dir(device))
     end
 
-    test "return not found on wrong event type", %{conn: conn, device: device} do
+    test "return not found on wrong event type", %{conn: conn, device: device, token: token} do
       conn
-      |> post(~p"/api/devices/#{device.id}/events?event_type=alpr", @milesight_lpr_event)
+      |> post(
+        ~p"/api/devices/#{device.id}/events?event_type=alpr&token=#{token}",
+        @milesight_lpr_event
+      )
       |> json_response(404)
     end
 
-    test "return not found for not implemented camera vendor", %{conn: conn, tmp_dir: tmp_dir} do
+    test "return unauthorized on wrong/missing token", %{conn: conn, device: device} do
+      conn
+      |> post(~p"/api/devices/#{device.id}/events?event_type=alpr", @milesight_lpr_event)
+      |> json_response(401)
+    end
+
+    test "return not found for not implemented camera vendor", %{
+      conn: conn,
+      tmp_dir: tmp_dir,
+      token: token
+    } do
       device = device_fixture(%{settings: %{storage_address: tmp_dir}})
 
       conn
-      |> post(~p"/api/devices/#{device.id}/events?event_type=alpr", @milesight_lpr_event)
+      |> post(
+        ~p"/api/devices/#{device.id}/events?event_type=alpr&token=#{token}",
+        @milesight_lpr_event
+      )
       |> json_response(404)
     end
   end

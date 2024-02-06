@@ -37,12 +37,6 @@ defmodule ExNVRWeb.API.FallbackController do
     |> json(%{message: "Forbidden"})
   end
 
-  def call(conn, {:error, :wrong_format}) do
-    conn
-    |> put_status(422)
-    |> json(%{message: "Wrong parameter format"})
-  end
-
   def call(conn, {:error, reason}) do
     conn
     |> put_status(500)
