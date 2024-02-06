@@ -1,10 +1,12 @@
-defmodule ExNVR.EventsFixture do
+defmodule ExNVR.EventsFixtures do
   @moduledoc """
   This module defines test helpers for creating
   entities via the `ExNVR.Events` context.
   """
 
   alias ExNVR.Events
+
+  @plate_image "test/fixtures/license-plate.jpg"
 
   @valid_lpr_event_attributes %{
     plate_number: "01-D-12345",
@@ -35,6 +37,10 @@ defmodule ExNVR.EventsFixture do
       attrs
       |> valid_lpr_event_attributes()
       |> then(&Events.create_lpr_event(device, &1, nil))
+
+    ExNVR.Model.Device.lpr_thumbnails_dir(device)
+    |> Path.join(Events.LPR.plate_name(event))
+    |> File.write!(File.read!(@plate_image))
 
     event
   end

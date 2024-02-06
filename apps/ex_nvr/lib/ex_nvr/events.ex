@@ -1,9 +1,13 @@
 defmodule ExNVR.Events do
   @moduledoc false
 
+  import Ecto.Query
+
   alias ExNVR.Events.LPR
   alias ExNVR.Model.Device
   alias ExNVR.Repo
+
+  @type flop_result :: {:ok, {[map()], Flop.Meta.t()}} | {:error, Flop.Meta.t()}
 
   @spec create_lpr_event(Device.t(), map(), binary() | nil) ::
           {:ok, LPR.t()} | {:error, Ecto.Changeset.t()}
@@ -26,15 +30,34 @@ defmodule ExNVR.Events do
     end
   end
 
-  @spec list_lpr_events(map()) :: {:ok, {[map()], Flop.Meta.t()}} | {:error, Flop.Meta.t()}
-  def list_lpr_events(params) do
-    LPR.list_with_device()
-    |> ExNVR.Flop.validate_and_run(params, for: LPREvent)
+  @spec list_lpr_events(map(), Keyword.t()) :: flop_result()
+  def list_lpr_events(params, opts \\ []) do
+    LPR
+    |> preload([:device])
+    |> ExNVR.Flop.validate_and_run(params, for: LPR)
+    |> case do
+      {:ok, {data, meta}} ->
+        {:ok, {maybe_include_lpr_thumbnails(opts[:include_plate_image], data), meta}}
+
+      other ->
+        other
+    end
   end
 
-  @spec list(binary(), atom()) :: [LPREvent.t()]
-  def list(device_id, :lpr) do
-    LPR.with_device(device_id)
-    |> Repo.all()
+  defp maybe_include_lpr_thumbnails(true, entries) do
+    Enum.map(entries, fn entry ->
+      plate_image =
+        ExNVR.Model.Device.lpr_thumbnails_dir(entry.device)
+        |> Path.join(LPR.plate_name(entry))
+        |> File.read()
+        |> case do
+          {:ok, image} -> Base.encode64(image)
+          _other -> nil
+        end
+
+      Map.put(entry, :plate_image, plate_image)
+    end)
   end
+
+  defp maybe_include_lpr_thumbnails(_other, entries), do: entries
 end

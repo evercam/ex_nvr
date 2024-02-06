@@ -20,7 +20,9 @@ defmodule ExNVRWeb.API.EventController do
 
   @spec index(Conn.t(), map()) :: Conn.t() | {:error, Ecto.Changeset.t()}
   def index(%Conn{} = conn, params) do
-    case Events.list_lpr_events(params) do
+    case Events.list_lpr_events(params,
+           include_plate_image: params["include_plate_image"] == "true"
+         ) do
       {:ok, {events, meta}} ->
         meta =
           Map.take(meta, [
@@ -29,10 +31,6 @@ defmodule ExNVRWeb.API.EventController do
             :total_count,
             :total_pages
           ])
-
-        events =
-          events
-          |> Enum.map(&serialize_event/1)
 
         conn
         |> put_status(200)
@@ -48,12 +46,6 @@ defmodule ExNVRWeb.API.EventController do
       :milesight -> {:ok, ExNVRWeb.LPR.Parser.Milesight.parse(params, device.timezone)}
       _other -> {:error, :not_found}
     end
-  end
-
-  defp serialize_event(event) do
-    event
-    |> Map.drop([:__meta__, :device_name, :timezone])
-    |> Map.put(:bounding_box, Map.from_struct(event.bounding_box))
   end
 
   defp check_event_type("lpr"), do: :ok

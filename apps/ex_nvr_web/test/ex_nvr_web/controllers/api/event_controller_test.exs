@@ -2,7 +2,7 @@ defmodule ExNVRWeb.Api.EventControllerTest do
   @moduledoc false
   use ExNVRWeb.ConnCase
 
-  import ExNVR.{AccountsFixtures, DevicesFixtures}
+  import ExNVR.{AccountsFixtures, DevicesFixtures, EventsFixtures}
 
   @moduletag :tmp_dir
 
@@ -79,30 +79,59 @@ defmodule ExNVRWeb.Api.EventControllerTest do
     end
   end
 
-  # describe "GET /api/events" do
-  #   setup %{device: device} = ctx do
-  #     event = lpr_event_fixture(device)
+  describe "GET /api/events" do
+    setup %{conn: conn} do
+      %{conn: log_in_user_with_access_token(conn, user_fixture())}
+    end
 
-  #     Map.put(ctx, :event, event)
-  #   end
+    test "get events", %{conn: conn} do
+      event_fixture(:lpr, device_fixture())
+      event_fixture(:lpr, device_fixture())
 
-  #   test "get events", %{token_conn: conn, device: device} do
-  #     response =
-  #       conn
-  #       |> get(~p"/api/events?filters[0][field]=device_id&filters[0][value]=#{device.id}")
-  #       |> json_response(200)
+      response =
+        conn
+        |> get(~p"/api/events")
+        |> json_response(200)
 
-  #     assert length(response["data"]) == 1
-  #     assert response["data"] |> Enum.at(0) |> Map.get("device_id") == device.id
-  #   end
+      assert response["meta"]["total_count"] == 2
+      assert [%{"plate_image" => nil}, %{"plate_image" => nil}] = response["data"]
+    end
 
-  #   test "invalid params", %{token_conn: conn} do
-  #     response =
-  #       conn
-  #       |> get("/api/events?filters[0][field]=device&order_by=some_field")
-  #       |> json_response(400)
+    test "filter events", %{conn: conn} do
+      device = device_fixture()
+      event_1 = event_fixture(:lpr, device)
+      event_fixture(:lpr, device_fixture())
 
-  #     assert response["code"] == "BAD_ARGUMENT"
-  #   end
-  # end
+      response =
+        conn
+        |> get(~p"/api/events?filters[0][field]=device_id&filters[0][value]=#{device.id}")
+        |> json_response(200)
+
+      assert response["meta"]["total_count"] == 1
+      assert List.first(response["data"])["id"] == event_1.id
+    end
+
+    test "get events with plate image", %{conn: conn} do
+      event_fixture(:lpr, device_fixture())
+      event_fixture(:lpr, device_fixture())
+
+      response =
+        conn
+        |> get(~p"/api/events?include_plate_image=true")
+        |> json_response(200)
+
+      assert response["meta"]["total_count"] == 2
+      assert [%{"plate_image" => image}, %{"plate_image" => image}] = response["data"]
+      assert not is_nil(image)
+    end
+
+    test "invalid params", %{conn: conn} do
+      response =
+        conn
+        |> get("/api/events?filters[0][field]=device&order_by=some_field")
+        |> json_response(400)
+
+      assert response["code"] == "BAD_ARGUMENT"
+    end
+  end
 end

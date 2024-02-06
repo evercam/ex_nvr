@@ -1,8 +1,6 @@
 defmodule ExNVR.Events.LPR do
   use Ecto.Schema
 
-  import Ecto.Query
-
   alias Ecto.Changeset
 
   @fields [:capture_time, :plate_number, :direction, :list_type, :device_id]
@@ -43,6 +41,7 @@ defmodule ExNVR.Events.LPR do
     @type t :: %__MODULE__{}
 
     @primary_key false
+    @derive Jason.Encoder
     embedded_schema do
       field :confidence, :float
       field :bounding_box, {:array, :float}
@@ -71,35 +70,19 @@ defmodule ExNVR.Events.LPR do
   end
 
   @foreign_key_type :binary_id
+  @derive {Jason.Encoder, except: [:device, :__meta__]}
   schema "lpr_events" do
     field :capture_time, :utc_datetime_usec
     field :plate_number, :string
     field :direction, Ecto.Enum, values: [:in, :away, :unknown], default: :unknown
     field :list_type, Ecto.Enum, values: [:white, :black, :other]
+    field :plate_image, :string, virtual: true
 
     embeds_one :metadata, Metadata, on_replace: :update
 
     belongs_to :device, ExNVR.Model.Device
 
     timestamps(type: :utc_datetime_usec)
-  end
-
-  @spec list_with_device(any()) :: Ecto.Query.t()
-  def list_with_device(query \\ __MODULE__) do
-    from(r in query,
-      join: d in assoc(r, :device),
-      as: :joined_device,
-      on: r.device_id == d.id,
-      select: map(r, ^__MODULE__.__schema__(:fields)),
-      select_merge: %{
-        device_name: d.name,
-        timezone: d.timezone
-      }
-    )
-  end
-
-  def with_device(query \\ __MODULE__, device_id) do
-    where(query, [r], r.device_id == ^device_id)
   end
 
   @spec plate_name(t()) :: binary()
