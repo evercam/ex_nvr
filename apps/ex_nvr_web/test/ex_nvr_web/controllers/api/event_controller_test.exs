@@ -90,7 +90,7 @@ defmodule ExNVRWeb.Api.EventControllerTest do
 
       response =
         conn
-        |> get(~p"/api/events")
+        |> get(~p"/api/events?type=lpr")
         |> json_response(200)
 
       assert response["meta"]["total_count"] == 2
@@ -104,7 +104,9 @@ defmodule ExNVRWeb.Api.EventControllerTest do
 
       response =
         conn
-        |> get(~p"/api/events?filters[0][field]=device_id&filters[0][value]=#{device.id}")
+        |> get(
+          ~p"/api/events?type=lpr&filters[0][field]=device_id&filters[0][value]=#{device.id}"
+        )
         |> json_response(200)
 
       assert response["meta"]["total_count"] == 1
@@ -117,7 +119,7 @@ defmodule ExNVRWeb.Api.EventControllerTest do
 
       response =
         conn
-        |> get(~p"/api/events?include_plate_image=true")
+        |> get(~p"/api/events?type=lpr&include_plate_image=true")
         |> json_response(200)
 
       assert response["meta"]["total_count"] == 2
@@ -128,7 +130,7 @@ defmodule ExNVRWeb.Api.EventControllerTest do
     test "invalid params", %{conn: conn} do
       response =
         conn
-        |> get("/api/events?filters[0][field]=device&order_by=some_field")
+        |> get("/api/events?type=lpr&filters[0][field]=device&order_by=some_field")
         |> json_response(400)
 
       assert response["code"] == "BAD_ARGUMENT"
