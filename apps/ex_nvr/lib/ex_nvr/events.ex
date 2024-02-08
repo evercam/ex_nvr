@@ -20,6 +20,7 @@ defmodule ExNVR.Events do
       {:ok, event} ->
         device
         |> Device.lpr_thumbnails_dir()
+        |> tap(&File.mkdir/1)
         |> Path.join(LPR.plate_name(event))
         |> File.write(plate_picture)
 
