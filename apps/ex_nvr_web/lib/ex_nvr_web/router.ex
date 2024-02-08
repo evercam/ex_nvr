@@ -24,11 +24,19 @@ defmodule ExNVRWeb.Router do
   end
 
   scope "/api", ExNVRWeb do
+    pipe_through [:api, :require_webhook_token, ExNVRWeb.Plug.Device]
+
+    post "/devices/:device_id/events", API.EventController, :create
+  end
+
+  scope "/api", ExNVRWeb do
     pipe_through [:api, :api_require_authenticated_user]
 
     resources "/users", API.UserController, except: [:new, :edit]
 
     resources "/devices", API.DeviceController, except: [:new, :edit]
+
+    get "/events", API.EventController, :index
 
     get "/recordings/chunks", API.RecordingController, :chunks
 

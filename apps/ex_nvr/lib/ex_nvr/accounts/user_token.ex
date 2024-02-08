@@ -54,6 +54,11 @@ defmodule ExNVR.Accounts.UserToken do
     {Base.url_encode64(token), %UserToken{token: token, context: "access", user_id: user.id}}
   end
 
+  def build_webhook_token(user) do
+    token = :crypto.strong_rand_bytes(@rand_size)
+    {Base.url_encode64(token), %UserToken{token: token, context: "webhook", user_id: user.id}}
+  end
+
   @doc """
   Checks if the token is valid and returns its underlying lookup query.
 

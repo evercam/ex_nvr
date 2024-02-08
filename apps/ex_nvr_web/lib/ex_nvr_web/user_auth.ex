@@ -119,8 +119,10 @@ defmodule ExNVRWeb.UserAuth do
     end
   end
 
-  defp fetch_token_from_headers_or_query_params(conn) do
-    if token = fetch_from_headers(conn), do: token, else: fetch_from_query_params(conn)
+  defp fetch_token_from_headers_or_query_params(conn, query_name \\ "access_token") do
+    if token = fetch_from_headers(conn),
+      do: token,
+      else: fetch_from_query_params(conn, query_name)
   end
 
   defp fetch_from_headers(conn) do
@@ -133,8 +135,8 @@ defmodule ExNVRWeb.UserAuth do
     end
   end
 
-  defp fetch_from_query_params(%{query_params: query_params}),
-    do: decode_access_token(query_params["access_token"])
+  defp fetch_from_query_params(%{query_params: query_params}, query_name),
+    do: decode_access_token(query_params[query_name])
 
   defp fetch_user_by_token(nil, _context), do: nil
   defp fetch_user_by_token(token, "session"), do: Accounts.get_user_by_session_token(token)
@@ -284,6 +286,18 @@ defmodule ExNVRWeb.UserAuth do
       |> maybe_store_return_to()
       |> redirect(to: ~p"/users/login")
       |> halt()
+    end
+  end
+
+  @doc """
+  Used for routes that require a webhook token.
+  """
+  def require_webhook_token(conn, _opts) do
+    if (token = fetch_token_from_headers_or_query_params(conn, "token")) &&
+         Accounts.verify_webhook_token(token) do
+      conn
+    else
+      unauthorized(conn)
     end
   end
 

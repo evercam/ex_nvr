@@ -733,6 +733,95 @@ paths:
           $ref: '#/components/responses/BadArg'
         '404':
           $ref: '#/components/responses/NotFound'
+  /api/devices/{device_id}/events:
+    post:
+      summary: Create an event
+      description: |
+        Create a new event.
+
+        The endpoint is a webhook to be used by third party services to push events to the NVR.
+
+        ## Event Types
+        ### LPR
+        Some IP Cameras has support for `LPR` (License Plate Recognizer) and they can be configured to 
+        push event via webhook in realtime. Since each camera event has a different schema, we have parsers 
+        for each type of IP Camera that we need to support.
+
+        Currently we support the following camera:
+          * Milesight
+
+        ## Authorization
+        Since event are pushed by third party systems, we need to authenticate this requests. For this
+        we need to create a `webhook` token. A webhook token has no expiry date and only authorize this 
+        endpoint.
+
+        The webhook token should be sent in the `Authorization` header (recommneded) or as a query param `token`.
+        ```
+        curl -XPOST http://my.server/api/devices/:device_id/events?event_type=lpr&token=mytoken
+        ```
+      operationId: createEvent
+      tags:
+        - Event
+      parameters:
+        - $ref: '#/components/parameters/device_id'
+        - name: event_type
+          in: query
+          required: true
+          description: The event type
+          schema:
+            type: string
+            enum: [lpr]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: Created
+        '400':
+          $ref: "#/components/responses/BadArg"
+        '404':
+          $ref: "#/components/responses/NotFound"
+  
+  /api/events:
+    get:
+      summary: Get events
+      description: Get all events
+      operationId: getEvents
+      tags:
+        - Event
+      parameters:
+        - name: type
+          in: query
+          required: true
+          description: Filter by type
+          schema:
+            type: string
+            enum: [lpr]
+          example: lpr
+        - name: include_plate_image
+          in: query
+          required: false
+          description: |
+            Include base64 encoded plate images. This param is ignored if the event type is not `lpr`
+          schema:
+            type: boolean
+            default: false
+        - $ref: '#/components/parameters/filters'
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/page_size'
+        - $ref: '#/components/parameters/order_by'
+        - $ref: '#/components/parameters/order_directions'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LPREvent'
 components:
   securitySchemes:
     bearerAuth:
@@ -786,6 +875,57 @@ components:
           type: string
           format: password
           description: Password to authenticate
+    LPREvent:
+      type: object
+      properties:
+        device_id:
+          type: string
+          format: uuid
+          description: The device id where the event belongs.
+        capture_time:
+          type: string
+          format: date-time
+          description: Capture time of the LPR event
+        plate_number:
+          type: string
+          description: Plate number of the LPR event
+        direction:
+          type: string
+          enum: [in, away]
+          description: Direction of the LPR Event
+        list_type:
+          type: string
+          enum: [white, black, other]
+        plate_image:
+          type: string
+          format: binary
+          description: The plate image
+        metadata:
+          type: object
+          properties:
+            confidence:
+              type: number
+              description: The confidence level of the recognized plate
+              minimum: 0.0
+              maximum: 1.0
+            bounding_box:
+              type: array
+              items:
+                type: number
+                minimum: 0.0
+                maximum: 1.0
+              minItems: 4
+              maxItems: 4
+              desription: The normalized coordinates of the plate.
+            plate_color:
+              type: string
+              description: The color of the vehicle plate.
+            vehicle_type:
+              type: string
+              description: The type of the vehicle
+            vehicle_color:
+              type: string
+              description: The vehicle color.
     Device:
       type: object
       properties:

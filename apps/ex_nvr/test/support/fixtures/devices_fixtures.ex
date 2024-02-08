@@ -16,7 +16,10 @@ defmodule ExNVR.DevicesFixtures do
   @spec valid_device_name() :: binary()
   def valid_device_name(), do: "Device_#{System.unique_integer([:monotonic, :positive])}"
 
+  @spec valid_device_credentials() :: map()
   def valid_device_credentials(), do: %{username: "user", password: "pass"}
+
+  @spec valid_device_settings() :: map()
   def valid_device_settings(), do: %{generate_bif: false, storage_address: "/tmp"}
 
   @spec valid_device_attributes(map(), binary()) :: map()

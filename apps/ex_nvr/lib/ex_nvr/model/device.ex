@@ -8,6 +8,7 @@ defmodule ExNVR.Model.Device do
   alias Ecto.Changeset
 
   @states [:stopped, :recording, :failed]
+  @camera_vendors ["HIKVISION", "Milesight Technology Co.,Ltd.", "AXIS"]
 
   @type state :: :stopped | :recording | :failed
   @type id :: binary()
@@ -185,6 +186,19 @@ defmodule ExNVR.Model.Device do
     timestamps(type: :utc_datetime_usec)
   end
 
+  @spec vendors() :: [binary()]
+  def vendors(), do: @camera_vendors
+
+  @spec vendor(t()) :: atom()
+  def vendor(%__MODULE__{vendor: vendor}) do
+    case vendor do
+      "HIKVISION" -> :hik
+      "Milesight Technology Co.,Ltd." -> :milesight
+      "AXIS" -> :axis
+      _other -> :unknown
+    end
+  end
+
   @spec streams(t()) :: {binary(), binary() | nil}
   def streams(%__MODULE__{} = device), do: build_stream_uri(device)
 
@@ -234,6 +248,11 @@ defmodule ExNVR.Model.Device do
   @spec thumbnails_dir(t()) :: Path.t()
   def thumbnails_dir(%__MODULE__{} = device) do
     Path.join([base_dir(device), "thumbnails"])
+  end
+
+  @spec lpr_thumbnails_dir(t()) :: Path.t()
+  def lpr_thumbnails_dir(device) do
+    Path.join(thumbnails_dir(device), "lpr")
   end
 
   def filter(query \\ __MODULE__, params) do
