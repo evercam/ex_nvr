@@ -17,6 +17,7 @@ defmodule ExNVRWeb.RecordingListLiveTest do
   defp assert_recording_info(lv, html, device, recording) do
     assert html =~ "#{recording.id}"
     assert html =~ device.name
+    assert html =~ device.timezone
 
     expected_start_date =
       recording.start_date

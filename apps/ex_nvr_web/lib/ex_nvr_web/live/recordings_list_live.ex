@@ -21,6 +21,7 @@ defmodule ExNVRWeb.RecordingListLive do
       >
         <:col :let={recording} label="Id" field={:id}><%= recording.id %></:col>
         <:col :let={recording} label="Device" field={:device_name}><%= recording.device_name %></:col>
+        <:col :let={recording} label="Timezone" field={:timezone}><%= recording.timezone %></:col>
         <:col :let={recording} label="Start-date" field={:start_date}>
           <%= format_date(recording.start_date, recording.timezone) %>
         </:col>
