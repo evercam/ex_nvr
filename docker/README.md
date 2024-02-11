@@ -42,7 +42,7 @@ Update `docker-compose.yml` file to use the appropriate image.
 
 If `https` is enabled and it should be, we'll need a private key and a certificate. Generating this files is out of the scope of this guide. However, there's many ways to generate this certificates, like self signed certificates (not recommended for production) or using a tool like [`let's encrypt`](https://letsencrypt.org/).
 
-In this guide, we assume the files are called `certificate.key` for the key, and `certficate.crt` for the certificate.
+In this guide, we assume the files are called `certificate.key` for the key, and `certificate.crt` for the certificate.
 
 ## Prepare volumes
 

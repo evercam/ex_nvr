@@ -21,7 +21,7 @@ defmodule ConfigParser do
     else
       _else ->
         raise("""
-        Bad INTEGRATED_TURN_PORT_RANGE enviroment variable value. Expected "from-to", where `from` and `to` \
+        Bad INTEGRATED_TURN_PORT_RANGE environment variable value. Expected "from-to", where `from` and `to` \
         are numbers between 0 and 65535 and `from` is not bigger than `to`, got: \
         #{inspect(range)}
         """)
@@ -36,7 +36,7 @@ defmodule ConfigParser do
     else
       _var ->
         raise(
-          "Bad #{var_name} enviroment variable value. Expected valid port number, got: #{inspect(port)}"
+          "Bad #{var_name} environment variable value. Expected valid port number, got: #{inspect(port)}"
         )
     end
   end
