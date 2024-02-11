@@ -22,7 +22,7 @@ NVR (Network Video Recorder) for Elixir using [Membrane Framework](https://githu
 
 ### Docker
 
-To get started with `ex_nvr` it's preferrable and easy to run a docker image:
+To get started with `ex_nvr` it's preferable and easy to run a docker image:
 ```bash
 docker run --rm -it -p 4000:4000 --env-file .env ghcr.io/evercam/ex_nvr:latest
 ```
@@ -84,7 +84,7 @@ sudo dpkg -P ex-nvr
 
 If you want to configure some aspects of `ex_nvr`, you can set the following environment variables:
 
-| **Env variable** | **descritpion** |
+| **Env variable** | **description** |
 |------------------|-----------------|
 | DATABASE_PATH    | The path where Sqlite database will be created. Defaults to: `/var/lib/ex_nvr/ex_nvr.db` |
 | EXNVR_HLS_DIRECTORY | The directory where hls playlists will be stored. Defaults to: `/tmp/hls`. <br/><br/>It is not necessary to expose this folder via volumes since the playlists are deleted each time the user stop streaming.
@@ -105,7 +105,7 @@ If you want to configure some aspects of `ex_nvr`, you can set the following env
 
 ### WebRTC Configuration
 
-| **Env variable** | **descritpion** |
+| **Env variable** | **description** |
 |------------------|-----------------|
 | EXTERNAL_IP | The external IP address to which attach the turn server. Defaults to: `127.0.0.1` |
 | VIRTUAL_HOST | The TURN server domain name. Defaults to: `localhost` |
@@ -131,7 +131,7 @@ A webrtc player can be embedded in web page by using `iframe`
 <iframe width="640" height="480" src="http://localhost:4000/webrtc/device_id?access_token=token" title="ex_nvr" allowfullscreen></iframe>
 ```
 
-> The `access_token` will eventually expire and must be updated to ensure the proper functionning of the embedded page. We plan to enhance this by introducing the capability to make the page public or generate non-expiring tokens with view privileges. 
+> The `access_token` will eventually expire and must be updated to ensure the proper functioning of the embedded page. We plan to enhance this by introducing the capability to make the page public or generate non-expiring tokens with view privileges. 
 
 ## Features
 

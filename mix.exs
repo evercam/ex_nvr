@@ -65,7 +65,7 @@ defmodule ExNVR.Umbrella.MixProject do
 
   defp copy_libs(arch, dest_dir) do
     # Tried to use `File.cp` to copy dependencies however links are not copied correctly
-    # which made the size of the destination folder 3 times the orginal size.
+    # which made the size of the destination folder 3 times the original size.
     libs = [
       "/usr/lib/#{arch}-linux-gnu/libsrtp2.so*",
       "/usr/lib/#{arch}-linux-gnu/libturbojpeg.so*",
