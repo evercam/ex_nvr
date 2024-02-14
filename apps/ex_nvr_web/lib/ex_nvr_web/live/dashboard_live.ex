@@ -19,7 +19,7 @@ defmodule ExNVRWeb.DashboardLive do
 
   def render(assigns) do
     ~H"""
-    <div class="bg-gray-300 sm:w-2/3 dark:bg-gray-800">
+    <div class="bg-gray-300 w-full h-full dark:bg-gray-800">
       <div :if={@devices == []} class="grid tracking-wide text-lg text-center dark:text-gray-200">
         You have no devices, you can create one
         <span><.link href={~p"/devices"} class="ml-2 dark:text-blue-600">here</.link></span>

@@ -10,7 +10,7 @@ defmodule ExNVRWeb.DeviceListLive do
 
   def render(assigns) do
     ~H"""
-    <div class="grow">
+    <div class="grow mt-20">
       <div :if={@current_user.role == :admin} class="ml-4 sm:ml-0">
         <.link href={~p"/devices/new"}>
           <.button>Add device</.button>
