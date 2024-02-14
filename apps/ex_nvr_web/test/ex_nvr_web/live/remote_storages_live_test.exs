@@ -6,7 +6,7 @@ defmodule ExNVRWeb.RemoteStoragesLiveTest do
   import ExNVR.{AccountsFixtures, RemoteStoragesFixtures}
   import Phoenix.LiveViewTest
 
-  alias ExNVR.{RemoteStorages}
+  alias ExNVR.RemoteStorages
 
   setup %{conn: conn} do
     %{conn: log_in_user(conn, user_fixture())}
