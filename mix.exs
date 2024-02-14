@@ -190,8 +190,6 @@ defmodule ExNVR.Umbrella.MixProject do
         [architecture, _vendor, os, abi] = specs
         {architecture, os, abi}
     end
-
-    # {architecture, os, abi}
   end
 
   defp get_debian_arch("x86_64"), do: "amd64"
