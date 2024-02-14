@@ -25,12 +25,8 @@ defmodule ExNVR.HTTP do
     end
   end
 
-  def save_snapshot(%{url: url, http_config: http_config}, device_id, timestamp, snapshot) do
-    do_call(:post, url)
-    |> case do
-      {:ok, _} -> :ok
-      error -> error
-    end
+  def post(url, headers, body) do
+    do_call(:post, url, headers, body)
   end
 
   @spec build_digest_auth_header(map(), Keyword.t()) :: {:ok, tuple()} | {:error, binary()}

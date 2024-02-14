@@ -1,6 +1,12 @@
-defmodule ExNVR.S3 do
-  alias ExAws.S3
+defmodule ExNVR.RemoteStorages.S3 do
+  @moduledoc false
 
+  alias ExAws.S3
+  alias ExNVR.RemoteStorages.Client
+
+  @behaviour Client
+
+  @impl Client
   def save_snapshot(%{url: url, s3_config: s3_config}, device_id, timestamp, snapshot) do
     key = key_from_timestamp(device_id, timestamp)
 
@@ -20,7 +26,7 @@ defmodule ExNVR.S3 do
   end
 
   defp key_from_timestamp(device_id, timestamp) do
-    Calendar.strftime(timestamp, "#{device_id}/%Y/%m/%d/%H/%M_%S_000.jpg")
+    Calendar.strftime(timestamp, "#{device_id}/%Y/%m/%d/%H/%M_%S_000.jpeg")
   end
 
   defp add_url_to_config(config, nil), do: config

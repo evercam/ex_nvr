@@ -1,10 +1,11 @@
-defmodule ExNVR.SnapshotUploader do
-  use GenServer
+defmodule ExNVR.RemoteStorages.SnapshotUploader do
+  use GenServer, restart: :transient
 
   require Logger
 
   alias ExNVR.Model.RemoteStorage
-  alias ExNVR.{Devices, HTTP, RemoteStorages, S3}
+  alias ExNVR.{Devices, RemoteStorages}
+  alias ExNVR.RemoteStorages.Client
 
   def start_link(options) do
     GenServer.start_link(__MODULE__, options)
@@ -12,7 +13,6 @@ defmodule ExNVR.SnapshotUploader do
 
   @impl true
   def init(options) do
-    IO.inspect("wik")
     Logger.metadata(device_id: options[:device].id)
     Logger.info("Start snapshot uploader")
     send(self(), :init_config)
@@ -41,20 +41,41 @@ defmodule ExNVR.SnapshotUploader do
     snapshot_config = device.snapshot_config
     utc_now = DateTime.utc_now()
 
-    with {:ok, snapshot} <- Devices.fetch_snapshot(device),
-         :ok <- save_snapshot(remote_storage, device.id, utc_now, snapshot) do
-      :ok
+    with true <- scheduled?(device),
+         {:ok, snapshot} <- Devices.fetch_snapshot(device) do
+      Client.save_snapshot(remote_storage, device.id, utc_now, snapshot)
     end
 
     Process.send_after(self(), :upload_snapshot, :timer.seconds(snapshot_config.upload_interval))
     {:noreply, state}
   end
 
-  defp save_snapshot(%{type: :s3} = remote_storage, device_id, utc_now, snapshot) do
-    S3.save_snapshot(remote_storage, device_id, utc_now, snapshot)
+  defp scheduled?(%{timezone: timezone, snapshot_config: %{schedule: schedule}}) do
+    now = DateTime.now!(timezone)
+    day_of_week = DateTime.to_date(now) |> Date.day_of_week() |> Integer.to_string()
+
+    case Map.get(schedule, day_of_week) do
+      [] ->
+        false
+
+      time_intervals ->
+        scheduled_today?(time_intervals, DateTime.to_time(now))
+    end
   end
 
-  defp save_snapshot(%{type: :http} = remote_storage, device_id, utc_now, snapshot) do
-    HTTP.save_snapshot(remote_storage, device_id, utc_now, snapshot)
+  defp scheduled_today?(time_intervals, current_time) do
+    time_intervals
+    |> Enum.map(fn time_interval ->
+      [start_time, end_time] = String.split(time_interval, "-")
+
+      %{
+        start_time: Time.from_iso8601!(start_time <> ":00"),
+        end_time: Time.from_iso8601!(end_time <> ":00")
+      }
+    end)
+    |> Enum.any?(fn time_interval ->
+      Time.compare(time_interval.start_time, current_time) in [:lt, :eq] &&
+        Time.before?(current_time, time_interval.end_time)
+    end)
   end
 end

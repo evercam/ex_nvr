@@ -396,7 +396,8 @@ defmodule ExNVR.Model.Device do
 
   @spec config_updated(t(), t()) :: boolean()
   def config_updated(%__MODULE__{} = device_1, %__MODULE__{} = device_2) do
-    device_1.stream_config != device_2.stream_config or device_1.settings != device_2.settings
+    device_1.stream_config != device_2.stream_config or device_1.settings != device_2.settings or
+      device_1.snapshot_config != device_2.snapshot_config
   end
 
   @spec has_sub_stream(t()) :: boolean()
@@ -465,6 +466,7 @@ defmodule ExNVR.Model.Device do
     |> Changeset.cast(params, [:name, :timezone, :state, :vendor, :mac, :url, :model])
     |> Changeset.cast_embed(:credentials)
     |> Changeset.cast_embed(:settings, required: true, with: &Settings.update_changeset/2)
+    |> Changeset.cast_embed(:snapshot_config)
     |> common_config()
   end
 
