@@ -1,4 +1,4 @@
-defmodule ExNVR.Model.RemoteStorage do
+defmodule ExNVR.RemoteStorage do
   use Ecto.Schema
 
   alias Ecto.Changeset
