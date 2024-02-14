@@ -175,10 +175,4 @@ window.addEventListener("phx:download-footage", (e) => {
     downloadFile(e.detail.url)
 })
 
-// const recordingDownloadElem = document.querySelector(".recording-link");
-// recordingDownloadElem.addEventListener("error", (event) => {
-//     console.log(event)
-//     window.pushEvent("error-downloading-recording", {})
-// });
-
 initDarkMode();
