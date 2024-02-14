@@ -44,6 +44,7 @@ defmodule ExNVRWeb.RecordingListLive do
                 href={~p"/api/devices/#{recording.device_id}/recordings/#{recording.filename}/blob"}
                 class="inline-flex items-center text-gray-900 rounded-lg"
                 id={"recording-#{recording.id}-link"}
+                phx-hook="DownloadRecording"
               >
                 <span title="Download recording">
                   <.icon name="hero-arrow-down-tray-solid" class="w-6 h-6 dark:text-gray-400" />

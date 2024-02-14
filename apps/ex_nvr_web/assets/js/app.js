@@ -69,6 +69,32 @@ let Hooks = {
             canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
         }
     },
+    DownloadRecording: {
+        mounted() {
+            this.el.addEventListener("click", (event) => {
+                event.preventDefault();
+
+                fetch(this.el.href)
+                .then(response => {
+                    if (!response.ok) {
+                        alert("Error downloading recording");
+                    } 
+                    else {
+                        var a = document.createElement('a');
+                        a.href = this.el.href;
+                        a.target="_blank";
+                        document.body.appendChild(a);
+                        a.click();    
+                        a.remove();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error: ', error.message)
+                })
+                
+            });
+        }
+    },
     Timeline: {
         mounted() {
             createTimeline(this.el)
@@ -158,5 +184,11 @@ function downloadFile(url) {
 window.addEventListener("phx:download-footage", (e) => {
     downloadFile(e.detail.url)
 })
+
+// const recordingDownloadElem = document.querySelector(".recording-link");
+// recordingDownloadElem.addEventListener("error", (event) => {
+//     console.log(event)
+//     window.pushEvent("error-downloading-recording", {})
+// });
 
 initDarkMode();
