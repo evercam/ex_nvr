@@ -73,25 +73,7 @@ let Hooks = {
         mounted() {
             this.el.addEventListener("click", (event) => {
                 event.preventDefault();
-
-                fetch(this.el.href)
-                .then(response => {
-                    if (!response.ok) {
-                        alert("Error downloading recording");
-                    } 
-                    else {
-                        var a = document.createElement('a');
-                        a.href = this.el.href;
-                        a.target="_blank";
-                        document.body.appendChild(a);
-                        a.click();    
-                        a.remove();
-                    }
-                })
-                .catch(error => {
-                    console.error('Error: ', error.message)
-                })
-                
+                downloadFile(this.el.href)
             });
         }
     },
@@ -170,15 +152,23 @@ window.addEventListener("phx:js-exec", ({ detail }) => {
 })
 
 function downloadFile(url) {
-    const anchor = document.createElement("a");
-    anchor.style.display = "none";
-    anchor.href = url;
-    anchor.target="_blank"
-
-    document.body.appendChild(anchor);
-    anchor.click();
-
-    document.body.removeChild(anchor);
+    fetch(url)
+    .then(response => {
+        if (!response.ok) {
+            alert("Error downloading footage");
+        } 
+        else {
+            var a = document.createElement('a');
+            a.href = url;
+            a.target="_blank";
+            document.body.appendChild(a);
+            a.click();    
+            a.remove();
+        }
+    })
+    .catch(error => {
+        console.error('Error: ', error.message)
+    })
 }
 
 window.addEventListener("phx:download-footage", (e) => {
