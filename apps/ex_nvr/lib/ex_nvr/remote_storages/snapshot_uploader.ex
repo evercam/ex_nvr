@@ -3,9 +3,9 @@ defmodule ExNVR.RemoteStorages.SnapshotUploader do
 
   require Logger
 
-  alias ExNVR.Model.RemoteStorage
+  alias ExNVR.RemoteStorage
   alias ExNVR.{Devices, RemoteStorages}
-  alias ExNVR.RemoteStorages.Client
+  alias ExNVR.RemoteStorages.Store
 
   def start_link(options) do
     GenServer.start_link(__MODULE__, options)
@@ -43,7 +43,7 @@ defmodule ExNVR.RemoteStorages.SnapshotUploader do
 
     with true <- scheduled?(device),
          {:ok, snapshot} <- Devices.fetch_snapshot(device) do
-      Client.save_snapshot(remote_storage, device.id, utc_now, snapshot)
+      Store.save_snapshot(remote_storage, device.id, utc_now, snapshot)
     end
 
     Process.send_after(self(), :upload_snapshot, :timer.seconds(snapshot_config.upload_interval))

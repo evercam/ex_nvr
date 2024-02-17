@@ -43,6 +43,45 @@ defmodule ExNVR.RemoteStorages.Store.HTTP do
     end
   end
 
+  @impl true
+  def save_snapshot(%{url: url, http_config: http_config}, device_id, timestamp, snapshot) do
+    file_part =
+      Multipart.Part.binary_body(snapshot)
+
+    multipart =
+      Multipart.new()
+      |> Multipart.add_part(json_part(%{device_id: device_id, timestamp: timestamp}))
+      |> Multipart.add_part(file_part)
+
+    opts = add_auth_type(http_config)
+
+    resp =
+      Req.post(url,
+        auth: auth_from_opts(opts),
+        headers: headers_from_multipart(multipart),
+        body: Multipart.body_stream(multipart)
+      )
+
+    case resp do
+      {:ok, %{status: status}} when status >= 200 and status < 300 -> :ok
+      {:ok, resp} -> {:error, resp}
+      error -> error
+    end
+  end
+
+  defp add_auth_type(%{username: username, password: password, token: token} = http_config) do
+    cond do
+      not is_nil(token) ->
+        Map.put(http_config, :auth_type, :bearer) |> Map.to_list()
+
+      not is_nil(username) && not is_nil(password) ->
+        Map.put(http_config, :auth_type, :basic) |> Map.to_list()
+
+      true ->
+        Map.to_list(http_config)
+    end
+  end
+
   defp json_part(data) do
     data
     |> Jason.encode!()

@@ -70,7 +70,6 @@ defmodule ExNVR.MixProject do
       {:turbojpeg, "~> 0.4.0"},
       {:ex_aws, "~> 2.5"},
       {:ex_aws_s3, "~> 2.5"},
-      {:tesla, "~> 1.8"},
       {:flop, "~> 0.22.1"},
       {:soap, github: "gBillal/soap", branch: "parse-attributes"},
       {:ex_aws_s3, "~> 2.0"},
