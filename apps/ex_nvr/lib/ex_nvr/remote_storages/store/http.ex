@@ -29,18 +29,7 @@ defmodule ExNVR.RemoteStorages.Store.HTTP do
       |> Multipart.add_part(json_part(%{device_id: device.id, start_date: recording.start_date}))
       |> Multipart.add_part(file_part)
 
-    resp =
-      Req.post(opts[:url],
-        auth: auth_from_opts(opts),
-        headers: headers_from_multipart(multipart),
-        body: Multipart.body_stream(multipart)
-      )
-
-    case resp do
-      {:ok, %{status: status}} when status >= 200 and status < 300 -> :ok
-      {:ok, resp} -> {:error, resp}
-      error -> error
-    end
+    do_post(multipart, opts)
   end
 
   @impl true
@@ -55,10 +44,14 @@ defmodule ExNVR.RemoteStorages.Store.HTTP do
       |> Multipart.add_part(json_part(%{device_id: device_id, timestamp: timestamp}))
       |> Multipart.add_part(file_part)
 
-    opts = add_auth_type(http_config)
+    opts = add_auth_type(http_config) |> Map.put(:url, url) |> Map.to_list()
 
+    do_post(multipart, opts)
+  end
+
+  defp do_post(multipart, opts) do
     resp =
-      Req.post(url,
+      Req.post(opts[:url],
         auth: auth_from_opts(opts),
         headers: headers_from_multipart(multipart),
         body: Multipart.body_stream(multipart)
@@ -74,13 +67,13 @@ defmodule ExNVR.RemoteStorages.Store.HTTP do
   defp add_auth_type(%{username: username, password: password, token: token} = http_config) do
     cond do
       not is_nil(token) ->
-        Map.put(http_config, :auth_type, :bearer) |> Map.to_list()
+        Map.put(http_config, :auth_type, :bearer)
 
       not is_nil(username) && not is_nil(password) ->
-        Map.put(http_config, :auth_type, :basic) |> Map.to_list()
+        Map.put(http_config, :auth_type, :basic)
 
       true ->
-        Map.to_list(http_config)
+        http_config
     end
   end
 

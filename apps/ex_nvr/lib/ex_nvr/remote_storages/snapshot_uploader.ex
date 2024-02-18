@@ -32,7 +32,8 @@ defmodule ExNVR.RemoteStorages.SnapshotUploader do
       {:noreply, Map.put(state, :remote_storage, remote_storage)}
     else
       _ ->
-        {:stop, :normal}
+        Logger.info("Stop snapshot uploader")
+        {:stop, :normal, state}
     end
   end
 
