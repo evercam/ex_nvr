@@ -14,6 +14,7 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
   @type return_t :: Plug.Conn.t() | {:error, Changeset.t()}
 
   @default_end_date ~U(2099-01-01 00:00:00Z)
+  @seconds_in_year 3_600 * 24 * 365
 
   @spec hls_stream(Plug.Conn.t(), map()) :: return_t()
   def hls_stream(conn, params) do
@@ -175,7 +176,9 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
       filepath = Path.join(ExNVR.Model.Device.bif_dir(conn.assigns.device), filename)
 
       if File.exists?(filepath) do
-        send_download(conn, {:file, filepath}, filename: filename)
+        conn
+        |> put_resp_header("cache-control", "private, immutable, max-age=#{@seconds_in_year}")
+        |> send_download({:file, filepath}, filename: filename)
       else
         {:error, :not_found}
       end
