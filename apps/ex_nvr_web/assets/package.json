@@ -11,7 +11,7 @@
   "dependencies": {
     "@jellyfish-dev/membrane-webrtc-js": "^0.6.3",
     "d3": "^7.8.5",
-    "flowbite": "^2.2.1",
+    "flowbite": "^2.3.0",
     "hls.js": "^1.5.2"
   }
 }
