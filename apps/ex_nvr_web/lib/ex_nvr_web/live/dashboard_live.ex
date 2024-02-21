@@ -190,6 +190,13 @@ defmodule ExNVRWeb.DashboardLive do
     """
   end
 
+  @impl true
+  def on_mount(:default, _params, _session, socket) do
+    # Schedule periodic manifest updates, e.g., every 3 seconds
+    :timer.send_interval(3_000, self(), :update_manifest)
+    {:cont, socket}
+  end
+
   def mount(_params, _session, socket) do
     socket =
       socket
@@ -281,6 +288,11 @@ defmodule ExNVRWeb.DashboardLive do
       {:error, changeset} ->
         {:noreply, assign_footage_form(socket, changeset)}
     end
+  end
+
+  @impl true
+  def handle_info(:update_manifest, socket) do
+    assign_stream_info(socket)
   end
 
   defp assign_stream_info(socket) do
