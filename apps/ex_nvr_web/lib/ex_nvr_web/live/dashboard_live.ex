@@ -6,6 +6,7 @@ defmodule ExNVRWeb.DashboardLive do
   alias ExNVR.Recordings
   alias ExNVR.Model.Device
   alias ExNVRWeb.TimelineComponent
+  alias ExNVR.Utils
 
   @durations [
     {"2 Minutes", "120"},
@@ -93,6 +94,15 @@ defmodule ExNVRWeb.DashboardLive do
               phx-hook="DownloadSnapshot"
             >
               <.icon name="hero-camera" />
+            </div>
+            <div
+              id="stream-info"
+              class="absolute bottom-0 left-0 m-4 bg-black bg-opacity-50 text-white p-2 rounded"
+            >
+              <p>Bandwidth: <%= @stream_info.bandwidth || "N/A" %></p>
+              <p>Average Bandwidth: <%= @stream_info.average_bandwidth || "N/A" %></p>
+              <p>Resolution: <%= @stream_info.resolution || "N/A" %></p>
+              <p>Codecs: <%= @stream_info.codecs || "N/A" %></p>
             </div>
           </div>
           <div
@@ -186,6 +196,7 @@ defmodule ExNVRWeb.DashboardLive do
       |> assign_devices()
       |> assign_current_device()
       |> assign_streams()
+      |> assign_stream_info()
       |> assign_form(nil)
       |> assign_footage_form(%{})
       |> live_view_enabled?()
@@ -203,6 +214,7 @@ defmodule ExNVRWeb.DashboardLive do
       socket
       |> assign_current_device(device)
       |> assign_streams()
+      |> assign_stream_info()
       |> assign_form(nil)
       |> assign_footage_form(%{})
       |> assign(start_date: nil)
@@ -218,6 +230,7 @@ defmodule ExNVRWeb.DashboardLive do
     socket =
       socket
       |> assign_form(%{"stream" => stream, "device" => socket.assigns.current_device.id})
+      |> assign_stream_info()
       |> live_view_enabled?()
       |> maybe_push_stream_event(socket.assigns.start_date)
 
@@ -268,6 +281,19 @@ defmodule ExNVRWeb.DashboardLive do
       {:error, changeset} ->
         {:noreply, assign_footage_form(socket, changeset)}
     end
+  end
+
+  defp assign_stream_info(socket) do
+    device = socket.assigns.current_device
+
+    # manifest_path = "path/to/your/manifest.m3u8"
+    hls_dir = Path.join(Utils.hls_dir(device.id), "live")
+    manifest_path = Path.join(hls_dir, "index.m3u8") |> IO.inspect()
+
+    stream_info = Utils.parse_manifest_file(manifest_path)
+
+    # Update the socket's assigns with the new stream info
+    assign(socket, stream_info: stream_info)
   end
 
   defp assign_devices(socket) do
