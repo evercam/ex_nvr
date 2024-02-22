@@ -26,6 +26,8 @@ erl_crash.dump
 
 /data/
 
+/**/priv/bundlex
+
 # Database files
 *.db
 *.db-*

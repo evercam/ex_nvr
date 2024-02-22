@@ -10,6 +10,7 @@ defmodule ExNVR.MixProject do
       deps_path: "../../deps",
       lockfile: "../../mix.lock",
       elixir: "~> 1.14",
+      compilers: [:unifex, :bundlex] ++ Mix.compilers(),
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
@@ -33,7 +34,8 @@ defmodule ExNVR.MixProject do
   # Type `mix help deps` for examples and options.
   defp deps do
     [
-      {:native, in_umbrella: true},
+      {:unifex, "~> 1.1"},
+      {:bundlex, "~> 1.4.6"},
       {:bcrypt_elixir, "~> 3.0"},
       {:phoenix_pubsub, "~> 2.1"},
       {:ecto_sql, "~> 3.6"},
@@ -59,6 +61,7 @@ defmodule ExNVR.MixProject do
       {:membrane_rtc_engine, "~> 0.20.0"},
       {:membrane_rtc_engine_webrtc, "~> 0.6.0"},
       {:membrane_fake_plugin, "~> 0.11.0"},
+      {:membrane_precompiled_dependency_provider, "~> 0.1"},
       {:ex_libsrtp, "~> 0.7.0"},
       {:membrane_udp_plugin, "~> 0.12.0"},
       {:connection, "~> 1.1.0"},
