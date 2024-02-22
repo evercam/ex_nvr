@@ -1,4 +1,4 @@
-defmodule ExNVR.Native.BundlexProject do
+defmodule ExNVR.BundlexProject do
   @moduledoc false
 
   use Bundlex.Project
@@ -16,7 +16,8 @@ defmodule ExNVR.Native.BundlexProject do
         sources: ["video_assembler.c"],
         os_deps: [
           ffmpeg: [
-            {:precompiled, Membrane.PrecompiledDependencyProvider.get_dependency_url(:ffmpeg), ["libavformat"]},
+            {:precompiled, Membrane.PrecompiledDependencyProvider.get_dependency_url(:ffmpeg),
+             ["libavformat"]},
             {:pkg_config, ["libavformat"]}
           ]
         ],

@@ -28,7 +28,14 @@ defmodule ExNVR.Umbrella.MixProject do
         version: @version,
         applications: [ex_nvr: :permanent, ex_nvr_web: :permanent],
         include_executables_for: [:unix],
-        steps: [:assemble, &copy_external_libs/1, &archive/1, &generate_deb_package/1]
+        steps: [
+          &delete_wrong_symlink/1,
+          :assemble,
+          &fix_ffmpeg_deps/1,
+          &copy_external_libs/1,
+          &archive/1,
+          &generate_deb_package/1
+        ]
       ]
     ]
   end
@@ -48,6 +55,15 @@ defmodule ExNVR.Umbrella.MixProject do
       setup: ["cmd mix setup"],
       release: ["cmd --app ex_nvr_web mix release", "release"]
     ]
+  end
+
+  defp delete_wrong_symlink(release) do
+    Path.join([Application.app_dir(:ex_nvr), "priv", "bundlex", "nif", "*"])
+    |> Path.wildcard()
+    |> Enum.reject(&File.exists?/1)
+    |> Enum.each(&File.rm!/1)
+
+    release
   end
 
   defp copy_external_libs(release) do
@@ -74,6 +90,51 @@ defmodule ExNVR.Umbrella.MixProject do
     ]
 
     System.shell("cp -P #{Enum.join(libs, " ")} #{dest_dir}")
+  end
+
+  def fix_ffmpeg_deps(release) do
+    suffix_path = Path.join(["priv", "shared", "precompiled"])
+    src_bundlex_path = Path.join(Application.app_dir(:bundlex), suffix_path)
+
+    dest_bundlex_path =
+      Path.join([release.path, "lib", "bundlex*", suffix_path]) |> Path.wildcard() |> List.first()
+
+    deps = File.ls!(src_bundlex_path)
+
+    Enum.each(deps, fn dep ->
+      File.rm_rf!(Path.join(dest_bundlex_path, dep))
+      System.shell("cp -r #{Path.join(src_bundlex_path, dep)} #{dest_bundlex_path}")
+    end)
+
+    Application.loaded_applications()
+    |> Enum.map(fn {name, _path, _version} -> name end)
+    |> Enum.map(fn dep ->
+      [release.path, "lib", "#{dep}-*", "priv", "bundlex", "nif"]
+      |> Path.join()
+      |> Path.wildcard()
+      |> List.first()
+    end)
+    |> Enum.reject(&is_nil/1)
+    |> Enum.each(fn dest ->
+      bundlex_deps =
+        dest
+        |> File.ls!()
+        |> Enum.filter(&(String.trim_trailing(&1, "_physical") in deps))
+
+      index = :binary.longest_common_prefix([dest, dest_bundlex_path])
+      dest_bundlex_path = "../../../../#{String.slice(dest_bundlex_path, index..-1)}"
+
+      Enum.each(bundlex_deps, fn bundlex_dep ->
+        File.rm_rf!(Path.join(dest, bundlex_dep))
+
+        File.ln_s!(
+          Path.join(dest_bundlex_path, String.trim_trailing(bundlex_dep, "_physical")),
+          Path.join(dest, bundlex_dep)
+        )
+      end)
+    end)
+
+    release
   end
 
   defp archive(release) do
