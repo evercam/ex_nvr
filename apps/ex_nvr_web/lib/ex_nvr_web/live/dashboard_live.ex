@@ -97,7 +97,7 @@ defmodule ExNVRWeb.DashboardLive do
             </div>
             <button
               id="toggle-info"
-              class="absolute top-1 left-1 z-50 text-white rounded-sm bg-zinc-900 dark:bg-gray-700 bg-opacity-80 px-1 py-1"
+              class="absolute top-1 left-1 rounded-sm bg-zinc-900 py-1 px-2 text-sm text-white dark:bg-gray-700 dark:bg-opacity-80 hover:cursor-pointer"
               phx-click={JS.toggle(to: "#stream-info")}
             >
               <.icon name="hero-eye" />
