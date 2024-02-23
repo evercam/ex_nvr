@@ -95,14 +95,17 @@ defmodule ExNVRWeb.DashboardLive do
             >
               <.icon name="hero-camera" />
             </div>
+            <button
+              id="toggle-info"
+              class="absolute top-1 left-1 z-50 text-white rounded-sm bg-zinc-900 dark:bg-gray-700 bg-opacity-80 px-1 py-1"
+              phx-click={JS.toggle(to: "#stream-info")}
+            >
+              <.icon name="hero-eye" />
+            </button>
             <div
               id="stream-info"
-              class="absolute bottom-0 left-0 m-4 bg-black bg-opacity-50 text-white p-2 rounded"
+              class="absolute top-14 left-1 z-50 text-white bg-black bg-opacity-50 px-2 py-1 hidden"
             >
-              <p>Bandwidth: <%= @stream_info.bandwidth || "N/A" %></p>
-              <p>Average Bandwidth: <%= @stream_info.average_bandwidth || "N/A" %></p>
-              <p>Resolution: <%= @stream_info.resolution || "N/A" %></p>
-              <p>Codecs: <%= @stream_info.codecs || "N/A" %></p>
             </div>
           </div>
           <div
@@ -190,20 +193,12 @@ defmodule ExNVRWeb.DashboardLive do
     """
   end
 
-  @impl true
-  def on_mount(:default, _params, _session, socket) do
-    # Schedule periodic manifest updates, e.g., every 3 seconds
-    :timer.send_interval(3_000, self(), :update_manifest)
-    {:cont, socket}
-  end
-
   def mount(_params, _session, socket) do
     socket =
       socket
       |> assign_devices()
       |> assign_current_device()
       |> assign_streams()
-      |> assign_stream_info()
       |> assign_form(nil)
       |> assign_footage_form(%{})
       |> live_view_enabled?()
@@ -221,7 +216,6 @@ defmodule ExNVRWeb.DashboardLive do
       socket
       |> assign_current_device(device)
       |> assign_streams()
-      |> assign_stream_info()
       |> assign_form(nil)
       |> assign_footage_form(%{})
       |> assign(start_date: nil)
@@ -237,7 +231,6 @@ defmodule ExNVRWeb.DashboardLive do
     socket =
       socket
       |> assign_form(%{"stream" => stream, "device" => socket.assigns.current_device.id})
-      |> assign_stream_info()
       |> live_view_enabled?()
       |> maybe_push_stream_event(socket.assigns.start_date)
 
@@ -288,24 +281,6 @@ defmodule ExNVRWeb.DashboardLive do
       {:error, changeset} ->
         {:noreply, assign_footage_form(socket, changeset)}
     end
-  end
-
-  @impl true
-  def handle_info(:update_manifest, socket) do
-    assign_stream_info(socket)
-  end
-
-  defp assign_stream_info(socket) do
-    device = socket.assigns.current_device
-
-    # manifest_path = "path/to/your/manifest.m3u8"
-    hls_dir = Path.join(Utils.hls_dir(device.id), "live")
-    manifest_path = Path.join(hls_dir, "index.m3u8") |> IO.inspect()
-
-    stream_info = Utils.parse_manifest_file(manifest_path)
-
-    # Update the socket's assigns with the new stream info
-    assign(socket, stream_info: stream_info)
   end
 
   defp assign_devices(socket) do

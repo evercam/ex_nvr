@@ -21,45 +21,6 @@ defmodule ExNVR.Utils do
     Path.join(@unix_socket_dir, "ex_nvr.#{device_id}.sock")
   end
 
-  def parse_manifest_file(file_path) do
-    case File.read(file_path) do
-      {:ok, content} ->
-        parse_content(content)
-
-      _error ->
-        %{
-          bandwidth: nil,
-          average_bandwidth: nil,
-          resolution: nil,
-          codecs: nil
-        }
-    end
-  end
-
-  defp parse_content(content) do
-    content
-    |> String.split("\n", trim: true)
-    |> Enum.reduce([], fn line, acc ->
-      case Regex.run(@regex, line) do
-        [_, bandwidth, average_bandwidth, resolution, codecs] ->
-          [
-            %{
-              bandwidth: bandwidth,
-              average_bandwidth: average_bandwidth,
-              resolution: resolution,
-              codecs: codecs
-            }
-            | acc
-          ]
-
-        _ ->
-          acc
-      end
-    end)
-    |> List.first()
-    |> IO.inspect()
-  end
-
   @spec pipeline_name(Device.t()) :: atom()
   def pipeline_name(device), do: :"pipeline_#{device.id}"
 

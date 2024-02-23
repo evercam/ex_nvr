@@ -116,6 +116,8 @@ function initDarkMode() {
 
 startStreaming = (src, poster_url) => {
     var video = document.getElementById("live-video")
+    var infoBox = document.getElementById("stream-info");
+    
     if (video != null && Hls.isSupported()) {
         if (window.hls) {
             window.hls.destroy()
@@ -130,6 +132,19 @@ startStreaming = (src, poster_url) => {
         })
         window.hls.loadSource(src)
         window.hls.attachMedia(video)
+        
+        window.hls.on(Hls.Events.LEVEL_LOADED, (event, data) => {
+            const { level } = data;
+            const levelInfo = window.hls.levels[level];
+
+            infoBox.innerHTML = `
+                <p>Bandwith: ${levelInfo.bitrate}</p>
+                <p>Avg.Bandwith: ${levelInfo.averageBitrate}</p>
+                <p>Resolution: ${levelInfo.width}x${levelInfo.height}</p>
+                <p>Codecs: ${levelInfo.attrs.CODECS}</p>
+                `;
+            infoBox.innerHTML = infoHtml;
+        });
     }
 }
 
