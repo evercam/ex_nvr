@@ -5,8 +5,6 @@ defmodule ExNVR.Utils do
 
   @unix_socket_dir "/tmp/sockets"
 
-  @regex ~r/EXT-X-STREAM-INF:BANDWIDTH=(\d+),AVERAGE-BANDWIDTH=(\d+),RESOLUTION=(\d+x\d+),CODECS="([^"]+)"/
-
   @spec hls_dir(Device.id() | nil) :: Path.t()
   def hls_dir(device_id \\ nil) do
     dir = Application.get_env(:ex_nvr, :hls_directory)
