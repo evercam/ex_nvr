@@ -35,7 +35,7 @@ defmodule ExNVRWeb.API.RemoteStorageController do
 
     case RemoteStorages.get(remote_storage_id) do
       %RemoteStorage{} = remote_storage ->
-        Conn.assign(conn, :remote_storage_instance, remote_storage)
+        Conn.assign(conn, :remote_storage, remote_storage)
 
       nil ->
         conn
@@ -49,23 +49,23 @@ defmodule ExNVRWeb.API.RemoteStorageController do
     with {:ok, remote_storage} <- RemoteStorages.create(params) do
       conn
       |> put_status(201)
-      |> render(:show, remote_storage_instance: remote_storage)
+      |> render(:show, remote_storage: remote_storage)
     end
   end
 
   @spec update(Conn.t(), map()) :: Conn.t() | {:error, Ecto.Changeset.t()}
   def update(%Conn{} = conn, params) do
-    remote_storage = conn.assigns.remote_storage_instance
+    remote_storage = conn.assigns.remote_storage
 
     with {:ok, updated_remote_storage} <- RemoteStorages.update(remote_storage, params) do
-      render(conn, :show, remote_storage_instance: updated_remote_storage)
+      render(conn, :show, remote_storage: updated_remote_storage)
     end
   end
 
   def delete(%Conn{} = conn, _params) do
-    remote_storage_instance = conn.assigns.remote_storage_instance
+    remote_storage = conn.assigns.remote_storage
 
-    with {:ok, _deleted_remote_storage} <- RemoteStorages.delete(remote_storage_instance) do
+    with {:ok, _deleted_remote_storage} <- RemoteStorages.delete(remote_storage) do
       send_resp(conn, 204, "")
     end
   end
@@ -77,6 +77,6 @@ defmodule ExNVRWeb.API.RemoteStorageController do
 
   @spec show(Conn.t(), map()) :: Conn.t() | {:error, Ecto.Changeset.t()}
   def show(%Conn{} = conn, _params) do
-    render(conn, :show, remote_storage_instance: conn.assigns.remote_storage_instance)
+    render(conn, :show, remote_storage: conn.assigns.remote_storage)
   end
 end
