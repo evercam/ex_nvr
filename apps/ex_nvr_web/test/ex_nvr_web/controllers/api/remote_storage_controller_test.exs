@@ -104,16 +104,12 @@ defmodule ExNVRWeb.API.RemoteStorageTest do
     end
 
     test "create a new remote_storage", %{conn: conn} do
-      total_remote_storages = RemoteStorages.count_remote_storages()
-
       response =
         conn
         |> post(~p"/api/remote-storages", valid_remote_storage_attributes())
         |> json_response(201)
 
       [remote_storage] = RemoteStorages.list()
-
-      assert RemoteStorages.count_remote_storages() == total_remote_storages + 1
 
       assert remote_storage.id == response["id"]
       assert remote_storage.name == response["name"]
