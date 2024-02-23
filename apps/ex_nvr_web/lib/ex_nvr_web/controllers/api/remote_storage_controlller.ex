@@ -35,7 +35,6 @@ defmodule ExNVRWeb.API.RemoteStorageController do
 
     case RemoteStorages.get(remote_storage_id) do
       %RemoteStorage{} = remote_storage ->
-        Logger.metadata(remote_storage_id: remote_storage.id)
         Conn.assign(conn, :remote_storage_instance, remote_storage)
 
       nil ->
