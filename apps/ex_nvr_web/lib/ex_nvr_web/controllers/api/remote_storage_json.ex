@@ -2,8 +2,8 @@ defmodule ExNVRWeb.API.RemoteStorageJSON do
   @moduledoc false
 
   @spec show(map()) :: map()
-  def show(%{remote_storage_instance: remote_storage_instance}) do
-    serialize_remote_storage(remote_storage_instance)
+  def show(%{remote_storage: remote_storage}) do
+    serialize_remote_storage(remote_storage)
   end
 
   def list(%{remote_storages: remote_storages}) do
