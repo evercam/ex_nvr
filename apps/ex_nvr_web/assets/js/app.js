@@ -135,7 +135,6 @@ startStreaming = (src, poster_url) => {
 
         window.hls.on(Hls.Events.LEVEL_LOADED, (event, data) => {
             const { level, stats } = data;
-            console.log(data)
             const levelInfo = window.hls.levels[level];
             const mbpsFactor = 1024 * 1024
             infoBox.innerHTML = `
