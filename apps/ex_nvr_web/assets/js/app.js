@@ -138,10 +138,10 @@ startStreaming = (src, poster_url) => {
             const levelInfo = window.hls.levels[level];
 
             infoBox.innerHTML = `
-                <p>Bandwith: ${levelInfo.bitrate}</p>
-                <p>Avg.Bandwith: ${levelInfo.averageBitrate}</p>
-                <p>Resolution: ${levelInfo.width}x${levelInfo.height}</p>
-                <p>Codecs: ${levelInfo.attrs.CODECS}</p>
+                <p class="font-bold text-xs">Bitrate: ${levelInfo.bitrate}</p>
+                <p class="font-bold text-xs">Avg.Bitrate: ${levelInfo.averageBitrate}</p>
+                <p class="font-bold text-xs">Resolution: ${levelInfo.width}x${levelInfo.height}</p>
+                <p class="font-bold text-xs">Codecs: ${levelInfo.attrs.CODECS}</p>
                 `;
             infoBox.innerHTML = infoHtml;
         });
