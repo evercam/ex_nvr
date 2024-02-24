@@ -65,7 +65,7 @@ defmodule ExNVRWeb.API.RemoteStorageController do
   def delete(%Conn{} = conn, _params) do
     remote_storage = conn.assigns.remote_storage
 
-    with {:ok, _deleted_remote_storage} <- RemoteStorages.delete(remote_storage) do
+    with :ok <- RemoteStorages.delete(remote_storage) do
       send_resp(conn, 204, "")
     end
   end

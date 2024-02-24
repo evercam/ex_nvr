@@ -36,7 +36,10 @@ defmodule ExNVR.RemoteStorages do
 
   @spec delete(RemoteStorage.t()) :: {:ok, RemoteStorage.t()} | {:error, Ecto.Changeset.t()}
   def delete(%RemoteStorage{} = remote_storage) do
-    Repo.delete(remote_storage)
+    case Repo.delete(remote_storage) do
+      {:ok, _deleted_remote_storage} -> :ok
+      {:error, changeset} -> {:error, changeset}
+    end
   end
 
   def count_remote_storages(), do: Repo.aggregate(RemoteStorage, :count)
