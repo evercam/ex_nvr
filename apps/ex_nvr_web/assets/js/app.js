@@ -136,16 +136,27 @@ startStreaming = (src, poster_url) => {
         window.hls.on(Hls.Events.LEVEL_LOADED, (event, data) => {
             const { level, stats } = data;
             const levelInfo = window.hls.levels[level];
-            const mbpsFactor = 1024 * 1024
+
             infoBox.innerHTML = `
-                <p class="font-bold text-xs">Bandwith Estimate: ${(window.hls.bandwidthEstimate / mbpsFactor).toFixed(3)} (Mbps)</p>
-                <p class="font-bold text-xs">Bitrate: ${(levelInfo.bitrate / mbpsFactor).toFixed(3)} (Mbps)</p>
-                <p class="font-bold text-xs">Avg.Bitrate: ${(levelInfo.averageBitrate / mbpsFactor).toFixed(3)} (Mbps)</p>
+                <p class="font-bold text-xs">Bandwith Estimate: ${convertBitrate(window.hls.bandwidthEstimate)}</p>
+                <p class="font-bold text-xs">Bitrate: ${convertBitrate(levelInfo.bitrate)}</p>
+                <p class="font-bold text-xs">Avg.Bitrate: ${convertBitrate(levelInfo.averageBitrate)}</p>
                 <p class="font-bold text-xs">Resolution: ${levelInfo.width}x${levelInfo.height}</p>
                 <p class="font-bold text-xs">Codecs: ${levelInfo.attrs.CODECS}</p>
                 `;
             infoBox.innerHTML = infoHtml;
         });
+    }
+}
+
+function convertBitrate(bitRate) {
+    const mbpsFactor = 1000 * 1000
+    
+    let bitRateMbps = (bitRate / mbpsFactor)
+    if (bitRateMbps < 1) {
+        return `${(bitRateMbps * 1000).toFixed(2)} Kbps`
+    } else {
+        return `${bitRateMbps.toFixed(2)} Mbps`
     }
 }
 
