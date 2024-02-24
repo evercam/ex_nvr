@@ -100,7 +100,7 @@ defmodule ExNVRWeb.DashboardLive do
               class="absolute top-10 right-1 rounded-sm bg-zinc-900 py-1 px-2 text-sm text-white dark:bg-gray-700 dark:bg-opacity-80 hover:cursor-pointer"
               phx-click={JS.toggle(to: "#stream-info")}
             >
-              <.icon name="hero-eye" />
+              <.icon name="hero-information-circle" />
             </button>
             <div
               id="stream-info"
