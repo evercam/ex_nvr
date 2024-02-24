@@ -30,7 +30,7 @@ defmodule ExNVRWeb.API.RemoteStorageController do
   end
 
   def remote_storage_plug(%Conn{} = conn, opts) do
-    field_name = Keyword.get(opts, :field_name, "remote_storage_id")
+    field_name = Keyword.get(opts, :field_name, "id")
     remote_storage_id = conn.path_params[field_name]
 
     case RemoteStorages.get(remote_storage_id) do
