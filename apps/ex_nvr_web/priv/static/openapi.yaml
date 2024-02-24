@@ -211,8 +211,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
   /api/remote_storages:
     get: 
-      summary: Get all remote_storages.
-      description: Get all existing remote_storages.
+      summary: Get all remote storages.
+      description: Get all existing remote storages.
       operationId: getRemoteStorages
       tags:
         - RemoteStorage
@@ -226,9 +226,9 @@ paths:
                 items:
                   $ref: '#/components/schemas/RemoteStorage'
     post:
-      summary: Create remote_storage
+      summary: Create a remote storage.
       description: |
-        Create a new remote_storage.
+        Create a new remote storage.
       operationId: createRemoteStorage
       tags:
         - RemoteStorage
@@ -241,14 +241,14 @@ paths:
               properties:
                 name:
                   type: string
-                  description: RemoteStorage name
+                  description: Remote Storage name
                 url:
                   type: string
-                  description: RemoteStorage url
+                  description: Remote Storage url
                 type:
                   type: string
                   enum: ["s3", "http"]
-                  description: RemoteStorage's type (either s3 or http).   
+                  description: The type of the remote storage.   
                 s3_config:
                   $ref: "#/components/schemas/S3Config"
                 http_config:
@@ -270,8 +270,8 @@ paths:
     parameters:
       - $ref: '#/components/parameters/remote_storage_id'
     get: 
-      summary: Get remote_storage
-      description: Get remote_storage by id.
+      summary: Get remote storage
+      description: Get remote storage by id.
       operationId: getRemoteStorage
       tags:
         - RemoteStorage
@@ -287,9 +287,9 @@ paths:
         '403':
           $ref: "#/components/responses/Unauthorized"
     put:
-      summary: Update RemoteStorage
+      summary: Update a Remote Storage
       description: |
-        Update RemoteStorage details.
+        Update Remote Storage details.
       operationId: updateRemoteStorage
       tags:
         - RemoteStorage
@@ -302,7 +302,7 @@ paths:
               properties:
                 url:
                   type: string
-                  description: RemoteStorage url
+                  description: Remote Storage url
       responses:
         '200':
           description: Success
@@ -315,9 +315,9 @@ paths:
         '403':
           $ref: "#/components/responses/Unauthorized"
     delete: 
-      summary: Delete remote_storage
+      summary: Delete a remote storage
       description: |
-        Delete a remote_storage giving the remote_storage id
+        Delete a remote storage identified by the provided id.
       operationId: deleteRemoteStorage
       tags:
         - RemoteStorage
@@ -1049,46 +1049,46 @@ components:
       type: object
       properties:
         id:
-          type: number
-          description: RemoteStorage id
+          type: integer
+          description: Remote storage id
         name:
           type: string
-          description: RemoteStorage name
+          description: Remote storage name
         url:
           type: string
-          description: RemoteStorage url
+          description: Remote storage url
         type:
           type: string
           enum: ["s3", "http"]
-          description: RemoteStorage's type (either s3 or http).
+          description: The type of the remote storage..
     S3Config:
       type: object
       properties:
         bucket:
           type: string
-          description: RemoteStorage bucket name
+          description: S3 bucket name.
         region:
           type: string
-          description: RemoteStorage region
+          description: Remote Storage region
           default: "us-east-1"
         access_key_id:
           type: string
-          description: RemoteStorage's access_key_id.
+          description: Remote Storage access_key_id.
         secret_access_key:
           type: string
-          description: RemoteStorage's secret_access_key.
+          description: Remote Storage secret_access_key.
     HttpConfig:
       type: object
       properties:
         username:
           type: string
-          description: RemoteStorage username
+          description: Remote Storage username
         password:
           type: string
-          description: RemoteStorage password
+          description: Remote Storage password
         token:
           type: string
-          description: RemoteStorage token
+          description: Remote Storage token
 
     Device:
       type: object
