@@ -162,7 +162,7 @@ defmodule ExNVR.Pipelines.Main do
           common_spec ++
             [child(:rtsp_source, %Source.RTSP{stream_uri: stream_uri})] ++
             if sub_stream_uri,
-              do: build_sub_stream_spec(device, sub_stream_uri),
+              do: [child({:rtsp_source, :sub_stream}, %Source.RTSP{stream_uri: sub_stream_uri})],
               else: []
 
         [spec: spec]
@@ -236,20 +236,20 @@ defmodule ExNVR.Pipelines.Main do
         _ctx,
         %State{} = state
       ) do
-    if track.encoding != :H264 do
-      Membrane.Logger.error("SubStream: only H264 streams are supported now")
-      {[remove_children: {:rtsp_source, :sub_stream}], state}
-    else
-      spec = [
-        get_child({:rtsp_source, :sub_stream})
-        |> via_out(Pad.ref(:output, ssrc))
-        |> via_in(Pad.ref(:input, make_ref()))
-        |> get_child({:funnel, :sub_stream})
-      ]
+    old_track = elem(state.video_tracks, 1)
+    spec = if is_nil(old_track), do: build_sub_stream_spec(state.device, track), else: []
 
-      video_tracks = put_elem(state.video_tracks, 1, track)
-      {[spec: spec], %{state | video_tracks: video_tracks}}
-    end
+    spec =
+      spec ++
+        [
+          get_child({:rtsp_source, :sub_stream})
+          |> via_out(Pad.ref(:output, ssrc))
+          |> via_in(Pad.ref(:input, make_ref()))
+          |> get_child({:funnel, :sub_stream})
+        ]
+
+    video_tracks = put_elem(state.video_tracks, 1, track)
+    {[spec: spec], %{state | video_tracks: video_tracks}}
   end
 
   @impl true
@@ -365,22 +365,48 @@ defmodule ExNVR.Pipelines.Main do
   end
 
   defp build_main_stream_spec(state, track) do
+    [
+      child(:funnel, %Membrane.Funnel{end_of_stream: :never})
+      |> child(:video_tee, Membrane.Tee.Master)
+      |> via_out(:master)
+      |> child({:storage_bin, :main_stream}, %Output.Storage{
+        device: state.device,
+        target_segment_duration: state.segment_duration,
+        correct_timestamp: true
+      }),
+      get_child(:video_tee)
+      |> via_out(:copy)
+      |> via_in(Pad.ref(:video, :main_stream), options: [encoding: track.encoding])
+      |> get_child(:hls_sink),
+      get_child(:video_tee)
+      |> via_out(:copy)
+      |> child({:cvs_bufferer, :main_stream}, ExNVR.Elements.CVSBufferer)
+    ]
+  end
+
+  defp build_sub_stream_spec(device, track) do
     spec =
       [
-        child(:funnel, %Membrane.Funnel{end_of_stream: :never})
-        |> child(:video_tee, Membrane.Tee.Master)
+        child({:funnel, :sub_stream}, %Membrane.Funnel{end_of_stream: :never})
+        |> child({:tee, :sub_stream}, Membrane.Tee.Master)
         |> via_out(:master)
-        |> child({:storage_bin, :main_stream}, %Output.Storage{
-          device: state.device,
-          target_segment_duration: state.segment_duration,
-          correct_timestamp: true
-        }),
-        get_child(:video_tee)
-        |> via_out(:copy)
-        |> child({:cvs_bufferer, :main_stream}, ExNVR.Elements.CVSBufferer)
+        |> via_in(Pad.ref(:video, :sub_stream), options: [encoding: track.encoding])
+        |> get_child(:hls_sink)
       ]
 
-    if track.encoding == :H264, do: spec ++ link_hls_element(), else: spec
+    if device.settings.generate_bif do
+      spec ++
+        [
+          get_child({:tee, :sub_stream})
+          |> via_out(:copy)
+          |> child({:thumbnailer, :sub_stream}, %Output.Thumbnailer{
+            dest: Device.bif_thumbnails_dir(device),
+            encoding: track.encoding
+          })
+        ]
+    else
+      spec
+    end
   end
 
   defp build_file_stream_spec(device) do
@@ -395,32 +421,6 @@ defmodule ExNVR.Pipelines.Main do
       |> via_out(:copy)
       |> child({:cvs_bufferer, :main_stream}, ExNVR.Elements.CVSBufferer)
     ]
-  end
-
-  defp build_sub_stream_spec(device, sub_stream_uri) do
-    spec =
-      [
-        child({:rtsp_source, :sub_stream}, %Source.RTSP{stream_uri: sub_stream_uri}),
-        child({:funnel, :sub_stream}, %Membrane.Funnel{end_of_stream: :never})
-        |> child({:tee, :sub_stream}, Membrane.Tee.Master)
-        |> via_out(:master)
-        |> via_in(Pad.ref(:video, :sub_stream), options: [encoding: :H264])
-        |> get_child(:hls_sink)
-      ]
-
-    if device.settings.generate_bif do
-      spec ++
-        [
-          get_child({:tee, :sub_stream})
-          |> via_out(:copy)
-          |> child({:thumbnailer, :sub_stream}, %Output.Thumbnailer{
-            dest: Device.bif_thumbnails_dir(device),
-            encoding: :H264
-          })
-        ]
-    else
-      spec
-    end
   end
 
   defp link_live_snapshot_elements(state, image_format) do
@@ -453,15 +453,6 @@ defmodule ExNVR.Pipelines.Main do
 
   # Pipeline process details
   defp pipeline_pid(device), do: Process.whereis(Utils.pipeline_name(device))
-
-  defp link_hls_element() do
-    [
-      get_child(:video_tee)
-      |> via_out(:copy)
-      |> via_in(Pad.ref(:video, :main_stream), options: [encoding: :H264])
-      |> get_child(:hls_sink)
-    ]
-  end
 
   def child_spec(arg) do
     %{

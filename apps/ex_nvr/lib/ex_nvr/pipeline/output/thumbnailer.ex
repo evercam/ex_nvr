@@ -39,7 +39,7 @@ defmodule ExNVR.Pipeline.Output.Thumbnailer do
                 description: "The codec used to compress the frames"
               ]
 
-  @interval :timer.seconds(5)
+  @interval Membrane.Time.seconds(5)
 
   @impl true
   def handle_init(_ctx, options) do

@@ -13,21 +13,7 @@ defmodule ExNVR.Model.Device do
   @type state :: :stopped | :recording | :failed
   @type id :: binary()
 
-  @type t :: %__MODULE__{
-          id: id() | nil,
-          name: binary() | nil,
-          type: :ip | :file,
-          timezone: binary(),
-          state: state(),
-          vendor: binary() | nil,
-          mac: binary() | nil,
-          url: binary() | nil,
-          model: binary() | nil,
-          credentials: Credentials.t() | nil,
-          stream_config: StreamConfig.t() | nil,
-          inserted_at: DateTime.t() | nil,
-          updated_at: DateTime.t() | nil
-        }
+  @type t :: %__MODULE__{}
 
   defmodule Credentials do
     use Ecto.Schema
