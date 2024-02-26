@@ -6,7 +6,7 @@ defmodule ExNVRWeb.API.RemoteStorageController do
   action_fallback ExNVRWeb.API.FallbackController
 
   plug :authorization_plug
-  plug :remote_storage_plug, [field_name: "id"] when action in [:update, :show, :delete]
+  plug :remote_storage_plug when action in [:update, :show, :delete]
 
   import ExNVRWeb.Controller.Helpers
   import ExNVR.Authorization
@@ -30,8 +30,7 @@ defmodule ExNVRWeb.API.RemoteStorageController do
   end
 
   def remote_storage_plug(%Conn{} = conn, opts) do
-    field_name = Keyword.get(opts, :field_name, "id")
-    remote_storage_id = conn.path_params[field_name]
+    remote_storage_id = conn.path_params["id"]
 
     case RemoteStorages.get(remote_storage_id) do
       %RemoteStorage{} = remote_storage ->
