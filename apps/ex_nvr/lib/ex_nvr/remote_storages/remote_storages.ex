@@ -7,7 +7,7 @@ defmodule ExNVR.RemoteStorages do
 
   import Ecto.Query
 
-  alias ExNVR.{RemoteStorage}
+  alias ExNVR.RemoteStorage
   alias ExNVR.Repo
 
   @spec create(map()) :: {:ok, RemoteStorage.t()} | {:error, Ecto.Changeset.t()}

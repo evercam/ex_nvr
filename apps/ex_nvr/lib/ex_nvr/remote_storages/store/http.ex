@@ -33,18 +33,16 @@ defmodule ExNVR.RemoteStorages.Store.HTTP do
   end
 
   @impl true
-  def save_snapshot(%{url: url, http_config: http_config}, device_id, timestamp, snapshot) do
-    filename = Calendar.strftime(timestamp, "#{device_id}_%Y-%m-%dT%H:%M:%S:000.jpeg")
+  def save_snapshot(device, snapshot, timestamp, opts) do
+    filename = Calendar.strftime(timestamp, "#{device.id}_%Y-%m-%dT%H:%M:%S:000.jpeg")
 
     file_part =
       Multipart.Part.file_content_field("", snapshot, "file", [], filename: filename)
 
     multipart =
       Multipart.new()
-      |> Multipart.add_part(json_part(%{device_id: device_id, timestamp: timestamp}))
+      |> Multipart.add_part(json_part(%{device_id: device.id, timestamp: timestamp}))
       |> Multipart.add_part(file_part)
-
-    opts = add_auth_type(http_config) |> Map.put(:url, url) |> Map.to_list()
 
     do_post(multipart, opts)
   end
@@ -61,19 +59,6 @@ defmodule ExNVR.RemoteStorages.Store.HTTP do
       {:ok, %{status: status}} when status >= 200 and status < 300 -> :ok
       {:ok, resp} -> {:error, resp}
       error -> error
-    end
-  end
-
-  defp add_auth_type(%{username: username, password: password, token: token} = http_config) do
-    cond do
-      not is_nil(token) ->
-        Map.put(http_config, :auth_type, :bearer)
-
-      not is_nil(username) && not is_nil(password) ->
-        Map.put(http_config, :auth_type, :basic)
-
-      true ->
-        http_config
     end
   end
 

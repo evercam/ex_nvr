@@ -24,15 +24,13 @@ defmodule ExNVR.RemoteStorages.Store.S3 do
   end
 
   @impl true
-  def save_snapshot(%{url: url, s3_config: s3_config}, device_id, timestamp, snapshot) do
-    key = build_snapshot_key(device_id, timestamp)
+  def save_snapshot(device, snapshot, timestamp, opts) do
+    key = build_snapshot_key(device.id, timestamp)
 
-    config = add_url_to_config(Map.from_struct(s3_config), url) |> Map.to_list()
-
-    config
+    opts
     |> Keyword.fetch!(:bucket)
     |> S3.put_object(key, snapshot, content_type: "image/jpeg")
-    |> ExAws.request(config)
+    |> ExAws.request(opts)
     |> case do
       {:ok, _} ->
         :ok
@@ -44,13 +42,5 @@ defmodule ExNVR.RemoteStorages.Store.S3 do
 
   defp build_snapshot_key(device_id, timestamp) do
     Calendar.strftime(timestamp, "#{device_id}/%Y/%m/%d/%H/%M_%S_000.jpeg")
-  end
-
-  defp add_url_to_config(config, nil), do: config
-
-  defp add_url_to_config(config, url) do
-    uri = URI.parse(url)
-
-    Map.merge(config, %{scheme: uri.scheme, host: uri.host, port: uri.port})
   end
 end
