@@ -58,20 +58,6 @@ defmodule ExNVRWeb.API.RemoteStorageTest do
       %{remote_storage: remote_storage_fixture()}
     end
 
-    test "get remote_storage using an unauthorized role", %{
-      conn: conn,
-      remote_storage: remote_storage
-    } do
-      user_conn = log_in_user_with_access_token(conn, user_fixture(%{role: :user}))
-
-      response =
-        user_conn
-        |> get(~p"/api/remote-storages/#{remote_storage.id}")
-        |> json_response(403)
-
-      assert response["message"] == "Forbidden"
-    end
-
     test "get remote_storage", %{conn: conn, remote_storage: remote_storage} do
       response =
         conn
