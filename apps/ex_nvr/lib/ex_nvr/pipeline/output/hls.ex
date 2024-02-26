@@ -76,7 +76,7 @@ defmodule ExNVR.Pipeline.Output.HLS do
       |> add_transcoding_spec(ctx.pad_options[:encoding], ref, ctx.pad_options[:resolution])
       |> via_in(Pad.ref(:input, ref),
         options: [
-          encoding: :H264,
+          encoding: ctx.pad_options[:encoding],
           track_name: track_name(state.segment_prefix, ref),
           segment_duration: @segment_duration
         ]
@@ -110,12 +110,12 @@ defmodule ExNVR.Pipeline.Output.HLS do
     {[], state}
   end
 
-  defp add_transcoding_spec(link_builder, :H264, _ref, nil), do: link_builder
+  defp add_transcoding_spec(link_builder, _encoding, _ref, nil), do: link_builder
 
   defp add_transcoding_spec(link_builder, encoding, ref, resolution) do
     link_builder
     |> child({:decoder, ref}, get_decoder(encoding))
-    |> child({:scaler, ref}, %Membrane.FFmpeg.SWScale.Scaler{output_height: resolution || 480})
+    |> child({:scaler, ref}, %Membrane.FFmpeg.SWScale.Scaler{output_height: resolution})
     |> child({:encoder, ref}, %Membrane.H264.FFmpeg.Encoder{
       profile: :baseline,
       tune: :zerolatency,

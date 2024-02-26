@@ -153,7 +153,7 @@ The main feature of this project is to store video streams retrieved from `devic
 
 * **Video Codecs**: allow storing and streaming videos with following codecs
    - [x] H264
-   - [x] H265 (Live stream disabled, videos are transcoded for playback)
+   - [x] H265
 
 * **Streaming**: live view and playback
    - [x] HLS

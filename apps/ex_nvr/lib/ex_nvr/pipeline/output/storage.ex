@@ -12,7 +12,7 @@ defmodule ExNVR.Pipeline.Output.Storage do
   alias Membrane.{H264, H265}
 
   @recordings_event [:ex_nvr, :recordings, :stop]
-  @interval :timer.seconds(5)
+  @interval Membrane.Time.seconds(5)
 
   def_input_pad :input,
     accepted_format:
