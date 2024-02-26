@@ -53,7 +53,6 @@ defmodule ExNVR.RemoteStoragesFixtures do
 
     http_config =
       Enum.into(config, %{
-        url: "https://example#{System.unique_integer()}",
         token: :crypto.strong_rand_bytes(16) |> Base.encode64()
       })
 

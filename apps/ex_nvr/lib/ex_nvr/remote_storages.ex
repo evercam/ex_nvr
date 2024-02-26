@@ -25,16 +25,24 @@ defmodule ExNVR.RemoteStorages do
     |> Repo.update()
   end
 
+  @spec get(number()) :: Device.t() | nil
+  def get(id), do: Repo.get(RemoteStorage, id)
+
   @spec get!(number()) :: RemoteStorage.t()
   def get!(id), do: Repo.get!(RemoteStorage, id)
 
   @spec list() :: [RemoteStorage.t()]
   def list(), do: Repo.all(RemoteStorage |> order_by([rs], rs.inserted_at))
 
-  @spec delete(RemoteStorage.t()) :: {:ok, RemoteStorage.t()} | {:error, Ecto.Changeset.t()}
+  @spec delete(RemoteStorage.t()) :: :ok | {:error, Ecto.Changeset.t()}
   def delete(%RemoteStorage{} = remote_storage) do
-    Repo.delete(remote_storage)
+    case Repo.delete(remote_storage) do
+      {:ok, _deleted_remote_storage} -> :ok
+      {:error, changeset} -> {:error, changeset}
+    end
   end
+
+  def count_remote_storages(), do: Repo.aggregate(RemoteStorage, :count)
 
   @spec change_remote_storage_creation(RemoteStorage.t(), map()) :: Ecto.Changeset.t()
   def change_remote_storage_creation(%RemoteStorage{} = remote_storage, attrs \\ %{}) do
