@@ -5,6 +5,7 @@ defmodule ExNVRWeb.DashboardLive do
   alias ExNVR.Devices
   alias ExNVR.Recordings
   alias ExNVR.Model.Device
+  alias ExNVRWeb.Router.Helpers, as: Routes
   alias ExNVRWeb.TimelineComponent
 
   @durations [
@@ -181,47 +182,51 @@ defmodule ExNVRWeb.DashboardLive do
   end
 
   def mount(_params, _session, socket) do
-    socket =
-      socket
-      |> assign_devices()
-      |> assign_current_device()
-      |> assign_streams()
-      |> assign_form(nil)
-      |> assign_footage_form(%{})
-      |> live_view_enabled?()
-      |> assign_runs()
-      |> assign_timezone()
-      |> maybe_push_stream_event(nil)
+    socket
+    |> assign_devices()
+    |> assign(
+      start_date: nil,
+      custom_duration: false
+    )
+    |> then(&{:ok, &1})
+  end
 
-    {:ok, assign(socket, start_date: nil, custom_duration: false)}
+  def handle_params(params, _uri, socket) do
+    devices = socket.assigns.devices
+
+    device =
+      Enum.find(socket.assigns.devices, List.first(devices), &(&1.id == params["device_id"]))
+
+    stream = Map.get(params, "stream", socket.assigns[:stream]) || "sub_stream"
+
+    socket
+    |> assign(current_device: device)
+    |> assign(stream: stream, start_date: nil)
+    |> assign_streams()
+    |> assign_form()
+    |> assign_footage_form(%{"device_id" => device && device.id})
+    |> live_view_enabled?()
+    |> assign_runs()
+    |> assign_timezone()
+    |> maybe_push_stream_event(socket.assigns.start_date)
+    |> then(&{:noreply, &1})
   end
 
   def handle_event("switch_device", %{"device" => device_id}, socket) do
-    device = Enum.find(socket.assigns.devices, &(&1.id == device_id))
+    route =
+      Routes.dashboard_path(socket, :new, %{device_id: device_id, stream: socket.assigns.stream})
 
-    socket =
-      socket
-      |> assign_current_device(device)
-      |> assign_streams()
-      |> assign_form(nil)
-      |> assign_footage_form(%{})
-      |> assign(start_date: nil)
-      |> live_view_enabled?()
-      |> assign_runs()
-      |> assign_timezone()
-      |> maybe_push_stream_event(socket.assigns.start_date)
-
-    {:noreply, socket}
+    {:noreply, push_patch(socket, to: route, replace: true)}
   end
 
   def handle_event("switch_stream", %{"stream" => stream}, socket) do
-    socket =
-      socket
-      |> assign_form(%{"stream" => stream, "device" => socket.assigns.current_device.id})
-      |> live_view_enabled?()
-      |> maybe_push_stream_event(socket.assigns.start_date)
+    route =
+      Routes.dashboard_path(socket, :new, %{
+        device_id: socket.assigns.current_device.id,
+        stream: stream
+      })
 
-    {:noreply, socket}
+    {:noreply, push_patch(socket, to: route, replace: true)}
   end
 
   def handle_event("datetime", %{"value" => value}, socket) do
@@ -274,24 +279,19 @@ defmodule ExNVRWeb.DashboardLive do
     assign(socket, devices: Devices.list())
   end
 
-  defp assign_current_device(socket, device \\ nil) do
-    devices = socket.assigns.devices
-    assign(socket, current_device: device || List.first(devices))
-  end
-
   defp assign_streams(%{assigns: %{current_device: nil}} = socket), do: socket
 
   defp assign_streams(socket) do
-    device = socket.assigns.current_device
+    %{current_device: device, stream: stream} = socket.assigns
 
-    supported_streams =
+    {supported_streams, stream} =
       if Device.has_sub_stream(device) do
-        [{"Main Stream", "main_stream"}, {"Sub Stream", "sub_stream"}]
+        {[{"Main Stream", "main_stream"}, {"Sub Stream", "sub_stream"}], stream}
       else
-        [{"Main Stream", "main_stream"}]
+        {[{"Main Stream", "main_stream"}], "main_stream"}
       end
 
-    assign(socket, supported_streams: supported_streams)
+    assign(socket, supported_streams: supported_streams, stream: stream)
   end
 
   defp assign_runs(%{assigns: %{current_device: nil}} = socket), do: socket
@@ -323,15 +323,11 @@ defmodule ExNVRWeb.DashboardLive do
     assign(socket, timezone: socket.assigns.current_device.timezone)
   end
 
-  defp assign_form(%{assigns: %{current_device: nil}} = socket, _params), do: socket
+  defp assign_form(%{assigns: %{current_device: nil}} = socket), do: socket
 
-  defp assign_form(socket, nil) do
-    device = socket.assigns.current_device
-    assign(socket, form: to_form(%{"device" => device.id, "stream" => "main_stream"}))
-  end
-
-  defp assign_form(socket, params) do
-    assign(socket, form: to_form(params))
+  defp assign_form(socket) do
+    %{current_device: device, stream: stream} = socket.assigns
+    assign(socket, form: to_form(%{"device" => device.id, "stream" => stream}))
   end
 
   defp assign_footage_form(socket, params) do

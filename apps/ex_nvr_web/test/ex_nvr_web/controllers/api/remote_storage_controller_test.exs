@@ -30,7 +30,7 @@ defmodule ExNVRWeb.API.RemoteStorageTest do
         |> get("/api/remote-storages/")
         |> json_response(200)
 
-      assert length(response) == 0
+      assert Enum.empty?(response)
     end
 
     test "get all remote_storages (remote_storages)", %{conn: conn} do
