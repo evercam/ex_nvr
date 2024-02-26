@@ -34,7 +34,7 @@ defmodule ExNVR.RemoteStorages do
   @spec list() :: [RemoteStorage.t()]
   def list(), do: Repo.all(RemoteStorage |> order_by([rs], rs.inserted_at))
 
-  @spec delete(RemoteStorage.t()) :: {:ok, RemoteStorage.t()} | {:error, Ecto.Changeset.t()}
+  @spec delete(RemoteStorage.t()) :: :ok | {:error, Ecto.Changeset.t()}
   def delete(%RemoteStorage{} = remote_storage) do
     case Repo.delete(remote_storage) do
       {:ok, _deleted_remote_storage} -> :ok
