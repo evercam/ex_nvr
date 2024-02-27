@@ -6,7 +6,6 @@ defmodule ExNVRWeb.DashboardLive do
   alias ExNVR.Recordings
   alias ExNVR.Model.Device
   alias ExNVRWeb.TimelineComponent
-  alias ExNVR.Utils
 
   @durations [
     {"2 Minutes", "120"},
