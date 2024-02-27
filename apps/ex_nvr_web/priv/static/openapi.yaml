@@ -2,7 +2,7 @@ openapi: 3.0.0
 info:
   title: ExNVR API
   description: Manage ExNVR via API endpoints
-  version: 0.9.1
+  version: 0.10.0
 servers:
   - url: '{protocol}://{host}:{port}'
     variables:
@@ -1035,7 +1035,7 @@ components:
                 maximum: 1.0
               minItems: 4
               maxItems: 4
-              desription: The normalized coordinates of the plate.
+              description: The normalized coordinates of the plate.
             plate_color:
               type: string
               description: The color of the vehicle plate.
