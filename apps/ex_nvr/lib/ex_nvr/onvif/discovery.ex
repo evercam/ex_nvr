@@ -11,15 +11,15 @@ defmodule ExNVR.Onvif.Discovery do
   <e:Envelope xmlns:e="http://www.w3.org/2003/05/soap-envelope"
       xmlns:w="http://schemas.xmlsoap.org/ws/2004/08/addressing"
       xmlns:d="http://schemas.xmlsoap.org/ws/2005/04/discovery"
-      xmlns:dn="http://www.onvif.org/ver10/network/wsdl">
+      xmlns:tds="http://www.onvif.org/ver10/device/wsdl">
     <e:Header>
-      <w:MessageID>uuid:edf6ea85-3a68-46f2-9d02-0b15ef52a787</w:MessageID>
+      <w:MessageID>uuid:$id</w:MessageID>
       <w:To e:mustUnderstand="true">urn:schemas-xmlsoap-org:ws:2005:04:discovery</w:To>
       <w:Action a:mustUnderstand="true">http://schemas.xmlsoap.org/ws/2005/04/discovery/Probe</w:Action>
     </e:Header>
     <e:Body>
       <d:Probe>
-        <d:Types>dn:NetworkVideoTransmitter</d:Types>
+        <d:Types>tds:Device</d:Types>
       </d:Probe>
     </e:Body>
   </e:Envelope>
@@ -27,12 +27,16 @@ defmodule ExNVR.Onvif.Discovery do
   @scope_regex ~r[^onvif://www.onvif.org/(name|hardware)/(.*)]
 
   def probe(timeout) do
+    msg = String.replace(@probe_message, "$id", UUID.uuid4())
+
     with {:ok, socket} <- mockable(:gen_udp).open(0, [:binary, active: false]),
-         :ok <- mockable(:gen_udp).send(socket, @multicast_addr, @multicast_port, @probe_message) do
+         :ok <- mockable(:gen_udp).send(socket, @multicast_addr, @multicast_port, msg) do
       socket
       |> recv(timeout)
       |> Map.values()
       |> Enum.map(&String.replace(&1, ["\r\n", "\r", "\n"], ""))
+      |> Enum.filter(&String.starts_with?(&1, "<?xml"))
+      |> Enum.map(&deduplicate/1)
       |> Enum.map(&%Soap.Response{body: &1, status_code: 200})
       |> Enum.map(&Soap.Response.parse/1)
       |> Enum.map(&delete_namespaces/1)
@@ -49,6 +53,14 @@ defmodule ExNVR.Onvif.Discovery do
 
       {:error, _error} ->
         acc
+    end
+  end
+
+  # Some cameras (Axis) returns duplicate responses to the probe message
+  defp deduplicate(response) do
+    case :binary.matches(response, "<?xml") do
+      [_no_duplicates] -> response
+      [_first_match, {pos, _len} | _rest] -> :binary.part(response, 0, pos)
     end
   end
 

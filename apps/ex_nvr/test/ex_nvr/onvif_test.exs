@@ -8,6 +8,7 @@ defmodule ExNVR.OnvifTest do
   alias ExNVR.Onvif
 
   @response """
+  <?xml version="1.0" encoding="UTF-8"?>
   <Envelope xmlns="http://www.w3.org/2003/05/soap-envelope">
   <Header>
   <wsa:MessageID xmlns:wsa="http://www.w3.org/2005/08/addressing">uuid:de305d54-75b4-431b-adb2-eb6b9e546014</wsa:MessageID>
@@ -121,7 +122,7 @@ defmodule ExNVR.OnvifTest do
     mock(:gen_udp, :open, Agent.start(fn -> 0 end))
 
     mock(:gen_udp, [send: 4], fn _socket, {239, 255, 255, 250}, 3702, request ->
-      assert request =~ "dn:NetworkVideoTransmitter"
+      assert request =~ "tds:Device"
       :ok
     end)
   end
