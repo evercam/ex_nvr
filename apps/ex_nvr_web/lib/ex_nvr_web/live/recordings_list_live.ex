@@ -148,11 +148,11 @@ defmodule ExNVRWeb.RecordingListLive do
 
     cursor_params =
       if not is_nil(after_cursor) do
-        old_pagination_params = Map.drop(socket.assigns.pagination_params, ["before"])
-        Map.merge(old_pagination_params, %{"after" => after_cursor})
+        old_pagination_params = Map.drop(socket.assigns.pagination_params, ["before", "before-cursor", "last"])
+        Map.merge(old_pagination_params, %{"first" => 100, "after" => after_cursor})
       else
-        old_pagination_params = Map.drop(socket.assigns.pagination_params, ["after"])
-        Map.merge(old_pagination_params, %{"before" => before_cursor})
+        old_pagination_params = Map.drop(socket.assigns.pagination_params, ["after", "after-cursor", "first"])
+        Map.merge(old_pagination_params, %{"last" => 100, "before" => before_cursor})
       end
 
     pagination_params = Map.merge(pagination_params, cursor_params)
