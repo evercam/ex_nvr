@@ -88,12 +88,9 @@ defmodule ExNVRWeb.API.RecordingControllerTest do
       assert Enum.map(response["data"], & &1["id"]) |> MapSet.new() ==
                Enum.map(recordings, & &1.id) |> MapSet.new()
 
-      assert %{
-               "total_count" => 4,
-               "total_pages" => 1,
-               "current_page" => 1,
-               "page_size" => 100
-             } = response["meta"]
+      assert Map.get(response["meta"], "page_size") == 100
+      assert Map.has_key?(response["meta"], "start_cursor")
+      assert Map.has_key?(response["meta"], "end_cursor")
     end
 
     test "filter recordings chunks", %{conn: conn, device: device, recordings: recordings} do
