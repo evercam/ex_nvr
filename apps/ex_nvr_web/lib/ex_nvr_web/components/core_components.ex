@@ -686,7 +686,7 @@ defmodule ExNVRWeb.CoreComponents do
           <a
             href="#"
             phx-click="paginate"
-            phx-value-page={@meta.previous_page}
+            phx-value-before-cursor={@meta.start_cursor}
             class={
               [
                 "flex items-center justify-center px-3 h-8 ml-0 leading-tight bg-white border border-gray-300 rounded-l-lg"
@@ -716,32 +716,11 @@ defmodule ExNVRWeb.CoreComponents do
             </svg>
           </a>
         </li>
-        <li :for={page <- 1..2} :if={@meta.total_pages > 6}>
-          <.pagination_link current_page={@meta.current_page} page={page} />
-        </li>
-        <li :if={@meta.total_pages > 6 && @meta.current_page > 4}>
-          <span class="px-3 h-8 text-gray-500">...</span>
-        </li>
-        <li
-          :for={idx <- 3..(@meta.total_pages - 2)}
-          :if={@meta.total_pages > 6 && abs(@meta.current_page - idx) <= 1}
-        >
-          <.pagination_link current_page={@meta.current_page} page={idx} />
-        </li>
-        <li :if={@meta.total_pages > 6 && @meta.current_page < @meta.total_pages - 3}>
-          <span class="px-3 h-8 text-gray-500">...</span>
-        </li>
-        <li :for={page <- [@meta.total_pages - 1, @meta.total_pages]} :if={@meta.total_pages > 6}>
-          <.pagination_link current_page={@meta.current_page} page={page} />
-        </li>
-        <li :for={idx <- 1..@meta.total_pages} :if={@meta.total_pages <= 6}>
-          <.pagination_link current_page={@meta.current_page} page={idx} />
-        </li>
         <li>
           <a
             href="#"
             phx-click="paginate"
-            phx-value-page={@meta.next_page}
+            phx-value-after-cursor={@meta.end_cursor}
             class={
               [
                 "flex items-center justify-center px-3 h-8 leading-tight border border-gray-300 bg-white rounded-r-lg"
@@ -781,7 +760,6 @@ defmodule ExNVRWeb.CoreComponents do
     <.link
       href="#"
       phx-click="paginate"
-      phx-value-page={@page}
       class={
         [
           "flex items-center justify-center px-3 h-8 leading-tight border dark:border-gray-700"

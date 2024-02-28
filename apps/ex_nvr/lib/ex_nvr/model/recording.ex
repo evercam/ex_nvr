@@ -23,9 +23,8 @@ defmodule ExNVR.Model.Recording do
                ]
              ]
            ],
-           pagination_types: [:page],
-           default_limit: 100,
-           max_limit: 150}
+           pagination_types: [:first, :last],
+           default_pagination_type: :first}
 
   @type t :: %__MODULE__{
           start_date: DateTime.t(),
