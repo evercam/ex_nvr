@@ -67,11 +67,14 @@ defmodule ExNVR.Umbrella.MixProject do
   end
 
   defp copy_ffmpeg_deps(release) do
+    libs_dest = Path.join(release.path, "external_lib")
+    File.mkdir_p!(libs_dest)
+
     suffix_path = Path.join(["priv", "shared", "precompiled"])
     src_bundlex_path = Path.join(Application.app_dir(:bundlex), suffix_path)
 
     System.shell(
-      "cp -P #{Path.join([src_bundlex_path, "**", "lib", "*.so*"])} #{Path.join(release.path, "external_lib")}"
+      "cp -P #{Path.join([src_bundlex_path, "**", "lib", "*.so*"])} #{libs_dest}"
     )
 
     dest_bundlex_path =
@@ -106,7 +109,6 @@ defmodule ExNVR.Umbrella.MixProject do
     case get_target() do
       {arch, "linux", "gnu"} ->
         libs_dest = Path.join(release.path, "external_lib")
-        File.mkdir_p!(libs_dest)
         copy_libs(arch, libs_dest)
         release
 
