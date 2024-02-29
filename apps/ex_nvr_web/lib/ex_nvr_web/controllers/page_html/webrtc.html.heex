@@ -1,0 +1,12 @@
+<div>
+  <pre
+    :if={Application.get_env(:ex_nvr, :env) == :dev}
+    class="text-xs text-white"
+    id="webRtcLogs"
+  />
+  <video id="webRtcPlayer" data-device={@device.id} controls muted autoplay></video>
+  <script>
+    window.token = "<%= @user_token %>"
+  </script>
+  <script defer phx-track-static type="text/javascript" src={~p"/assets/webrtc.js"} />
+</div>

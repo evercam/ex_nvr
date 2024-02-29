@@ -1,0 +1,92 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    runs-on: ubuntu-20.04
+    env:
+      MIX_ENV: prod
+      GENERATE_DEB_PACKAGE: true
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: erlef/setup-beam@v1.16
+        with:
+          otp-version: 26.1
+          elixir-version: 1.15.7
+
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get -y install npm libsrtp2-dev libturbojpeg-dev
+
+      # Hack: Download precompiled ffmpeg since the membrane plugin are broken.
+      - name: Get precompiled ffmpeg
+        run: > 
+          mkdir -p _build/prod/bundlex_precompiled/httpsgithub.comBtbNFFmpeg-Buildsreleasesdownloadlatestffmpeg-n6.0-latest-linux64-gpl-shared-6.0.tar.xz
+          && wget https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-n6.1-latest-linux64-gpl-shared-6.1.tar.xz
+          && tar -xvf ffmpeg-n6.1-latest-linux64-gpl-shared-6.1.tar.xz -C _build/prod/bundlex_precompiled/httpsgithub.comBtbNFFmpeg-Buildsreleasesdownloadlatestffmpeg-n6.0-latest-linux64-gpl-shared-6.0.tar.xz --strip-components=1
+        
+      - name: Get deps
+        run: mix deps.get --only prod
+
+      - name: Create release
+        run: mix release
+
+      - name: Setup QEMU
+        uses: docker/setup-qemu-action@v2
+      
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Build and push
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          platforms: linux/arm64/v8
+          file: .github/workflows/Dockerfile
+          load: true
+          tags: ex_nvr:${{ github.ref_name }}-arm64
+          build-args: |
+            ERL_FLAGS=+JPperf true
+
+      - name: Copy release
+        run: |
+          id=$(docker create ex_nvr:${{ github.ref_name }}-arm64)
+          docker cp $id:/app/build-assets/. _build/prod/
+          docker rm -v $id
+
+      - name: Create GH release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: ${{ github.ref_name }}
+          generate_release_notes: true
+          files: |
+            _build/prod/*.deb
+            _build/prod/*.tar.gz
+
+  publish-docs:
+    needs: [release]
+
+    runs-on: ubuntu-20.04
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      with:
+        ref: ${{ github.ref }}
+
+    - name: Copy Documentation
+      run:  cp apps/ex_nvr_web/priv/static/openapi.yaml docs/
+
+    - name: Deploy to GitHub Pages
+      run: |
+        git config user.name "GitHub Actions"
+        git config user.email "github-actions@github.com"
+        git checkout --orphan gh-pages
+        git add -A
+        git commit -m "Deploy documentation for tag ${{ github.ref_name }} to github pages"
+        git push origin gh-pages -f    
