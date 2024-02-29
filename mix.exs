@@ -28,14 +28,7 @@ defmodule ExNVR.Umbrella.MixProject do
         version: @version,
         applications: [ex_nvr: :permanent, ex_nvr_web: :permanent],
         include_executables_for: [:unix],
-        steps: [
-          &delete_wrong_symlink/1,
-          :assemble,
-          &copy_ffmpeg_deps/1,
-          &copy_external_libs/1,
-          &archive/1,
-          &generate_deb_package/1
-        ]
+        steps: steps()
       ]
     ]
   end
@@ -55,6 +48,21 @@ defmodule ExNVR.Umbrella.MixProject do
       setup: ["cmd mix setup"],
       release: ["cmd --app ex_nvr_web mix release", "release"]
     ]
+  end
+
+  defp steps() do
+    if System.get_env("DOCKER_BUILD", "false") |> String.to_existing_atom() do
+      [:assemble]
+    else
+      [
+        &delete_wrong_symlink/1,
+        :assemble,
+        &copy_ffmpeg_deps/1,
+        &copy_external_libs/1,
+        &archive/1,
+        &generate_deb_package/1
+      ]
+    end
   end
 
   defp delete_wrong_symlink(release) do
