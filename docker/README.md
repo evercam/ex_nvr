@@ -4,20 +4,6 @@ In this guide, we'll deploy `ex_nvr` using `docker compose`. We provide a `docke
 
 Copy the two provided files to your target host and update the files to fit your needs.
 
-## Quick deploy
-
-We provide a script to quickly deploy `ex_nvr` using `docker compose`. It'll try to install `docker` if it's not installed on the target machine (currently only `ubuntu` is supported).
-
-Before running the script, make sure that a `cert` folder with `certificate.key` and `certificate.crt` files exists in the folder where you'll run the following command (For `Evercam` we already have certificates on `zoho vault`).
-
-```bash
-bash <(wget -qO- https://evercam-public-assets.s3.eu-west-1.amazonaws.com/ex_nvr/docker-deploy.sh)
-```
-
-The script will prompt you for some configuration with default values.
-
-In the following steps, we'll explain in details what the script does
-
 ## Dependencies
 
 Make sure that `docker` and `docker compose plugin` are installed on your target machine.
@@ -32,27 +18,21 @@ The docker images are saved in Github container registry `ghcr.io` and publicly 
 docker pull ghcr.io/evercam/ex_nvr:latest
 ```
 
-## Which image to use
-
-Currently there's two different tags available for `ex_nvr` images, `v*` and `v*-armv7` where `*` represent a version number (e.g. `0.1.1`), the first is for `arm64/v8` and `amd64` machines and the latter for `arm/v7`.
-
-Update `docker-compose.yml` file to use the appropriate image.
-
 ## HTTPS
 
-If `https` is enabled and it should be, we'll need a private key and a certificate. Generating this files is out of the scope of this guide. However, there's many ways to generate this certificates, like self signed certificates (not recommended for production) or using a tool like [`let's encrypt`](https://letsencrypt.org/).
+If `https` is desired, we need to provide an SSL certificate: a public and private key. Generating this files is out of the scope of this guide. However, there's many ways to generate this certificates, like self signed certificates (not recommended for production) or using a tool like [`let's encrypt`](https://letsencrypt.org/).
 
 In this guide, we assume the files are called `certificate.key` for the key, and `certificate.crt` for the certificate.
 
 ## Prepare volumes
 
-By default any data written to a docker container will be lost when the container is stopped, to preserve the data you need volumes. In this guide we suppose that we have a hard drive mounted at `/data`.
+By default any data written to a docker container will be lost when the container is stopped, to preserve the data you need volumes. We suppose that we have a hard drive mounted at `/media/hdd`.
 
-* Create the needed folders
+* Create the database and cert folders
   ```bash
-  sudo mkdir /data/ex_nvr
-  cd /data/ex_nvr
-  sudo mkdir database recordings cert
+  sudo mkdir /media/hdd
+  cd /media/hdd/ex_nvr
+  sudo mkdir database cert
   ```
 
 * Copy the certificates (needed for https) to the `cert` folder
@@ -61,9 +41,9 @@ By default any data written to a docker container will be lost when the containe
   ```
   If you don't plan to use `https`, you can skip this step
 
-* Make the `ex_nvr` user the owner of the *ex_nvr* folder
+* Make the `ex_nvr` the owner of the */data* folder
   ```bash
-  sudo chown -R nobody:nogroup /data/ex_nvr
+  sudo chown -R nobody:nogroup /media/hdd/ex_nvr
   ```
 
 ## Environment variables

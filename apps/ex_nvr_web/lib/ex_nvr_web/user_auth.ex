@@ -293,8 +293,9 @@ defmodule ExNVRWeb.UserAuth do
   Used for routes that require a webhook token.
   """
   def require_webhook_token(conn, _opts) do
-    if (token = fetch_token_from_headers_or_query_params(conn, "token")) &&
-         Accounts.verify_webhook_token(token) do
+    token = fetch_token_from_headers_or_query_params(conn, "token")
+
+    if token && Accounts.verify_webhook_token(token) do
       conn
     else
       unauthorized(conn)

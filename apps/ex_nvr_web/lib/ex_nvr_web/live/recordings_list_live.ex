@@ -183,6 +183,6 @@ defmodule ExNVRWeb.RecordingListLive do
   defp format_date(date, timezone) do
     date
     |> DateTime.shift_zone!(timezone)
-    |> Calendar.strftime("%b %d, %Y %H:%M:%S")
+    |> Calendar.strftime("%b %d, %Y %H:%M:%S %Z")
   end
 end

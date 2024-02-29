@@ -92,12 +92,12 @@ defmodule ExNVR.Recordings.Snapshooter do
   end
 
   defp get_parameter_sets(%H264{stream_structure: {_avc, dcr}}) do
-    %{spss: spss, ppss: ppss} = H264.DecoderConfigurationRecord.parse(dcr)
+    %{spss: spss, ppss: ppss} = H264.Parser.DecoderConfigurationRecord.parse(dcr)
     Enum.map_join(spss ++ ppss, &(<<0, 0, 0, 1>> <> &1))
   end
 
   defp get_parameter_sets(%H265{stream_structure: {_hevc, dcr}}) do
-    %{vpss: vpss, spss: spss, ppss: ppss} = H265.DecoderConfigurationRecord.parse(dcr)
+    %{vpss: vpss, spss: spss, ppss: ppss} = H265.Parser.DecoderConfigurationRecord.parse(dcr)
     Enum.map_join(vpss ++ spss ++ ppss, &(<<0, 0, 0, 1>> <> &1))
   end
 

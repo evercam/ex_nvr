@@ -29,7 +29,7 @@ defmodule ExNVRWeb.API.RemoteStorageController do
     end
   end
 
-  def remote_storage_plug(%Conn{} = conn, opts) do
+  def remote_storage_plug(%Conn{} = conn, _opts) do
     remote_storage_id = conn.path_params["id"]
 
     case RemoteStorages.get(remote_storage_id) do
