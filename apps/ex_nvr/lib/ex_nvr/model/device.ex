@@ -6,7 +6,7 @@ defmodule ExNVR.Model.Device do
   import Ecto.Query
 
   alias Ecto.Changeset
-  alias ExNVR.Model.SnapshotConfig
+  alias ExNVR.Model.Device.SnapshotConfig
 
   @states [:stopped, :recording, :failed]
   @camera_vendors ["HIKVISION", "Milesight Technology Co.,Ltd.", "AXIS"]
@@ -240,6 +240,15 @@ defmodule ExNVR.Model.Device do
   @spec lpr_thumbnails_dir(t()) :: Path.t()
   def lpr_thumbnails_dir(device) do
     Path.join(thumbnails_dir(device), "lpr")
+  end
+
+  @spec snapshot_config(t()) :: map()
+  def snapshot_config(%{snapshot_config: snapshot_config}) do
+    {:ok, schedule} = SnapshotConfig.parse_schedule(snapshot_config.schedule)
+
+    snapshot_config
+    |> Map.take([:enabled, :remote_storage, :upload_interval])
+    |> Map.put(:schedule, schedule)
   end
 
   def filter(query \\ __MODULE__, params) do

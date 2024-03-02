@@ -34,7 +34,7 @@ defmodule ExNVR.RemoteStorages.Store.HTTP do
 
   @impl true
   def save_snapshot(device, snapshot, timestamp, opts) do
-    filename = Calendar.strftime(timestamp, "#{device.id}_%Y-%m-%dT%H:%M:%S:000.jpeg")
+    filename = "#{DateTime.to_unix(timestamp)}.jpeg"
 
     file_part =
       Multipart.Part.file_content_field("", snapshot, "file", [], filename: filename)

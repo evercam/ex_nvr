@@ -1,4 +1,4 @@
-defmodule ExNVR.Model.SnapshotConfig do
+defmodule ExNVR.Model.Device.SnapshotConfig do
   use Ecto.Schema
 
   import Ecto.Changeset
@@ -108,7 +108,7 @@ defmodule ExNVR.Model.SnapshotConfig do
     end
   end
 
-  defp parse_schedule(schedule) do
+  def parse_schedule(schedule) do
     schedule
     |> Enum.reduce_while({:ok, %{}}, fn {day_of_week, time_intervals}, {:ok, acc} ->
       case parse_day_schedule(time_intervals) do

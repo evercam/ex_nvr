@@ -14,9 +14,9 @@ defmodule ExNVR.RemoteStorages.Store do
               opts :: Keyword.t()
             ) :: :ok | {:error, any()}
 
-  def save_snapshot(device, snapshot, timestamp, opts),
-    do: impl(opts[:type]).save_snapshot(device, snapshot, timestamp, opts)
+  def save_snapshot(remote_storage, device, snapshot, timestamp, opts),
+    do: impl(remote_storage).save_snapshot(device, snapshot, timestamp, opts)
 
-  defp impl(:s3), do: S3
-  defp impl(:http), do: HTTP
+  defp impl(%{type: :s3}), do: S3
+  defp impl(%{type: :http}), do: HTTP
 end

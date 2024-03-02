@@ -29,7 +29,7 @@ defmodule ExNVR.DeviceSupervisor do
       {ExNVR.DiskMonitor, params},
       {Main, params},
       {ExNVR.BIF.GeneratorServer, params},
-      {ExNVR.RemoteStorages.SnapshotUploader, params}
+      {ExNVR.Devices.SnapshotUploader, params}
     ]
 
     children =

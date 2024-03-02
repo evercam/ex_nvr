@@ -32,15 +32,12 @@ defmodule ExNVR.RemoteStorages.Store.S3 do
     |> S3.put_object(key, snapshot, content_type: "image/jpeg")
     |> ExAws.request(opts)
     |> case do
-      {:ok, _} ->
-        :ok
-
-      error ->
-        error
+      {:ok, _} -> :ok
+      error -> error
     end
   end
 
   defp build_snapshot_key(device_id, timestamp) do
-    Calendar.strftime(timestamp, "#{device_id}/%Y/%m/%d/%H/%M_%S_000.jpeg")
+    Calendar.strftime(timestamp, "ex_nvr/#{device_id}/%Y/%m/%d/%H/%M_%S_000.jpeg")
   end
 end
