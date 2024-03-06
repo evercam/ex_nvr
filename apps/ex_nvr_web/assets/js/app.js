@@ -22,6 +22,7 @@ import { Socket } from "phoenix"
 import { LiveSocket } from "phoenix_live_view"
 import topbar from "../vendor/topbar"
 import createTimeline, { updateTimelineSegments } from "./timeline"
+import { trackSelectedSlots } from "./scheduler"
 import "flowbite/dist/flowbite.phoenix"
 import Hls from "hls.js"
 
@@ -78,6 +79,11 @@ let Hooks = {
             updateTimelineSegments(this.el)
         },
     },
+    Scheduler: {
+        mounted() {
+            trackSelectedSlots(this.el)
+        },
+    }
 }
 
 let csrfToken = document
