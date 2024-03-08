@@ -4,7 +4,7 @@ defmodule ExNVR.RemoteStoragesFixtures do
   entities via the `ExNVR.RemoteStorages` context.
   """
 
-  alias ExNVR.Model.RemoteStorage
+  alias ExNVR.RemoteStorage
 
   @spec valid_remote_storage_name() :: binary()
   def valid_remote_storage_name(),

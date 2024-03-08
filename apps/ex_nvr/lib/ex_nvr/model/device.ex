@@ -6,6 +6,7 @@ defmodule ExNVR.Model.Device do
   import Ecto.Query
 
   alias Ecto.Changeset
+  alias ExNVR.Model.Device.SnapshotConfig
 
   @states [:stopped, :recording, :failed]
   @camera_vendors ["HIKVISION", "Milesight Technology Co.,Ltd.", "AXIS"]
@@ -159,7 +160,6 @@ defmodule ExNVR.Model.Device do
     field :type, Ecto.Enum, values: [:ip, :file], default: :ip
     field :timezone, :string, default: "UTC"
     field :state, Ecto.Enum, values: @states, default: :recording
-
     field :vendor, :string
     field :mac, :string
     field :url, :string
@@ -168,6 +168,7 @@ defmodule ExNVR.Model.Device do
     embeds_one :credentials, Credentials, source: :credentials, on_replace: :update
     embeds_one :stream_config, StreamConfig, source: :config, on_replace: :update
     embeds_one :settings, Settings, on_replace: :update
+    embeds_one :snapshot_config, SnapshotConfig, on_replace: :update
 
     timestamps(type: :utc_datetime_usec)
   end
@@ -241,6 +242,15 @@ defmodule ExNVR.Model.Device do
     Path.join(thumbnails_dir(device), "lpr")
   end
 
+  @spec snapshot_config(t()) :: map()
+  def snapshot_config(%{snapshot_config: snapshot_config}) do
+    {:ok, schedule} = SnapshotConfig.parse_schedule(snapshot_config.schedule)
+
+    snapshot_config
+    |> Map.take([:enabled, :remote_storage, :upload_interval])
+    |> Map.put(:schedule, schedule)
+  end
+
   def filter(query \\ __MODULE__, params) do
     Enum.reduce(params, query, fn
       {:state, value}, q when is_atom(value) -> where(q, [d], d.state == ^value)
@@ -258,6 +268,7 @@ defmodule ExNVR.Model.Device do
     |> Changeset.cast(params, [:name, :type, :timezone, :state, :vendor, :mac, :url, :model])
     |> Changeset.cast_embed(:credentials)
     |> Changeset.cast_embed(:settings, required: true)
+    |> Changeset.cast_embed(:snapshot_config)
     |> common_config()
   end
 
@@ -266,6 +277,7 @@ defmodule ExNVR.Model.Device do
     |> Changeset.cast(params, [:name, :timezone, :state, :vendor, :mac, :url, :model])
     |> Changeset.cast_embed(:credentials)
     |> Changeset.cast_embed(:settings, required: true, with: &Settings.update_changeset/2)
+    |> Changeset.cast_embed(:snapshot_config)
     |> common_config()
   end
 

@@ -1,8 +1,9 @@
 defmodule ExNVRWeb.RemoteStorageListLive do
   @moduledoc false
 
-  alias ExNVR.RemoteStorages
   use ExNVRWeb, :live_view
+
+  alias ExNVR.RemoteStorages
 
   def render(assigns) do
     ~H"""

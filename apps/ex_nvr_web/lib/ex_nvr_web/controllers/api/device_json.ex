@@ -15,7 +15,7 @@ defmodule ExNVRWeb.API.DeviceJSON do
       :user ->
         device
         |> Map.from_struct()
-        |> Map.drop([:__meta__, :stream_config, :credentials, :settings])
+        |> Map.drop([:__meta__, :stream_config, :credentials, :settings, :snapshot_config])
 
       :admin ->
         device
@@ -24,6 +24,7 @@ defmodule ExNVRWeb.API.DeviceJSON do
         |> Map.put(:stream_config, Map.from_struct(device.stream_config))
         |> Map.put(:credentials, Map.from_struct(device.credentials))
         |> Map.put(:settings, Map.from_struct(device.settings))
+        |> Map.put(:snapshot_config, Map.from_struct(device.snapshot_config))
     end
   end
 end

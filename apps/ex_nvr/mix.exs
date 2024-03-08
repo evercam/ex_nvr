@@ -68,8 +68,12 @@ defmodule ExNVR.MixProject do
       {:connection, "~> 1.1.0"},
       {:tzdata, "~> 1.1"},
       {:turbojpeg, "~> 0.4.0"},
+      {:ex_aws, "~> 2.5"},
+      {:ex_aws_s3, "~> 2.5"},
       {:flop, "~> 0.22.1"},
       {:soap, github: "gBillal/soap", branch: "parse-attributes"},
+      {:req, "~> 0.4.0"},
+      {:multipart, "~> 0.4.0"},
       {:faker, "~> 0.17", only: :test},
       {:bypass, "~> 2.1", only: :test}
     ]

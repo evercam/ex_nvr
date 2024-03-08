@@ -3,7 +3,7 @@ defmodule ExNVRWeb.RemoteStorageLive do
 
   use ExNVRWeb, :live_view
 
-  alias ExNVR.Model.RemoteStorage
+  alias ExNVR.RemoteStorage
   alias ExNVR.RemoteStorages
 
   def render(assigns) do

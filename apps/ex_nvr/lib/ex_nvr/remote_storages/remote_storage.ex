@@ -1,4 +1,4 @@
-defmodule ExNVR.Model.RemoteStorage do
+defmodule ExNVR.RemoteStorage do
   use Ecto.Schema
 
   alias Ecto.Changeset
@@ -78,6 +78,15 @@ defmodule ExNVR.Model.RemoteStorage do
     timestamps(type: :utc_datetime_usec)
   end
 
+  def build_opts(%{s3_config: s3_config, http_config: http_config} = remote_storage) do
+    Map.merge(s3_config, http_config)
+    |> Map.from_struct()
+    |> Map.put(:url, remote_storage.url)
+    |> add_auth_type()
+    |> add_parsed_url()
+    |> Map.to_list()
+  end
+
   def create_changeset(remote_storage \\ %__MODULE__{}, params) do
     remote_storage
     |> Changeset.cast(params, [:name, :type, :url])
@@ -96,7 +105,7 @@ defmodule ExNVR.Model.RemoteStorage do
 
     changeset
     |> validate_required(type)
-    |> Changeset.validate_change(:url, fn :url, url -> validate_url(:url, url) end)
+    |> Changeset.validate_change(:url, &validate_url/2)
     |> validate_config(type)
   end
 
@@ -135,5 +144,32 @@ defmodule ExNVR.Model.RemoteStorage do
       true ->
         []
     end
+  end
+
+  defp add_auth_type(%{type: :s3} = config), do: config
+
+  defp add_auth_type(%{username: username, password: password, token: token} = config) do
+    cond do
+      not is_nil(token) ->
+        Map.put(config, :auth_type, :bearer)
+
+      not is_nil(username) && not is_nil(password) ->
+        Map.put(config, :auth_type, :basic)
+
+      true ->
+        config
+    end
+  end
+
+  defp add_parsed_url(%{type: :http} = config), do: config
+  defp add_parsed_url(%{url: nil} = config), do: config
+
+  defp add_parsed_url(config) do
+    parsed_url_parts =
+      config.url
+      |> URI.parse()
+      |> Map.take([:scheme, :host, :port])
+
+    Map.merge(config, parsed_url_parts)
   end
 end

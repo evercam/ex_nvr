@@ -7,7 +7,7 @@ defmodule ExNVR.RemoteStorages do
 
   import Ecto.Query
 
-  alias ExNVR.Model.{RemoteStorage}
+  alias ExNVR.RemoteStorage
   alias ExNVR.Repo
 
   @spec create(map()) :: {:ok, RemoteStorage.t()} | {:error, Ecto.Changeset.t()}
@@ -30,6 +30,11 @@ defmodule ExNVR.RemoteStorages do
 
   @spec get!(number()) :: RemoteStorage.t()
   def get!(id), do: Repo.get!(RemoteStorage, id)
+
+  @spec get_by(Keyword.t() | map()) :: Ecto.Schema.t() | term() | nil
+  def get_by(clauses) do
+    Repo.get_by(RemoteStorage, clauses)
+  end
 
   @spec list() :: [RemoteStorage.t()]
   def list(), do: Repo.all(RemoteStorage |> order_by([rs], rs.inserted_at))
