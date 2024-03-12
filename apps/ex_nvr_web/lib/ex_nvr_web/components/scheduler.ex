@@ -37,7 +37,7 @@ defmodule ExNVRWeb.SchedulerComponent do
       </div>
 
       <div id="task-form" class="hidden absolute bg-gray-300 dark:bg-gray-800 p-4 border border-gray-300 rounded shadow-lg z-10 ">
-        <.simple_form id="task-form-inner" for={%{}}>
+        <.simple_form id="task-form-inner" for={%{}} phx-submit="save_task">
           <div>
             <.input
               label="Task Name"
