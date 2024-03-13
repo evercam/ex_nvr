@@ -63,7 +63,7 @@ defmodule ExNVRWeb.RecordingListLiveTest do
       {:ok, lv, html} =
         conn
         |> log_in_user(user_fixture())
-        |> live(~p"/recordings?page_size=1")
+        |> live(~p"/recordings?first=1")
 
       # check pagination
       assert lv
@@ -74,14 +74,6 @@ defmodule ExNVRWeb.RecordingListLiveTest do
              |> element("a", "Next")
              |> has_element?()
 
-      assert lv
-             |> element("a", "1")
-             |> has_element?()
-
-      for page_label <- ["1", "2", "...", "4", "5", "6", "...", "9", "10"] do
-        assert html =~ page_label
-      end
-
       assert_recording_info(lv, html, device, List.last(recordings))
     end
 
@@ -91,14 +83,10 @@ defmodule ExNVRWeb.RecordingListLiveTest do
         |> log_in_user(user_fixture())
         |> live(~p"/recordings?page_size=1")
 
-      html = element(lv, "a", "2") |> render_click(%{page_size: 1})
-
-      for page_label <- ["1", "2", "...", "4", "5", "6", "...", "9", "10"] do
-        assert html =~ page_label
-      end
+      html = element(lv, "a", "Next") |> render_click(%{last: 1})
 
       # check recording
-      recording = Enum.at(recordings, length(recordings) - 2)
+      recording = Enum.at(recordings, 0)
       assert_recording_info(lv, html, device, recording)
     end
 
@@ -240,7 +228,7 @@ defmodule ExNVRWeb.RecordingListLiveTest do
       {:ok, lv, html} =
         logged_in_conn
         |> live(
-          ~p"/recordings?page_size=1&order_by[]=device_name&order_by[]=start_date&order_by[]=end_date&order_directions[]=asc&order_directions[]=desc"
+          ~p"/recordings?first=1&order_by[]=device_name&order_by[]=start_date&order_by[]=end_date&order_directions[]=asc&order_directions[]=desc"
         )
 
       assert_recording_info(lv, html, device, List.last(recordings))
@@ -249,7 +237,7 @@ defmodule ExNVRWeb.RecordingListLiveTest do
       {:ok, lv, html} =
         logged_in_conn
         |> live(
-          ~p"/recordings?page_size=1&order_by[]=start_date&order_by[]=device_name&order_directions[]=asc&order_directions[]=asc"
+          ~p"/recordings?first=1&order_by[]=start_date&order_by[]=device_name&order_directions[]=asc&order_directions[]=asc"
         )
 
       assert_recording_info(lv, html, new_device, List.first(new_recordings))
@@ -258,7 +246,7 @@ defmodule ExNVRWeb.RecordingListLiveTest do
       {:ok, lv, html} =
         logged_in_conn
         |> live(
-          ~p"/recordings?page_size=1&order_by[]=end_date&order_by[]=device_name&order_directions[]=desc&order_directions[]=desc"
+          ~p"/recordings?first=1&order_by[]=end_date&order_by[]=device_name&order_directions[]=desc&order_directions[]=desc"
         )
 
       assert_recording_info(lv, html, new_device, List.last(new_recordings))

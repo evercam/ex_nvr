@@ -143,7 +143,21 @@ defmodule ExNVRWeb.RecordingListLive do
 
   @impl true
   def handle_event("paginate", pagination_params, socket) do
-    pagination_params = Map.merge(socket.assigns.pagination_params, pagination_params)
+    after_cursor = Map.get(pagination_params, "after-cursor", nil)
+    first = Map.get(pagination_params, "first", 100)
+    before_cursor = Map.get(pagination_params, "before-cursor", nil)
+    last = Map.get(pagination_params, "last", 100)
+
+    cursor_params =
+      if not is_nil(after_cursor) do
+        old_pagination_params = Map.drop(socket.assigns.pagination_params, ["before", "before-cursor", "last"])
+        Map.merge(old_pagination_params, %{"first" => first, "after" => after_cursor})
+      else
+        old_pagination_params = Map.drop(socket.assigns.pagination_params, ["after", "after-cursor", "first"])
+        Map.merge(old_pagination_params, %{"last" => last, "before" => before_cursor})
+      end
+
+    pagination_params = Map.merge(pagination_params, cursor_params)
 
     params =
       Map.merge(socket.assigns.filter_params, pagination_params)

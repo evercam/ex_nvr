@@ -28,10 +28,9 @@ defmodule ExNVRWeb.API.RecordingController do
       {:ok, {recordings, meta}} ->
         meta =
           Map.take(meta, [
-            :current_page,
+            :start_cursor,
             :page_size,
-            :total_count,
-            :total_pages
+            :end_cursor
           ])
 
         recordings = Enum.map(recordings, &Map.drop(&1, [:device_name, :timezone]))
