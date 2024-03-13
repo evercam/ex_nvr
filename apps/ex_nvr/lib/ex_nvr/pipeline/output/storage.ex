@@ -253,7 +253,7 @@ defmodule ExNVR.Pipeline.Output.Storage do
           state.run
           | end_date: Membrane.Time.to_datetime(segment.end_date),
             active: not end_run?
-        }
+        },
     }
   end
 

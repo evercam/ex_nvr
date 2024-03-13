@@ -7,6 +7,7 @@ defmodule ExNVR.Recordings do
   alias Ecto.Multi
   alias ExNVR.Model.{Device, Recording, Run}
   alias ExNVR.Repo
+  alias ExNVR.SystemInformation.Disks
   alias Phoenix.PubSub
 
   @recordings_topic "recordings"
@@ -23,9 +24,17 @@ defmodule ExNVR.Recordings do
         |> Map.put(:filename, recording_path(device, params) |> Path.basename())
         |> Recording.changeset()
 
+      disk_id =
+        device
+        |> maybe_get_disk_info()
+        |> case do
+          {:ok, disk} -> disk.id
+          _other -> nil
+        end
+
       Multi.new()
       |> Multi.insert(:recording, recording_changeset)
-      |> Multi.insert(:run, run, on_conflict: {:replace_all_except, [:start_date]})
+      |> Multi.insert(:run, %Run{run | disk_id: disk_id}, on_conflict: {:replace_all_except, [:start_date]})
       |> Repo.transaction()
       |> case do
         {:ok, %{recording: recording, run: run}} ->
@@ -138,5 +147,12 @@ defmodule ExNVR.Recordings do
 
   defp broadcast_recordings_event(event) do
     PubSub.broadcast(ExNVR.PubSub, @recordings_topic, {event, nil})
+  end
+
+  defp maybe_get_disk_info(%Device{settings: %Device.Settings{storage_address: storage_address}}) do
+    storage_address
+    |> Disks.list_available_disks()
+    |> List.first(%{})
+    |> Disks.create()
   end
 end
