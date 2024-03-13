@@ -5,7 +5,7 @@ defmodule ExNVRWeb.UserSettingsLive do
 
   def render(assigns) do
     ~H"""
-    <div class="grow max-w-3xl">
+    <div class="grow max-w-3xl mt-20">
       <.header class="text-center">
         Account Settings
         <:subtitle>Manage your account email address and password settings</:subtitle>
