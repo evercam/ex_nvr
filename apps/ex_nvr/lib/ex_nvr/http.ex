@@ -4,25 +4,11 @@ defmodule ExNVR.HTTP do
   @spec get(binary(), Keyword.t()) ::
           {:ok, Finch.Response.t()} | {:error, term()}
   def get(url, opts \\ []) do
-    username = opts[:username] || ""
-    password = opts[:password] || ""
+    call(:get, url, nil, opts)
+  end
 
-    opts = opts ++ [method: :get, url: url]
-
-    if username == "" or password == "" do
-      do_call(:get, url)
-    else
-      http_headers = [{"Authorization", "Basic " <> Base.encode64(username <> ":" <> password)}]
-      result = do_call(:get, url, http_headers)
-
-      with {:ok, %{status: 401} = resp} <- result,
-           {:ok, digest_header} <- build_digest_auth_header(resp, opts) do
-        do_call(:get, url, [digest_header])
-      else
-        _other ->
-          result
-      end
-    end
+  def post(url, body, opts \\ []) do
+    call(:post, url, body, opts)
   end
 
   @spec build_digest_auth_header(map(), Keyword.t()) :: {:ok, tuple()} | {:error, binary()}
@@ -30,6 +16,28 @@ defmodule ExNVR.HTTP do
     with digest_opts when is_map(digest_opts) <- digest_auth_opts(resp, opts),
          digest_header <- {"Authorization", encode_digest(digest_opts)} do
       {:ok, digest_header}
+    end
+  end
+
+  defp call(method, url, body, opts) do
+    username = opts[:username] || ""
+    password = opts[:password] || ""
+
+    opts = opts ++ [method: method, url: url]
+
+    if username == "" or password == "" do
+      do_call(method, url)
+    else
+      http_headers = [{"Authorization", "Basic " <> Base.encode64(username <> ":" <> password)}]
+      result = do_call(method, url, http_headers, body)
+
+      with {:ok, %{status: 401} = resp} <- result,
+           {:ok, digest_header} <- build_digest_auth_header(resp, opts) do
+        do_call(method, url, [digest_header], body)
+      else
+        _other ->
+          result
+      end
     end
   end
 
