@@ -18,11 +18,13 @@ defmodule ExNVR.Events do
     |> Repo.insert()
     |> case do
       {:ok, event} ->
-        device
-        |> Device.lpr_thumbnails_dir()
-        |> tap(&File.mkdir/1)
-        |> Path.join(LPR.plate_name(event))
-        |> File.write(plate_picture)
+        if plate_picture do
+          device
+          |> Device.lpr_thumbnails_dir()
+          |> tap(&File.mkdir/1)
+          |> Path.join(LPR.plate_name(event))
+          |> File.write(plate_picture)
+        end
 
         {:ok, event}
 
