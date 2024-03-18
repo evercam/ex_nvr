@@ -11,10 +11,12 @@ defmodule ExNVR.Recordings do
 
   @recordings_topic "recordings"
 
+  @type stream_type :: :low | :high
   @type error :: {:error, Ecto.Changeset.t() | File.posix()}
 
-  @spec create(Device.t(), Run.t(), map(), boolean()) :: {:ok, Recording.t(), Run.t()} | error()
-  def create(%Device{} = device, %Run{} = run, params, copy_file? \\ true) do
+  @spec create(Device.t(), Run.t() | nil, map(), boolean()) ::
+          {:ok, Recording.t(), Run.t()} | error()
+  def create(%Device{} = device, run, params, copy_file? \\ true) do
     params = if is_struct(params), do: Map.from_struct(params), else: params
 
     with :ok <- copy_file(device, params, copy_file?) do
@@ -25,7 +27,11 @@ defmodule ExNVR.Recordings do
 
       Multi.new()
       |> Multi.insert(:recording, recording_changeset)
-      |> Multi.insert(:run, run, on_conflict: {:replace_all_except, [:start_date]})
+      |> Multi.run(:run, fn _repo, _changes ->
+        if run,
+          do: Repo.insert(run, on_conflict: {:replace_all_except, [:start_date]}),
+          else: {:ok, nil}
+      end)
       |> Repo.transaction()
       |> case do
         {:ok, %{recording: recording, run: run}} ->
@@ -38,31 +44,29 @@ defmodule ExNVR.Recordings do
     end
   end
 
-  @spec index(binary()) :: [Recording.t()]
-  def index(device_id) do
-    Recording.with_device(device_id)
-    |> Repo.all()
-  end
-
   @spec list(map()) :: {:ok, {[map()], Flop.Meta.t()}} | {:error, Flop.Meta.t()}
-  def list(params \\ %{}) do
-    Recording.list_with_devices()
+  @spec list() :: {:ok, {[map()], Flop.Meta.t()}} | {:error, Flop.Meta.t()}
+  def list(params \\ %{}, stream_type \\ :high) do
+    Recording.with_type(stream_type)
+    |> Recording.list_with_devices()
     |> ExNVR.Flop.validate_and_run(params, for: Recording)
   end
 
   @spec get_recordings_between(binary(), DateTime.t(), DateTime.t(), Keyword.t()) :: [
           Recording.t()
         ]
-  def get_recordings_between(device_id, start_date, end_date, opts \\ []) do
-    start_date
-    |> Recording.between_dates(end_date, opts)
+  def get_recordings_between(device_id, stream_type \\ :high, start_date, end_date, opts \\ []) do
+    Recording.with_type(stream_type)
+    |> Recording.between_dates(start_date, end_date, opts)
     |> Recording.with_device(device_id)
     |> Repo.all()
   end
 
   @spec get(Device.t(), binary()) :: Recording.t() | nil
-  def get(%Device{id: id}, filename) do
-    Repo.one(Recording.get_query(id, filename))
+  def get(%Device{id: id}, stream_type \\ :high, filename) do
+    Recording.with_type(stream_type)
+    |> Recording.get_query(id, filename)
+    |> Repo.one()
   end
 
   # Runs
@@ -77,9 +81,10 @@ defmodule ExNVR.Recordings do
   end
 
   @spec recording_path(Device.t(), map()) :: Path.t()
-  def recording_path(device, %{start_date: start_date}) do
+  @spec recording_path(Device.t(), stream_type(), map()) :: Path.t()
+  def recording_path(device, stream_type \\ :high, %{start_date: start_date}) do
     Path.join(
-      [Device.recording_dir(device) | ExNVR.Utils.date_components(start_date)] ++
+      [Device.recording_dir(device, stream_type) | ExNVR.Utils.date_components(start_date)] ++
         ["#{DateTime.to_unix(start_date, :microsecond)}.mp4"]
     )
   end
@@ -133,7 +138,7 @@ defmodule ExNVR.Recordings do
   defp copy_file(_device, _params, false), do: :ok
 
   defp copy_file(device, params, true) do
-    File.cp(params.path, recording_path(device, params))
+    File.cp(params.path, recording_path(device, params[:stream] || :high, params))
   end
 
   defp broadcast_recordings_event(event) do

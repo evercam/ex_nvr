@@ -26,6 +26,15 @@ defmodule ExNVR.Pipeline.Output.Storage do
                 spec: Device.t(),
                 description: "The device where this video belongs"
               ],
+              stream: [
+                spec: :high | :low,
+                default: :high,
+                description: """
+                The type of the stream to store.
+                  * `high` - main stream
+                  * `low` - sub stream
+                """
+              ],
               target_segment_duration: [
                 spec: non_neg_integer(),
                 default: 60,
@@ -56,10 +65,11 @@ defmodule ExNVR.Pipeline.Output.Storage do
       |> child(:tee, Membrane.Tee.Parallel)
     ]
 
-    dest = Device.recording_dir(opts.device)
+    dest = Device.recording_dir(opts.device, opts.stream)
 
     state = %{
       device: opts.device,
+      stream: opts.stream,
       directory: dest,
       pending_segments: %{},
       segment_extension: ".mp4",
@@ -67,7 +77,8 @@ defmodule ExNVR.Pipeline.Output.Storage do
       terminating?: false,
       end_of_stream?: false,
       target_duration: opts.target_segment_duration,
-      correct_timestamp: opts.correct_timestamp
+      correct_timestamp: opts.correct_timestamp,
+      first_segment?: true
     }
 
     actions =
@@ -119,7 +130,7 @@ defmodule ExNVR.Pipeline.Output.Storage do
         state
       ) do
     state = run_from_segment(state, segment, end_run?)
-    {[], put_in(state, [:pending_segments, pad_ref], segment)}
+    {[], put_in(state, [:pending_segments, pad_ref], {segment, end_run?})}
   end
 
   # Once the sink receive end of stream and flush the segment to the filesystem
@@ -128,7 +139,7 @@ defmodule ExNVR.Pipeline.Output.Storage do
   def handle_element_end_of_stream({:sink, seg_ref}, _pad, _ctx, state) do
     {state, segment} = do_save_recording(state, seg_ref)
 
-    actions = [remove_children: seg_ref, notify_parent: {:segment_stored, segment}]
+    actions = [remove_children: seg_ref, notify_parent: {:segment_stored, state.stream, segment}]
     terminate_action = if state.terminating?, do: [terminate: :normal], else: []
 
     {actions ++ terminate_action, state}
@@ -186,17 +197,18 @@ defmodule ExNVR.Pipeline.Output.Storage do
   defp get_parser(:H265), do: %Membrane.H265.Parser{output_stream_structure: :hvc1}
 
   defp do_save_recording(state, recording_ref) do
-    {segment, state} = pop_in(state, [:pending_segments, recording_ref])
+    {{segment, end_run?}, state} = pop_in(state, [:pending_segments, recording_ref])
 
     recording = %{
       start_date: Membrane.Time.to_datetime(segment.start_date),
       end_date: Membrane.Time.to_datetime(segment.end_date),
       path: recording_path(state, segment.start_date),
+      stream: state.stream,
       device_id: state.device.id
     }
 
     # first segment has its start date adjusted
-    if is_nil(state.run.id) do
+    if state.first_segment? do
       File.rename!(
         recording_path(state, recording_ref),
         recording_path(state, segment.start_date)
@@ -209,6 +221,7 @@ defmodule ExNVR.Pipeline.Output.Storage do
 
         Membrane.Logger.info("""
         Segment saved successfully
+          Stream: #{state.stream}
           Media duration: #{duration_ms} ms
           Realtime (monotonic) duration: #{Membrane.Time.as_milliseconds(Segment.realtime_duration(segment), :round)} ms
           Wallclock duration: #{Membrane.Time.as_milliseconds(Segment.wall_clock_duration(segment), :round)} ms
@@ -220,9 +233,10 @@ defmodule ExNVR.Pipeline.Output.Storage do
         :telemetry.execute(
           @recordings_event,
           %{duration: duration_ms, size: Segment.size(segment)},
-          %{device_id: state.device.id}
+          %{device_id: state.device.id, stream: state.stream}
         )
 
+        state = %{state | first_segment?: end_run?}
         {maybe_new_run(state, run), recording}
 
       {:error, error} ->
@@ -234,6 +248,8 @@ defmodule ExNVR.Pipeline.Output.Storage do
         {maybe_new_run(state, nil), recording}
     end
   end
+
+  defp run_from_segment(%{stream: :low} = state, _segment, _end_run?), do: state
 
   defp run_from_segment(%{run: nil} = state, segment, end_run?) do
     run = %Run{

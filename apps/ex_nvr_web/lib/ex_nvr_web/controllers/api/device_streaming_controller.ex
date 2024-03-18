@@ -147,6 +147,7 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
   defp get_recordings(device, params) do
     case Recordings.get_recordings_between(
            device.id,
+           :high,
            params.start_date,
            params.end_date || @default_end_date,
            limit: 120

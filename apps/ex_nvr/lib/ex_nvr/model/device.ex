@@ -243,12 +243,19 @@ defmodule ExNVR.Model.Device do
   end
 
   @spec snapshot_config(t()) :: map()
-  def snapshot_config(%{snapshot_config: snapshot_config}) do
-    {:ok, schedule} = SnapshotConfig.parse_schedule(snapshot_config.schedule)
+  def snapshot_config(%{snapshot_config: nil}) do
+    %{enabled: false}
+  end
 
-    snapshot_config
-    |> Map.take([:enabled, :remote_storage, :upload_interval])
-    |> Map.put(:schedule, schedule)
+  def snapshot_config(%{snapshot_config: snapshot_config}) do
+    config = Map.take(snapshot_config, [:enabled, :remote_storage, :upload_interval])
+
+    if config.enabled do
+      {:ok, schedule} = SnapshotConfig.parse_schedule(snapshot_config.schedule)
+      Map.put(snapshot_config, :schedule, schedule)
+    else
+      config
+    end
   end
 
   def filter(query \\ __MODULE__, params) do
