@@ -52,9 +52,12 @@ defmodule ExNVR.Recordings do
     |> ExNVR.Flop.validate_and_run(params, for: Recording)
   end
 
-  @spec get_recordings_between(binary(), DateTime.t(), DateTime.t(), Keyword.t()) :: [
+  @spec get_recordings_between(binary(), DateTime.t(), DateTime.t()) :: [Recording.t()]
+  @spec get_recordings_between(binary(), stream_type(), DateTime.t(), DateTime.t()) :: [
           Recording.t()
         ]
+  @spec get_recordings_between(binary(), stream_type(), DateTime.t(), DateTime.t(), Keyword.t()) ::
+          [Recording.t()]
   def get_recordings_between(device_id, stream_type \\ :high, start_date, end_date, opts \\ []) do
     Recording.with_type(stream_type)
     |> Recording.between_dates(start_date, end_date, opts)

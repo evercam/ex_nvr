@@ -76,22 +76,33 @@ defmodule ExNVRWeb.API.DeviceStreamingControllerTest do
 
   describe "GET /api/devices/:device_id/snapshot" do
     setup %{device: device} do
+      bypass = Bypass.open()
+
       recording =
         recording_fixture(device, %{
           start_date: ~U(2023-06-23 20:00:00Z),
           end_date: ~U(2023-06-23 20:00:05Z)
         })
 
-      %{recording: recording}
-    end
+      low_stream_recording =
+        recording_fixture(device, %{
+          start_date: ~U(2023-06-23 20:00:00Z),
+          end_date: ~U(2023-06-23 20:00:05Z),
+          stream: :low
+        })
 
-    setup do
-      bypass = Bypass.open()
-      {:ok, bypass: bypass}
+      %{recording: recording, low_stream_recording: low_stream_recording, bypass: bypass}
     end
 
     test "Get snapshot from recorded videos", %{conn: conn, device: device, recording: recording} do
       conn = get(conn, "/api/devices/#{device.id}/snapshot?time=#{recording.start_date}")
+
+      assert conn.status == 200
+      assert get_resp_header(conn, "content-type") == ["image/jpeg; charset=utf-8"]
+    end
+
+    test "Get snapshot from recorded sub stream videos", %{conn: conn, device: device, recording: recording} do
+      conn = get(conn, "/api/devices/#{device.id}/snapshot?time=#{recording.start_date}&stream=low")
 
       assert conn.status == 200
       assert get_resp_header(conn, "content-type") == ["image/jpeg; charset=utf-8"]

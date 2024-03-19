@@ -717,6 +717,18 @@ paths:
           schema:
             type: string
             enum: [jpeg]
+        - name: stream
+          in: query
+          required: false
+          description: |
+            Get the snapshot from the main (high) or sub (low) resolution stream.
+
+            When requesting `low` resolution, It'll works if the sub stream is recorded on the requested
+            time. Not supported for live snapshot.
+          schema:
+            type: string
+            enum: [high, low]
+            default: high
       responses:
         '200':
           description: success

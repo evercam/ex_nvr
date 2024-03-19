@@ -93,7 +93,7 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
   defp serve_snapshot_from_recorded_videos(conn, %{time: time} = params) do
     device = conn.assigns.device
 
-    with [recording] <- Recordings.get_recordings_between(device.id, time, time),
+    with [recording] <- Recordings.get_recordings_between(device.id, params.stream, time, time),
          {:ok, timestamp, snapshot} <-
            Recordings.Snapshooter.snapshot(device, recording, time, method: params.method) do
       conn
@@ -200,10 +200,11 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
     types = %{
       time: :utc_datetime,
       method: {:parameterized, Ecto.Enum, Ecto.Enum.init(values: ~w(before precise)a)},
-      format: {:parameterized, Ecto.Enum, Ecto.Enum.init(values: ~w(jpeg)a)}
+      format: {:parameterized, Ecto.Enum, Ecto.Enum.init(values: ~w(jpeg)a)},
+      stream: {:parameterized, Ecto.Enum, Ecto.Enum.init(values: ~w(high low)a)}
     }
 
-    {%{method: :before, format: :jpeg, time: nil}, types}
+    {%{method: :before, format: :jpeg, time: nil, stream: :high}, types}
     |> Changeset.cast(params, Map.keys(types))
     |> Changeset.apply_action(:create)
   end
