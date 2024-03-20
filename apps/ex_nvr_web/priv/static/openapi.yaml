@@ -654,11 +654,10 @@ paths:
           description: |
             Request the main/sub stream.
 
-            `0` will return only the main stream, `1` will return only the sub-stream
+            When in playback, the `high` resolution stream is the default. 
           schema:
-            type: integer
-            minimum: 0
-            maximum: 1
+            type: string
+            enum: [high, low]
         - name: resolution
           in: query
           description: |

@@ -29,7 +29,7 @@ defmodule ExNVR.Pipelines.HlsPlaybackTest do
 
   describe "Hls playback" do
     test "playback recording", %{device: device, tmp_dir: out_dir} do
-      pid = prepare_pipeline(device, directory: out_dir)
+      pid = prepare_pipeline(device, directory: out_dir, stream: :high)
 
       ExNVR.Pipelines.HlsPlayback.start_streaming(pid)
 

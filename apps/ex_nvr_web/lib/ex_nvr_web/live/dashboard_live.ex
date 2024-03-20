@@ -344,7 +344,9 @@ defmodule ExNVRWeb.DashboardLive do
 
       true ->
         device = socket.assigns.current_device
-        current_stream = if socket.assigns.form.params["stream"] == "main_stream", do: 0, else: 1
+
+        current_stream =
+          if socket.assigns.form.params["stream"] == "main_stream", do: :high, else: :low
 
         {stream_url, poster_url} = stream_url(device, datetime, current_stream)
 

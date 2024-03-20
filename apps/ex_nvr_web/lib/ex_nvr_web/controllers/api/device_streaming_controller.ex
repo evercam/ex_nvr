@@ -20,14 +20,14 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
   def hls_stream(conn, params) do
     with {:ok, params} <- validate_hls_stream_params(params),
          query_params <- [stream_id: Utils.generate_token(), live: is_nil(params.pos)],
-         path <- start_hls_pipeline(conn.assigns.device, params, query_params[:stream_id]),
+         {:ok, path} <- start_hls_pipeline(conn.assigns.device, params, query_params[:stream_id]),
          {:ok, manifest_file} <- File.read(Path.join(path, "index.m3u8")) do
       conn
       |> put_resp_content_type("application/vnd.apple.mpegurl")
       |> send_resp(
         200,
         remove_unused_stream(manifest_file, params)
-        |> HLS.Processor.add_query_params(query_params)
+        |> HLS.Processor.add_query_params(:playlist, query_params)
       )
     end
   end
@@ -47,7 +47,10 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
 
           path
           |> File.read!()
-          |> HLS.Processor.add_query_params(stream_id: stream_id, live: params["live"])
+          |> HLS.Processor.add_query_params(:media_playlist,
+            stream_id: stream_id,
+            live: params["live"]
+          )
           |> then(&send_resp(conn, 200, &1))
         else
           send_file(conn, 200, path)
@@ -187,11 +190,14 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
   end
 
   defp validate_hls_stream_params(params) do
-    types = %{pos: :utc_datetime, stream: :integer, resolution: :integer}
+    types = %{
+      pos: :utc_datetime,
+      stream: {:parameterized, Ecto.Enum, Ecto.Enum.init(values: ~w(high low)a)},
+      resolution: :integer
+    }
 
     {%{pos: nil, stream: nil, resolution: nil}, types}
     |> Changeset.cast(params, Map.keys(types))
-    |> Changeset.validate_inclusion(:stream, [0, 1])
     |> Changeset.validate_inclusion(:resolution, [240, 480, 640, 720, 1080])
     |> Changeset.apply_action(:create)
   end
@@ -265,37 +271,41 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
 
   defp start_hls_pipeline(device, %{pos: nil}, stream_id) do
     ExNVRWeb.HlsStreamingMonitor.register(stream_id, fn -> :ok end)
-    Path.join(Utils.hls_dir(device.id), "live")
+    {:ok, Path.join(Utils.hls_dir(device.id), "live")}
   end
 
   defp start_hls_pipeline(device, params, stream_id) do
-    path =
-      device.id
-      |> Utils.hls_dir()
-      |> Path.join(stream_id)
+    stream = params.stream || :high
 
-    pipeline_options = [
-      device: device,
-      start_date: params.pos,
-      resolution: params.resolution,
-      directory: path,
-      segment_name_prefix: UUID.uuid4()
-    ]
+    if Recordings.exists?(device, stream, params.pos) do
+      path = Utils.hls_dir(device.id) |> Path.join(stream_id)
 
-    {:ok, _, pid} = HlsPlayback.start(pipeline_options)
-    ExNVRWeb.HlsStreamingMonitor.register(stream_id, fn -> HlsPlayback.stop_streaming(pid) end)
+      pipeline_options = [
+        device: device,
+        start_date: params.pos,
+        resolution: params.resolution,
+        stream: stream,
+        directory: path,
+        segment_name_prefix: UUID.uuid4()
+      ]
 
-    :ok = HlsPlayback.start_streaming(pid)
+      {:ok, _, pid} = HlsPlayback.start(pipeline_options)
+      ExNVRWeb.HlsStreamingMonitor.register(stream_id, fn -> HlsPlayback.stop_streaming(pid) end)
 
-    path
+      :ok = HlsPlayback.start_streaming(pid)
+
+      {:ok, path}
+    else
+      {:error, :not_found}
+    end
   end
 
   defp remove_unused_stream(manifest_file, %{pos: pos}) when not is_nil(pos), do: manifest_file
   defp remove_unused_stream(manifest_file, %{stream: nil}), do: manifest_file
 
-  defp remove_unused_stream(manifest_file, %{stream: 0}),
+  defp remove_unused_stream(manifest_file, %{stream: :high}),
     do: HLS.Processor.delete_stream(manifest_file, "live_sub_stream")
 
-  defp remove_unused_stream(manifest_file, %{stream: 1}),
+  defp remove_unused_stream(manifest_file, %{stream: :low}),
     do: HLS.Processor.delete_stream(manifest_file, "live_main_stream")
 end

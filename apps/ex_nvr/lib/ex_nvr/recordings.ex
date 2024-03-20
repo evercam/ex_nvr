@@ -66,10 +66,20 @@ defmodule ExNVR.Recordings do
   end
 
   @spec get(Device.t(), binary()) :: Recording.t() | nil
+  @spec get(Device.t(), stream_type(), binary()) :: Recording.t() | nil
   def get(%Device{id: id}, stream_type \\ :high, filename) do
     Recording.with_type(stream_type)
     |> Recording.get_query(id, filename)
     |> Repo.one()
+  end
+
+  @spec exists?(Device.t(), DateTime.t()) :: boolean()
+  @spec exists?(Device.t(), stream_type(), DateTime.t()) :: boolean()
+  def exists?(%Device{id: id}, stream_type \\ :high, date) do
+    Recording.with_device(id)
+    |> Recording.with_type(stream_type)
+    |> Recording.between_dates(date, date, [])
+    |> Repo.exists?()
   end
 
   # Runs
