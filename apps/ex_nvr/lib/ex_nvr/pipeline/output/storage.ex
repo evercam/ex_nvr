@@ -77,8 +77,7 @@ defmodule ExNVR.Pipeline.Output.Storage do
       terminating?: false,
       end_of_stream?: false,
       target_duration: opts.target_segment_duration,
-      correct_timestamp: opts.correct_timestamp,
-      first_segment?: true
+      correct_timestamp: opts.correct_timestamp
     }
 
     actions =
@@ -130,7 +129,7 @@ defmodule ExNVR.Pipeline.Output.Storage do
         state
       ) do
     state = run_from_segment(state, segment, end_run?)
-    {[], put_in(state, [:pending_segments, pad_ref], {segment, end_run?})}
+    {[], put_in(state, [:pending_segments, pad_ref], segment)}
   end
 
   # Once the sink receive end of stream and flush the segment to the filesystem
@@ -197,7 +196,7 @@ defmodule ExNVR.Pipeline.Output.Storage do
   defp get_parser(:H265), do: %Membrane.H265.Parser{output_stream_structure: :hvc1}
 
   defp do_save_recording(state, recording_ref) do
-    {{segment, end_run?}, state} = pop_in(state, [:pending_segments, recording_ref])
+    {segment, state} = pop_in(state, [:pending_segments, recording_ref])
 
     recording = %{
       start_date: Membrane.Time.to_datetime(segment.start_date),
@@ -208,7 +207,7 @@ defmodule ExNVR.Pipeline.Output.Storage do
     }
 
     # first segment has its start date adjusted
-    if state.first_segment? do
+    if is_nil(state.run.id) do
       File.rename!(
         recording_path(state, recording_ref),
         recording_path(state, segment.start_date)
@@ -236,7 +235,6 @@ defmodule ExNVR.Pipeline.Output.Storage do
           %{device_id: state.device.id, stream: state.stream}
         )
 
-        state = %{state | first_segment?: end_run?}
         {maybe_new_run(state, run), recording}
 
       {:error, error} ->
@@ -249,13 +247,12 @@ defmodule ExNVR.Pipeline.Output.Storage do
     end
   end
 
-  defp run_from_segment(%{stream: :low} = state, _segment, _end_run?), do: state
-
   defp run_from_segment(%{run: nil} = state, segment, end_run?) do
     run = %Run{
       start_date: Membrane.Time.to_datetime(segment.start_date),
       end_date: Membrane.Time.to_datetime(segment.end_date),
       device_id: state.device.id,
+      stream: state.stream,
       active: !end_run?
     }
 

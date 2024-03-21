@@ -14,9 +14,9 @@ defmodule ExNVR.Recordings do
   @type stream_type :: :low | :high
   @type error :: {:error, Ecto.Changeset.t() | File.posix()}
 
-  @spec create(Device.t(), Run.t() | nil, map(), boolean()) ::
+  @spec create(Device.t(), Run.t(), map(), boolean()) ::
           {:ok, Recording.t(), Run.t()} | error()
-  def create(%Device{} = device, run, params, copy_file? \\ true) do
+  def create(%Device{} = device, %Run{} = run, params, copy_file? \\ true) do
     params = if is_struct(params), do: Map.from_struct(params), else: params
 
     with :ok <- copy_file(device, params, copy_file?) do
@@ -27,11 +27,7 @@ defmodule ExNVR.Recordings do
 
       Multi.new()
       |> Multi.insert(:recording, recording_changeset)
-      |> Multi.run(:run, fn _repo, _changes ->
-        if run,
-          do: Repo.insert(run, on_conflict: {:replace_all_except, [:start_date]}),
-          else: {:ok, nil}
-      end)
+      |> Multi.insert(:run, run, on_conflict: {:replace_all_except, [:start_date]})
       |> Repo.transaction()
       |> case do
         {:ok, %{recording: recording, run: run}} ->
@@ -44,6 +40,7 @@ defmodule ExNVR.Recordings do
     end
   end
 
+  @spec list(map(), stream_type()) :: {:ok, {[map()], Flop.Meta.t()}} | {:error, Flop.Meta.t()}
   @spec list(map()) :: {:ok, {[map()], Flop.Meta.t()}} | {:error, Flop.Meta.t()}
   @spec list() :: {:ok, {[map()], Flop.Meta.t()}} | {:error, Flop.Meta.t()}
   def list(params \\ %{}, stream_type \\ :high) do
@@ -83,9 +80,10 @@ defmodule ExNVR.Recordings do
   end
 
   # Runs
+  @spec list_runs(map() | Keyword.t(), stream_type()) :: [Run.t()]
   @spec list_runs(map() | Keyword.t()) :: [Run.t()]
-  def list_runs(params) do
-    Repo.all(Run.filter(params))
+  def list_runs(params, stream_type \\ :high) do
+    Run.with_type(stream_type) |> Run.filter(params) |> Repo.all()
   end
 
   @spec deactivate_runs(Device.t()) :: {non_neg_integer(), nil | term()}

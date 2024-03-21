@@ -112,7 +112,7 @@ defmodule ExNVR.Devices do
     end
   end
 
-  defp create_device_directories(device) do
+  def create_device_directories(device) do
     File.mkdir_p!(Device.base_dir(device))
     File.mkdir_p!(Device.recording_dir(device))
     File.mkdir_p!(Device.recording_dir(device, :low))

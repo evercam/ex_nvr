@@ -523,6 +523,7 @@ paths:
       tags:
         - Recording
       parameters:
+        - $ref: '#/components/parameters/stream_type'
         - $ref: '#/components/parameters/filters'
         - $ref: '#/components/parameters/page'
         - $ref: '#/components/parameters/page_size'
@@ -553,6 +554,7 @@ paths:
         - Recording
       parameters:
         - $ref: '#/components/parameters/device_id'
+        - $ref: '#/components/parameters/stream_type'
         - name: start_date
           in: query
           required: false
@@ -596,6 +598,7 @@ paths:
       parameters:
         - $ref: '#/components/parameters/device_id'
         - $ref: '#/components/parameters/recording_id'
+        - $ref: '#/components/parameters/stream_type'
       responses:
         '200':
           description: Success
@@ -640,6 +643,7 @@ paths:
         - Media Streaming
       parameters:
         - $ref: '#/components/parameters/device_id'
+        - $ref: '#/components/parameters/stream_type'
         - name: pos
           in: query
           description: |
@@ -649,15 +653,6 @@ paths:
           schema:
             type: string
             format: date-time
-        - name: stream
-          in: query
-          description: |
-            Request the main/sub stream.
-
-            When in playback, the `high` resolution stream is the default. 
-          schema:
-            type: string
-            enum: [high, low]
         - name: resolution
           in: query
           description: |
@@ -679,7 +674,7 @@ paths:
     get:
       summary: Get snapshot
       description: |
-        Get a snapshot from live feed or the recorded videos
+        Get a snapshot from live feed or the recorded videos.
       operationId: getSnapshot
       tags:
         - Media Streaming
@@ -716,18 +711,7 @@ paths:
           schema:
             type: string
             enum: [jpeg]
-        - name: stream
-          in: query
-          required: false
-          description: |
-            Get the snapshot from the main (high) or sub (low) resolution stream.
-
-            When requesting `low` resolution, It'll works if the sub stream is recorded on the requested
-            time. Not supported for live snapshot.
-          schema:
-            type: string
-            enum: [high, low]
-            default: high
+        - $ref: '#/components/parameters/stream_type'
       responses:
         '200':
           description: success
@@ -1213,15 +1197,6 @@ components:
           format: path
           description: The Path of the file location to be used as a streaming source (Only when Device type is file)
   parameters:
-    user_id:
-      name: user_id
-      description: The id of the user
-      in: path
-      required: true
-      schema:
-        type: string
-        format: uuid
-      example: 1d7c7f47-63c1-4bef-91a6-124cbaf3ecea
     remote_storage_id:
       name: remote_storage_id
       description: The id of the remote_storage
@@ -1247,6 +1222,15 @@ components:
       schema:
         type: string
       example: 11236565645.mp4
+    stream_type:
+      name: stream
+      in: query
+      required: false
+      description: Stream type.
+      schema:
+        type: string
+        enum: [high, low]
+        default: high
     filters:
       name: filters
       in: query
@@ -1319,6 +1303,15 @@ components:
       description: The size of the requested page.
       schema:
         type: integer
+    user_id:
+      name: user_id
+      description: The id of the user
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      example: 1d7c7f47-63c1-4bef-91a6-124cbaf3ecea
   responses:
     BadArg:
       description: Bad Arguments
