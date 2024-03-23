@@ -129,7 +129,7 @@ defmodule ExNVRWeb.API.DeviceStreamingControllerTest do
       conn: conn,
       tmp_dir: tmp_dir
     } do
-      device = device_fixture(%{state: :failed, settings: %{storage_address: tmp_dir}})
+      device = camera_device_fixture(tmp_dir, %{state: :failed})
 
       conn
       |> get("/api/devices/#{device.id}/snapshot")
@@ -142,12 +142,11 @@ defmodule ExNVRWeb.API.DeviceStreamingControllerTest do
       bypass: bypass
     } do
       device =
-        device_fixture(%{
+        camera_device_fixture(tmp_dir, %{
           stream_config: %{
             stream_uri: "rtsp://localhost:8541",
             snapshot_uri: "http://localhost:#{bypass.port}/snapshot"
-          },
-          settings: %{storage_address: tmp_dir}
+          }
         })
 
       Bypass.expect(bypass, "GET", "/snapshot", fn conn ->

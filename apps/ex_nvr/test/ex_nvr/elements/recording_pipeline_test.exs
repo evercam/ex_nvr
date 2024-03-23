@@ -14,9 +14,7 @@ defmodule ExNVR.Elements.RecordingPipelineTest do
   @moduletag :tmp_dir
 
   setup %{tmp_dir: tmp_dir} do
-    device = device_fixture(%{settings: %{storage_address: tmp_dir}})
-
-    {:ok, device: device}
+    {:ok, device: camera_device_fixture(tmp_dir)}
   end
 
   describe "Read multiple avc1 recordings as one file" do

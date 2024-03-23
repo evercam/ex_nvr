@@ -10,8 +10,7 @@ defmodule ExNVR.RecordingTest do
   @moduletag :tmp_dir
 
   setup ctx do
-    device = device_fixture(%{settings: %{storage_address: ctx.tmp_dir}})
-    %{device: device}
+    %{device: camera_device_fixture(ctx.tmp_dir)}
   end
 
   test "delete multiple recordings", %{device: device} do

@@ -38,7 +38,7 @@ defmodule ExNVRWeb.RecordingListLiveTest do
 
   describe "Recording list page" do
     setup %{device: device, tmp_dir: tmp_dir} do
-      new_device = device_fixture(%{name: "Device_yxz", settings: %{storage_address: tmp_dir}})
+      new_device = camera_device_fixture(tmp_dir, %{name: "Device_yxz"})
 
       %{
         recordings:
@@ -149,7 +149,7 @@ defmodule ExNVRWeb.RecordingListLiveTest do
     end
 
     test "Filter recordings by device with no recordings", %{conn: conn, tmp_dir: tmp_dir} do
-      new_device = device_fixture(%{settings: %{storage_address: tmp_dir}})
+      new_device = camera_device_fixture(tmp_dir)
 
       {:ok, lv, _html} =
         conn

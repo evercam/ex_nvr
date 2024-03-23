@@ -47,7 +47,7 @@ defmodule ExNVRWeb.API.DeviceControllerTest do
 
   describe "PUT/PATCH /api/devices/:id" do
     setup ctx do
-      %{device: device_fixture(%{settings: %{storage_address: ctx.tmp_dir}})}
+      %{device: camera_device_fixture(ctx.tmp_dir)}
     end
 
     test "update a device", %{conn: conn, device: device} do
@@ -88,7 +88,7 @@ defmodule ExNVRWeb.API.DeviceControllerTest do
     test "get all devices (existing devices)", %{conn: conn, tmp_dir: tmp_dir} do
       devices =
         Enum.map(1..10, fn _ ->
-          device_fixture(%{settings: %{storage_address: tmp_dir}})
+          camera_device_fixture(tmp_dir)
         end)
 
       total_devices = devices |> length()
@@ -104,7 +104,7 @@ defmodule ExNVRWeb.API.DeviceControllerTest do
 
   describe "GET /api/devices/:id" do
     setup ctx do
-      %{device: device_fixture(%{settings: %{storage_address: ctx.tmp_dir}})}
+      %{device: camera_device_fixture(ctx.tmp_dir)}
     end
 
     test "get device", %{conn: conn, device: device} do
@@ -146,7 +146,7 @@ defmodule ExNVRWeb.API.DeviceControllerTest do
 
   describe "DELETE /api/devices/:id" do
     setup ctx do
-      %{device: device_fixture(%{settings: %{storage_address: ctx.tmp_dir}})}
+      %{device: camera_device_fixture(ctx.tmp_dir)}
     end
 
     test "Delete device", %{conn: conn, device: device} do

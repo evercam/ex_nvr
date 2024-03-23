@@ -80,9 +80,7 @@ defmodule ExNVRWeb.ConnCase do
 
   def maybe_create_device(tags) do
     if Map.has_key?(tags, :device) do
-      device =
-        ExNVR.DevicesFixtures.device_fixture(%{settings: %{storage_address: tags[:tmp_dir]}})
-
+      device = ExNVR.DevicesFixtures.camera_device_fixture(tags[:tmp_dir])
       %{device: device}
     else
       %{}

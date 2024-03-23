@@ -24,7 +24,7 @@ defmodule ExNVRWeb.DeviceLiveTest do
     end
 
     test "render update device page", %{conn: conn, tmp_dir: tmp_dir} do
-      device = device_fixture(%{settings: %{storage_address: tmp_dir}})
+      device = camera_device_fixture(tmp_dir)
       {:ok, _lv, html} = live(conn, ~p"/devices/#{device.id}")
 
       assert html =~ "Update a device"
@@ -57,30 +57,21 @@ defmodule ExNVRWeb.DeviceLiveTest do
           "device" => %{
             "name" => "My Device",
             "type" => "file",
-            "settings" => %{"storage_address" => "/tmp"}
+            "storage_config" => %{"address" => "/tmp"}
           }
         })
         |> render_submit()
         |> follow_redirect(conn, ~p"/devices")
 
-      devices = Devices.list()
-      assert length(devices) == 1
-
-      [created_device] = devices
+      assert [created_device] = Devices.list()
 
       assert created_device.name == "My Device"
       assert created_device.type == :file
-      assert created_device.settings.storage_address == "/tmp"
+      assert created_device.storage_config.address == "/tmp"
       assert created_device.stream_config.filename == "big_buck.mp4"
 
-      uploaded_file_path =
-        Path.join([
-          Device.base_dir(created_device),
-          created_device.stream_config.filename
-        ])
-
-      assert File.exists?(uploaded_file_path)
-      File.rm!(uploaded_file_path)
+      assert File.exists?(Device.file_location(created_device))
+      File.rm(Device.file_location(created_device))
 
       assert Phoenix.Flash.get(conn.assigns.flash, :info) == "Device created successfully"
     end
@@ -125,8 +116,8 @@ defmodule ExNVRWeb.DeviceLiveTest do
             "stream_config" => %{
               "stream_uri" => "rtsp://localhost:554"
             },
-            "settings" => %{
-              "storage_address" => "/tmp"
+            "storage_config" => %{
+              "address" => "/tmp"
             }
           }
         })
@@ -146,8 +137,8 @@ defmodule ExNVRWeb.DeviceLiveTest do
             "name" => "My Device",
             "type" => "ip",
             "stream_config" => %{"stream_uri" => "rtsp://"},
-            "settings" => %{
-              "storage_address" => "/tmp"
+            "storage_config" => %{
+              "address" => "/tmp"
             }
           }
         })
@@ -161,8 +152,8 @@ defmodule ExNVRWeb.DeviceLiveTest do
   describe "Update a device" do
     setup ctx do
       %{
-        device: device_fixture(%{settings: %{storage_address: ctx.tmp_dir}}),
-        file_device: device_fixture(%{settings: %{storage_address: ctx.tmp_dir}}, "file")
+        device: camera_device_fixture(ctx.tmp_dir),
+        file_device: file_device_fixture()
       }
     end
 

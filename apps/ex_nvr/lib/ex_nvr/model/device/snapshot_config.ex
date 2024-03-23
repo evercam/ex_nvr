@@ -1,4 +1,6 @@
 defmodule ExNVR.Model.Device.SnapshotConfig do
+  @moduledoc false
+
   use Ecto.Schema
 
   import Ecto.Changeset

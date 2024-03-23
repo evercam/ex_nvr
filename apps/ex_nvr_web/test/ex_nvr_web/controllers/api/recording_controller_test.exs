@@ -9,7 +9,7 @@ defmodule ExNVRWeb.API.RecordingControllerTest do
 
   setup ctx do
     conn = build_conn() |> log_in_user_with_access_token(user_fixture())
-    device = device_fixture(%{settings: %{storage_address: ctx.tmp_dir}})
+    device = camera_device_fixture(ctx.tmp_dir)
 
     %{conn: conn, device: device}
   end
@@ -80,9 +80,9 @@ defmodule ExNVRWeb.API.RecordingControllerTest do
 
   describe "GET /api/recordings/chunks" do
     setup ctx do
-      device_1 = device_fixture(%{settings: %{storage_address: ctx.tmp_dir}})
-      device_2 = device_fixture(%{settings: %{storage_address: ctx.tmp_dir}})
-      device_3 = device_fixture(%{settings: %{storage_address: ctx.tmp_dir}})
+      device_1 = camera_device_fixture(ctx.tmp_dir)
+      device_2 = camera_device_fixture(ctx.tmp_dir)
+      device_3 = camera_device_fixture(ctx.tmp_dir)
 
       rec_1 = recording_fixture(device_1)
       rec_2 = recording_fixture(device_1)

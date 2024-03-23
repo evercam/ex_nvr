@@ -16,9 +16,7 @@ defmodule ExNVR.Pipeline.Output.StoragePipelineTest do
   @h265_fixtures "../../../../fixtures/video-30-10s.h265" |> Path.expand(__DIR__)
 
   setup %{tmp_dir: tmp_dir} do
-    device = device_fixture(%{settings: %{storage_address: tmp_dir}})
-
-    %{device: device}
+    %{device: camera_device_fixture(tmp_dir)}
   end
 
   test "Segment H264 stream and save recordings", %{device: device} do

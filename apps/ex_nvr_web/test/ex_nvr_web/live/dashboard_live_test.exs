@@ -41,11 +41,10 @@ defmodule ExNVRWeb.DashboardTest do
     @describetag :tmp_dir
 
     test "switch devices update available streams", %{conn: conn, tmp_dir: tmp_dir} do
-      device_1 = device_fixture(%{settings: %{storage_address: tmp_dir}})
+      device_1 = camera_device_fixture(tmp_dir)
 
       device_2 =
-        device_fixture(%{
-          settings: %{storage_address: tmp_dir},
+        camera_device_fixture(tmp_dir, %{
           stream_config: %{sub_stream_uri: valid_rtsp_url()}
         })
 
