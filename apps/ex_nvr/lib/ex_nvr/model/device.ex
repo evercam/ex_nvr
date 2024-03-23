@@ -158,6 +158,27 @@ defmodule ExNVR.Model.Device do
     end
   end
 
+  @spec auth_type(t()) :: keyword()
+  def auth_type(%__MODULE__{credentials: credentials}) do
+    %{username: username, password: password} = credentials
+
+    if is_nil(username) || is_nil(password) do
+      []
+    else
+      [auth_type: :basic]
+    end
+  end
+
+  @spec base_url(t()) :: binary() | nil
+  def base_url(%__MODULE__{url: nil}), do: nil
+
+  def base_url(%__MODULE__{url: url}) do
+    case URI.parse(url) do
+      %{path: nil} -> url
+      %{path: path} -> String.replace(url, path, "")
+    end
+  end
+
   @spec streams(t()) :: {binary(), binary() | nil}
   def streams(%__MODULE__{} = device), do: build_stream_uri(device)
 

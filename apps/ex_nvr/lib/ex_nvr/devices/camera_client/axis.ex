@@ -1,4 +1,4 @@
-defmodule ExNVR.Devices.Client.Axis do
+defmodule ExNVR.Devices.CameraClient.Axis do
   @moduledoc """
   Client for AXIS camera
   """
