@@ -1,4 +1,4 @@
-defmodule ExNVR.Devices.Client.Hik do
+defmodule ExNVR.Devices.CameraClient.Hik do
   @moduledoc """
   Client for Hikvision camera
   """
@@ -12,13 +12,11 @@ defmodule ExNVR.Devices.Client.Hik do
   @lpr_image_path "/doc/ui/images/plate"
 
   def fetch_anpr(url, opts) do
-    full_url = url <> @lpr_path
+    last_event_timestamp = last_event_timestamp(opts[:last_event_timestamp], opts[:timezone])
+    request_body = "<AfterTime><picTime>#{last_event_timestamp}</picTime></AfterTime>"
 
-    request_body =
-      "<AfterTime><picTime>#{get_last_event_timestamp(opts[:last_event_timestamp])}</picTime></AfterTime>"
-
-    case HTTP.post(full_url, request_body, opts) do
-      {:ok, %{body: body, status: 200}} ->
+    case HTTP.post(url <> @lpr_path, request_body, opts) do
+      {:ok, %Req.Response{body: body, status: 200}} ->
         records = parse_response(body, opts[:timezone])
         plates = fetch_plate_image(records, url, opts)
 
@@ -32,10 +30,14 @@ defmodule ExNVR.Devices.Client.Hik do
     end
   end
 
-  defp get_last_event_timestamp(nil), do: 0
+  defp last_event_timestamp(nil, _timezone), do: 0
 
-  defp get_last_event_timestamp(last_event_timestamp),
-    do: DateTime.add(last_event_timestamp, 1) |> Calendar.strftime("%Y%m%d%H%M%S")
+  defp last_event_timestamp(last_event_timestamp, timezone) do
+    last_event_timestamp
+    |> DateTime.shift_zone!(timezone)
+    |> DateTime.add(1)
+    |> Calendar.strftime("%Y%m%d%H%M%S")
+  end
 
   defp parse_response(body, timezone) do
     body

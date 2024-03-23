@@ -1,4 +1,4 @@
-defmodule ExNVR.Devices.Client.Milesight do
+defmodule ExNVR.Devices.CameraClient.Milesight do
   @moduledoc """
   Client for Milesight camera
   """
@@ -14,8 +14,8 @@ defmodule ExNVR.Devices.Client.Milesight do
     full_url = url <> @lpr_path
 
     case HTTP.get(full_url, opts) do
-      {:ok, %{body: body, status: 200}} ->
-        records = parse_response(body, opts[:timezone])
+      {:ok, %Req.Response{body: body, status: 200}} ->
+        records = parse_response(body, opts)
         plates = fetch_plate_image(records, url, opts)
         {:ok, records, plates}
 
@@ -27,15 +27,19 @@ defmodule ExNVR.Devices.Client.Milesight do
     end
   end
 
-  defp parse_response(body, timezone) do
+  defp parse_response(body, opts) do
     body
     |> String.split("\n")
     |> Enum.chunk_every(10, 10, :discard)
     |> Enum.map(&parse_entry/1)
     |> Enum.map(&rename_keys/1)
     |> Enum.map(fn record ->
-      capture_time = parse_capture_time(record.capture_time, timezone)
+      capture_time = parse_capture_time(record.capture_time, opts[:timezone])
       %{record | capture_time: capture_time}
+    end)
+    |> Enum.filter(fn record ->
+      is_nil(opts[:last_event_timestamp]) ||
+        DateTime.after?(record.capture_time, opts[:last_event_timestamp])
     end)
   end
 

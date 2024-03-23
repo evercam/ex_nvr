@@ -3,7 +3,7 @@ defmodule ExNVR.Devices.LprEventsPuller do
 
   require Logger
 
-  alias ExNVR.Devices.Client
+  alias ExNVR.Devices.CameraClient
   alias ExNVR.Events
 
   @pulling_interval 10
@@ -16,8 +16,15 @@ defmodule ExNVR.Devices.LprEventsPuller do
   def init(options) do
     Logger.metadata(device_id: options[:device].id)
     Logger.info("Start lvr events puller")
-    send(self(), :pull_events)
-    {:ok, %{device: options[:device], last_event_timestamp: nil}}
+    device = options[:device]
+
+    if device.url do
+      send(self(), :pull_events)
+      {:ok, %{device: options[:device], last_event_timestamp: nil}}
+    else
+      Logger.info("Stop lvr events puller")
+      {:stop, :normal}
+    end
   end
 
   @impl true
@@ -30,11 +37,11 @@ defmodule ExNVR.Devices.LprEventsPuller do
       ) do
     Process.send_after(self(), :pull_events, :timer.seconds(@pulling_interval))
 
-    with {:ok, records, plates} <- Client.fetch_anpr(device, last_event_timestamp),
+    with {:ok, records, plates} <- CameraClient.fetch_anpr(device, last_event_timestamp),
          :ok <- save_events(device, records, plates) do
       last_event_timestamp =
         records
-        |> Enum.map(&DateTime.shift_zone!(&1.capture_time, device.timezone))
+        |> Enum.map(& &1.capture_time)
         |> Enum.max(&>=/2, fn -> nil end)
         |> Kernel.||(last_event_timestamp)
 
