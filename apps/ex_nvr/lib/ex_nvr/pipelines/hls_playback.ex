@@ -42,7 +42,8 @@ defmodule ExNVR.Pipelines.HlsPlayback do
     spec = [
       child(:source, %Elements.RecordingBin{
         device: options[:device],
-        start_date: options[:start_date]
+        start_date: options[:start_date],
+        stream: options[:stream]
       })
     ]
 
@@ -88,6 +89,12 @@ defmodule ExNVR.Pipelines.HlsPlayback do
   @impl true
   def handle_child_notification({:track_playable, _track}, :sink, _ctx, state) do
     {[reply_to: {state.caller, :ok}], %{state | caller: nil}}
+  end
+
+  @impl true
+  def handle_child_notification(notification, _element, _ctx, state) do
+    Membrane.Logger.warning("Received unexpected notification: #{inspect(notification)}")
+    {[], state}
   end
 
   @impl true

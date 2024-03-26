@@ -2,12 +2,12 @@ defmodule ExNVR.Elements.RecordingBin do
   @moduledoc """
   Element responsible for reading recordings chunks as if it's one big file.
 
-  Videos are recording as 1-minute video chunks on most cases, some pipelines
-  needs to interact with the files as if it is one video chunk. This element
-  will consolidate the videos chunks on one big file by:
+  Videos are recorded as 1-minute chunks on most cases, some pipelines
+  needs to interact with the files as if it is one video file. This element
+  will consolidate the video chunks into one big file by:
     * Reading the videos chunks
     * Correct dts/pts
-    * Filter the recordings by start date/end date/duration
+    * Filter the recordings by start date, end date and duration
   """
 
   use Membrane.Bin
@@ -23,6 +23,11 @@ defmodule ExNVR.Elements.RecordingBin do
   def_options device: [
                 spec: ExNVR.Model.Device.t(),
                 description: "The device from where to read the recordings"
+              ],
+              stream: [
+                spec: :high | :low,
+                default: :high,
+                description: "The stream type"
               ],
               start_date: [
                 spec: DateTime.t(),
@@ -74,7 +79,12 @@ defmodule ExNVR.Elements.RecordingBin do
     Membrane.Logger.debug("Initialize recording bin: #{inspect(options)}")
 
     recordings =
-      Recordings.get_recordings_between(options.device.id, options.start_date, options.end_date)
+      Recordings.get_recordings_between(
+        options.device.id,
+        options.stream,
+        options.start_date,
+        options.end_date
+      )
 
     state =
       Map.from_struct(options)
@@ -163,6 +173,7 @@ defmodule ExNVR.Elements.RecordingBin do
     recordings =
       Recordings.get_recordings_between(
         state.device.id,
+        state.stream,
         state.current_recording.end_date,
         state.end_date
       )
@@ -192,13 +203,11 @@ defmodule ExNVR.Elements.RecordingBin do
   defp read_file_spec(%{recordings: [recording | rest]} = state) do
     Membrane.Logger.debug("Start reading file: #{recording.filename}")
 
-    id = recording.id
-
     spec = [
-      child({:source, id}, %File.Source{
-        location: Recordings.recording_path(state.device, recording)
+      child({:source, recording.id}, %File.Source{
+        location: Recordings.recording_path(state.device, state.stream, recording)
       })
-      |> child({:demuxer, id}, MP4.Demuxer.ISOM)
+      |> child({:demuxer, recording.id}, MP4.Demuxer.ISOM)
     ]
 
     state = update_recording_duration(state)

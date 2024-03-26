@@ -12,39 +12,30 @@ defmodule ExNVR.HLS.Processor do
 
   The provided `stream_name` should be a prefix of the stream to delete
   """
-  @spec delete_stream(binary(), binary()) :: binary()
+  @spec delete_stream(String.t(), String.t()) :: binary()
   def delete_stream(manifest_content, stream_name) do
-    manifest_file_lines = String.split(manifest_content, "\n")
-
-    case Enum.find_index(manifest_file_lines, &String.starts_with?(&1, stream_name)) do
-      nil ->
-        manifest_content
-
-      idx ->
-        manifest_file_lines
-        |> Enum.with_index()
-        |> Enum.reject(fn {_, index} -> index in [idx - 1, idx] end)
-        |> Enum.map_join("\n", fn {line, _} -> line end)
-    end
+    playlist = ExM3U8.deserialize_multivariant_playlist!(manifest_content)
+    streams = Enum.reject(playlist.items, &String.starts_with?(&1.uri, stream_name))
+    ExM3U8.serialize(%{playlist | items: streams})
   end
 
-  @spec add_query_params(binary(), Enumerable.t()) :: binary()
-  def add_query_params(manifest_content, query_params) do
+  @spec add_query_params(String.t(), :media_playlist | :playlist, Enumerable.t()) :: binary()
+  def add_query_params(manifest_content, :media_playlist, query_params) do
     encoded_params = URI.encode_query(query_params)
+    playlist = ExM3U8.deserialize_media_playlist!(manifest_content, [])
 
-    manifest_content
-    |> String.split("\n")
-    |> Enum.map_join("\n", fn line ->
-      cond do
-        String.match?(line, ~r/.+\.mp4"$/) ->
-          String.replace(line, ~r/(.+\.mp4)"$/, "\\1?#{encoded_params}\"")
+    timeline =
+      Enum.map(playlist.timeline, fn
+        %{uri: uri} = entry -> %{entry | uri: uri <> "?#{encoded_params}"}
+        entry -> entry
+      end)
 
-        String.ends_with?(line, [".m3u8", ".m4s"]) ->
-          "#{line}?#{encoded_params}"
+    ExM3U8.serialize(%{playlist | timeline: timeline})
+  end
 
-        true ->
-          line
-      end
-    end)
+  def add_query_params(manifest_content, :playlist, query_params) do
+    playlist = ExM3U8.deserialize_multivariant_playlist!(manifest_content, [])
+    items = Enum.map(playlist.items, &%{&1 | uri: &1.uri <> "?#{URI.encode_query(query_params)}"})
+    ExM3U8.serialize(%{playlist | items: items})
   end
 end

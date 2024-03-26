@@ -12,8 +12,8 @@ defmodule ExNVR.Pipelines.VideoAssemblerTest do
   @moduletag :tmp_dir
 
   setup ctx do
-    device = device_fixture(%{settings: %{storage_address: ctx.tmp_dir}})
-    device2 = device_fixture(%{settings: %{storage_address: ctx.tmp_dir}})
+    device = camera_device_fixture(ctx.tmp_dir)
+    device2 = camera_device_fixture(ctx.tmp_dir)
 
     dates = [
       {~U(2023-06-23 10:00:00Z), ~U(2023-06-23 10:00:05Z)},

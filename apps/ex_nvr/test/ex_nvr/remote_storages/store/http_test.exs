@@ -15,7 +15,7 @@ defmodule ExNVR.RemoteStorages.Store.HTTPTest do
   describe "save recording" do
     setup %{tmp_dir: tmp_dir} do
       bypass = Bypass.open()
-      device = device_fixture(%{settings: %{storaga_address: tmp_dir}})
+      device = camera_device_fixture(tmp_dir)
 
       %{bypass: bypass, device: device}
     end

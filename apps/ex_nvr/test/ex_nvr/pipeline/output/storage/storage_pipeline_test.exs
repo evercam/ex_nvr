@@ -16,9 +16,7 @@ defmodule ExNVR.Pipeline.Output.StoragePipelineTest do
   @h265_fixtures "../../../../fixtures/video-30-10s.h265" |> Path.expand(__DIR__)
 
   setup %{tmp_dir: tmp_dir} do
-    device = device_fixture(%{settings: %{storage_address: tmp_dir}})
-
-    %{device: device}
+    %{device: camera_device_fixture(tmp_dir)}
   end
 
   test "Segment H264 stream and save recordings", %{device: device} do
@@ -32,9 +30,9 @@ defmodule ExNVR.Pipeline.Output.StoragePipelineTest do
   defp perform_test(device, fixture) do
     pid = start_pipeline(device, fixture)
 
-    assert_pipeline_notified(pid, :storage, {:segment_stored, segment1})
-    assert_pipeline_notified(pid, :storage, {:segment_stored, segment2})
-    assert_pipeline_notified(pid, :storage, {:segment_stored, segment3})
+    assert_pipeline_notified(pid, :storage, {:segment_stored, :high, segment1})
+    assert_pipeline_notified(pid, :storage, {:segment_stored, :high, segment2})
+    assert_pipeline_notified(pid, :storage, {:segment_stored, :high, segment3})
 
     assert DateTime.diff(segment1.end_date, segment1.start_date) == 6
     assert DateTime.diff(segment2.end_date, segment2.start_date) == 6

@@ -9,7 +9,7 @@ defmodule ExNVR.BIF.GeneratorServerTest do
   @moduletag :tmp_dir
 
   setup %{tmp_dir: tmp_dir} do
-    device = device_fixture(%{settings: %{storage_address: tmp_dir, generate_bif: true}})
+    device = camera_device_fixture(tmp_dir, %{settings: %{generate_bif: true}})
     {:ok, device: device}
   end
 

@@ -35,8 +35,7 @@ defmodule ExNVRWeb.DeviceLive do
        device: device,
        disks_data: get_disks_data(),
        device_form: to_form(Devices.change_device_update(device)),
-       device_type: Atom.to_string(device.type),
-       override_on_full_disk: device.settings.override_on_full_disk
+       device_type: Atom.to_string(device.type)
      )}
   end
 

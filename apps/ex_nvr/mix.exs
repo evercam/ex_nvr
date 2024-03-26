@@ -65,6 +65,7 @@ defmodule ExNVR.MixProject do
       {:membrane_fake_plugin, "~> 0.11.0"},
       {:membrane_precompiled_dependency_provider, "~> 0.1"},
       {:ex_libsrtp, "~> 0.7.0"},
+      {:ex_m3u8, "~> 0.14.2"},
       {:connection, "~> 1.1.0"},
       {:tzdata, "~> 1.1"},
       {:turbojpeg, "~> 0.4.0"},

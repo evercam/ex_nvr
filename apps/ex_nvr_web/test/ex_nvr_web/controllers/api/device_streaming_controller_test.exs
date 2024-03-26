@@ -46,10 +46,16 @@ defmodule ExNVRWeb.API.DeviceStreamingControllerTest do
       assert body =~ "live_sub_stream.m3u8"
     end
 
+    test "get manifest file for not recorded date", %{conn: conn, device: device} do
+      conn
+      |> get(~p"/api/devices/#{device.id}/hls/index.m3u8?pos=2050-01-01T10:00:00Z")
+      |> json_response(404)
+    end
+
     test "get manifest file for selected stream", %{conn: conn, device: device} do
       response =
         conn
-        |> get(~p"/api/devices/#{device.id}/hls/index.m3u8?stream=0")
+        |> get(~p"/api/devices/#{device.id}/hls/index.m3u8?stream=high")
         |> response(200)
 
       assert response =~ "live_main_stream.m3u8"
@@ -57,7 +63,7 @@ defmodule ExNVRWeb.API.DeviceStreamingControllerTest do
 
       response =
         conn
-        |> get(~p"/api/devices/#{device.id}/hls/index.m3u8?stream=1")
+        |> get(~p"/api/devices/#{device.id}/hls/index.m3u8?stream=low")
         |> response(200)
 
       refute response =~ "live_main_stream.m3u8"
@@ -67,7 +73,7 @@ defmodule ExNVRWeb.API.DeviceStreamingControllerTest do
     test "get manifest file with invalid params", %{conn: conn, device: device} do
       response =
         conn
-        |> get(~p"/api/devices/#{device.id}/hls/index.m3u8?stream=2")
+        |> get(~p"/api/devices/#{device.id}/hls/index.m3u8?stream=lo")
         |> json_response(400)
 
       assert response["code"] == "BAD_ARGUMENT"
@@ -76,22 +82,38 @@ defmodule ExNVRWeb.API.DeviceStreamingControllerTest do
 
   describe "GET /api/devices/:device_id/snapshot" do
     setup %{device: device} do
+      bypass = Bypass.open()
+
       recording =
         recording_fixture(device, %{
           start_date: ~U(2023-06-23 20:00:00Z),
           end_date: ~U(2023-06-23 20:00:05Z)
         })
 
-      %{recording: recording}
-    end
+      low_stream_recording =
+        recording_fixture(device, %{
+          start_date: ~U(2023-06-23 20:00:00Z),
+          end_date: ~U(2023-06-23 20:00:05Z),
+          stream: :low
+        })
 
-    setup do
-      bypass = Bypass.open()
-      {:ok, bypass: bypass}
+      %{recording: recording, low_stream_recording: low_stream_recording, bypass: bypass}
     end
 
     test "Get snapshot from recorded videos", %{conn: conn, device: device, recording: recording} do
       conn = get(conn, "/api/devices/#{device.id}/snapshot?time=#{recording.start_date}")
+
+      assert conn.status == 200
+      assert get_resp_header(conn, "content-type") == ["image/jpeg; charset=utf-8"]
+    end
+
+    test "Get snapshot from recorded sub stream videos", %{
+      conn: conn,
+      device: device,
+      recording: recording
+    } do
+      conn =
+        get(conn, "/api/devices/#{device.id}/snapshot?time=#{recording.start_date}&stream=low")
 
       assert conn.status == 200
       assert get_resp_header(conn, "content-type") == ["image/jpeg; charset=utf-8"]
@@ -107,7 +129,7 @@ defmodule ExNVRWeb.API.DeviceStreamingControllerTest do
       conn: conn,
       tmp_dir: tmp_dir
     } do
-      device = device_fixture(%{state: :failed, settings: %{storage_address: tmp_dir}})
+      device = camera_device_fixture(tmp_dir, %{state: :failed})
 
       conn
       |> get("/api/devices/#{device.id}/snapshot")
@@ -120,12 +142,11 @@ defmodule ExNVRWeb.API.DeviceStreamingControllerTest do
       bypass: bypass
     } do
       device =
-        device_fixture(%{
+        camera_device_fixture(tmp_dir, %{
           stream_config: %{
             stream_uri: "rtsp://localhost:8541",
             snapshot_uri: "http://localhost:#{bypass.port}/snapshot"
-          },
-          settings: %{storage_address: tmp_dir}
+          }
         })
 
       Bypass.expect(bypass, "GET", "/snapshot", fn conn ->

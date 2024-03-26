@@ -26,6 +26,15 @@ defmodule ExNVR.Pipeline.Output.Storage do
                 spec: Device.t(),
                 description: "The device where this video belongs"
               ],
+              stream: [
+                spec: :high | :low,
+                default: :high,
+                description: """
+                The type of the stream to store.
+                  * `high` - main stream
+                  * `low` - sub stream
+                """
+              ],
               target_segment_duration: [
                 spec: non_neg_integer(),
                 default: 60,
@@ -56,10 +65,11 @@ defmodule ExNVR.Pipeline.Output.Storage do
       |> child(:tee, Membrane.Tee.Parallel)
     ]
 
-    dest = Device.recording_dir(opts.device)
+    dest = Device.recording_dir(opts.device, opts.stream)
 
     state = %{
       device: opts.device,
+      stream: opts.stream,
       directory: dest,
       pending_segments: %{},
       segment_extension: ".mp4",
@@ -128,7 +138,7 @@ defmodule ExNVR.Pipeline.Output.Storage do
   def handle_element_end_of_stream({:sink, seg_ref}, _pad, _ctx, state) do
     {state, segment} = do_save_recording(state, seg_ref)
 
-    actions = [remove_children: seg_ref, notify_parent: {:segment_stored, segment}]
+    actions = [remove_children: seg_ref, notify_parent: {:segment_stored, state.stream, segment}]
     terminate_action = if state.terminating?, do: [terminate: :normal], else: []
 
     {actions ++ terminate_action, state}
@@ -192,6 +202,7 @@ defmodule ExNVR.Pipeline.Output.Storage do
       start_date: Membrane.Time.to_datetime(segment.start_date),
       end_date: Membrane.Time.to_datetime(segment.end_date),
       path: recording_path(state, segment.start_date),
+      stream: state.stream,
       device_id: state.device.id
     }
 
@@ -209,6 +220,7 @@ defmodule ExNVR.Pipeline.Output.Storage do
 
         Membrane.Logger.info("""
         Segment saved successfully
+          Stream: #{state.stream}
           Media duration: #{duration_ms} ms
           Realtime (monotonic) duration: #{Membrane.Time.as_milliseconds(Segment.realtime_duration(segment), :round)} ms
           Wallclock duration: #{Membrane.Time.as_milliseconds(Segment.wall_clock_duration(segment), :round)} ms
@@ -220,7 +232,7 @@ defmodule ExNVR.Pipeline.Output.Storage do
         :telemetry.execute(
           @recordings_event,
           %{duration: duration_ms, size: Segment.size(segment)},
-          %{device_id: state.device.id}
+          %{device_id: state.device.id, stream: state.stream}
         )
 
         {maybe_new_run(state, run), recording}
@@ -240,6 +252,7 @@ defmodule ExNVR.Pipeline.Output.Storage do
       start_date: Membrane.Time.to_datetime(segment.start_date),
       end_date: Membrane.Time.to_datetime(segment.end_date),
       device_id: state.device.id,
+      stream: state.stream,
       active: !end_run?
     }
 

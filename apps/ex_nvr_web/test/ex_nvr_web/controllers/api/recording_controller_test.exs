@@ -9,7 +9,7 @@ defmodule ExNVRWeb.API.RecordingControllerTest do
 
   setup ctx do
     conn = build_conn() |> log_in_user_with_access_token(user_fixture())
-    device = device_fixture(%{settings: %{storage_address: ctx.tmp_dir}})
+    device = camera_device_fixture(ctx.tmp_dir)
 
     %{conn: conn, device: device}
   end
@@ -19,6 +19,12 @@ defmodule ExNVRWeb.API.RecordingControllerTest do
       run_fixture(device,
         start_date: ~U(2023-05-01 01:52:00.000000Z),
         end_date: ~U(2023-05-02 10:15:30.000000Z)
+      )
+
+      run_fixture(device,
+        start_date: ~U(2023-05-01 01:52:00.000000Z),
+        end_date: ~U(2023-05-02 10:15:30.000000Z),
+        stream: :low
       )
 
       run_fixture(device,
@@ -45,6 +51,15 @@ defmodule ExNVRWeb.API.RecordingControllerTest do
       assert Enum.map(response, & &1["active"]) == [false, false, true]
     end
 
+    test "get low resolution runs", %{device: device, conn: conn} do
+      response =
+        conn
+        |> get("/api/devices/#{device.id}/recordings?stream=low")
+        |> json_response(200)
+
+      assert length(response) == 1
+    end
+
     test "filter runs", %{device: device, conn: conn} do
       response =
         conn
@@ -65,19 +80,24 @@ defmodule ExNVRWeb.API.RecordingControllerTest do
 
   describe "GET /api/recordings/chunks" do
     setup ctx do
-      device_1 = device_fixture(%{settings: %{storage_address: ctx.tmp_dir}})
-      device_2 = device_fixture(%{settings: %{storage_address: ctx.tmp_dir}})
-      device_3 = device_fixture(%{settings: %{storage_address: ctx.tmp_dir}})
+      device_1 = camera_device_fixture(ctx.tmp_dir)
+      device_2 = camera_device_fixture(ctx.tmp_dir)
+      device_3 = camera_device_fixture(ctx.tmp_dir)
 
       rec_1 = recording_fixture(device_1)
       rec_2 = recording_fixture(device_1)
       rec_3 = recording_fixture(device_2)
       rec_4 = recording_fixture(device_3)
+      rec_5 = recording_fixture(device_3, stream: :low)
 
-      %{recordings: [rec_1, rec_2, rec_3, rec_4], device: device_1}
+      %{recordings: [rec_1, rec_2, rec_3, rec_4], low_res_recordings: [rec_5], device: device_1}
     end
 
-    test "get recordings chunks", %{conn: conn, recordings: recordings} do
+    test "get recordings chunks", %{
+      conn: conn,
+      recordings: recordings,
+      low_res_recordings: low_res_recordings
+    } do
       response =
         conn
         |> get("/api/recordings/chunks")
@@ -94,6 +114,17 @@ defmodule ExNVRWeb.API.RecordingControllerTest do
                "current_page" => 1,
                "page_size" => 100
              } = response["meta"]
+
+      # Low resolution chunks
+      response =
+        conn
+        |> get("/api/recordings/chunks?stream=low")
+        |> json_response(200)
+
+      assert length(response["data"]) == length(low_res_recordings)
+
+      assert Enum.map(response["data"], & &1["id"]) |> MapSet.new() ==
+               Enum.map(low_res_recordings, & &1.id) |> MapSet.new()
     end
 
     test "filter recordings chunks", %{conn: conn, device: device, recordings: recordings} do

@@ -6,7 +6,7 @@ defmodule ExNVR.Model.Device do
   import Ecto.Query
 
   alias Ecto.Changeset
-  alias ExNVR.Model.Device.SnapshotConfig
+  alias ExNVR.Model.Device.{SnapshotConfig, StorageConfig}
 
   @states [:stopped, :recording, :failed]
   @camera_vendors ["HIKVISION", "Milesight Technology Co.,Ltd.", "AXIS"]
@@ -111,46 +111,17 @@ defmodule ExNVR.Model.Device do
     import Ecto.Changeset
 
     @type t :: %__MODULE__{
-            generate_bif: boolean(),
-            storage_address: binary()
+            generate_bif: boolean()
           }
 
     @primary_key false
     embedded_schema do
       field :generate_bif, :boolean, default: true
-      field :storage_address, :string
-      field :override_on_full_disk, :boolean, default: false
-      field :override_on_full_disk_threshold, :float, default: 95.0
     end
 
     @spec changeset(t(), map()) :: Ecto.Changeset.t()
     def changeset(struct, params) do
-      struct
-      |> cast(params, __MODULE__.__schema__(:fields))
-      |> validate_required([:storage_address])
-      |> validate_number(:override_on_full_disk_threshold,
-        less_than_or_equal_to: 100,
-        greater_than_or_equal_to: 0,
-        message: "value must be between 0 and 100"
-      )
-      |> validate_change(:storage_address, fn :storage_address, mountpoint ->
-        case File.stat(mountpoint) do
-          {:ok, %File.Stat{access: :read_write}} -> []
-          _other -> [storage_address: "has no write permissions"]
-        end
-      end)
-    end
-
-    @spec update_changeset(t(), map()) :: Ecto.Changeset.t()
-    def update_changeset(struct, params) do
-      struct
-      |> cast(params, [:generate_bif, :override_on_full_disk, :override_on_full_disk_threshold])
-      |> validate_number(:override_on_full_disk_threshold,
-        less_than_or_equal_to: 100,
-        greater_than_or_equal_to: 0,
-        message: "value must be between 0 and 100"
-      )
-      |> validate_required([:storage_address])
+      cast(struct, params, __MODULE__.__schema__(:fields))
     end
   end
 
@@ -168,6 +139,7 @@ defmodule ExNVR.Model.Device do
     embeds_one :credentials, Credentials, source: :credentials, on_replace: :update
     embeds_one :stream_config, StreamConfig, source: :config, on_replace: :update
     embeds_one :settings, Settings, on_replace: :update
+    embeds_one :storage_config, StorageConfig, on_replace: :update
     embeds_one :snapshot_config, SnapshotConfig, on_replace: :update
 
     timestamps(type: :utc_datetime_usec)
@@ -199,7 +171,8 @@ defmodule ExNVR.Model.Device do
 
   @spec config_updated(t(), t()) :: boolean()
   def config_updated(%__MODULE__{} = device_1, %__MODULE__{} = device_2) do
-    device_1.stream_config != device_2.stream_config or device_1.settings != device_2.settings
+    device_1.stream_config != device_2.stream_config or device_1.settings != device_2.settings or
+      device_1.storage_config != device_2.storage_config
   end
 
   @spec has_sub_stream(t()) :: boolean()
@@ -213,9 +186,10 @@ defmodule ExNVR.Model.Device do
   # directories path
 
   @spec base_dir(t()) :: Path.t()
-  def base_dir(%__MODULE__{id: id, settings: %{storage_address: path}}),
+  def base_dir(%__MODULE__{id: id, storage_config: %{address: path}}),
     do: Path.join([path, "ex_nvr", id])
 
+  @spec recording_dir(t()) :: Path.t()
   @spec recording_dir(t(), :high | :low) :: Path.t()
   def recording_dir(%__MODULE__{} = device, stream \\ :high) do
     stream = if stream == :high, do: "hi_quality", else: "lo_quality"
@@ -243,12 +217,19 @@ defmodule ExNVR.Model.Device do
   end
 
   @spec snapshot_config(t()) :: map()
-  def snapshot_config(%{snapshot_config: snapshot_config}) do
-    {:ok, schedule} = SnapshotConfig.parse_schedule(snapshot_config.schedule)
+  def snapshot_config(%{snapshot_config: nil}) do
+    %{enabled: false}
+  end
 
-    snapshot_config
-    |> Map.take([:enabled, :remote_storage, :upload_interval])
-    |> Map.put(:schedule, schedule)
+  def snapshot_config(%{snapshot_config: snapshot_config}) do
+    config = Map.take(snapshot_config, [:enabled, :remote_storage, :upload_interval])
+
+    if config.enabled do
+      {:ok, schedule} = SnapshotConfig.parse_schedule(snapshot_config.schedule)
+      Map.put(snapshot_config, :schedule, schedule)
+    else
+      config
+    end
   end
 
   def filter(query \\ __MODULE__, params) do
@@ -267,8 +248,7 @@ defmodule ExNVR.Model.Device do
     device
     |> Changeset.cast(params, [:name, :type, :timezone, :state, :vendor, :mac, :url, :model])
     |> Changeset.cast_embed(:credentials)
-    |> Changeset.cast_embed(:settings, required: true)
-    |> Changeset.cast_embed(:snapshot_config)
+    |> Changeset.cast_embed(:storage_config, required: true)
     |> common_config()
   end
 
@@ -276,8 +256,10 @@ defmodule ExNVR.Model.Device do
     device
     |> Changeset.cast(params, [:name, :timezone, :state, :vendor, :mac, :url, :model])
     |> Changeset.cast_embed(:credentials)
-    |> Changeset.cast_embed(:settings, required: true, with: &Settings.update_changeset/2)
-    |> Changeset.cast_embed(:snapshot_config)
+    |> Changeset.cast_embed(:storage_config,
+      required: true,
+      with: &StorageConfig.update_changeset/2
+    )
     |> common_config()
   end
 
@@ -285,7 +267,10 @@ defmodule ExNVR.Model.Device do
     changeset
     |> Changeset.validate_required([:name, :type])
     |> Changeset.validate_inclusion(:timezone, Tzdata.zone_list())
+    |> Changeset.cast_embed(:settings)
+    |> Changeset.cast_embed(:snapshot_config)
     |> validate_config()
+    |> maybe_set_default_settings()
   end
 
   defp validate_config(%Changeset{} = changeset) do
@@ -295,6 +280,12 @@ defmodule ExNVR.Model.Device do
       required: true,
       with: &StreamConfig.changeset(&1, &2, type)
     )
+  end
+
+  defp maybe_set_default_settings(changeset) do
+    if Changeset.get_field(changeset, :settings),
+      do: changeset,
+      else: Changeset.put_embed(changeset, :settings, %Settings{})
   end
 
   defp build_stream_uri(%__MODULE__{stream_config: config, credentials: credentials_config}) do

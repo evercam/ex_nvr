@@ -9,7 +9,7 @@ defmodule ExNVRWeb.DeviceListLiveTest do
 
   describe "Device list page" do
     setup ctx do
-      %{device: device_fixture(%{settings: %{storage_address: ctx.tmp_dir}})}
+      %{device: camera_device_fixture(ctx.tmp_dir)}
     end
 
     test "render devices page", %{conn: conn, device: device} do
@@ -53,7 +53,7 @@ defmodule ExNVRWeb.DeviceListLiveTest do
     end
 
     test "Stop recording", %{conn: conn, tmp_dir: tmp_dir} do
-      device = device_fixture(%{state: :recording, settings: %{storage_address: tmp_dir}})
+      device = camera_device_fixture(tmp_dir, %{state: :recording})
 
       {:ok, lv, html} = live(conn, ~p"/devices")
 
@@ -69,7 +69,7 @@ defmodule ExNVRWeb.DeviceListLiveTest do
     end
 
     test "Start recording", %{conn: conn, tmp_dir: tmp_dir} do
-      device = device_fixture(%{state: :stopped, settings: %{storage_address: tmp_dir}})
+      device = camera_device_fixture(tmp_dir, %{state: :stopped})
 
       {:ok, lv, html} = live(conn, ~p"/devices")
 

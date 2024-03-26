@@ -401,7 +401,9 @@ paths:
                   $ref: "#/components/schemas/Credentials"
                 settings:
                   $ref: "#/components/schemas/DeviceSettings"
-              required: [name, type, settings]
+                storage_config: 
+                  $ref: "#/components/schemas/DeviceStorageConfig"
+              required: [name, type, storage_config]
       responses:
         '201':
           description: Created
@@ -484,6 +486,8 @@ paths:
                   $ref: "#/components/schemas/Credentials"
                 settings:
                   $ref: "#/components/schemas/DeviceSettings"
+                storage_config: 
+                  $ref: "#/components/schemas/DeviceStorageConfig"
       responses:
         '200':
           description: Success
@@ -523,6 +527,7 @@ paths:
       tags:
         - Recording
       parameters:
+        - $ref: '#/components/parameters/stream_type'
         - $ref: '#/components/parameters/filters'
         - $ref: '#/components/parameters/page'
         - $ref: '#/components/parameters/page_size'
@@ -553,6 +558,7 @@ paths:
         - Recording
       parameters:
         - $ref: '#/components/parameters/device_id'
+        - $ref: '#/components/parameters/stream_type'
         - name: start_date
           in: query
           required: false
@@ -596,6 +602,7 @@ paths:
       parameters:
         - $ref: '#/components/parameters/device_id'
         - $ref: '#/components/parameters/recording_id'
+        - $ref: '#/components/parameters/stream_type'
       responses:
         '200':
           description: Success
@@ -640,6 +647,7 @@ paths:
         - Media Streaming
       parameters:
         - $ref: '#/components/parameters/device_id'
+        - $ref: '#/components/parameters/stream_type'
         - name: pos
           in: query
           description: |
@@ -649,16 +657,6 @@ paths:
           schema:
             type: string
             format: date-time
-        - name: stream
-          in: query
-          description: |
-            Request the main/sub stream.
-
-            `0` will return only the main stream, `1` will return only the sub-stream
-          schema:
-            type: integer
-            minimum: 0
-            maximum: 1
         - name: resolution
           in: query
           description: |
@@ -680,7 +678,7 @@ paths:
     get:
       summary: Get snapshot
       description: |
-        Get a snapshot from live feed or the recorded videos
+        Get a snapshot from live feed or the recorded videos.
       operationId: getSnapshot
       tags:
         - Media Streaming
@@ -717,6 +715,7 @@ paths:
           schema:
             type: string
             enum: [jpeg]
+        - $ref: '#/components/parameters/stream_type'
       responses:
         '200':
           description: success
@@ -769,6 +768,7 @@ paths:
         - Media Streaming
       parameters:
         - $ref: '#/components/parameters/device_id'
+        - $ref: '#/components/parameters/stream_type'
         - name: start_date
           in: query
           required: true
@@ -902,7 +902,6 @@ paths:
           $ref: "#/components/responses/BadArg"
         '404':
           $ref: "#/components/responses/NotFound"
-  
   /api/events:
     get:
       summary: Get events
@@ -1116,6 +1115,37 @@ components:
           $ref: "#/components/schemas/Credentials"
         settings:
           $ref: "#/components/schemas/DeviceSettings"
+        storage_config:
+          $ref: "#/components/schemas/DeviceStorageConfig"
+    DeviceStorageConfig:
+      type: object
+      description: Storage settings
+      properties:
+        address:
+          type: string
+          description: "The mountpoint/location where to store the device data"
+        record_sub_stream:
+          type: string
+          enum: [never, always]
+          description: |
+            When the sub stream should be recorded, it accept one of the following values:
+
+              * `never` - Do not record the sub stream.
+              * `always` - Always record the sub stream.
+        full_drive_threshold:
+          type: number
+          minimum: 0
+          maximum: 99
+          description: The percentage when a drive should be considered full.
+        full_drive_action:
+          type: string
+          enum: [nothing, overwrite]
+          description: |
+            The action to take when a drive is full, it can be one of the following values:
+
+              * `nothing` - Do nothing, keep recording.
+              * `overwrite` - Delete old recordings.
+      required: [address]
     DeviceSettings:
       type: object
       description: Device settings that controls how the device behaves.
@@ -1124,22 +1154,6 @@ components:
           type: boolean
           default: true
           description: Indicates whether BIF (Base Index File) used for trick play should be generated.
-        storage_address:
-          type: string
-          description: | 
-            The mountpoint/folder where to store device data (recordings, bif, ...etc.)
-
-            This setting is not updatable after the creation of the device
-        override_on_full_disk:
-          type: boolean
-          default: false
-          description: A boolean value to signal that when reaching the override_on_full_disk_threshold on the storage_address disk usage percentage the 30 oldest recordings would be deleted
-        override_on_full_disk_threshold:
-          type: number
-          default: 90.0
-          minimum: 0.0
-          maximum: 100.0
-          description: A float value where if storage_address storage usage percentage reaches this value the 30 oldest recordings will be deleted
       required: [storage_address]
     Error:
       type: object
@@ -1202,15 +1216,6 @@ components:
           format: path
           description: The Path of the file location to be used as a streaming source (Only when Device type is file)
   parameters:
-    user_id:
-      name: user_id
-      description: The id of the user
-      in: path
-      required: true
-      schema:
-        type: string
-        format: uuid
-      example: 1d7c7f47-63c1-4bef-91a6-124cbaf3ecea
     remote_storage_id:
       name: remote_storage_id
       description: The id of the remote_storage
@@ -1236,6 +1241,15 @@ components:
       schema:
         type: string
       example: 11236565645.mp4
+    stream_type:
+      name: stream
+      in: query
+      required: false
+      description: Stream type.
+      schema:
+        type: string
+        enum: [high, low]
+        default: high
     filters:
       name: filters
       in: query
@@ -1308,6 +1322,15 @@ components:
       description: The size of the requested page.
       schema:
         type: integer
+    user_id:
+      name: user_id
+      description: The id of the user
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      example: 1d7c7f47-63c1-4bef-91a6-124cbaf3ecea
   responses:
     BadArg:
       description: Bad Arguments

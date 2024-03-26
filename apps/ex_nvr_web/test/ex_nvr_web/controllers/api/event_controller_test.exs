@@ -23,12 +23,7 @@ defmodule ExNVRWeb.Api.EventControllerTest do
   }
 
   setup %{tmp_dir: tmp_dir} do
-    device =
-      device_fixture(%{
-        vendor: "Milesight Technology Co.,Ltd.",
-        settings: %{storage_address: tmp_dir}
-      })
-
+    device = camera_device_fixture(tmp_dir, %{vendor: "Milesight Technology Co.,Ltd."})
     [device: device]
   end
 
@@ -68,7 +63,7 @@ defmodule ExNVRWeb.Api.EventControllerTest do
       tmp_dir: tmp_dir,
       token: token
     } do
-      device = device_fixture(%{settings: %{storage_address: tmp_dir}})
+      device = camera_device_fixture(tmp_dir)
 
       conn
       |> post(
@@ -85,8 +80,8 @@ defmodule ExNVRWeb.Api.EventControllerTest do
     end
 
     test "get events", %{conn: conn} do
-      event_fixture(:lpr, device_fixture())
-      event_fixture(:lpr, device_fixture())
+      event_fixture(:lpr, camera_device_fixture())
+      event_fixture(:lpr, camera_device_fixture())
 
       response =
         conn
@@ -98,9 +93,9 @@ defmodule ExNVRWeb.Api.EventControllerTest do
     end
 
     test "filter events", %{conn: conn} do
-      device = device_fixture()
+      device = camera_device_fixture()
       event_1 = event_fixture(:lpr, device)
-      event_fixture(:lpr, device_fixture())
+      event_fixture(:lpr, camera_device_fixture())
 
       response =
         conn
@@ -114,8 +109,8 @@ defmodule ExNVRWeb.Api.EventControllerTest do
     end
 
     test "get events with plate image", %{conn: conn} do
-      event_fixture(:lpr, device_fixture())
-      event_fixture(:lpr, device_fixture())
+      event_fixture(:lpr, camera_device_fixture())
+      event_fixture(:lpr, camera_device_fixture())
 
       response =
         conn

@@ -21,15 +21,20 @@ defmodule ExNVR.Model.Run do
 
   @foreign_key_type :binary_id
   schema "runs" do
-    field(:start_date, :utc_datetime_usec)
-    field(:end_date, :utc_datetime_usec)
-    field(:active, :boolean, default: false)
+    field :start_date, :utc_datetime_usec
+    field :end_date, :utc_datetime_usec
+    field :active, :boolean, default: false
+    field :stream, Ecto.Enum, values: [:high, :low], default: :high
 
     belongs_to :device, ExNVR.Model.Device
   end
 
   def deactivate_query(device_id) do
     from(r in __MODULE__, where: r.device_id == ^device_id and r.active == true)
+  end
+
+  def with_type(query \\ __MODULE__, stream_type) do
+    where(query, [r], r.stream == ^stream_type)
   end
 
   def with_device(query \\ __MODULE__, device_id) do
@@ -47,7 +52,6 @@ defmodule ExNVR.Model.Run do
 
   @spec changeset(t(), map()) :: Ecto.Changeset.t()
   def changeset(struct, params) do
-    struct
-    |> Changeset.cast(params, __MODULE__.__schema__(:fields))
+    Changeset.cast(struct, params, __MODULE__.__schema__(:fields))
   end
 end

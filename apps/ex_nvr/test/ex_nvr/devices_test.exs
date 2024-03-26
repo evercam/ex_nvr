@@ -14,10 +14,6 @@ defmodule ExNVR.DevicesTest do
 
   @moduletag :tmp_dir
 
-  setup ctx do
-    %{settings: %{storage_address: ctx.tmp_dir}}
-  end
-
   describe "list_devices/1" do
     test "returns empty list if no device exists" do
       assert Enum.empty?(Devices.list())
@@ -25,17 +21,17 @@ defmodule ExNVR.DevicesTest do
 
     test "returns all the devices", ctx do
       devices = [
-        device_fixture(%{settings: ctx.settings}),
-        device_fixture(%{settings: ctx.settings})
+        camera_device_fixture(ctx.tmp_dir, %{settings: %{}}),
+        camera_device_fixture(ctx.tmp_dir, %{settings: %{}})
       ]
 
       assert devices == Devices.list()
     end
 
     test "filter devices by state", ctx do
-      device_1 = device_fixture(%{state: :recording, settings: ctx.settings})
-      device_2 = device_fixture(%{state: :failed, settings: ctx.settings})
-      device_3 = device_fixture(%{state: :stopped, settings: ctx.settings})
+      device_1 = camera_device_fixture(ctx.tmp_dir, %{state: :recording, settings: %{}})
+      device_2 = camera_device_fixture(ctx.tmp_dir, %{state: :failed, settings: %{}})
+      device_3 = camera_device_fixture(ctx.tmp_dir, %{state: :stopped, settings: %{}})
 
       assert [device_1] == Devices.list(%{state: :recording})
       assert [device_2, device_3] == Devices.list(%{state: [:failed, :stopped]})
@@ -121,12 +117,12 @@ defmodule ExNVR.DevicesTest do
              } = errors_on(changeset)
     end
 
-    test "require settings" do
+    test "require storage config" do
       {:error, changeset} = Devices.create(%{})
-      assert %{settings: ["can't be blank"]} = errors_on(changeset)
+      assert %{storage_config: ["can't be blank"]} = errors_on(changeset)
 
-      {:error, changeset} = Devices.create(%{settings: %{}})
-      assert %{settings: %{storage_address: ["can't be blank"]}} = errors_on(changeset)
+      {:error, changeset} = Devices.create(%{storage_config: %{}})
+      assert %{storage_config: %{address: ["can't be blank"]}} = errors_on(changeset)
     end
 
     test "override_on_full_disk_threshold is between 0 and 100", %{tmp_dir: tmp_dir} do
@@ -134,28 +130,28 @@ defmodule ExNVR.DevicesTest do
         Devices.create(
           valid_device_attributes(%{
             name: @valid_camera_name,
-            settings: %{
-              storage_address: tmp_dir,
-              override_on_full_disk_threshold: 120
+            storage_config: %{
+              address: tmp_dir,
+              full_drive_threshold: 120
             }
           })
         )
 
-      assert %{settings: %{override_on_full_disk_threshold: ["value must be between 0 and 100"]}} =
+      assert %{storage_config: %{full_drive_threshold: ["value must be between 0 and 100"]}} =
                errors_on(changeset)
 
       {:error, changeset} =
         Devices.create(
           valid_device_attributes(%{
             name: @valid_camera_name,
-            settings: %{
-              storage_address: tmp_dir,
-              override_on_full_disk_threshold: -40
+            storage_config: %{
+              address: tmp_dir,
+              full_drive_threshold: 120
             }
           })
         )
 
-      assert %{settings: %{override_on_full_disk_threshold: ["value must be between 0 and 100"]}} =
+      assert %{storage_config: %{full_drive_threshold: ["value must be between 0 and 100"]}} =
                errors_on(changeset)
     end
 
@@ -269,15 +265,15 @@ defmodule ExNVR.DevicesTest do
             mac: @valid_mac,
             url: @valid_url,
             model: @valid_model,
-            settings: %{
-              storage_address: tmp_dir,
-              override_on_full_disk: true
-            },
             snapshot_config: %{
               enabled: true,
               upload_interval: 5,
               remote_storage: "remote_storage",
               schedule: %{"1" => ["08:00-12:00"], "2" => ["09:00-12:00", "14:00-18:00"]}
+            },
+            storage_config: %{
+              address: tmp_dir,
+              full_drive_action: :overwrite
             }
           })
         )
@@ -288,8 +284,8 @@ defmodule ExNVR.DevicesTest do
       assert device.mac == @valid_mac
       assert device.url == @valid_url
       assert device.model == @valid_model
-      assert device.settings.storage_address == tmp_dir
-      assert device.settings.override_on_full_disk
+      assert device.storage_config.address == tmp_dir
+      assert device.storage_config.full_drive_action == :overwrite
       assert device.snapshot_config.enabled
       assert device.snapshot_config.upload_interval == 5
       assert device.snapshot_config.remote_storage == "remote_storage"
@@ -314,7 +310,7 @@ defmodule ExNVR.DevicesTest do
 
   describe "update/2" do
     setup ctx do
-      %{device: device_fixture(%{settings: ctx.settings})}
+      %{device: camera_device_fixture(ctx.tmp_dir)}
     end
 
     test "type cannot be updated", %{device: device} do
@@ -336,8 +332,12 @@ defmodule ExNVR.DevicesTest do
           url: @valid_url,
           model: @valid_model,
           settings: %{
-            generate_bif: true,
-            override_on_full_disk: true
+            generate_bif: true
+          },
+          storage_config: %{
+            full_drive_action: :overwrite,
+            full_drive_threshold: 15.50,
+            record_sub_stream: :always
           }
         })
 
@@ -348,13 +348,15 @@ defmodule ExNVR.DevicesTest do
       assert device.model == @valid_model
       assert device.stream_config.sub_stream_uri == stream_uri
       assert device.settings.generate_bif
-      assert device.settings.override_on_full_disk
+      assert device.storage_config.full_drive_threshold == 15.5
+      assert device.storage_config.full_drive_action == :overwrite
+      assert device.storage_config.record_sub_stream == :always
     end
   end
 
   describe "delete/1" do
     setup ctx do
-      %{device: device_fixture(%{settings: ctx.settings})}
+      %{device: camera_device_fixture(ctx.tmp_dir)}
     end
 
     test "delete device", %{device: device} do
@@ -374,7 +376,7 @@ defmodule ExNVR.DevicesTest do
 
   describe "update_state/2" do
     setup ctx do
-      %{device: device_fixture(%{settings: ctx.settings})}
+      %{device: camera_device_fixture(ctx.tmp_dir)}
     end
 
     test "device state updated", %{device: device} do
@@ -390,7 +392,7 @@ defmodule ExNVR.DevicesTest do
   describe "change_user_creation/1" do
     test "returns changeset" do
       assert %Ecto.Changeset{} = changeset = Devices.change_device_creation(%Device{})
-      assert changeset.required == [:stream_config, :name, :type, :settings]
+      assert changeset.required == [:stream_config, :name, :type, :storage_config]
     end
 
     test "requires Stream config (camera config) to be set when type is IP" do
@@ -403,7 +405,7 @@ defmodule ExNVR.DevicesTest do
                  valid_device_attributes(%{name: name, type: "ip"})
                )
 
-      assert changeset.required == [:stream_config, :name, :type, :settings]
+      assert changeset.required == [:stream_config, :name, :type, :storage_config]
     end
 
     test "allows fields to be set (Type: ip)" do
@@ -441,7 +443,7 @@ defmodule ExNVR.DevicesTest do
                  valid_device_attributes(%{name: name, type: "file"})
                )
 
-      assert changeset.required == [:stream_config, :name, :type, :settings]
+      assert changeset.required == [:stream_config, :name, :type, :storage_config]
     end
 
     test "allows fields to be set (Type: file)" do
@@ -474,7 +476,7 @@ defmodule ExNVR.DevicesTest do
   end
 
   test "get recordings dir", ctx do
-    device = device_fixture(%{settings: ctx.settings})
+    device = camera_device_fixture(ctx.tmp_dir)
 
     assert Path.join([ctx.tmp_dir, "ex_nvr", device.id]) == Device.base_dir(device)
 

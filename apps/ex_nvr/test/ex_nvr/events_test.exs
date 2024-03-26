@@ -14,8 +14,7 @@ defmodule ExNVR.EventsTest do
   @lpr_plate_image "test/fixtures/images/license-plate.jpg"
 
   setup ctx do
-    device = device_fixture(%{settings: %{storage_address: ctx.tmp_dir}})
-    %{device: device}
+    %{device: camera_device_fixture(ctx.tmp_dir)}
   end
 
   describe "Create events" do

@@ -4,8 +4,6 @@ defmodule ExNVR.DevicesFixtures do
   entities via the `ExNVR.Devices` context.
   """
 
-  alias ExNVR.Model.Device
-
   @spec valid_rtsp_url() :: binary()
   def valid_rtsp_url(), do: "rtsp://example#{System.unique_integer()}:8541"
 
@@ -22,10 +20,12 @@ defmodule ExNVR.DevicesFixtures do
   @spec valid_device_settings() :: map()
   def valid_device_settings(), do: %{generate_bif: false, storage_address: "/tmp"}
 
+  def valid_device_storage_config(), do: %{address: "/tmp"}
+
   @spec valid_device_attributes(map(), binary()) :: map()
-  def valid_device_attributes(attrs \\ %{}, type \\ "ip") do
+  def valid_device_attributes(attrs \\ %{}, type \\ :ip) do
     {stream_config, attrs} = Map.pop(attrs, :stream_config, %{})
-    {settings, attrs} = Map.pop(attrs, :settings, %{})
+    {storage_config, attrs} = Map.pop(attrs, :storage_config, %{})
 
     credentials = valid_device_credentials()
     stream_config = build_stream_config(stream_config, type)
@@ -38,28 +38,39 @@ defmodule ExNVR.DevicesFixtures do
       state: :recording,
       stream_config: stream_config,
       credentials: credentials,
-      settings: Enum.into(settings, valid_device_settings()),
+      storage_config: Enum.into(storage_config, valid_device_storage_config()),
       snapshot_config: %{enabled: false}
     })
   end
 
-  @spec device_fixture(map(), binary()) :: Device.t()
-  def device_fixture(attrs \\ %{}, device_type \\ "ip") do
+  def camera_device_fixture(storage_address \\ "/tmp", attrs \\ %{}) do
+    storage_config = Map.put(attrs[:storage_config] || %{}, :address, storage_address)
+
     {:ok, device} =
       attrs
-      |> valid_device_attributes(device_type)
+      |> Map.put(:storage_config, storage_config)
+      |> valid_device_attributes(:ip)
       |> ExNVR.Devices.create()
 
     device
   end
 
-  defp build_stream_config(stream_config, "ip") do
+  def file_device_fixture(attrs \\ %{}) do
+    {:ok, device} =
+      attrs
+      |> valid_device_attributes(:file)
+      |> ExNVR.Devices.create()
+
+    device
+  end
+
+  defp build_stream_config(stream_config, :ip) do
     Enum.into(stream_config, %{
       stream_uri: valid_rtsp_url()
     })
   end
 
-  defp build_stream_config(stream_config, "file") do
+  defp build_stream_config(stream_config, :file) do
     Enum.into(stream_config, %{
       filename: "big_buck.mp4",
       temporary_path: valid_file_location(),

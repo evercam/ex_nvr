@@ -27,11 +27,7 @@ defmodule ExNVR.Model.Recording do
            default_limit: 100,
            max_limit: 150}
 
-  @type t :: %__MODULE__{
-          start_date: DateTime.t(),
-          end_date: DateTime.t(),
-          filename: binary()
-        }
+  @type t :: %__MODULE__{}
 
   @required_fields [:device_id, :start_date, :end_date, :filename]
 
@@ -40,8 +36,17 @@ defmodule ExNVR.Model.Recording do
     field :start_date, :utc_datetime_usec
     field :end_date, :utc_datetime_usec
     field :filename, :string
+    field :stream, Ecto.Enum, values: [:high, :low], default: :high
 
     belongs_to :device, ExNVR.Model.Device
+  end
+
+  def with_type(query \\ __MODULE__, stream_type) do
+    where(query, [r], r.stream == ^stream_type)
+  end
+
+  def before_date(query \\ __MODULE__, date) do
+    where(query, [r], r.end_date < ^date)
   end
 
   def between_dates(query \\ __MODULE__, start_date, end_date, opts) do
@@ -66,8 +71,8 @@ defmodule ExNVR.Model.Recording do
     )
   end
 
-  def list_with_devices() do
-    from(r in __MODULE__,
+  def list_with_devices(query) do
+    from(r in query,
       join: d in assoc(r, :device),
       as: :joined_device,
       on: r.device_id == d.id,
@@ -93,7 +98,7 @@ defmodule ExNVR.Model.Recording do
 
   def changeset(params) do
     %__MODULE__{}
-    |> Changeset.cast(params, @required_fields)
+    |> Changeset.cast(params, @required_fields ++ [:stream])
     |> Changeset.validate_required(@required_fields)
   end
 end

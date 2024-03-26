@@ -12,7 +12,7 @@ defmodule ExNVR.Pipelines.HlsPlaybackTest do
   @moduletag :tmp_dir
 
   setup ctx do
-    device = device_fixture(%{settings: %{storage_address: ctx.tmp_dir}})
+    device = camera_device_fixture(ctx.tmp_dir)
 
     recording_fixture(device,
       start_date: ~U(2023-06-23 10:00:00Z),
@@ -29,7 +29,7 @@ defmodule ExNVR.Pipelines.HlsPlaybackTest do
 
   describe "Hls playback" do
     test "playback recording", %{device: device, tmp_dir: out_dir} do
-      pid = prepare_pipeline(device, directory: out_dir)
+      pid = prepare_pipeline(device, directory: out_dir, stream: :high)
 
       ExNVR.Pipelines.HlsPlayback.start_streaming(pid)
 
