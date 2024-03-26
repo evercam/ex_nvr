@@ -16,13 +16,13 @@ defmodule ExNVRWeb.PromEx.Recording do
           event_name: @recording_event,
           measurement: fn _measurement -> 1 end,
           description: "The total number of recorded segments",
-          tags: [:device_id]
+          tags: [:device_id, :stream]
         ),
         distribution("ex_nvr.recording.duration.milliseconds",
           event_name: @recording_event,
           measurement: :duration,
           description: "The total duration of the recordings",
-          tags: [:device_id],
+          tags: [:device_id, :stream],
           reporter_options: [
             buckets: [60_500, 65_000, 70_000, 75_000]
           ]
@@ -31,9 +31,9 @@ defmodule ExNVRWeb.PromEx.Recording do
           event_name: @recording_event,
           measurement: :size,
           description: "The total size of the recordings",
-          tags: [:device_id],
+          tags: [:device_id, :stream],
           reporter_options: [
-            buckets: [10_000_000, 20_000_000, 40_000_000, 80_000_000]
+            buckets: [500_000, 1_000_000, 5_000_000, 10_000_000, 20_000_000, 40_000_000]
           ]
         )
       ]
