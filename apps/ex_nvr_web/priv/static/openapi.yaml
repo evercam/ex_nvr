@@ -768,6 +768,7 @@ paths:
         - Media Streaming
       parameters:
         - $ref: '#/components/parameters/device_id'
+        - $ref: '#/components/parameters/stream_type'
         - name: start_date
           in: query
           required: true

@@ -150,7 +150,7 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
   defp get_recordings(device, params) do
     case Recordings.get_recordings_between(
            device.id,
-           :high,
+           params.stream,
            params.start_date,
            params.end_date || @default_end_date,
            limit: 120
@@ -165,7 +165,7 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
             &VideoAssembler.Download.new(
               &1.start_date,
               &1.end_date,
-              Recordings.recording_path(device, &1)
+              Recordings.recording_path(device, params.stream, &1)
             )
           )
 
@@ -219,10 +219,11 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
     types = %{
       start_date: :utc_datetime,
       end_date: :utc_datetime,
-      duration: :integer
+      duration: :integer,
+      stream: {:parameterized, Ecto.Enum, Ecto.Enum.init(values: ~w(high low)a)}
     }
 
-    {%{duration: 0, end_date: ~U(2099-01-01 00:00:00Z)}, types}
+    {%{duration: 0, end_date: ~U(2099-01-01 00:00:00Z), stream: :high}, types}
     |> Changeset.cast(params, Map.keys(types))
     |> Changeset.validate_required([:start_date])
     |> Changeset.validate_number(:duration, greater_than: 5, less_than_or_equal_to: 7200)
