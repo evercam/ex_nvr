@@ -146,7 +146,7 @@ The main feature of this project is to store video streams retrieved from `devic
 
 * **Camera Streams**: save and playback
    - [x] Main stream
-   - [ ] Sub-stream
+   - [x] Sub-stream
 
 * **Device Discovery**: discover devices
    - [x] Onvif discovery
