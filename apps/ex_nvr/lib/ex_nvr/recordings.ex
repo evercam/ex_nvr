@@ -103,27 +103,30 @@ defmodule ExNVR.Recordings do
   @spec delete_oldest_recordings(Device.t(), integer()) ::
           :ok | {:error, Ecto.Changeset.t()}
   def delete_oldest_recordings(device, limit) do
-    recordings = Recording.oldest_recordings(device.id, limit) |> Repo.all()
+    high_res_recordings =
+      Recording.with_type(:high)
+      |> Recording.oldest_recordings(device.id, limit)
+      |> Repo.all()
 
-    oldest_recording_query = Recording.oldest_recordings(device.id, 1)
-    delete_recordings_query = from(r in Recording, where: r.id in ^Enum.map(recordings, & &1.id))
+    low_res_recordings =
+      Recording.with_type(:low)
+      |> Recording.before_date(List.last(high_res_recordings).end_date)
+      |> Repo.all()
 
-    base_run_query = from(r in Run, where: r.device_id == ^device.id)
-    oldest_run_query = from(r in base_run_query, order_by: r.start_date, limit: 1)
+    ids = Enum.concat(high_res_recordings, low_res_recordings) |> Enum.map(& &1.id)
+    delete_recordings_query = from(r in Recording, where: r.id in ^ids)
 
     Multi.new()
     |> Multi.delete_all(:recordings, delete_recordings_query)
-    |> Multi.one(:oldest_recording, oldest_recording_query)
-    |> Multi.delete_all(:runs, fn %{oldest_recording: recording} ->
-      from(r in base_run_query, where: r.end_date < ^recording.start_date)
-    end)
-    |> Multi.one(:oldest_run, oldest_run_query)
-    |> Multi.update(:run, fn %{oldest_run: run, oldest_recording: recording} ->
-      Run.changeset(run, %{start_date: recording.start_date})
-    end)
+    |> delete_recordings_multi(device, :high)
+    |> delete_recordings_multi(device, :low)
     |> Multi.run(:delete_files, fn _repo, _params ->
-      recordings
+      high_res_recordings
       |> Enum.map(&recording_path(device, &1))
+      |> Enum.each(&File.rm!/1)
+
+      low_res_recordings
+      |> Enum.map(&recording_path(device, :low, &1))
       |> Enum.each(&File.rm!/1)
 
       {:ok, nil}
@@ -133,13 +136,44 @@ defmodule ExNVR.Recordings do
       {:ok, _params} ->
         broadcast_recordings_event(:delete)
 
-        :telemetry.execute([:ex_nvr, :recording, :delete], %{count: length(recordings)}, %{
-          device_id: device.id
-        })
+        :telemetry.execute(
+          [:ex_nvr, :recording, :delete],
+          %{count: length(high_res_recordings)},
+          %{
+            device_id: device.id
+          }
+        )
 
       {:error, _, changeset, _} ->
         {:error, changeset}
     end
+  end
+
+  defp delete_recordings_multi(multi, device, stream_type) do
+    oldest_recording_query =
+      Recording.with_type(stream_type) |> Recording.oldest_recordings(device.id, 1)
+
+    base_run_query = from(r in Run, where: r.stream == ^stream_type and r.device_id == ^device.id)
+    oldest_run_query = from(r in base_run_query, order_by: r.start_date, limit: 1)
+
+    multi
+    |> Multi.one(:"oldest_recording_#{stream_type}", oldest_recording_query)
+    |> Multi.run(:"runs_#{stream_type}", fn _repo, changes ->
+      if recording = changes[:"oldest_recording_#{stream_type}"] do
+        Repo.delete_all(from(r in base_run_query, where: r.end_date < ^recording.start_date))
+      end
+
+      {:ok, 0}
+    end)
+    |> Multi.one(:"oldest_run_#{stream_type}", oldest_run_query)
+    |> Multi.run(:"run_#{stream_type}", fn _repo, changes ->
+      if run = changes[:"oldest_run_#{stream_type}"] do
+        recording = changes[:"oldest_recording_#{stream_type}"]
+        Repo.update(Run.changeset(run, %{start_date: recording.start_date}))
+      else
+        {:ok, nil}
+      end
+    end)
   end
 
   def subscribe_to_recording_events() do

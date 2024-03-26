@@ -171,7 +171,8 @@ defmodule ExNVR.Model.Device do
 
   @spec config_updated(t(), t()) :: boolean()
   def config_updated(%__MODULE__{} = device_1, %__MODULE__{} = device_2) do
-    device_1.stream_config != device_2.stream_config or device_1.settings != device_2.settings
+    device_1.stream_config != device_2.stream_config or device_1.settings != device_2.settings or
+      device_1.storage_config != device_2.storage_config
   end
 
   @spec has_sub_stream(t()) :: boolean()

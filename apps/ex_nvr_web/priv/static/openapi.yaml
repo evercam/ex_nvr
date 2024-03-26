@@ -401,7 +401,9 @@ paths:
                   $ref: "#/components/schemas/Credentials"
                 settings:
                   $ref: "#/components/schemas/DeviceSettings"
-              required: [name, type, settings]
+                storage_config: 
+                  $ref: "#/components/schemas/DeviceStorageConfig"
+              required: [name, type, storage_config]
       responses:
         '201':
           description: Created
@@ -484,6 +486,8 @@ paths:
                   $ref: "#/components/schemas/Credentials"
                 settings:
                   $ref: "#/components/schemas/DeviceSettings"
+                storage_config: 
+                  $ref: "#/components/schemas/DeviceStorageConfig"
       responses:
         '200':
           description: Success
@@ -897,7 +901,6 @@ paths:
           $ref: "#/components/responses/BadArg"
         '404':
           $ref: "#/components/responses/NotFound"
-  
   /api/events:
     get:
       summary: Get events
@@ -1111,6 +1114,37 @@ components:
           $ref: "#/components/schemas/Credentials"
         settings:
           $ref: "#/components/schemas/DeviceSettings"
+        storage_config:
+          $ref: "#/components/schemas/DeviceStorageConfig"
+    DeviceStorageConfig:
+      type: object
+      description: Storage settings
+      properties:
+        address:
+          type: string
+          description: "The mountpoint/location where to store the device data"
+        record_sub_stream:
+          type: string
+          enum: [never, always]
+          description: |
+            When the sub stream should be recorded, it accept one of the following values:
+
+              * `never` - Do not record the sub stream.
+              * `always` - Always record the sub stream.
+        full_drive_threshold:
+          type: number
+          minimum: 0
+          maximum: 99
+          description: The percentage when a drive should be considered full.
+        full_drive_action:
+          type: string
+          enum: [nothing, overwrite]
+          description: |
+            The action to take when a drive is full, it can be one of the following values:
+
+              * `nothing` - Do nothing, keep recording.
+              * `overwrite` - Delete old recordings.
+      required: [address]
     DeviceSettings:
       type: object
       description: Device settings that controls how the device behaves.
@@ -1119,22 +1153,6 @@ components:
           type: boolean
           default: true
           description: Indicates whether BIF (Base Index File) used for trick play should be generated.
-        storage_address:
-          type: string
-          description: | 
-            The mountpoint/folder where to store device data (recordings, bif, ...etc.)
-
-            This setting is not updatable after the creation of the device
-        override_on_full_disk:
-          type: boolean
-          default: false
-          description: A boolean value to signal that when reaching the override_on_full_disk_threshold on the storage_address disk usage percentage the 30 oldest recordings would be deleted
-        override_on_full_disk_threshold:
-          type: number
-          default: 90.0
-          minimum: 0.0
-          maximum: 100.0
-          description: A float value where if storage_address storage usage percentage reaches this value the 30 oldest recordings will be deleted
       required: [storage_address]
     Error:
       type: object

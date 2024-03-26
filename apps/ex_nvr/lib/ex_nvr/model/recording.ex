@@ -45,6 +45,10 @@ defmodule ExNVR.Model.Recording do
     where(query, [r], r.stream == ^stream_type)
   end
 
+  def before_date(query \\ __MODULE__, date) do
+    where(query, [r], r.end_date < ^date)
+  end
+
   def between_dates(query \\ __MODULE__, start_date, end_date, opts) do
     where(query, [r], r.start_date <= ^end_date and r.end_date > ^start_date)
     |> limit(^(opts[:limit] || 50))

@@ -112,14 +112,6 @@
               label="RTSP Uri"
               placeholder="rtsp://camera1:554/video/stream2"
             />
-            <.input
-              :if={@device_type == "ip"}
-              field={config[:sub_stream_snapshot_uri]}
-              id="config_snapshot_uri"
-              type="text"
-              label="Snapshot Uri"
-              placeholder="http://camera1:80/snapshot"
-            />
             <label
               :if={@device_type == "file" && is_nil(@device.id)}
               for={@uploads.file_to_upload.ref}
@@ -219,7 +211,7 @@
             </div>
           </.inputs_for>
         </div>
-        <div class="flex flex-col" :if={@device_type == "ip"}>
+        <div :if={@device_type == "ip"} class="flex flex-col">
           <div class="relative flex py-5 items-center">
             <span class="flex-shrink mr-4 text-black dark:text-white">Other Settings</span>
             <div class="flex-grow border-t border-gray-400"></div>

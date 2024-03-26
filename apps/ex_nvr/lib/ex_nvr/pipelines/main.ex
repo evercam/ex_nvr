@@ -394,6 +394,24 @@ defmodule ExNVR.Pipelines.Main do
         |> get_child(:hls_sink)
       ]
 
+    spec =
+      case device.storage_config.record_sub_stream do
+        :always ->
+          spec ++
+            [
+              get_child({:tee, :sub_stream})
+              |> via_out(:copy)
+              |> child({:storage, :sub_stream}, %Output.Storage{
+                device: device,
+                stream: :low,
+                correct_timestamp: true
+              })
+            ]
+
+        _other ->
+          spec
+      end
+
     if device.settings.generate_bif do
       spec ++
         [
