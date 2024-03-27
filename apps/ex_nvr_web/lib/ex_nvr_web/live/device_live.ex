@@ -61,8 +61,9 @@ defmodule ExNVRWeb.DeviceLive do
 
   def handle_event("save_device", %{"device" => device_params}, socket) do
     device = socket.assigns.device
+    device_type = socket.assigns.device_type
 
-    device_params = put_default_schedule(device_params)
+    device_params = put_default_schedule(device_params, device_type)
 
     if device.id,
       do: do_update_device(socket, device, device_params),
@@ -95,12 +96,15 @@ defmodule ExNVRWeb.DeviceLive do
     {device_type, changeset}
   end
 
-  defp put_default_schedule(%{"type" => "file"} = device_config), do: device_config
+  defp put_default_schedule(device_config, "file"), do: device_config
 
-  defp put_default_schedule(%{"snapshot_config" => %{"enabled" => false}} = device_config),
-    do: device_config
+  defp put_default_schedule(
+         %{"snapshot_config" => %{"enabled" => false}} = device_config,
+         _device_type
+       ),
+       do: device_config
 
-  defp put_default_schedule(%{"snapshot_config" => snapshot_config} = device_config) do
+  defp put_default_schedule(%{"snapshot_config" => snapshot_config} = device_config, _device_type) do
     snapshot_config =
       Map.put(snapshot_config, "schedule", %{
         "1" => ["00:00-23:59"],
