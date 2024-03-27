@@ -161,7 +161,6 @@ defmodule ExNVR.DevicesTest do
 
       assert %{
                snapshot_config: %{
-                 upload_interval: ["can't be blank"],
                  remote_storage: ["can't be blank"],
                  schedule: ["can't be blank"]
                }

@@ -13,4 +13,4 @@ type recording :: %ExNVR.VideoAssembler.Download{
 spec assemble_recordings(recordings :: [recording], start_date :: int64, end_date :: int64, duration :: int64, dest :: string) ::
   {:ok :: label, start_date :: int64} | {:error :: label, reason :: atom}
 
-dirty :cpu, assemble_files: 2
+dirty :cpu, assemble_recordings: 5
