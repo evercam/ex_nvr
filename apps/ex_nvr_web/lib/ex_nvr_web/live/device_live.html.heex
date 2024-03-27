@@ -211,6 +211,46 @@
             </div>
           </.inputs_for>
         </div>
+        <div :if={@device_type == "ip"} id="snapshot-config" class="flex flex-col">
+          <div class="relative flex py-5 items-center">
+            <span class="flex-shrink mr-4 text-black dark:text-white">
+              Snapshot Config
+            </span>
+            <div class="flex-grow border-t border-gray-400"></div>
+          </div>
+          <div class="flex flex-col text-black dark:text-white">
+            <.inputs_for :let={snapshot_config} field={@device_form[:snapshot_config]}>
+              <.input
+                field={snapshot_config[:enabled]}
+                type="checkbox"
+                label="Enable snapshot upload to remote storage"
+              />
+              <div
+                :if={snapshot_config[:enabled].value}
+                class="grid grid-cols-3 gap-5 items-center my-5"
+              >
+                <span class="col-span-2">Upload interval (seconds):</span>
+                <.input
+                  field={snapshot_config[:upload_interval]}
+                  type="number"
+                  min="5"
+                  max="3600"
+                  label=""
+                  required
+                />
+
+                <span class="col-span-2">Remote storages:</span>
+                <.input
+                  field={snapshot_config[:remote_storage]}
+                  type="select"
+                  label=""
+                  options={@remote_storages}
+                  required
+                />
+              </div>
+            </.inputs_for>
+          </div>
+        </div>
         <div :if={@device_type == "ip"} class="flex flex-col">
           <div class="relative flex py-5 items-center">
             <span class="flex-shrink mr-4 text-black dark:text-white">Other Settings</span>
@@ -218,40 +258,6 @@
           </div>
           <.inputs_for :let={settings} field={@device_form[:settings]}>
             <.input field={settings[:generate_bif]} type="checkbox" label="Generate BIF" />
-          </.inputs_for>
-        </div>
-      </div>
-      <div id="snapshot-config" class="flex flex-col">
-        <p class="text-xl font-medium mb-4 text-black dark:text-white">
-          Snapshot Config
-        </p>
-        <div class="flex flex-col text-black dark:text-white">
-          <.inputs_for :let={snapshot_config} field={@device_form[:snapshot_config]}>
-            <div class="mx-3 px-3">
-              <.input
-                field={snapshot_config[:enabled]}
-                type="checkbox"
-                label="Enable snapshot upload to remote storage"
-              />
-              <.input
-                :if={snapshot_config[:enabled].value}
-                field={snapshot_config[:upload_interval]}
-                type="number"
-                min="5"
-                max="3600"
-                label="Upload interval (seconds)"
-                required
-              />
-              <.input
-                :if={snapshot_config[:enabled].value}
-                field={snapshot_config[:remote_storage]}
-                type="select"
-                label="Remote storages"
-                prompt="Choose your remotr storage"
-                options={@remote_storages}
-                required
-              />
-            </div>
           </.inputs_for>
         </div>
       </div>

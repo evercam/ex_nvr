@@ -95,6 +95,8 @@ defmodule ExNVRWeb.DeviceLive do
     {device_type, changeset}
   end
 
+  defp put_default_schedule(%{"type" => "file"} = device_config), do: device_config
+
   defp put_default_schedule(%{"snapshot_config" => %{"enabled" => false}} = device_config),
     do: device_config
 

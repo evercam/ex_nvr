@@ -403,6 +403,8 @@ paths:
                   $ref: "#/components/schemas/DeviceSettings"
                 storage_config: 
                   $ref: "#/components/schemas/DeviceStorageConfig"
+                snapshot_config:
+                  $ref: "#/components/schemas/DeviceSnapshotConfig"
               required: [name, type, storage_config]
       responses:
         '201':
@@ -488,6 +490,8 @@ paths:
                   $ref: "#/components/schemas/DeviceSettings"
                 storage_config: 
                   $ref: "#/components/schemas/DeviceStorageConfig"
+                snapshot_config:
+                  $ref: "#/components/schemas/DeviceSnapshotConfig"
       responses:
         '200':
           description: Success
@@ -1117,6 +1121,8 @@ components:
           $ref: "#/components/schemas/DeviceSettings"
         storage_config:
           $ref: "#/components/schemas/DeviceStorageConfig"
+        snapshot_config:
+          $ref: "#components/schemas/DeviceSnapshotConfig"
     DeviceStorageConfig:
       type: object
       description: Storage settings
@@ -1146,6 +1152,36 @@ components:
               * `nothing` - Do nothing, keep recording.
               * `overwrite` - Delete old recordings.
       required: [address]
+    DeviceSnapshotConfig:
+      type: object
+      description: snapshot config
+      properties:
+        enabled:
+          type: boolean
+          default: false
+          description: Indicates if snapshot upload to remote storage is enabled for the device or not.
+        upload_interval:
+          type: number
+          minimum: 5
+          maximum: 3600
+          description: The interval in seconds for snapshots upload.
+        remote_storage:
+          type: string
+          description: The remote storage name where the snapshots will be uploaded
+        schedule:
+          type: object
+          description: |
+            Describe the time slots during which the snapshots are uploaded. 
+            The keys are the week days indexes (from 1 to 7) and the values are an array of time intervals.
+            If a key is missing, then it default value will be an empty array and no snapshots will be uploaded for this day.
+          example: 
+            1: ["08:00-20:00"]
+            2: ["08:00-18:00"]
+            3: ["08:00-12:00", "14:00-18:00"]
+            4: []
+            5: ["00:00-23:59"]
+            6: ["00:00-18:00"]
+            7: []
     DeviceSettings:
       type: object
       description: Device settings that controls how the device behaves.
