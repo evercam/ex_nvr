@@ -17,7 +17,7 @@ defmodule ExNVR.Model.Device.SnapshotConfig do
   @primary_key false
   embedded_schema do
     field :enabled, :boolean
-    field :upload_interval, :integer
+    field :upload_interval, :integer, default: 30
     field :remote_storage, :string
     field :schedule, :map
   end
