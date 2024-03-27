@@ -81,9 +81,7 @@ defmodule ExNVR.Umbrella.MixProject do
     suffix_path = Path.join(["priv", "shared", "precompiled"])
     src_bundlex_path = Path.join(Application.app_dir(:bundlex), suffix_path)
 
-    System.shell(
-      "cp -P #{Path.join([src_bundlex_path, "**", "lib", "*.so*"])} #{libs_dest}"
-    )
+    System.shell("cp -P #{Path.join([src_bundlex_path, "**", "lib", "*.so*"])} #{libs_dest}")
 
     dest_bundlex_path =
       Path.join([release.path, "lib", "bundlex*", suffix_path])
