@@ -127,7 +127,7 @@ defmodule ExNVR.Model.Device.SnapshotConfig do
     Enum.reduce_while(time_intervals, [], fn time_interval, acc ->
       with [start_time, end_time] <- String.split(time_interval, "-", parts: 2),
            {:ok, start_time} <- Time.from_iso8601(start_time <> ":00"),
-           {:ok, end_time} <- Time.from_iso8601(end_time <> ":00") do
+           {:ok, end_time} <- Time.from_iso8601(end_time <> ":59") do
         {:cont, acc ++ [%{start_time: start_time, end_time: end_time}]}
       else
         _error -> {:halt, :invalid_time_intervals}

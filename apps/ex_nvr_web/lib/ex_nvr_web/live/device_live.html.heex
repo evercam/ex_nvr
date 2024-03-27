@@ -221,6 +221,40 @@
           </.inputs_for>
         </div>
       </div>
+      <div id="snapshot-config" class="flex flex-col">
+        <p class="text-xl font-medium mb-4 text-black dark:text-white">
+          Snapshot Config
+        </p>
+        <div class="flex flex-col text-black dark:text-white">
+          <.inputs_for :let={snapshot_config} field={@device_form[:snapshot_config]}>
+            <div class="mx-3 px-3">
+              <.input
+                field={snapshot_config[:enabled]}
+                type="checkbox"
+                label="Enable snapshot upload to remote storage"
+              />
+              <.input
+                :if={snapshot_config[:enabled].value}
+                field={snapshot_config[:upload_interval]}
+                type="number"
+                min="5"
+                max="3600"
+                label="Upload interval (seconds)"
+                required
+              />
+              <.input
+                :if={snapshot_config[:enabled].value}
+                field={snapshot_config[:remote_storage]}
+                type="select"
+                label="Remote storages"
+                prompt="Choose your remotr storage"
+                options={@remote_storages}
+                required
+              />
+            </div>
+          </.inputs_for>
+        </div>
+      </div>
       <:actions>
         <.button :if={is_nil(@device.id)} class="w-full" phx-disable-with="Creating...">
           Create

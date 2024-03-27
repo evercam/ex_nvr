@@ -79,7 +79,7 @@ defmodule ExNVR.Devices.SnapshotUploader do
   defp scheduled_today?(time_intervals, current_time) do
     Enum.any?(time_intervals, fn time_interval ->
       Time.compare(time_interval.start_time, current_time) in [:lt, :eq] &&
-        Time.before?(current_time, time_interval.end_time)
+        Time.compare(current_time, time_interval.end_time) in [:lt, :eq]
     end)
   end
 

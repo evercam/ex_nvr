@@ -3,7 +3,7 @@ defmodule ExNVRWeb.DeviceLive do
 
   use ExNVRWeb, :live_view
 
-  alias ExNVR.{Devices, DeviceSupervisor}
+  alias ExNVR.{Devices, DeviceSupervisor, RemoteStorages}
   alias ExNVR.Model.Device
   alias ExNVR.MP4.Reader
 
@@ -19,7 +19,8 @@ defmodule ExNVRWeb.DeviceLive do
        disks_data: get_disks_data(),
        device_form: to_form(changeset),
        device_type: "ip",
-       override_on_full_disk: false
+       override_on_full_disk: false,
+       remote_storages: list_remote_storages()
      )
      |> allow_upload(:file_to_upload,
        accept: ~w(video/mp4),
@@ -35,7 +36,8 @@ defmodule ExNVRWeb.DeviceLive do
        device: device,
        disks_data: get_disks_data(),
        device_form: to_form(Devices.change_device_update(device)),
-       device_type: Atom.to_string(device.type)
+       device_type: Atom.to_string(device.type),
+       remote_storages: list_remote_storages()
      )}
   end
 
@@ -59,6 +61,8 @@ defmodule ExNVRWeb.DeviceLive do
 
   def handle_event("save_device", %{"device" => device_params}, socket) do
     device = socket.assigns.device
+
+    device_params = put_default_schedule(device_params)
 
     if device.id,
       do: do_update_device(socket, device, device_params),
@@ -89,6 +93,24 @@ defmodule ExNVRWeb.DeviceLive do
     device_type = device_params["type"]
     changeset = Devices.change_device_creation(%Device{}, device_params)
     {device_type, changeset}
+  end
+
+  defp put_default_schedule(%{"snapshot_config" => %{"enabled" => false}} = device_config),
+    do: device_config
+
+  defp put_default_schedule(%{"snapshot_config" => snapshot_config} = device_config) do
+    snapshot_config =
+      Map.put(snapshot_config, "schedule", %{
+        "1" => ["00:00-23:59"],
+        "2" => ["00:00-23:59"],
+        "3" => ["00:00-23:59"],
+        "4" => ["00:00-23:59"],
+        "5" => ["00:00-23:59"],
+        "6" => ["00:00-23:59"],
+        "7" => ["00:00-23:59"]
+      })
+
+    Map.put(device_config, "snapshot_config", snapshot_config)
   end
 
   defp do_save_device(socket, device_params) do
@@ -153,6 +175,10 @@ defmodule ExNVRWeb.DeviceLive do
       {:error, changeset} ->
         {:noreply, assign(socket, device_form: to_form(changeset))}
     end
+  end
+
+  defp list_remote_storages() do
+    RemoteStorages.list() |> Enum.map(& &1.name)
   end
 
   defp humanize_capacity({capacity, _percentag}) do
