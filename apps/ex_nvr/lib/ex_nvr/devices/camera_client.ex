@@ -2,19 +2,25 @@ defmodule ExNVR.Devices.CameraClient do
   alias ExNVR.Devices.CameraClient.{Axis, Hik, Milesight}
   alias ExNVR.Model.Device
 
-  def fetch_anpr(device, last_event_timestamp \\ nil) do
+  @spec fetch_lpr_event(Device.t(), DateTime.t() | nil) ::
+          {:ok, [map()], [binary() | nil]} | {:error, term()}
+  def fetch_lpr_event(device, last_event_timestamp \\ nil) do
+    %{username: username, password: password} = device.credentials
+    auth_type = if not is_nil(username) && not is_nil(password), do: :basic
+
     opts =
       [
-        username: device.credentials.username,
-        password: device.credentials.password,
+        username: username,
+        password: password,
+        auth_type: auth_type,
         last_event_timestamp: last_event_timestamp,
         timezone: device.timezone
-      ] ++ Device.auth_type(device)
+      ]
 
     vendor = Device.vendor(device)
     base_url = Device.base_url(device)
 
-    impl(vendor).fetch_anpr(base_url, opts)
+    impl(vendor).fetch_lpr_event(base_url, opts)
   end
 
   defp impl(:axis), do: Axis

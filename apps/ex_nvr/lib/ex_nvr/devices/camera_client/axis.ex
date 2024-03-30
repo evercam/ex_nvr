@@ -12,7 +12,7 @@ defmodule ExNVR.Devices.CameraClient.Axis do
   @lpr_image_path_prefix "/local/fflprapp/"
   @timestamp_regex ~r/(\d+-\d+-\d+ \d+:\d+:\d+).*/
 
-  def fetch_anpr(url, opts) do
+  def fetch_lpr_event(url, opts) do
     timestamp = opts[:timestamp] && DateTime.to_unix(opts[:last_event_timestamp], :microsecond)
     full_url = url <> @lpr_path <> "?TimestampFrom=#{timestamp}"
 

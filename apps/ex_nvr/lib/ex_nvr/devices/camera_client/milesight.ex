@@ -10,7 +10,7 @@ defmodule ExNVR.Devices.CameraClient.Milesight do
   @lpr_path "/cgi-bin/operator/operator.cgi?action=get.lpr.lastdata&format=inf"
   @lpr_image_path "/LPR"
 
-  def fetch_anpr(url, opts) do
+  def fetch_lpr_event(url, opts) do
     full_url = url <> @lpr_path
 
     case HTTP.get(full_url, opts) do

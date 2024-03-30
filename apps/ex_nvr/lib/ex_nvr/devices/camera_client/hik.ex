@@ -11,7 +11,7 @@ defmodule ExNVR.Devices.CameraClient.Hik do
   @lpr_path "/ISAPI/Traffic/channels/1/vehicledetect/plates"
   @lpr_image_path "/doc/ui/images/plate"
 
-  def fetch_anpr(url, opts) do
+  def fetch_lpr_event(url, opts) do
     last_event_timestamp = last_event_timestamp(opts[:last_event_timestamp], opts[:timezone])
     request_body = "<AfterTime><picTime>#{last_event_timestamp}</picTime></AfterTime>"
 
