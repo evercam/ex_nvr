@@ -27,27 +27,11 @@ defmodule ExNVR.Pipeline.Output.WebRTC.StreamEndpoint do
   end
 
   @impl true
-  def handle_parent_notification({:media_track, media_track}, ctx, state) do
+  def handle_parent_notification({:encoding, encoding}, ctx, state) do
     {:endpoint, endpoint_id} = ctx.name
 
-    rtpmap = media_track.rtpmap
-
-    fmtp = %ExSDP.Attribute.FMTP{
-      pt: rtpmap.payload_type
-    }
-
-    track =
-      Track.new(
-        media_track.type,
-        Track.stream_id(),
-        endpoint_id,
-        media_track.encoding,
-        rtpmap.clock_rate,
-        fmtp,
-        ctx: %{
-          rtpmap: rtpmap
-        }
-      )
+    fmtp = %ExSDP.Attribute.FMTP{pt: 96}
+    track = Track.new(:video, Track.stream_id(), endpoint_id, encoding, 90_000, fmtp)
 
     {[
        notify_parent: {:publish, {:new_tracks, [track]}},

@@ -18,7 +18,6 @@ defmodule ExNVR.Pipeline.Output.WebRTC do
 
   require Membrane.Logger
 
-  alias ExNVR.Media.Track
   alias ExNVR.Pipeline.Output
   alias Membrane.H264
   alias Membrane.ICE.TURNManager
@@ -30,9 +29,9 @@ defmodule ExNVR.Pipeline.Output.WebRTC do
     accepted_format: %H264{alignment: :au},
     availability: :on_request,
     options: [
-      media_track: [
-        spec: Track.t(),
-        description: "Media track description"
+      encoding: [
+        spec: :H264,
+        description: "encoding of the media"
       ]
     ]
 
@@ -67,23 +66,23 @@ defmodule ExNVR.Pipeline.Output.WebRTC do
        network_options: network_options,
        peer_channels: %{},
        stream_endpoint_id: stream_endpoint_id,
-       media_track: nil
+       encoding: nil
      }}
   end
 
   @impl true
   def handle_pad_added(Pad.ref(:input, :main_stream) = pad, ctx, state) do
-    media_track = ctx.pad_options[:media_track]
+    encoding = ctx.pad_options[:encoding]
 
     Engine.message_endpoint(
       state.rtc_engine,
       state.stream_endpoint_id,
-      {:media_track, media_track}
+      {:encoding, encoding}
     )
 
     spec = [bin_input(pad) |> child(:sink, Output.WebRTC.Sink)]
 
-    {[spec: spec], %{state | media_track: media_track}}
+    {[spec: spec], %{state | encoding: encoding}}
   end
 
   @impl true
@@ -94,7 +93,7 @@ defmodule ExNVR.Pipeline.Output.WebRTC do
   @impl true
   def handle_pad_removed(Pad.ref(:input, :main_stream), _ctx, state) do
     Engine.message_endpoint(state.rtc_engine, state.stream_endpoint_id, :remove_track)
-    {[remove_children: :sink], %{state | media_track: nil}}
+    {[remove_children: :sink], %{state | encoding: nil}}
   end
 
   @impl true
