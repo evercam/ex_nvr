@@ -11,7 +11,7 @@ defmodule ExNVR.Pipelines.HlsPlayback do
   alias ExNVR.Pipeline.Output
   alias Membrane.{H264, H265}
 
-  @call_timeout :timer.seconds(10)
+  @call_timeout :timer.seconds(20)
 
   @spec start_link(Keyword.t()) :: Pipeline.on_start()
   def start_link(opts) do
