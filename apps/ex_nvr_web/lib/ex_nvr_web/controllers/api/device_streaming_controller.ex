@@ -217,8 +217,8 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
 
   defp validate_footage_req_params(params) do
     types = %{
-      start_date: :utc_datetime,
-      end_date: :utc_datetime,
+      start_date: :utc_datetime_usec,
+      end_date: :utc_datetime_usec,
       duration: :integer,
       stream: {:parameterized, Ecto.Enum, Ecto.Enum.init(values: ~w(high low)a)}
     }
