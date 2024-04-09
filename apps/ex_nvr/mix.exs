@@ -4,7 +4,7 @@ defmodule ExNVR.MixProject do
   def project do
     [
       app: :ex_nvr,
-      version: "0.10.0",
+      version: "0.11.0",
       build_path: "../../_build",
       config_path: "../../config/config.exs",
       deps_path: "../../deps",
@@ -44,7 +44,7 @@ defmodule ExNVR.MixProject do
       {:jason, "~> 1.2"},
       {:swoosh, "~> 1.15"},
       {:finch, "~> 0.13"},
-      {:ex_sdp, "~> 0.14.0", override: true},
+      {:ex_sdp, "~> 0.15.0", override: true},
       {:membrane_core, "~> 1.0"},
       {:membrane_rtp_plugin, "~> 0.27.0", override: true},
       {:membrane_file_plugin, "~> 0.17.0", override: true},
