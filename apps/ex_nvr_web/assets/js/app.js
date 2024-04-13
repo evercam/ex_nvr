@@ -116,6 +116,9 @@ function initDarkMode() {
 
 startStreaming = (src, poster_url) => {
     var video = document.getElementById("live-video")
+    let realLifeTime = 0
+    let durationSinceStart = 0
+    let timeSinceStartPlaying = 0
     if (video != null && Hls.isSupported()) {
         if (window.hls) {
             window.hls.destroy()
@@ -128,13 +131,37 @@ startStreaming = (src, poster_url) => {
         window.hls = new Hls({
             manifestLoadingTimeOut: MANIFEST_LOAD_TIMEOUT,
         })
-        window.hls.loadSource(src)
         window.hls.attachMedia(video)
+        window.hls.on(Hls.Events.MEDIA_ATTACHED, () => {
+            window.hls.loadSource(src)
+        })
+        // window.hls.on(Hls.Events.FRAG_LOADED, (event, data) => {
+        //     realLifeTime = data.frag.programDateTime
+        //     durationSinceStart = data.frag.duration
+        //     console.log("New date : " ,new Date(data.frag.programDateTime))
+        // })
+        window.hls.on(Hls.Events.INIT_PTS_FOUND, (event, data) => {
+            realLifeTime = data.frag.programDateTime - data.initPTS
+            console.log(new Date(realLifeTime), new Date(data.frag.programDateTime))
+        })
+        video.addEventListener("timeupdate", (event) => {
+            // console.log(event.timeStamp);
+            timeSinceStartPlaying  = event.timeStamp
+            const actualTimeOnPlaying = realLifeTime + timeSinceStartPlaying;
+            console.log("Playing : " ,new Date(actualTimeOnPlaying))
+            window.TimelineHook?.pushEvent("new_date", {value: actualTimeOnPlaying})
+        })
+
+        video.play()
     }
 }
 
 window.addEventListener("phx:stream", (e) => {
     startStreaming(e.detail.src, e.detail.poster)
+})
+
+window.addEventListener("phx:stream", (e) => {
+    console.log(e.detail.motion)
 })
 
 window.addEventListener("phx:js-exec", ({ detail }) => {

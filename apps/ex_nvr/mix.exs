@@ -59,6 +59,7 @@ defmodule ExNVR.MixProject do
       {:membrane_rtc_engine, "~> 0.21.0"},
       {:membrane_rtc_engine_webrtc, "~> 0.7.0"},
       {:membrane_fake_plugin, "~> 0.11.0"},
+      {:membrane_framerate_converter_plugin, "~> 0.8.0"},
       {:ex_libsrtp, "~> 0.7.0"},
       {:ex_m3u8, "~> 0.14.2"},
       {:connection, "~> 1.1.0"},
@@ -71,7 +72,10 @@ defmodule ExNVR.MixProject do
       {:req, "~> 0.4.0"},
       {:multipart, "~> 0.4.0"},
       {:faker, "~> 0.17", only: :test},
-      {:bypass, "~> 2.1", only: :test}
+      {:bypass, "~> 2.1", only: :test},
+      {:evision, "~> 0.1"},
+      {:nx, "~> 0.5"},
+      {:torchx, "~> 0.5"}
     ]
   end
 

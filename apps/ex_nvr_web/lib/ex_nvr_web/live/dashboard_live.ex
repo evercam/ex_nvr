@@ -5,6 +5,8 @@ defmodule ExNVRWeb.DashboardLive do
   alias ExNVR.Devices
   alias ExNVR.Recordings
   alias ExNVR.Model.Device
+  alias ExNVR.Model.Motion
+  alias ExNVR.Motions
   alias ExNVRWeb.Router.Helpers, as: Routes
   alias ExNVRWeb.TimelineComponent
 
@@ -219,6 +221,19 @@ defmodule ExNVRWeb.DashboardLive do
     {:noreply, push_patch(socket, to: route, replace: true)}
   end
 
+  def handle_event("new_date", %{"value" => value}, socket) do
+    current_datetime = socket.assigns.start_date
+    current_device = socket.assigns.current_device
+    timezone = socket.assigns.current_device.timezone
+    new_datetime = parse_datetime(value, timezone)
+
+    IO.inspect("in")
+    motion = Motions.get_closest_time(new_datetime, current_device.id)
+    socket = push_event(socket, "motion", %{motion: motion})
+
+    {:noreply, socket}
+  end
+
   def handle_event("switch_stream", %{"stream" => stream}, socket) do
     route =
       Routes.dashboard_path(socket, :new, %{
@@ -227,24 +242,6 @@ defmodule ExNVRWeb.DashboardLive do
       })
 
     {:noreply, push_patch(socket, to: route, replace: true)}
-  end
-
-  def handle_event("datetime", %{"value" => value}, socket) do
-    current_datetime = socket.assigns.start_date
-    timezone = socket.assigns.current_device.timezone
-    new_datetime = parse_datetime(value, timezone)
-
-    socket =
-      if current_datetime != new_datetime do
-        socket
-        |> assign(start_date: new_datetime)
-        |> live_view_enabled?()
-        |> maybe_push_stream_event(new_datetime)
-      else
-        socket
-      end
-
-    {:noreply, socket}
   end
 
   def handle_event("footage_duration", %{"footage" => params}, socket) do

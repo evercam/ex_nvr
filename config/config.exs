@@ -73,6 +73,7 @@ config :logger, :console,
 config :phoenix, :json_library, Jason
 
 config :soap, :globals, version: "1.2"
+config :nx, :default_backend, Torchx.Backend
 
 config :os_mon,
   disk_space_check_interval: {:second, 30},
