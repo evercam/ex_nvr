@@ -22,7 +22,7 @@ defmodule ExNVRWeb.DashboardLive do
 
   def render(assigns) do
     ~H"""
-    <div class="bg-gray-300 sm:w-2/3 dark:bg-gray-800">
+    <div id="dashContainer" class="bg-gray-300 sm:w-2/3 dark:bg-gray-800" phx-hook="dashContainer">
       <div :if={@devices == []} class="grid tracking-wide text-lg text-center dark:text-gray-200">
         You have no devices, you can create one
         <span><.link href={~p"/devices"} class="ml-2 dark:text-blue-600">here</.link></span>
@@ -225,9 +225,9 @@ defmodule ExNVRWeb.DashboardLive do
     current_datetime = socket.assigns.start_date
     current_device = socket.assigns.current_device
     timezone = socket.assigns.current_device.timezone
-    new_datetime = parse_datetime(value, timezone)
+    new_datetime = DateTime.from_unix!(round(value), :millisecond)
 
-    IO.inspect("in")
+    IO.inspect(new_datetime)
     motion = Motions.get_closest_time(new_datetime, current_device.id)
     socket = push_event(socket, "motion", %{motion: motion})
 
@@ -367,10 +367,9 @@ defmodule ExNVRWeb.DashboardLive do
     assign(socket, live_view_enabled?: enabled?)
   end
 
-  defp parse_datetime(datetime, timezone) do
-    with {:ok, naive_date} <- NaiveDateTime.from_iso8601(datetime),
-         {:ok, zoned_date} <- DateTime.from_naive(naive_date, timezone) do
-      zoned_date
+  defp parse_datetime(timestamp, timezone) do
+    with {:ok, datetime} <- DateTime.from_unix(timestamp, :millisecond, timezone) do
+      datetime
     else
       _ -> nil
     end

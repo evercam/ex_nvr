@@ -76,6 +76,7 @@ config :ex_nvr_web, dev_routes: true
 
 # Do not include metadata nor timestamps in development logs
 config :logger, :console,
+  level: :info,
   metadata: [:device_id, :user_id, :request_id],
   format: "$dateT$time [$level] $message\n"
 

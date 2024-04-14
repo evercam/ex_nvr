@@ -78,6 +78,12 @@ let Hooks = {
             updateTimelineSegments(this.el)
         },
     },
+    dashContainer: {
+        mounted() {
+            console.log("Mounted")
+            window.container = this
+        }
+    }
 }
 
 let csrfToken = document
@@ -141,7 +147,7 @@ startStreaming = (src, poster_url) => {
         //     console.log("New date : " ,new Date(data.frag.programDateTime))
         // })
         window.hls.on(Hls.Events.INIT_PTS_FOUND, (event, data) => {
-            realLifeTime = data.frag.programDateTime - data.initPTS
+            realLifeTime = data.frag.programDateTime + data.initPTS
             console.log(new Date(realLifeTime), new Date(data.frag.programDateTime))
         })
         video.addEventListener("timeupdate", (event) => {
@@ -149,7 +155,7 @@ startStreaming = (src, poster_url) => {
             timeSinceStartPlaying  = event.timeStamp
             const actualTimeOnPlaying = realLifeTime + timeSinceStartPlaying;
             console.log("Playing : " ,new Date(actualTimeOnPlaying))
-            window.TimelineHook?.pushEvent("new_date", {value: actualTimeOnPlaying})
+            window.container?.pushEvent("new_date", {value: actualTimeOnPlaying})
         })
 
         video.play()
