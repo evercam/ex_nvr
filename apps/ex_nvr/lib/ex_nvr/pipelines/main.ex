@@ -387,7 +387,7 @@ defmodule ExNVR.Pipelines.Main do
 
   defp build_main_stream_spec(state, encoding) do
     [
-      child(:funnel, %Membrane.Funnel{end_of_stream: :never})
+      child(:funnel, ExNVR.Elements.DiscontinuityFunnel)
       |> child(:video_tee, Membrane.Tee.Master)
       |> via_out(:master)
       |> child({:storage_bin, :main_stream}, %Output.Storage{
@@ -408,7 +408,7 @@ defmodule ExNVR.Pipelines.Main do
   defp build_sub_stream_spec(device, encoding) do
     spec =
       [
-        child({:funnel, :sub_stream}, %Membrane.Funnel{end_of_stream: :never})
+        child({:funnel, :sub_stream}, ExNVR.Elements.DiscontinuityFunnel)
         |> child({:tee, :sub_stream}, Membrane.Tee.Master)
         |> via_out(:master)
         |> via_in(Pad.ref(:video, :sub_stream), options: [encoding: encoding])
