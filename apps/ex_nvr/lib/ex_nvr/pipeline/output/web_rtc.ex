@@ -136,7 +136,7 @@ defmodule ExNVR.Pipeline.Output.WebRTC do
     }
 
     result = Engine.add_endpoint(engine, webrtc_endpoint, id: peer_id)
-    {[notify_parent: {:add_peer, result}], state}
+    {[notify_parent: {:add_peer, result}, notify_child: {:sink, {:stream, true}}], state}
   end
 
   @impl true
@@ -211,7 +211,7 @@ defmodule ExNVR.Pipeline.Output.WebRTC do
   @impl true
   def handle_info(%Engine.Message.EndpointCrashed{endpoint_id: peer_id}, _ctx, state) do
     Membrane.Logger.error("Peer endpoint crashed #{peer_id}")
-    peer_channel = state.peer_channels[peer_id]
+    {peer_channel, state} = pop_in(state, [:peer_channels, peer_id])
 
     if peer_channel do
       send(peer_channel, :endpoint_crashed)
@@ -223,7 +223,7 @@ defmodule ExNVR.Pipeline.Output.WebRTC do
       """)
     end
 
-    {[], state}
+    maybe_stop_streaming(state)
   end
 
   @impl true
@@ -238,7 +238,7 @@ defmodule ExNVR.Pipeline.Output.WebRTC do
     Engine.remove_endpoint(state.rtc_engine, peer_id)
     {_elem, state} = pop_in(state, [:peer_channels, peer_id])
 
-    {[], state}
+    maybe_stop_streaming(state)
   end
 
   @impl true
@@ -265,5 +265,13 @@ defmodule ExNVR.Pipeline.Output.WebRTC do
       ports_range: Application.fetch_env!(:ex_nvr, :integrated_turn_port_range),
       cert_file: turn_cert_file
     ]
+  end
+
+  defp maybe_stop_streaming(state) do
+    if state.peer_channels == %{} do
+      {[notify_child: {:sink, {:stream, false}}], state}
+    else
+      {[], state}
+    end
   end
 end

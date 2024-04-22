@@ -213,29 +213,21 @@ defmodule ExNVR.Pipelines.Main do
     state = maybe_update_device_and_report(state, :recording)
     old_track = elem(state.video_tracks, 0)
 
-    rtsp_spec = [
+    spec = [
       get_child(:rtsp_source)
       |> via_out(Pad.ref(:output, ssrc))
       |> via_in(Pad.ref(:input, make_ref()))
-      |> get_child(:funnel)
+      |> get_child(:funnel),
+      get_child(:video_tee)
+      |> via_out(:copy)
+      |> via_in(Pad.ref(:input, :main_stream), options: [encoding: track.encoding])
+      |> get_child(:webrtc)
     ]
 
-    spec = if is_nil(old_track), do: build_main_stream_spec(state, track.encoding), else: []
-
-    webrtc_spec =
-      if track.encoding == :H264 do
-        [
-          get_child(:video_tee)
-          |> via_out(:copy)
-          |> via_in(Pad.ref(:input, :main_stream), options: [encoding: track.encoding])
-          |> get_child(:webrtc)
-        ]
-      else
-        []
-      end
+    main_spec = if is_nil(old_track), do: build_main_stream_spec(state, track.encoding), else: []
 
     video_tracks = put_elem(state.video_tracks, 0, track)
-    {[spec: spec ++ rtsp_spec ++ webrtc_spec], %{state | video_tracks: video_tracks}}
+    {[spec: main_spec ++ spec], %{state | video_tracks: video_tracks}}
   end
 
   @impl true
@@ -294,13 +286,7 @@ defmodule ExNVR.Pipelines.Main do
   @impl true
   def handle_child_pad_removed(:rtsp_source, Pad.ref(:output, _ssrc), _ctx, state) do
     state = maybe_update_device_and_report(state, :failed)
-    track = elem(state.video_tracks, 0)
-
-    if track.encoding == :H264 do
-      {[remove_link: {:webrtc, Pad.ref(:input, :main_stream)}], state}
-    else
-      {[], state}
-    end
+    {[remove_link: {:webrtc, Pad.ref(:input, :main_stream)}], state}
   end
 
   @impl true

@@ -204,7 +204,7 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
 
   defp validate_snapshot_req_params(params) do
     types = %{
-      time: :utc_datetime,
+      time: :utc_datetime_usec,
       method: {:parameterized, Ecto.Enum, Ecto.Enum.init(values: ~w(before precise)a)},
       format: {:parameterized, Ecto.Enum, Ecto.Enum.init(values: ~w(jpeg)a)},
       stream: {:parameterized, Ecto.Enum, Ecto.Enum.init(values: ~w(high low)a)}
