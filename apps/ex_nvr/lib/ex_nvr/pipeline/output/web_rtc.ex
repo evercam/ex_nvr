@@ -19,14 +19,14 @@ defmodule ExNVR.Pipeline.Output.WebRTC do
   require Membrane.Logger
 
   alias ExNVR.Pipeline.Output
-  alias Membrane.H264
+  alias Membrane.{H264, H265}
   alias Membrane.ICE.TURNManager
   alias Membrane.RTC.Engine
   alias Membrane.RTC.Engine.Message
   alias Membrane.RTC.Engine.Endpoint.WebRTC
 
   def_input_pad :input,
-    accepted_format: %H264{alignment: :au},
+    accepted_format: any_of(%H264{alignment: :au}, %H265{alignment: :au}),
     availability: :on_request,
     options: [
       encoding: [
@@ -74,11 +74,13 @@ defmodule ExNVR.Pipeline.Output.WebRTC do
   def handle_pad_added(Pad.ref(:input, :main_stream) = pad, ctx, state) do
     encoding = ctx.pad_options[:encoding]
 
-    Engine.message_endpoint(
-      state.rtc_engine,
-      state.stream_endpoint_id,
-      {:encoding, encoding}
-    )
+    if encoding == :H264 do
+      Engine.message_endpoint(
+        state.rtc_engine,
+        state.stream_endpoint_id,
+        {:encoding, encoding}
+      )
+    end
 
     spec = [bin_input(pad) |> child(:sink, Output.WebRTC.Sink)]
 
