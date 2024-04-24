@@ -12,6 +12,8 @@ defmodule ExNVR.Onvif do
   @type url :: binary()
   @type opts :: Keyword.t()
 
+  @type response :: {:error, any} | {:ok, map}
+
   @allowed_operations [
     get_system_date_and_time: :device,
     get_device_information: :device,
@@ -43,6 +45,72 @@ defmodule ExNVR.Onvif do
       error ->
         error
     end
+  end
+
+  @spec get_system_date_and_time(url(), opts()) :: response()
+  def get_system_date_and_time(url, opts \\ []) do
+    with {:ok, result} <- call(url, :get_system_date_and_time, %{}, opts) do
+      {:ok, get_in(result, [:get_system_date_and_time_response, :system_date_and_time])}
+    end
+  end
+
+  @spec get_device_information(url(), opts()) :: response()
+  def get_device_information(url, opts \\ []) do
+    with {:ok, result} <- call(url, :get_device_information, %{}, opts) do
+      {:ok, result.get_device_information_response}
+    end
+  end
+
+  @spec get_capabilities(url(), opts()) :: response()
+  def get_capabilities(url, opts \\ []) do
+    with {:ok, result} <- call(url, :get_capabilities, %{}, opts) do
+      {:ok, get_in(result, [:get_capabilities_response, :capabilities])}
+    end
+  end
+
+  @spec get_network_interfaces(url(), opts()) :: response()
+  def get_network_interfaces(url, opts \\ []) do
+    with {:ok, result} <- call(url, :get_network_interfaces, %{}, opts) do
+      result =
+        get_in(result, [:get_network_interfaces_response, :network_interfaces])
+        |> List.wrap()
+        |> Enum.map(fn network_interface ->
+          network_interface
+          |> Map.put(:ip_v4, network_interface[:i_pv4])
+          |> Map.put(:ip_v6, network_interface[:i_pv6])
+          |> Map.drop([:i_pv4, :i_pv6])
+        end)
+
+      {:ok, result}
+    end
+  end
+
+  @spec get_media_profiles(url(), opts()) :: response()
+  def get_media_profiles(url, opts \\ []) do
+    with {:ok, result} <- call(url, :get_profiles, %{"Type" => "All"}, opts) do
+      result =
+        Keyword.values(result.get_profiles_response)
+        |> Enum.map(fn media_profile ->
+          configurations = Map.drop(media_profile.configurations, [:analytics])
+          %{media_profile | configurations: configurations}
+        end)
+
+      {:ok, result}
+    end
+  end
+
+  @spec get_media_stream_uri!(url(), binary(), opts()) :: response()
+  def get_media_stream_uri!(url, profile_token, opts \\ []) do
+    body = %{"ProfileToken" => profile_token, "Protocol" => ""}
+    result = call!(url, :get_stream_uri, body, opts)
+    get_in(result, [:get_stream_uri_response, :uri])
+  end
+
+  @spec get_media_snapshot_uri!(url(), binary(), opts()) :: response()
+  def get_media_snapshot_uri!(url, profile_token, opts \\ []) do
+    body = %{"ProfileToken" => profile_token, "Protocol" => ""}
+    result = call!(url, :get_snapshot_uri, body, opts)
+    get_in(result, [:get_snapshot_uri_response, :uri])
   end
 
   @spec call(url(), atom(), map(), opts()) :: {:error, any} | {:ok, map}

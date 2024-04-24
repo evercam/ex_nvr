@@ -25,6 +25,7 @@ defmodule ExNVR.Onvif.Utils do
     to_string(key)
     |> String.split(":")
     |> List.last()
+    |> Macro.underscore()
     |> String.to_atom()
   end
 end
