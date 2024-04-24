@@ -54,10 +54,10 @@
       <!-- Device Information -->
       <div class="md:w-1/3 p-5 border border-gray-400 card-shadow">
         <h2 class="text-xl font-bold mb-4">Device Information</h2>
-        <p :if={!@device_details[:infos]}>N/A</p>
-        <div :if={@device_details[:infos]} class="mb-4 dark:text-gray-400">
+        <p :if={!@device_details[:device_information]}>N/A</p>
+        <div :if={@device_details[:device_information]} class="mb-4 dark:text-gray-400">
           <table class="w-full table-auto">
-            <tr :for={{key, value} <- @device_details[:infos]}>
+            <tr :for={{key, value} <- @device_details[:device_information]}>
               <td class="font-bold"><%= display_key(key) %></td>
               <td class="break-anywhere"><%= value %></td>
             </tr>
@@ -67,10 +67,10 @@
       <!-- Time Settings -->
       <div class="md:w-1/4 p-5 border border-gray-400 card-shadow">
         <h2 class="text-xl font-bold mb-4">Time Settings</h2>
-        <p :if={!@device_details[:time_settings]}>N/A</p>
-        <div :if={@device_details[:time_settings]} class="dark:text-gray-400 mb-4">
+        <p :if={!@device_details[:date_time_settings]}>N/A</p>
+        <div :if={@device_details[:date_time_settings]} class="dark:text-gray-400 mb-4">
           <table class="w-full table-auto">
-            <tr :for={{key, value} <- @device_details[:time_settings]}>
+            <tr :for={{key, value} <- @device_details[:date_time_settings]}>
               <td class="font-bold"><%= display_key(key) %></td>
               <td class="break-anywhere"><%= value %></td>
             </tr>
@@ -103,19 +103,19 @@
           <table class="w-full table-auto">
             <tr>
               <td class="font-bold">Codec</td>
-              <td><%= profile.codec %></td>
+              <td><%= get_in(profile, [:configurations, :video_encoder, :encoding]) %></td>
             </tr>
             <tr>
               <td class="font-bold">Profile</td>
-              <td><%= profile.profile %></td>
+              <td><%= get_in(profile, [:configurations, :video_encoder, :profile]) %></td>
             </tr>
             <tr>
               <td class="font-bold">Group of Pictures</td>
-              <td><%= profile.gov_length %></td>
+              <td><%= get_in(profile, [:configurations, :video_encoder, :gov_length]) %></td>
             </tr>
             <tr>
               <td class="font-bold">Image Quality</td>
-              <td><%= profile.quality %></td>
+              <td><%= get_in(profile, [:configurations, :video_encoder, :quality]) %></td>
             </tr>
           </table>
         </div>
@@ -123,19 +123,42 @@
           <table class="w-full table-auto">
             <tr>
               <td class="font-bold">Resolution</td>
-              <td><%= profile.resolution.width %>x<%= profile.resolution.height %></td>
+              <td>
+                <%= get_in(profile, [:configurations, :video_encoder, :resolution, :width]) %> x <%= get_in(
+                  profile,
+                  [:configurations, :video_encoder, :resolution, :height]
+                ) %>
+              </td>
             </tr>
             <tr>
               <td class="font-bold">Constant Bitrate</td>
-              <td><%= String.upcase("#{profile.rate_control.constant_bit_rate}") %></td>
+              <td>
+                <%= String.upcase(
+                  "#{get_in(profile, [:configurations, :video_encoder, :rate_control, :constant_bit_rate])}"
+                ) %>
+              </td>
             </tr>
             <tr>
               <td class="font-bold">Frame rate</td>
-              <td><%= profile.rate_control.frame_rate %> fps</td>
+              <td>
+                <%= get_in(profile, [
+                  :configurations,
+                  :video_encoder,
+                  :rate_control,
+                  :frame_rate_limit
+                ]) %> fps
+              </td>
             </tr>
             <tr>
               <td class="font-bold">Max Bitrate</td>
-              <td><%= profile.rate_control.max_bit_rate %> kbps</td>
+              <td>
+                <%= get_in(profile, [
+                  :configurations,
+                  :video_encoder,
+                  :rate_control,
+                  :bitrate_limit
+                ]) %> kbps
+              </td>
             </tr>
           </table>
         </div>

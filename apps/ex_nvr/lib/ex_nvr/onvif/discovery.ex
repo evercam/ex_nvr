@@ -65,12 +65,12 @@ defmodule ExNVR.Onvif.Discovery do
   end
 
   defp format_response(response) do
-    probe_match = get_in(response, [:ProbeMatches, :ProbeMatch])
-    scopes = probe_match[:Scopes] |> String.split()
+    probe_match = get_in(response, [:probe_matches, :probe_match])
+    scopes = probe_match[:scopes] |> String.split()
 
     %{
-      types: probe_match[:Types] |> String.split(),
-      addresses: probe_match[:XAddrs] |> String.split()
+      types: probe_match[:types] |> String.split(),
+      addresses: probe_match[:x_addrs] |> String.split()
     }
     |> Map.merge(parse_scopes(scopes))
   end
