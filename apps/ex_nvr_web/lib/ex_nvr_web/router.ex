@@ -42,6 +42,9 @@ defmodule ExNVRWeb.Router do
 
     get "/recordings/chunks", API.RecordingController, :chunks
 
+    post "/onvif/discover", API.OnvifController, :discover
+    get "/onvif/discover", API.OnvifController, :discover
+
     scope "/devices/:device_id" do
       pipe_through ExNVRWeb.Plug.Device
 

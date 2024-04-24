@@ -210,6 +210,8 @@ defmodule ExNVR.Devices do
         Map.put(profile, :snapshot_uri, uri)
       end)
       |> then(&Map.put(camera, :media_profiles, &1))
+    else
+      _other -> Map.put(camera, :media_profiles, [])
     end
   end
 end
