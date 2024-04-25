@@ -48,6 +48,7 @@ defmodule ExNVR.Onvif do
   end
 
   @spec get_system_date_and_time(url(), opts()) :: response()
+  @spec get_system_date_and_time(url()) :: response()
   def get_system_date_and_time(url, opts \\ []) do
     with {:ok, result} <- call(url, :get_system_date_and_time, %{}, opts) do
       {:ok, get_in(result, [:get_system_date_and_time_response, :system_date_and_time])}
@@ -55,6 +56,7 @@ defmodule ExNVR.Onvif do
   end
 
   @spec get_device_information(url(), opts()) :: response()
+  @spec get_device_information(url()) :: response()
   def get_device_information(url, opts \\ []) do
     with {:ok, result} <- call(url, :get_device_information, %{}, opts) do
       {:ok, result.get_device_information_response}
@@ -62,6 +64,7 @@ defmodule ExNVR.Onvif do
   end
 
   @spec get_capabilities(url(), opts()) :: response()
+  @spec get_capabilities(url()) :: response()
   def get_capabilities(url, opts \\ []) do
     with {:ok, result} <- call(url, :get_capabilities, %{}, opts) do
       {:ok, get_in(result, [:get_capabilities_response, :capabilities])}
@@ -69,6 +72,7 @@ defmodule ExNVR.Onvif do
   end
 
   @spec get_network_interfaces(url(), opts()) :: response()
+  @spec get_network_interfaces(url()) :: response()
   def get_network_interfaces(url, opts \\ []) do
     with {:ok, result} <- call(url, :get_network_interfaces, %{}, opts) do
       result =
@@ -86,6 +90,7 @@ defmodule ExNVR.Onvif do
   end
 
   @spec get_media_profiles(url(), opts()) :: response()
+  @spec get_media_profiles(url()) :: response()
   def get_media_profiles(url, opts \\ []) do
     with {:ok, result} <- call(url, :get_profiles, %{"Type" => "All"}, opts) do
       result =
@@ -100,6 +105,7 @@ defmodule ExNVR.Onvif do
   end
 
   @spec get_media_stream_uri!(url(), binary(), opts()) :: response()
+  @spec get_media_stream_uri!(url(), binary()) :: response()
   def get_media_stream_uri!(url, profile_token, opts \\ []) do
     body = %{"ProfileToken" => profile_token, "Protocol" => ""}
     result = call!(url, :get_stream_uri, body, opts)
@@ -107,6 +113,7 @@ defmodule ExNVR.Onvif do
   end
 
   @spec get_media_snapshot_uri!(url(), binary(), opts()) :: response()
+  @spec get_media_snapshot_uri!(url(), binary()) :: response()
   def get_media_snapshot_uri!(url, profile_token, opts \\ []) do
     body = %{"ProfileToken" => profile_token, "Protocol" => ""}
     result = call!(url, :get_snapshot_uri, body, opts)
@@ -152,6 +159,7 @@ defmodule ExNVR.Onvif do
      |> delete_namespaces()}
   end
 
+  defp handle_response({:ok, %{status_code: 401}}, _parse), do: {:error, :unauthorized}
   defp handle_response({:ok, response}, _parse), do: {:error, response}
   defp handle_response(response, _parse), do: response
 end
