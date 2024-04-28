@@ -18,9 +18,9 @@ defmodule ExNVR.Devices.CameraClient do
       ]
 
     vendor = Device.vendor(device)
-    base_url = Device.base_url(device)
+    http_url = Device.http_url(device)
 
-    impl(vendor).fetch_lpr_event(base_url, opts)
+    impl(vendor).fetch_lpr_event(http_url, opts)
   end
 
   defp impl(:axis), do: Axis

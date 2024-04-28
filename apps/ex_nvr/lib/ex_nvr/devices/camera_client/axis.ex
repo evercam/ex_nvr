@@ -13,7 +13,9 @@ defmodule ExNVR.Devices.CameraClient.Axis do
   @timestamp_regex ~r/(\d+-\d+-\d+ \d+:\d+:\d+).*/
 
   def fetch_lpr_event(url, opts) do
-    timestamp = opts[:timestamp] && DateTime.to_unix(opts[:last_event_timestamp], :microsecond)
+    timestamp =
+      opts[:last_event_timestamp] && DateTime.to_unix(opts[:last_event_timestamp], :microsecond)
+
     full_url = url <> @lpr_path <> "?TimestampFrom=#{timestamp}"
 
     case HTTP.get(full_url, opts) do

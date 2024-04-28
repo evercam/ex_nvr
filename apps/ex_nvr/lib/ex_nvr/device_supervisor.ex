@@ -29,7 +29,7 @@ defmodule ExNVR.DeviceSupervisor do
       {ExNVR.DiskMonitor, params},
       {Main, params},
       {ExNVR.BIF.GeneratorServer, params},
-      {ExNVR.Devices.LPREventsPuller, params},
+      {ExNVR.Devices.LPREventPuller, params},
       {ExNVR.Devices.SnapshotUploader, params}
     ]
 

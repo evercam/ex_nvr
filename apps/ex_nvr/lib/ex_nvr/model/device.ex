@@ -158,14 +158,14 @@ defmodule ExNVR.Model.Device do
     end
   end
 
-  @spec base_url(t()) :: binary() | nil
-  def base_url(%__MODULE__{url: nil}), do: nil
+  @spec http_url(t()) :: binary() | nil
+  def http_url(%__MODULE__{url: nil}), do: nil
 
-  def base_url(%__MODULE__{url: url}) do
-    case URI.parse(url) do
-      %{path: nil} -> url
-      %{path: path} -> String.replace(url, path, "")
-    end
+  def http_url(%__MODULE__{url: url}) do
+    url
+    |> URI.parse()
+    |> Map.put(:path, nil)
+    |> URI.to_string()
   end
 
   @spec streams(t()) :: {binary(), binary() | nil}

@@ -1,4 +1,4 @@
-defmodule ExNVR.Devices.LPREventsPuller do
+defmodule ExNVR.Devices.LPREventPuller do
   use GenServer
 
   require Logger
@@ -14,16 +14,15 @@ defmodule ExNVR.Devices.LPREventsPuller do
   end
 
   @impl true
-  def init(options) do
-    Logger.metadata(device_id: options[:device].id)
+  def init(device: device) do
+    Logger.metadata(device_id: device.id)
     Logger.info("Start LPR event puller")
-    device = options[:device]
 
-    if Device.base_url(device) do
+    if Device.http_url(device) do
       send(self(), :pull_events)
-      {:ok, %{device: options[:device], last_event_timestamp: nil}}
+      {:ok, %{device: device, last_event_timestamp: nil}}
     else
-      Logger.info("Stop LPR event puller")
+      Logger.warning("http url is not set: stopping LPR event puller")
       {:stop, :normal}
     end
   end
