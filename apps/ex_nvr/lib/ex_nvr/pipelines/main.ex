@@ -42,11 +42,13 @@ defmodule ExNVR.Pipelines.Main do
   alias ExNVR.{Devices, Recordings, Utils}
   alias ExNVR.Model.Device
   alias ExNVR.Pipeline.{Output, Source}
+  alias Membrane.RTSP
 
   @type encoding :: :H264 | :H265
 
   @event_prefix [:ex_nvr, :main_pipeline]
-  @supported_video_codecs [:H264, :H265]
+  @supported_video_codecs ["H264", "H265"]
+  @default_segment_duration 60
 
   defmodule State do
     @moduledoc false
@@ -130,7 +132,7 @@ defmodule ExNVR.Pipelines.Main do
 
     state = %State{
       device: device,
-      segment_duration: options[:segment_duration] || 60,
+      segment_duration: options[:segment_duration] || @default_segment_duration,
       rtc_engine: options[:rtc_engine]
     }
 
@@ -160,12 +162,28 @@ defmodule ExNVR.Pipelines.Main do
 
         spec =
           common_spec ++
-            [child(:rtsp_source, %Source.RTSP{stream_uri: stream_uri})] ++
-            if sub_stream_uri,
-              do: [child({:rtsp_source, :sub_stream}, %Source.RTSP{stream_uri: sub_stream_uri})],
-              else: []
+            [
+              child(:rtsp_source, %RTSP.Source{
+                stream_uri: stream_uri,
+                allowed_media_types: [:video],
+                transport: :tcp
+              })
+            ]
 
-        [spec: spec]
+        if sub_stream_uri do
+          sub_stream_spec =
+            [
+              child({:rtsp_source, :sub_stream}, %RTSP.Source{
+                stream_uri: sub_stream_uri,
+                allowed_media_types: [:video],
+                transport: :tcp
+              })
+            ]
+
+          [spec: spec ++ sub_stream_spec]
+        else
+          [spec: spec]
+        end
       else
         Membrane.Logger.info("""
         Start streaming for
@@ -189,39 +207,33 @@ defmodule ExNVR.Pipelines.Main do
         _ctx,
         %State{} = state
       )
-      when track.encoding in @supported_video_codecs do
+      when track.rtpmap.encoding in @supported_video_codecs do
+    track = %{type: track.type, encoding: String.to_atom(track.rtpmap.encoding)}
+
     state = maybe_update_device_and_report(state, :recording)
     old_track = elem(state.video_tracks, 0)
 
-    rtsp_spec = [
+    spec = [
       get_child(:rtsp_source)
       |> via_out(Pad.ref(:output, ssrc))
       |> via_in(Pad.ref(:input, make_ref()))
-      |> get_child(:funnel)
+      |> get_child(:funnel),
+      get_child(:video_tee)
+      |> via_out(:copy)
+      |> via_in(Pad.ref(:input, :main_stream), options: [encoding: track.encoding])
+      |> get_child(:webrtc)
     ]
 
-    spec = if is_nil(old_track), do: build_main_stream_spec(state, track), else: []
-
-    webrtc_spec =
-      if track.encoding == :H264 do
-        [
-          get_child(:video_tee)
-          |> via_out(:copy)
-          |> via_in(Pad.ref(:input, :main_stream), options: [media_track: track])
-          |> get_child(:webrtc)
-        ]
-      else
-        []
-      end
+    main_spec = if is_nil(old_track), do: build_main_stream_spec(state, track.encoding), else: []
 
     video_tracks = put_elem(state.video_tracks, 0, track)
-    {[spec: spec ++ rtsp_spec ++ webrtc_spec], %{state | video_tracks: video_tracks}}
+    {[spec: main_spec ++ spec], %{state | video_tracks: video_tracks}}
   end
 
   @impl true
   def handle_child_notification({:new_track, _ssrc, track}, :rtsp_source, _ctx, state) do
     Membrane.Logger.error("""
-    Video codec #{track.encoding} is not supported
+    Video codec #{track.rtpmap.encoding} is not supported
     Supported codecs are: #{Enum.join(@supported_video_codecs, " ")}
     """)
 
@@ -236,8 +248,9 @@ defmodule ExNVR.Pipelines.Main do
         _ctx,
         %State{} = state
       ) do
+    track = %{type: track.type, encoding: String.to_atom(track.rtpmap.encoding)}
     old_track = elem(state.video_tracks, 1)
-    spec = if is_nil(old_track), do: build_sub_stream_spec(state.device, track), else: []
+    spec = if is_nil(old_track), do: build_sub_stream_spec(state.device, track.encoding), else: []
 
     spec =
       spec ++
@@ -273,13 +286,7 @@ defmodule ExNVR.Pipelines.Main do
   @impl true
   def handle_child_pad_removed(:rtsp_source, Pad.ref(:output, _ssrc), _ctx, state) do
     state = maybe_update_device_and_report(state, :failed)
-    track = elem(state.video_tracks, 0)
-
-    if track.encoding == :H264 do
-      {[remove_link: {:webrtc, Pad.ref(:input, :main_stream)}], state}
-    else
-      {[], state}
-    end
+    {[remove_link: {:webrtc, Pad.ref(:input, :main_stream)}], state}
   end
 
   @impl true
@@ -364,9 +371,9 @@ defmodule ExNVR.Pipelines.Main do
     {[terminate: :normal], state}
   end
 
-  defp build_main_stream_spec(state, track) do
+  defp build_main_stream_spec(state, encoding) do
     [
-      child(:funnel, %Membrane.Funnel{end_of_stream: :never})
+      child(:funnel, ExNVR.Elements.DiscontinuityFunnel)
       |> child(:video_tee, Membrane.Tee.Master)
       |> via_out(:master)
       |> child({:storage_bin, :main_stream}, %Output.Storage{
@@ -376,7 +383,7 @@ defmodule ExNVR.Pipelines.Main do
       }),
       get_child(:video_tee)
       |> via_out(:copy)
-      |> via_in(Pad.ref(:video, :main_stream), options: [encoding: track.encoding])
+      |> via_in(Pad.ref(:video, :main_stream), options: [encoding: encoding])
       |> get_child(:hls_sink),
       get_child(:video_tee)
       |> via_out(:copy)
@@ -384,13 +391,13 @@ defmodule ExNVR.Pipelines.Main do
     ]
   end
 
-  defp build_sub_stream_spec(device, track) do
+  defp build_sub_stream_spec(device, encoding) do
     spec =
       [
-        child({:funnel, :sub_stream}, %Membrane.Funnel{end_of_stream: :never})
+        child({:funnel, :sub_stream}, ExNVR.Elements.DiscontinuityFunnel)
         |> child({:tee, :sub_stream}, Membrane.Tee.Master)
         |> via_out(:master)
-        |> via_in(Pad.ref(:video, :sub_stream), options: [encoding: track.encoding])
+        |> via_in(Pad.ref(:video, :sub_stream), options: [encoding: encoding])
         |> get_child(:hls_sink)
       ]
 
@@ -419,7 +426,7 @@ defmodule ExNVR.Pipelines.Main do
           |> via_out(:copy)
           |> child({:thumbnailer, :sub_stream}, %Output.Thumbnailer{
             dest: Device.bif_thumbnails_dir(device),
-            encoding: track.encoding
+            encoding: encoding
           })
         ]
     else

@@ -2,7 +2,7 @@ openapi: 3.0.0
 info:
   title: ExNVR API
   description: Manage ExNVR via API endpoints
-  version: 0.10.0
+  version: 0.11.0
 servers:
   - url: '{protocol}://{host}:{port}'
     variables:
@@ -856,6 +856,80 @@ paths:
           $ref: '#/components/responses/BadArg'
         '404':
           $ref: '#/components/responses/NotFound'
+  /api/onvif/discover:
+    post:
+      summary: Onvif discovery
+      description: |
+        Scan the local network for Onvif compliant devices.
+
+        The following information are retrieved from the devices:
+          
+          * The url, name and hardware.
+          * Date time settings
+          * Basic information about the device (vendor, model, firware version, ...etc.)
+          * Available Network interfaces
+          * Media profiles (including stream uri and snapshot uri).
+
+        Most of the operations above needs authentication, so if a `username` and `password` are not provided,
+        only public information are retrieved, the other fields will contain a `null` or `empty` values.
+
+        The schema of the data above can be looked up on the onvif wsdl documents [here](https://www.onvif.org/ver10/device/wsdl/devicemgmt.wsdl) 
+        and [here](https://www.onvif.org/ver20/media/wsdl/media.wsdl).
+
+        ***Note***
+
+        This endpoint is also available using http `GET`, The request body should be sent as query params 
+      operationId: onvifDiscovery
+      tags: [Onvif]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                timeout:
+                  type: integer
+                  description: Maximum time to wait for a response from an onvif device to discovery requests.
+                  minimum: 1
+                  maximum: 60
+                username:
+                  type: string
+                  description: username to use to authorize requests to discovered devices.
+                password:
+                  type: string
+                  description: password to use to authorize requests to discovered devices.
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  name:
+                    type: string
+                    description: Name of the discovered device
+                  url:
+                    type: string
+                    format: uri
+                    description: The url of the discovered device
+                  hardware:
+                    type: string
+                    description: The hardware reference of the discovered device
+                  date_time_settings:
+                    type: object
+                    description: Date time settings of the device (see GetSystemDateAndTime on onvif spec)
+                  device_information:
+                    type: object
+                    description: Basic device information (see GetDeviceInformation on onvif spec)
+                  network_interfaces:
+                    type: object
+                    description: Network interfaces (see GetNetworkInterfaces on onvif spec)
+                  media_profiles:
+                    type: object
+                    description: Media profiles including stream and snapshot uris (see GetProfiles, GetStreamUri and GetSnapshotUri on onvif spec)
+        '400':
+          $ref: "#/components/responses/BadArg"
   /api/devices/{device_id}/events:
     post:
       summary: Create an event

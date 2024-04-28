@@ -18,21 +18,20 @@ defmodule ExNVR.Pipeline.Output.WebRTC do
 
   require Membrane.Logger
 
-  alias ExNVR.Media.Track
   alias ExNVR.Pipeline.Output
-  alias Membrane.H264
+  alias Membrane.{H264, H265}
   alias Membrane.ICE.TURNManager
   alias Membrane.RTC.Engine
   alias Membrane.RTC.Engine.Message
   alias Membrane.RTC.Engine.Endpoint.WebRTC
 
   def_input_pad :input,
-    accepted_format: %H264{alignment: :au},
+    accepted_format: any_of(%H264{alignment: :au}, %H265{alignment: :au}),
     availability: :on_request,
     options: [
-      media_track: [
-        spec: Track.t(),
-        description: "Media track description"
+      encoding: [
+        spec: :H264,
+        description: "encoding of the media"
       ]
     ]
 
@@ -67,23 +66,25 @@ defmodule ExNVR.Pipeline.Output.WebRTC do
        network_options: network_options,
        peer_channels: %{},
        stream_endpoint_id: stream_endpoint_id,
-       media_track: nil
+       encoding: nil
      }}
   end
 
   @impl true
   def handle_pad_added(Pad.ref(:input, :main_stream) = pad, ctx, state) do
-    media_track = ctx.pad_options[:media_track]
+    encoding = ctx.pad_options[:encoding]
 
-    Engine.message_endpoint(
-      state.rtc_engine,
-      state.stream_endpoint_id,
-      {:media_track, media_track}
-    )
+    if encoding == :H264 do
+      Engine.message_endpoint(
+        state.rtc_engine,
+        state.stream_endpoint_id,
+        {:encoding, encoding}
+      )
+    end
 
     spec = [bin_input(pad) |> child(:sink, Output.WebRTC.Sink)]
 
-    {[spec: spec], %{state | media_track: media_track}}
+    {[spec: spec], %{state | encoding: encoding}}
   end
 
   @impl true
@@ -94,7 +95,7 @@ defmodule ExNVR.Pipeline.Output.WebRTC do
   @impl true
   def handle_pad_removed(Pad.ref(:input, :main_stream), _ctx, state) do
     Engine.message_endpoint(state.rtc_engine, state.stream_endpoint_id, :remove_track)
-    {[remove_children: :sink], %{state | media_track: nil}}
+    {[remove_children: :sink], %{state | encoding: nil}}
   end
 
   @impl true
@@ -137,7 +138,7 @@ defmodule ExNVR.Pipeline.Output.WebRTC do
     }
 
     result = Engine.add_endpoint(engine, webrtc_endpoint, id: peer_id)
-    {[notify_parent: {:add_peer, result}], state}
+    {[notify_parent: {:add_peer, result}, notify_child: {:sink, {:stream, true}}], state}
   end
 
   @impl true
@@ -212,7 +213,7 @@ defmodule ExNVR.Pipeline.Output.WebRTC do
   @impl true
   def handle_info(%Engine.Message.EndpointCrashed{endpoint_id: peer_id}, _ctx, state) do
     Membrane.Logger.error("Peer endpoint crashed #{peer_id}")
-    peer_channel = state.peer_channels[peer_id]
+    {peer_channel, state} = pop_in(state, [:peer_channels, peer_id])
 
     if peer_channel do
       send(peer_channel, :endpoint_crashed)
@@ -224,7 +225,7 @@ defmodule ExNVR.Pipeline.Output.WebRTC do
       """)
     end
 
-    {[], state}
+    maybe_stop_streaming(state)
   end
 
   @impl true
@@ -239,7 +240,7 @@ defmodule ExNVR.Pipeline.Output.WebRTC do
     Engine.remove_endpoint(state.rtc_engine, peer_id)
     {_elem, state} = pop_in(state, [:peer_channels, peer_id])
 
-    {[], state}
+    maybe_stop_streaming(state)
   end
 
   @impl true
@@ -266,5 +267,13 @@ defmodule ExNVR.Pipeline.Output.WebRTC do
       ports_range: Application.fetch_env!(:ex_nvr, :integrated_turn_port_range),
       cert_file: turn_cert_file
     ]
+  end
+
+  defp maybe_stop_streaming(state) do
+    if state.peer_channels == %{} do
+      {[notify_child: {:sink, {:stream, false}}], state}
+    else
+      {[], state}
+    end
   end
 end

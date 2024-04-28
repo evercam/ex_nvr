@@ -21,14 +21,7 @@ jobs:
 
       - name: Install dependencies
         run: sudo apt-get update && sudo apt-get -y install npm libsrtp2-dev libturbojpeg-dev
-
-      # Hack: Download precompiled ffmpeg since the membrane plugin are broken.
-      - name: Get precompiled ffmpeg
-        run: > 
-          mkdir -p _build/prod/bundlex_precompiled/httpsgithub.comBtbNFFmpeg-Buildsreleasesdownloadlatestffmpeg-n6.0-latest-linux64-gpl-shared-6.0.tar.xz
-          && wget https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-n6.1-latest-linux64-gpl-shared-6.1.tar.xz
-          && tar -xvf ffmpeg-n6.1-latest-linux64-gpl-shared-6.1.tar.xz -C _build/prod/bundlex_precompiled/httpsgithub.comBtbNFFmpeg-Buildsreleasesdownloadlatestffmpeg-n6.0-latest-linux64-gpl-shared-6.0.tar.xz --strip-components=1
-        
+   
       - name: Get deps
         run: mix deps.get --only prod
 

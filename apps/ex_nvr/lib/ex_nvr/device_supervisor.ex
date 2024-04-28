@@ -69,7 +69,7 @@ defmodule ExNVR.DeviceSupervisor do
     device
     |> ExNVR.Utils.pipeline_name()
     |> Process.whereis()
-    |> Membrane.Pipeline.terminate()
+    |> Membrane.Pipeline.terminate(force?: true, timeout: :timer.seconds(10))
   end
 
   defp supervisor_name(device), do: :"#{device.id}"

@@ -95,10 +95,10 @@ defmodule ExNVR.OnvifTest do
 
       mock_operation("GetProfiles", body, ref_file)
 
-      assert {:ok, %{GetProfilesResponse: profiles}} =
+      assert {:ok, %{get_profiles_response: profiles}} =
                Onvif.call(@default_media_uri, :get_profiles, %{"Type" => "All"})
 
-      assert %{GetProfilesResponse: _profiles} =
+      assert %{get_profiles_response: _profiles} =
                Onvif.call!(@default_media_uri, :get_profiles, %{"Type" => "All"})
 
       assert length(profiles) == 2

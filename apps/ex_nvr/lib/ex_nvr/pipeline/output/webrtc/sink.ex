@@ -3,26 +3,33 @@ defmodule ExNVR.Pipeline.Output.WebRTC.Sink do
 
   use Membrane.Sink
 
-  alias Membrane.Buffer
-
   def_input_pad :input,
     flow_control: :auto,
     accepted_format: _any
 
   @impl true
   def handle_init(_ctx, _opts) do
-    {[], %{pid: nil, stream_format: nil}}
+    {[], %{pid: nil, stream_format: nil, stream?: false}}
   end
 
   @impl true
   def handle_parent_notification({:source_pid, pid}, _ctx, state) do
     Process.monitor(pid)
 
-    if state.stream_format do
+    if state.stream? and state.stream_format do
       send(pid, {:stream_format, state.stream_format})
     end
 
     {[], %{state | pid: pid}}
+  end
+
+  @impl true
+  def handle_parent_notification({:stream, stream?}, _ctx, state) do
+    if not is_nil(state.pid) and stream? and state.stream_format do
+      send(state.pid, {:stream_format, state.stream_format})
+    end
+
+    {[], %{state | stream?: stream?}}
   end
 
   @impl true
@@ -31,25 +38,23 @@ defmodule ExNVR.Pipeline.Output.WebRTC.Sink do
   end
 
   @impl true
-  def handle_stream_format(:input, stream_format, _ctx, %{pid: nil} = state) do
-    {[], %{state | stream_format: stream_format}}
+  def handle_stream_format(:input, stream_format, _ctx, state) do
+    if is_nil(state.pid) or not state.stream? do
+      {[], %{state | stream_format: stream_format}}
+    else
+      send(state.pid, {:stream_format, stream_format})
+      {[], state}
+    end
   end
 
   @impl true
-  def handle_stream_format(:input, stream_format, _ctx, %{pid: pid} = state) do
-    send(pid, {:stream_format, stream_format})
-    {[], state}
-  end
-
-  @impl true
-  def handle_buffer(:input, _buffer, _ctx, %{pid: nil} = state) do
-    {[], state}
-  end
-
-  @impl true
-  def handle_buffer(:input, %Buffer{} = buffer, _ctx, state) do
-    send(state.pid, {:buffer, buffer})
-    {[], state}
+  def handle_buffer(:input, buffer, _ctx, state) do
+    if is_nil(state.pid) or not state.stream? do
+      {[], state}
+    else
+      send(state.pid, {:buffer, buffer})
+      {[], state}
+    end
   end
 
   @impl true
