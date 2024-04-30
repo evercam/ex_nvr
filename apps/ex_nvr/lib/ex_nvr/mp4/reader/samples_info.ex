@@ -201,11 +201,12 @@ defmodule ExNVR.MP4.Reader.SamplesInfo do
 
     {sample_composition_offset, composition_offsets} =
       case composition_offsets do
-        [%{sample_count: 1, sample_offset: offset} | composition_offsets] ->
+        [%{sample_count: 1, sample_composition_offset: offset} | composition_offsets] ->
           {offset, composition_offsets}
 
-        [%{sample_count: count, sample_offset: offset} | composition_offsets] ->
-          {offset, [%{sample_count: count - 1, sample_offset: offset} | composition_offsets]}
+        [%{sample_count: count, sample_composition_offset: offset} | composition_offsets] ->
+          {offset,
+           [%{sample_count: count - 1, sample_composition_offset: offset} | composition_offsets]}
       end
 
     {%{size: size, sample_delta: delta, sample_composition_offset: sample_composition_offset},

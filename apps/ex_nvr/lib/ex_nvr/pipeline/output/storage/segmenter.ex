@@ -20,6 +20,7 @@ defmodule ExNVR.Pipeline.Output.Storage.Segmenter do
   alias Membrane.{Buffer, Event, H264, H265, Time}
 
   @time_error Time.milliseconds(30)
+  @jitter_buffer_delay Time.milliseconds(200)
 
   def_options target_duration: [
                 spec: non_neg_integer(),
@@ -240,8 +241,10 @@ defmodule ExNVR.Pipeline.Output.Storage.Segmenter do
     Segment.add_duration(segment, diff)
   end
 
-  defp maybe_correct_timestamp(segment, _correct_timestamp, _state, end_date),
-    do: %{segment | start_date: end_date - Segment.duration(segment), end_date: end_date}
+  defp maybe_correct_timestamp(segment, _correct_timestamp, _state, end_date) do
+    start_date = end_date - Segment.duration(segment) - @jitter_buffer_delay
+    %{segment | start_date: start_date, end_date: end_date}
+  end
 
   defp completed_segment_action(state, discontinuity \\ false) do
     [notify_parent: {:completed_segment, {state.start_time, state.segment, discontinuity}}]
