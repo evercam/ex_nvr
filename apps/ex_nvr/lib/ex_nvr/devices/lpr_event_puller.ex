@@ -5,7 +5,6 @@ defmodule ExNVR.Devices.LPREventPuller do
 
   alias ExNVR.Devices.CameraClient
   alias ExNVR.Events
-  alias ExNVR.Model.Device
 
   @pulling_interval :timer.seconds(10)
 
@@ -18,13 +17,8 @@ defmodule ExNVR.Devices.LPREventPuller do
     Logger.metadata(device_id: device.id)
     Logger.info("Start LPR event puller")
 
-    if Device.http_url(device) do
-      send(self(), :pull_events)
-      {:ok, %{device: device, last_event_timestamp: nil}}
-    else
-      Logger.warning("http url is not set: stopping LPR event puller")
-      {:stop, :normal}
-    end
+    send(self(), :pull_events)
+    {:ok, %{device: device, last_event_timestamp: nil}}
   end
 
   @impl true

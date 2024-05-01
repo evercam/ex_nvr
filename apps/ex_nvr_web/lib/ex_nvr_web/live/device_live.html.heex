@@ -258,6 +258,7 @@
           </div>
           <.inputs_for :let={settings} field={@device_form[:settings]}>
             <.input field={settings[:generate_bif]} type="checkbox" label="Generate BIF" />
+            <.input field={settings[:enable_lpr]} type="checkbox" label="Pull LPR events" />
           </.inputs_for>
         </div>
       </div>

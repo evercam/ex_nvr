@@ -29,9 +29,15 @@ defmodule ExNVR.DeviceSupervisor do
       {ExNVR.DiskMonitor, params},
       {Main, params},
       {ExNVR.BIF.GeneratorServer, params},
-      {ExNVR.Devices.LPREventPuller, params},
       {ExNVR.Devices.SnapshotUploader, params}
     ]
+
+    children =
+      if device.settings.enable_lpr && Device.http_url(device) do
+        children ++ [{ExNVR.Devices.LPREventPuller, params}]
+      else
+        children
+      end
 
     children =
       case :os.type() do

@@ -111,12 +111,14 @@ defmodule ExNVR.Model.Device do
     import Ecto.Changeset
 
     @type t :: %__MODULE__{
-            generate_bif: boolean()
+            generate_bif: boolean(),
+            enable_lpr: boolean()
           }
 
     @primary_key false
     embedded_schema do
       field :generate_bif, :boolean, default: true
+      field :enable_lpr, :boolean, default: false
     end
 
     @spec changeset(t(), map()) :: Ecto.Changeset.t()
