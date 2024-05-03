@@ -2,34 +2,37 @@ defmodule ExNVR.HTTP do
   @moduledoc false
 
   @spec get(binary(), Keyword.t()) ::
-          {:ok, Finch.Response.t()} | {:error, term()}
+          {:ok, Req.Response.t()} | {:error, Exception.t()}
   def get(url, opts \\ []) do
-    username = opts[:username] || ""
-    password = opts[:password] || ""
+    call(:get, url, nil, opts)
+  end
 
-    opts = opts ++ [method: :get, url: url]
+  @spec post(binary(), any(), Keyword.t()) ::
+          {:ok, Req.Response.t()} | {:error, Exception.t()}
+  def post(url, body, opts \\ []) do
+    call(:post, url, body, opts)
+  end
 
-    if username == "" or password == "" do
-      do_call(:get, url)
-    else
-      http_headers = [{"Authorization", "Basic " <> Base.encode64(username <> ":" <> password)}]
-      result = do_call(:get, url, http_headers)
-
-      with {:ok, %{status: 401} = resp} <- result,
-           {:ok, digest_header} <- build_digest_auth_header(resp, opts) do
-        do_call(:get, url, [digest_header])
-      else
-        _other ->
-          result
-      end
+  @spec build_digest_auth(map(), Keyword.t()) :: {:ok, binary()} | {:error, binary()}
+  def build_digest_auth(resp, opts) do
+    with digest_opts when is_map(digest_opts) <- digest_auth_opts(resp, opts) do
+      digest_auth = encode_digest(digest_opts)
+      {:ok, digest_auth}
     end
   end
 
-  @spec build_digest_auth_header(map(), Keyword.t()) :: {:ok, tuple()} | {:error, binary()}
-  def build_digest_auth_header(resp, opts) do
-    with digest_opts when is_map(digest_opts) <- digest_auth_opts(resp, opts),
-         digest_header <- {"Authorization", encode_digest(digest_opts)} do
-      {:ok, digest_header}
+  defp call(method, url, body, opts) do
+    opts = Keyword.merge(opts, method: method, url: url)
+
+    result = do_call(method, body, opts)
+
+    with {:ok, %{status: 401} = resp} <- result,
+         {:ok, digest_auth} <- build_digest_auth(resp, opts) do
+      opts = Keyword.merge(opts, auth_type: :digest, digest_auth: digest_auth)
+      do_call(method, body, opts)
+    else
+      _other ->
+        result
     end
   end
 
@@ -39,20 +42,27 @@ defmodule ExNVR.HTTP do
     |> Map.new()
     |> Map.fetch("www-authenticate")
     |> case do
+      {:ok, ["Digest " <> digest]} ->
+        build_digest_auth_opts(digest, opts)
+
       {:ok, "Digest " <> digest} ->
-        %{
-          nonce: match_pattern("nonce", digest),
-          realm: match_pattern("realm", digest),
-          qop: match_pattern("qop", digest),
-          username: opts[:username],
-          password: opts[:password],
-          method: Atom.to_string(opts[:method]) |> String.upcase(),
-          path: URI.parse(opts[:url]).path
-        }
+        build_digest_auth_opts(digest, opts)
 
       _other ->
         nil
     end
+  end
+
+  defp build_digest_auth_opts(digest, opts) do
+    %{
+      nonce: match_pattern("nonce", digest),
+      realm: match_pattern("realm", digest),
+      qop: match_pattern("qop", digest),
+      username: opts[:username],
+      password: opts[:password],
+      method: Atom.to_string(opts[:method]) |> String.upcase(),
+      path: URI.parse(opts[:url]).path
+    }
   end
 
   defp match_pattern(pattern, digest) do
@@ -94,8 +104,17 @@ defmodule ExNVR.HTTP do
     md5([ha1, opts.nonce, nonce_count, client_nonce, opts.qop, ha2])
   end
 
-  defp do_call(method, url, headers \\ [], body \\ nil, opts \\ []) do
-    Finch.build(method, url, headers, body) |> Finch.request(ExNVR.Finch, opts)
+  defp do_call(method, body, opts) do
+    Req.request(method: method, url: opts[:url], auth: auth_from_opts(opts), body: body)
+  end
+
+  defp auth_from_opts(opts) do
+    case opts[:auth_type] do
+      :bearer -> {:bearer, opts[:token]}
+      :basic -> {:basic, "#{opts[:username]}:#{opts[:password]}"}
+      :digest -> opts[:digest_auth]
+      _other -> nil
+    end
   end
 
   defp md5(value) do

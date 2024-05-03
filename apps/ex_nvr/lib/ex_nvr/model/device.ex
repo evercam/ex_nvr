@@ -111,12 +111,14 @@ defmodule ExNVR.Model.Device do
     import Ecto.Changeset
 
     @type t :: %__MODULE__{
-            generate_bif: boolean()
+            generate_bif: boolean(),
+            enable_lpr: boolean()
           }
 
     @primary_key false
     embedded_schema do
       field :generate_bif, :boolean, default: true
+      field :enable_lpr, :boolean, default: false
     end
 
     @spec changeset(t(), map()) :: Ecto.Changeset.t()
@@ -156,6 +158,16 @@ defmodule ExNVR.Model.Device do
       "AXIS" -> :axis
       _other -> :unknown
     end
+  end
+
+  @spec http_url(t()) :: binary() | nil
+  def http_url(%__MODULE__{url: nil}), do: nil
+
+  def http_url(%__MODULE__{url: url}) do
+    url
+    |> URI.parse()
+    |> Map.put(:path, nil)
+    |> URI.to_string()
   end
 
   @spec streams(t()) :: {binary(), binary() | nil}

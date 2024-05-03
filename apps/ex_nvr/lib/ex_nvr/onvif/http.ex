@@ -25,8 +25,8 @@ defmodule ExNVR.Onvif.Http do
       result = mockable(Soap).call(wsdl, operation, body, http_headers)
 
       with {:ok, %{status_code: 401} = resp} <- result,
-           {:ok, digest_header} <- HTTP.build_digest_auth_header(resp, opts) do
-        mockable(Soap).call(wsdl, operation, body, [digest_header])
+           {:ok, digest_auth} <- HTTP.build_digest_auth(resp, opts) do
+        mockable(Soap).call(wsdl, operation, body, [{"Authorization", digest_auth}])
       else
         _other -> result
       end

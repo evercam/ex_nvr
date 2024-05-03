@@ -33,6 +33,13 @@ defmodule ExNVR.DeviceSupervisor do
     ]
 
     children =
+      if device.settings.enable_lpr && Device.http_url(device) do
+        children ++ [{ExNVR.Devices.LPREventPuller, params}]
+      else
+        children
+      end
+
+    children =
       case :os.type() do
         {:unix, _name} -> children ++ [{ExNVR.UnixSocketServer, params}]
         _other -> children
