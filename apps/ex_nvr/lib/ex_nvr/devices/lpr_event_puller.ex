@@ -18,7 +18,7 @@ defmodule ExNVR.Devices.LPREventPuller do
     Logger.info("Start LPR event puller")
 
     send(self(), :pull_events)
-    {:ok, %{device: device, last_event_timestamp: nil}}
+    {:ok, %{device: device, last_event_timestamp: Events.last_lpr_event_timestamp(device)}}
   end
 
   @impl true
@@ -27,9 +27,11 @@ defmodule ExNVR.Devices.LPREventPuller do
     Process.send_after(self(), :pull_events, @pulling_interval)
 
     with {:ok, records, plates} <- CameraClient.fetch_lpr_event(device, last_event_timestamp),
-         :ok <- save_events(device, records, plates) do
+         stored_events <- save_events(device, records, plates) do
+      Logger.info("LPR: stored #{length(stored_events)} events")
+
       last_event_timestamp =
-        records
+        stored_events
         |> Enum.map(& &1.capture_time)
         |> Enum.max_by(& &1, DateTime, fn -> last_event_timestamp end)
 
@@ -42,7 +44,24 @@ defmodule ExNVR.Devices.LPREventPuller do
   end
 
   defp save_events(device, records, plates) do
-    Enum.zip(records, plates)
-    |> Enum.each(fn {record, plate} -> Events.create_lpr_event(device, record, plate) end)
+    records
+    |> Enum.zip(plates)
+    |> Enum.map(fn {record, plate} ->
+      case Events.create_lpr_event(device, record, plate) do
+        {:ok, event} ->
+          event
+
+        {:error, reason} ->
+          Logger.error("""
+          Could not store lpr event
+          due to: #{inspect(reason)}
+          """)
+
+          nil
+      end
+    end)
+    |> Enum.reject(&is_nil/1)
+    # ignore already stored events (id is null)
+    |> Enum.reject(&is_nil(&1.id))
   end
 end

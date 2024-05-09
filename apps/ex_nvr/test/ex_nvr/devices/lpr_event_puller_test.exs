@@ -44,7 +44,7 @@ defmodule ExNVR.Devices.LPREventPullerTest do
     assert {:ok, state} = LPREventPuller.init(device: device)
     assert {:noreply, state} = LPREventPuller.handle_info(:pull_events, state)
 
-    assert state.last_event_timestamp == ~U[2024-04-28 13:00:00Z]
+    assert DateTime.compare(state.last_event_timestamp, ~U[2024-04-28 13:00:00Z]) == :eq
 
     assert {:ok, {records, _}} = Events.list_lpr_events(%{}, include_plate_image: true)
 
@@ -85,7 +85,7 @@ defmodule ExNVR.Devices.LPREventPullerTest do
     assert {:ok, state} = LPREventPuller.init(device: device)
     assert {:noreply, state} = LPREventPuller.handle_info(:pull_events, state)
 
-    assert state.last_event_timestamp == ~U[2024-04-27 12:50:06Z]
+    assert state.last_event_timestamp == ~U[2024-04-27 12:50:06.000000Z]
 
     assert {:ok, {records, _}} = Events.list_lpr_events(%{}, include_plate_image: true)
 
@@ -126,7 +126,7 @@ defmodule ExNVR.Devices.LPREventPullerTest do
     assert {:ok, state} = LPREventPuller.init(device: device)
     assert {:noreply, state} = LPREventPuller.handle_info(:pull_events, state)
 
-    assert state.last_event_timestamp == ~U[2024-04-28 15:00:00.000Z]
+    assert DateTime.compare(state.last_event_timestamp, ~U(2024-04-28 15:00:00Z)) == :eq
 
     assert {:ok, {records, _}} = Events.list_lpr_events(%{}, include_plate_image: true)
 
