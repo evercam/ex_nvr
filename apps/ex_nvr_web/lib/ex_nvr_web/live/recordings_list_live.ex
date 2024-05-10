@@ -46,7 +46,10 @@ defmodule ExNVRWeb.RecordingListLive do
                 />
               </span>
             </button>
-            <.recording_details_popover recording={recording} rec_details={@files_details[recording.id]} />
+            <.recording_details_popover
+              recording={recording}
+              rec_details={@files_details[recording.id]}
+            />
             <span
               title="Preview recording"
               phx-click={open_popup(recording)}
@@ -177,7 +180,7 @@ defmodule ExNVRWeb.RecordingListLive do
         </table>
       </div>
       <p :if={@rec_details == :error} class="px-3 py-2 text-red-500">
-      Error while fetching details of the recording (the file may not exists)
+        Error while fetching details of the recording (the file may not exists)
       </p>
       <div data-popper-arrow></div>
     </div>
