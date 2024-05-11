@@ -20,9 +20,10 @@ defmodule ExNVRWeb.ViewUtils do
   @spec humanize_size(non_neg_integer()) :: String.t()
   def humanize_size(size_bytes) do
     cond do
+      size_bytes / 1_000_000_000 >= 1 -> "#{Float.round(size_bytes / 1024 ** 3, 2)} GiB"
       size_bytes / 1_000_000 >= 1 -> "#{Float.round(size_bytes / 1024 ** 2, 2)} MiB"
       size_bytes / 1_000 >= 1 -> "#{Float.round(size_bytes / 1024, 2)} KiB"
-      true -> "#{Float.round(size_bytes / 1024, 2)} B"
+      true -> "#{size_bytes} B"
     end
   end
 

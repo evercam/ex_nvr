@@ -36,7 +36,7 @@ defmodule ExNVRWeb.DeviceLiveTest do
     test "create a new FILE device", %{conn: conn} do
       {:ok, lv, _} = live(conn, ~p"/devices/new")
 
-      file_content = Path.expand("../fixtures/big_buck.mp4", __DIR__) |> File.read!()
+      file_content = File.read!("test/fixtures/big_buck.mp4")
 
       render_change(lv, :validate, %{"device" => %{"type" => "file"}})
 
@@ -79,8 +79,7 @@ defmodule ExNVRWeb.DeviceLiveTest do
     test "renders errors on file upload with wrong type", %{conn: conn} do
       {:ok, lv, _} = live(conn, ~p"/devices/new")
 
-      file_content =
-        Path.expand("../fixtures/device_file_with_wrong_type.txt", __DIR__) |> File.read!()
+      file_content = File.read!("test/fixtures/device_file_with_wrong_type.txt")
 
       render_change(lv, :validate, %{"device" => %{"type" => "file"}})
 
