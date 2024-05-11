@@ -40,8 +40,18 @@ defmodule ExNVR.Devices.CameraClient.Axis do
       capture_time2: ~x"./MOD_TS/text()"s |> transform_by(&to_datetime(&1, timezone)),
       plate_number: ~x"./LPR/text()"s,
       pic_name: ~x"./LP_BMP/text()"s,
-      direction: ~x"./DIRECTION/text()"s |> transform_by(&parse_direction/1)
+      direction: ~x"./DIRECTION/text()"s |> transform_by(&parse_direction/1),
+      vehicle_type: ~x"./CAR_M_TYPE/text()"s |> transform_by(&String.downcase/1),
+      vehicle_color: ~x"./CAR_COLOR/text()"s |> transform_by(&String.downcase/1),
+      confidence: ~x"./CAR_CONF/text()"F
     )
+    |> Enum.map(fn response ->
+      metadata_keys = [:vehicle_type, :vehicle_color, :confidence]
+
+      response
+      |> Map.put(:metadata, Map.take(response, metadata_keys))
+      |> Map.drop(metadata_keys)
+    end)
     |> Enum.map(fn response ->
       cond do
         response.capture_time == 0 and response.capture_time2 == 0 ->
