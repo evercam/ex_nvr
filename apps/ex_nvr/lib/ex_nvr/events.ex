@@ -12,24 +12,22 @@ defmodule ExNVR.Events do
   @spec create_lpr_event(Device.t(), map(), binary() | nil) ::
           {:ok, LPR.t()} | {:error, Ecto.Changeset.t()}
   def create_lpr_event(device, params, plate_picture) do
-    params
-    |> Map.put(:device_id, device.id)
-    |> LPR.changeset()
-    |> Repo.insert()
-    |> case do
-      {:ok, event} ->
-        if plate_picture do
-          device
-          |> Device.lpr_thumbnails_dir()
-          |> tap(&File.mkdir/1)
-          |> Path.join(LPR.plate_name(event))
-          |> File.write(plate_picture)
-        end
+    insertion_result =
+      params
+      |> Map.put(:device_id, device.id)
+      |> LPR.changeset()
+      |> Repo.insert(on_conflict: :nothing)
 
-        {:ok, event}
+    with {:ok, %{id: id} = event} when not is_nil(id) <- insertion_result do
+      if plate_picture do
+        device
+        |> Device.lpr_thumbnails_dir()
+        |> tap(&File.mkdir/1)
+        |> Path.join(LPR.plate_name(event))
+        |> File.write(plate_picture)
+      end
 
-      error ->
-        error
+      {:ok, event}
     end
   end
 
@@ -45,6 +43,16 @@ defmodule ExNVR.Events do
       other ->
         other
     end
+  end
+
+  @spec last_lpr_event_timestamp(Device.t()) :: DateTime.t() | nil
+  def last_lpr_event_timestamp(device) do
+    LPR
+    |> select([e], e.capture_time)
+    |> where([e], e.device_id == ^device.id)
+    |> order_by(desc: :capture_time)
+    |> limit(1)
+    |> Repo.one()
   end
 
   defp maybe_include_lpr_thumbnails(true, entries) do

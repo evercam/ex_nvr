@@ -22,17 +22,15 @@ defmodule ExNVR.HttpTest do
 
         ["Digest " <> _token] ->
           conn
-          |> Conn.put_resp_content_type("application/json")
+          |> Conn.put_resp_content_type("plain/text")
           |> Conn.resp(200, ~s(success))
       end
     end)
 
-    opts = [username: "admin", password: "password"]
+    opts = [username: "admin", password: "password", auth_type: :basic]
     response = HTTP.get("#{url(bypass.port)}/resource", opts)
     assert {:ok, %{status: 200, body: ~s<success>}} = response
   end
 
-  defp url(port) do
-    "http://localhost:#{port}"
-  end
+  defp url(port), do: "http://localhost:#{port}"
 end
