@@ -2,7 +2,7 @@ defmodule ExNVR.MP4.Reader do
   @moduledoc false
 
   alias ExNVR.MP4.Reader.SamplesInfo
-  alias Membrane.{Buffer, H264, H265}
+  alias Membrane.{AAC, Buffer, H264, H265}
   alias Membrane.MP4.Container
 
   @type track_id :: non_neg_integer()
@@ -24,7 +24,6 @@ defmodule ExNVR.MP4.Reader do
          {box, ""} <- Container.parse!(mov_box) do
       samples_info = SamplesInfo.get_samples_info(box[:moov])
       mdat_offset = SamplesInfo.get_mdat_offset(samples_info)
-      duration = calculate_duration(box)
       :file.position(fd, mdat_offset)
 
       {:ok,
@@ -32,7 +31,7 @@ defmodule ExNVR.MP4.Reader do
          fd: fd,
          samples_info: samples_info,
          mdat_offset: mdat_offset,
-         duration: duration
+         duration: calculate_duration(box)
        }}
     end
   end
@@ -74,6 +73,32 @@ defmodule ExNVR.MP4.Reader do
 
   @spec duration(t()) :: Membrane.Time.t()
   def duration(%__MODULE__{duration: duration}), do: duration
+
+  @spec summary(t()) :: map()
+  def summary(%__MODULE__{} = reader) do
+    duration = reader.duration
+
+    track_details =
+      for {_track_id, sample_table} <- reader.samples_info.sample_tables do
+        sample_count = sample_table.sample_count
+        total_size = Enum.sum(sample_table.sample_sizes)
+        duration_in_s = duration / 10 ** 9
+
+        bitrate = round(total_size * 8 / duration_in_s)
+
+        track_details =
+          Map.merge(codec_information(sample_table.sample_description), %{bitrate: bitrate})
+
+        if track_details.codec in [:H264, :H265],
+          do: Map.put(track_details, :fps, Float.round(sample_count / duration_in_s, 2)),
+          else: track_details
+      end
+
+    %{
+      duration: duration,
+      track_details: track_details
+    }
+  end
 
   defp lookup_moov_box(fd) do
     case IO.binread(fd, 8) do
@@ -118,4 +143,17 @@ defmodule ExNVR.MP4.Reader do
     |> Ratio.new(timescale)
     |> Membrane.Time.seconds()
   end
+
+  defp codec_information(%module{} = codec) when module in [H264, H265] do
+    %{
+      type: :video,
+      codec: if(module == H264, do: :H264, else: :H265),
+      codec_tag: elem(codec.stream_structure, 0),
+      width: codec.width,
+      height: codec.height
+    }
+  end
+
+  defp codec_information(%AAC{}), do: %{type: :audio, codec: :AAC}
+  defp codec_information(_codec), do: %{type: :unknow}
 end

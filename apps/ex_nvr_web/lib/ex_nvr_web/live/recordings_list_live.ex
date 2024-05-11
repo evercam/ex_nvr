@@ -1,7 +1,10 @@
 defmodule ExNVRWeb.RecordingListLive do
   @moduledoc false
 
+  require Logger
   use ExNVRWeb, :live_view
+
+  import ExNVRWeb.ViewUtils
 
   alias ExNVRWeb.Router.Helpers, as: Routes
   alias ExNVR.{Recordings, Devices}
@@ -29,6 +32,24 @@ defmodule ExNVRWeb.RecordingListLive do
         </:col>
         <:action :let={recording}>
           <div class="flex justify-end">
+            <button
+              data-popover-target={"popover-click-#{recording.id}"}
+              data-popover-trigger="click"
+              phx-click="fetch-details"
+              phx-value-id={recording.id}
+              type="button"
+            >
+              <span title="Show information">
+                <.icon
+                  name="hero-information-circle-solid"
+                  class="w-6 h-6 mr-2 dark:text-gray-400 cursor-pointer"
+                />
+              </span>
+            </button>
+            <.recording_details_popover
+              recording={recording}
+              rec_details={@files_details[recording.id]}
+            />
             <span
               title="Preview recording"
               phx-click={open_popup(recording)}
@@ -105,6 +126,67 @@ defmodule ExNVRWeb.RecordingListLive do
     """
   end
 
+  def recording_details_popover(%{rec_details: rec_details} = assigns) do
+    assigns =
+      if rec_details && rec_details != :error,
+        do:
+          assign(
+            assigns,
+            :video_track,
+            Enum.find(rec_details.track_details, &(&1.type == :video))
+          ),
+        else: assigns
+
+    ~H"""
+    <div
+      data-popover
+      id={"popover-click-#{@recording.id}"}
+      role="tooltip"
+      class="absolute z-10 invisible inline-block w-64 text-sm text-gray-500 transition-opacity duration-300 bg-white border border-gray-200 rounded-lg shadow-sm opacity-0 dark:text-gray-400 dark:border-gray-600 dark:bg-gray-800"
+    >
+      <div class="px-3 py-2 bg-gray-100 border-b border-gray-200 rounded-t-lg dark:border-gray-600 dark:bg-gray-700">
+        <h3 class="font-semibold text-gray-900 dark:text-white">Recording Details</h3>
+      </div>
+      <div :if={@rec_details && @rec_details != :error} class="px-3 py-2 grid">
+        <p class="text-left text-sm font-bold dark:text-white">General</p>
+        <table class="ml-3 mb-3 text-left text-xs">
+          <tr>
+            <td class="font-semibold">Size:</td>
+            <td><%= humanize_size(@rec_details.size) %></td>
+          </tr>
+          <tr>
+            <td class="font-semibold">Duration:</td>
+            <td><%= humanize_duration(@rec_details.duration) %></td>
+          </tr>
+        </table>
+        <p :if={@video_track} class="text-left text-sm font-bold dark:text-white">Video</p>
+        <table class="ml-3 text-left text-xs">
+          <tr>
+            <td class="font-semibold">Codec:</td>
+            <td><%= @video_track.codec %> (<%= @video_track.codec_tag %>)</td>
+          </tr>
+          <tr>
+            <td class="font-semibold">Resolution:</td>
+            <td><%= @video_track.width %> x <%= @video_track.height %></td>
+          </tr>
+          <tr>
+            <td class="font-semibold">Bitrate:</td>
+            <td><%= humanize_bitrate(@video_track.bitrate) %></td>
+          </tr>
+          <tr>
+            <td class="font-semibold">fps:</td>
+            <td><%= @video_track.fps %></td>
+          </tr>
+        </table>
+      </div>
+      <p :if={@rec_details == :error} class="px-3 py-2 text-red-500">
+        Error while fetching details of the recording (the file may not exists)
+      </p>
+      <div data-popper-arrow></div>
+    </div>
+    """
+  end
+
   @impl true
   def mount(params, _session, socket) do
     Recordings.subscribe_to_recording_events()
@@ -114,7 +196,8 @@ defmodule ExNVRWeb.RecordingListLive do
        devices: Devices.list(),
        filter_params: params,
        pagination_params: %{},
-       sort_params: %{}
+       sort_params: %{},
+       files_details: %{}
      )}
   end
 
@@ -152,7 +235,26 @@ defmodule ExNVRWeb.RecordingListLive do
     {:noreply,
      socket
      |> assign(pagination_params: pagination_params)
-     |> push_patch(to: Routes.recording_list_path(socket, :list, params))}
+     |> push_patch(to: Routes.recording_list_path(socket, :list, params), replace: true)}
+  end
+
+  @impl true
+  def handle_event("fetch-details", %{"id" => recording_id}, socket) do
+    files_details = socket.assigns.files_details
+    recording_id = String.to_integer(recording_id)
+    recording = Enum.find(socket.assigns.recordings, &(&1.id == recording_id))
+    device = Enum.find(socket.assigns.devices, &(&1.id == recording.device_id))
+
+    files_details =
+      with :error <- Map.fetch(files_details, recording_id),
+           {:error, reason} <- Recordings.details(device, recording) do
+        Logger.error("could not fetch file details, due to: #{inspect(reason)}")
+        Map.put(files_details, recording_id, :error)
+      else
+        {:ok, details} -> Map.put(socket.assigns.files_details, recording_id, details)
+      end
+
+    {:noreply, assign(socket, :files_details, files_details)}
   end
 
   defp load_recordings(params, socket) do

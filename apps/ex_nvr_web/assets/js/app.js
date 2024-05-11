@@ -17,7 +17,6 @@
 
 // Include phoenix_html to handle method=PUT/DELETE in forms and buttons.
 import "phoenix_html"
-// Establish Phoenix Socket and LiveView configuration.
 import { Socket } from "phoenix"
 import { LiveSocket } from "phoenix_live_view"
 import topbar from "../vendor/topbar"
@@ -135,6 +134,16 @@ startStreaming = (src, poster_url) => {
 
 window.addEventListener("phx:stream", (e) => {
     startStreaming(e.detail.src, e.detail.poster)
+})
+
+// Listen for navigate events and re-init the popovers
+// phx-loading-xxx events are not triggered by push_patch
+// so this is why we listen for phx:navigate events instead
+// we set the timeout to allow the dom to updated first
+window.addEventListener('phx:navigate', (e) => {
+    if (e.detail.href.startsWith("/recordings")) {
+        setTimeout(() => initPopovers(), 1000); 
+    }
 })
 
 window.addEventListener("phx:js-exec", ({ detail }) => {

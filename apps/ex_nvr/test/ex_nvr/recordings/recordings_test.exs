@@ -112,6 +112,37 @@ defmodule ExNVR.RecordingTest do
     assert_files_deleted(device, :high, low_res_recordings_2, 4)
   end
 
+  describe "get recordings details" do
+    test "get recording details", %{device: device} do
+      recording = recording_fixture(device)
+
+      assert {:ok,
+              %{
+                duration: 5_000,
+                size: 298_854,
+                track_details: [
+                  %{
+                    type: :video,
+                    codec: :H264,
+                    codec_tag: :avc1,
+                    width: 428,
+                    height: 240,
+                    fps: 30.0,
+                    bitrate: 473_458
+                  }
+                ]
+              }} = Recordings.details(device, recording)
+    end
+
+    test "get details of not existing recording", %{device: device} do
+      assert {:error, :enoent} =
+               Recordings.details(device, %Recording{
+                 start_date: DateTime.utc_now(),
+                 filename: "233434.mp4"
+               })
+    end
+  end
+
   defp assert_files_deleted(device, stream_type, recordings, count) do
     recordings_path =
       recordings

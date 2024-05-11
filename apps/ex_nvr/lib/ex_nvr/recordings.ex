@@ -6,7 +6,7 @@ defmodule ExNVR.Recordings do
 
   alias Ecto.Multi
   alias ExNVR.Model.{Device, Recording, Run}
-  alias ExNVR.Repo
+  alias ExNVR.{MP4, Repo}
   alias Phoenix.PubSub
 
   @recordings_topic "recordings"
@@ -77,6 +77,20 @@ defmodule ExNVR.Recordings do
     |> Recording.with_type(stream_type)
     |> Recording.between_dates(date, date, [])
     |> Repo.exists?()
+  end
+
+  @spec details(Device.t(), Recording.t()) :: {:ok, map()} | {:error, any()}
+  def details(device, recording) do
+    path = recording_path(device, recording.stream, recording)
+
+    with {:ok, stat} <- File.stat(path),
+         {:ok, reader} <- MP4.Reader.new(path) do
+      details = MP4.Reader.summary(reader)
+      details = Map.update!(details, :duration, &Membrane.Time.as_milliseconds(&1, :round))
+      MP4.Reader.close(reader)
+
+      {:ok, Map.put(details, :size, stat.size)}
+    end
   end
 
   # Runs
