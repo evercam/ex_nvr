@@ -21,7 +21,7 @@ defmodule ExNVR.Events.LPR do
            adapter_opts: [
              join_fields: [
                device_name: [
-                 binding: :joined_device,
+                 binding: :device,
                  field: :name,
                  ecto_type: :string
                ]

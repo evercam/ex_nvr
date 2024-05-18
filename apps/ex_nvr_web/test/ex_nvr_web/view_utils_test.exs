@@ -8,7 +8,7 @@ defmodule ExNVRWeb.ViewUtilsTest do
   test "humanize duration" do
     assert ViewUtils.humanize_duration(0) == "00:00:00.000"
     assert ViewUtils.humanize_duration(1010) == "00:00:01.010"
-    assert ViewUtils.humanize_duration(168909) == "00:02:48.909"
+    assert ViewUtils.humanize_duration(168_909) == "00:02:48.909"
     assert ViewUtils.humanize_duration(156_512_690) == "43:28:32.690"
   end
 

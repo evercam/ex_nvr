@@ -156,8 +156,17 @@
               href={~p"/recordings"}
               class="flex items-center p-2 text-gray-900 rounded-lg text-white dark:text-white hover:bg-gray-500 dark:hover:bg-gray-700"
             >
-              <.icon name="hero-video-camera-solid" class="w-6 h-6 dark:text-gray-400" />
+              <.icon name="hero-film-solid" class="w-6 h-6 dark:text-gray-400" />
               <span class="flex-1 ml-3 whitespace-nowrap">Recordings</span>
+            </.link>
+          </li>
+          <li>
+            <.link
+              href={~p"/lpr-events"}
+              class="flex items-center p-2 text-gray-900 rounded-lg text-white dark:text-white hover:bg-gray-500 dark:hover:bg-gray-700"
+            >
+              <.icon name="hero-camera-solid" class="w-6 h-6 dark:text-gray-400" />
+              <span class="flex-1 ml-3 whitespace-nowrap">Events</span>
             </.link>
           </li>
         </ul>
@@ -167,7 +176,7 @@
               href={~p"/devices"}
               class="flex items-center p-2 text-gray-900 rounded-lg text-white dark:text-white hover:bg-gray-500 dark:hover:bg-gray-700"
             >
-              <.icon name="hero-camera-solid" class="w-6 h-6 dark:text-gray-400" />
+              <.icon name="hero-video-camera-solid" class="w-6 h-6 dark:text-gray-400" />
               <span class="flex-1 ml-3 whitespace-nowrap">Devices</span>
             </.link>
           </li>
