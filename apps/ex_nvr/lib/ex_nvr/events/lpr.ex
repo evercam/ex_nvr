@@ -13,10 +13,10 @@ defmodule ExNVR.Events.LPR do
              :list_type,
              :device_id
            ],
-           sortable: [:device_id, :capture_time],
+           sortable: [:capture_time],
            default_order: %{
-             order_by: [:device_id, :capture_time],
-             order_directions: [:asc, :desc]
+             order_by: [:capture_time],
+             order_directions: [:desc]
            },
            adapter_opts: [
              join_fields: [

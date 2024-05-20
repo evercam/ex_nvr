@@ -10,13 +10,13 @@ defmodule ExNVRWeb.LPREventsListLive do
   def render(assigns) do
     ~H"""
     <div class="grow">
-      <.filter_form meta={@meta} devices={@devices} id="event-filter-form" />
+      <.filter_form meta={@meta} devices={@devices} id="lpr-event-filter-form" />
       <Flop.Phoenix.table
         id="events"
         opts={ExNVRWeb.FlopConfig.table_opts()}
         items={@events}
         meta={@meta}
-        path={~p"/lpr-events"}
+        path={~p"/events/lpr"}
       >
         <:col :let={lpr_event} label="Plate image" field={:plate_image}>
           <img src={show_plate_image(lpr_event)} class="w-full h-auto max-w-full max-h-[80%]" />
