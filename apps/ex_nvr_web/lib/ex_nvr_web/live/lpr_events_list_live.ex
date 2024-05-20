@@ -19,15 +19,11 @@ defmodule ExNVRWeb.LPREventsListLive do
         path={~p"/lpr-events"}
       >
         <:col :let={lpr_event} label="Plate image" field={:plate_image}>
-          <img
-            id="event-image"
-            src={show_plate_image(lpr_event)}
-            class="w-full h-auto max-w-full max-h-[80%]"
-          />
+          <img src={show_plate_image(lpr_event)} class="w-full h-auto max-w-full max-h-[80%]" />
         </:col>
         <:col :let={lpr_event} label="Device" field={:device_name}><%= lpr_event.device.name %></:col>
         <:col :let={lpr_event} label="Capture time" field={:capture_time}>
-          <%= lpr_event.capture_time %>
+          <%= format_date(lpr_event.capture_time, lpr_event.device.timezone) %>
         </:col>
         <:col :let={lpr_event} label="Plate number" field={:plate_number}>
           <%= lpr_event.plate_number %>
@@ -80,8 +76,9 @@ defmodule ExNVRWeb.LPREventsListLive do
               options: Enum.map(@devices, &{&1.name, &1.id}),
               prompt: "Choose your device"
             ],
-            plate_number: [],
-            capture_time: [op: :>=]
+            capture_time: [op: :>=, label: "Min capture time"],
+            capture_time: [op: :<=, label: "Max capture time"],
+            plate_number: [op: :like]
           ]}
         >
           <div>
@@ -161,13 +158,20 @@ defmodule ExNVRWeb.LPREventsListLive do
     end
   end
 
+  defp format_date(date, timezone) do
+    date
+    |> DateTime.shift_zone!(timezone)
+    |> Calendar.strftime("%b %d, %Y %H:%M:%S %Z")
+  end
+
   defp show_plate_image(lpr_event) do
     "data:image/png;base64,#{Events.lpr_event_thumbnail(lpr_event)}"
   end
 
   defp preview_event(lpr_event) do
     JS.remove_class("hidden", to: "#popup-container")
-    |> JS.set_attribute({"src", "data:image/png;base64,#{Events.lpr_event_thumbnail(lpr_event)}"},
+    |> JS.set_attribute(
+      {"src", "/api/devices/#{lpr_event.device_id}/snapshot?time=#{lpr_event.capture_time}"},
       to: "#event-image"
     )
   end
