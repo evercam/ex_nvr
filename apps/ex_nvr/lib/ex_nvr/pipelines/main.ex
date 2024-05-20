@@ -19,7 +19,7 @@ defmodule ExNVR.Pipelines.Main do
 
   There's some limitation on the pipeline working, the pipeline supports:
     * Only video streams
-    * Only H264 encoded streams
+    * Only H264/H265 encoded streams
 
   ## Telemetry
 
@@ -40,6 +40,7 @@ defmodule ExNVR.Pipelines.Main do
   require Membrane.Logger
 
   alias ExNVR.{Devices, Recordings, Utils}
+  alias ExNVR.Media.Track
   alias ExNVR.Model.Device
   alias ExNVR.Pipeline.{Output, Source}
   alias Membrane.RTSP
@@ -74,7 +75,6 @@ defmodule ExNVR.Pipelines.Main do
             segment_duration: non_neg_integer(),
             supervisor_pid: pid(),
             live_snapshot_waiting_pids: list(),
-            rtc_engine: pid() | atom(),
             video_tracks: {Track.t(), Track.t()}
           }
 
@@ -85,7 +85,6 @@ defmodule ExNVR.Pipelines.Main do
                   segment_duration: @default_segment_duration,
                   supervisor_pid: nil,
                   live_snapshot_waiting_pids: [],
-                  rtc_engine: nil,
                   video_tracks: {nil, nil}
                 ]
   end
@@ -132,8 +131,7 @@ defmodule ExNVR.Pipelines.Main do
 
     state = %State{
       device: device,
-      segment_duration: options[:segment_duration] || @default_segment_duration,
-      rtc_engine: options[:rtc_engine]
+      segment_duration: options[:segment_duration] || @default_segment_duration
     }
 
     {[], state}
@@ -208,7 +206,7 @@ defmodule ExNVR.Pipelines.Main do
         %State{} = state
       )
       when track.rtpmap.encoding in @supported_video_codecs do
-    track = %{type: track.type, encoding: String.to_atom(track.rtpmap.encoding)}
+    track = Track.new(track.type, track.rtpmap.encoding)
 
     state = maybe_update_device_and_report(state, :recording)
     old_track = elem(state.video_tracks, 0)
@@ -248,7 +246,7 @@ defmodule ExNVR.Pipelines.Main do
         _ctx,
         %State{} = state
       ) do
-    track = %{type: track.type, encoding: String.to_atom(track.rtpmap.encoding)}
+    track = Track.new(track.type, track.rtpmap.encoding)
     old_track = elem(state.video_tracks, 1)
     spec = if is_nil(old_track), do: build_sub_stream_spec(state.device, track.encoding), else: []
 
@@ -401,23 +399,22 @@ defmodule ExNVR.Pipelines.Main do
         |> get_child(:hls_sink)
       ]
 
-    spec =
-      case device.storage_config.record_sub_stream do
-        :always ->
-          spec ++
-            [
-              get_child({:tee, :sub_stream})
-              |> via_out(:copy)
-              |> child({:storage, :sub_stream}, %Output.Storage{
-                device: device,
-                stream: :low,
-                correct_timestamp: true
-              })
-            ]
+    case device.storage_config.record_sub_stream do
+      :always ->
+        spec ++
+          [
+            get_child({:tee, :sub_stream})
+            |> via_out(:copy)
+            |> child({:storage, :sub_stream}, %Output.Storage{
+              device: device,
+              stream: :low,
+              correct_timestamp: true
+            })
+          ]
 
-        _other ->
-          spec
-      end
+      _other ->
+        spec
+    end
 
     if device.settings.generate_bif do
       spec ++
