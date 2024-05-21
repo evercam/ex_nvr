@@ -7,30 +7,32 @@ defmodule ExNVR.Elements.VideoStreamStatReporterTest do
 
   @ctx %{}
 
-  test "init video stream stats" do
-    {_actions, state} =
-      VideoStreamStatReporter.handle_init(@ctx, %VideoStreamStatReporter{
-        report_interval: Membrane.Time.seconds(1)
-      })
+  setup do
+    assert {_actions, state} =
+             VideoStreamStatReporter.handle_init(@ctx, %VideoStreamStatReporter{
+               device_id: UUID.uuid4()
+             })
 
-    assert state == %{
-             report_interval: Membrane.Time.seconds(1),
+    %{state: state}
+  end
+
+  test "init video stream stats", %{state: state} do
+    assert %{
+             stream: :high,
              resolution: nil,
              profile: nil,
              elapsed_time: 0,
              total_bytes: 0,
              total_frames: 0,
              frames_since_last_keyframe: 0,
-             avg_gop_size: nil
-           }
+             avg_bitrate: 0,
+             avg_fps: 0,
+             avg_gop_size: nil,
+             gop_size: 0
+           } = state
   end
 
-  test "get resolution and profile" do
-    assert {_actions, state} =
-             VideoStreamStatReporter.handle_init(@ctx, %VideoStreamStatReporter{
-               report_interval: Membrane.Time.seconds(1)
-             })
-
+  test "get resolution and profile", %{state: state} do
     assert {_actions, %{resolution: {640, 480}, profile: :main}} =
              VideoStreamStatReporter.handle_stream_format(
                :input,
@@ -40,11 +42,8 @@ defmodule ExNVR.Elements.VideoStreamStatReporterTest do
              )
   end
 
-  test "get stream stats" do
-    assert {_actions, state} =
-             VideoStreamStatReporter.handle_init(@ctx, %VideoStreamStatReporter{
-               report_interval: Membrane.Time.seconds(4)
-             })
+  test "get stream stats", %{state: state} do
+    state = %{state | start_time: Membrane.Time.monotonic_time() - Membrane.Time.seconds(4)}
 
     buffers = [
       %Membrane.Buffer{payload: <<10::100*8>>, metadata: %{h264: %{key_frame?: true}}},
@@ -67,15 +66,16 @@ defmodule ExNVR.Elements.VideoStreamStatReporterTest do
         state
       end)
 
-    assert {[notify_parent: {:stats, stats}], _state} =
-             VideoStreamStatReporter.handle_tick(:report_stats, @ctx, state)
-
     assert %{
-             avg_bitrate: 2080,
-             avg_fps: 2.5,
+             total_frames: 10,
+             total_bytes: 1040,
              avg_gop_size: 4.5,
+             gop_size: 5,
              resolution: nil,
              profile: nil
-           } = stats
+           } = state
+
+    assert_in_delta(state.avg_fps, 2.5, 0.1)
+    assert_in_delta(state.avg_bitrate, 2080, 30)
   end
 end

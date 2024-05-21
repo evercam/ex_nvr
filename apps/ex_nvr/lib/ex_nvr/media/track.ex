@@ -12,23 +12,29 @@ defmodule ExNVR.Media.Track do
   @type t :: %__MODULE__{
           type: media_type(),
           encoding: media_codec(),
+          total_bytes: non_neg_integer(),
           avg_bitrate: non_neg_integer(),
           # video properties
           profile: atom(),
           resolution: {non_neg_integer(), non_neg_integer()},
+          total_frames: non_neg_integer(),
           avg_fps: number(),
-          avg_gop_size: number()
+          avg_gop_size: number(),
+          gop_size: non_neg_integer()
         }
 
   @enforce_keys [:type]
   defstruct @enforce_keys ++
               [
                 encoding: nil,
+                total_bytes: 0,
                 avg_bitrate: 0,
                 profile: nil,
                 resolution: nil,
-                avg_fps: 0.0,
-                avg_gop_size: 0.0
+                total_frames: 0,
+                avg_fps: 0,
+                avg_gop_size: 0.0,
+                gop_size: 0
               ]
 
   @spec new(media_type(), media_codec()) :: t()

@@ -40,6 +40,7 @@ defmodule ExNVR.Pipelines.Main do
   require Membrane.Logger
 
   alias ExNVR.{Devices, Recordings, Utils}
+  alias ExNVR.Elements.VideoStreamStatReporter
   alias ExNVR.Media.Track
   alias ExNVR.Model.Device
   alias ExNVR.Pipeline.{Output, Source}
@@ -372,6 +373,9 @@ defmodule ExNVR.Pipelines.Main do
   defp build_main_stream_spec(state, encoding) do
     [
       child(:funnel, ExNVR.Elements.DiscontinuityFunnel)
+      |> child({:stats_reporter, :main_stream}, %VideoStreamStatReporter{
+        device_id: state.device.id
+      })
       |> child(:video_tee, Membrane.Tee.Master)
       |> via_out(:master)
       |> child({:storage_bin, :main_stream}, %Output.Storage{
@@ -393,28 +397,33 @@ defmodule ExNVR.Pipelines.Main do
     spec =
       [
         child({:funnel, :sub_stream}, ExNVR.Elements.DiscontinuityFunnel)
+        |> child({:stats_reporter, :sub_stream}, %VideoStreamStatReporter{
+          device_id: device.id,
+          stream: :low
+        })
         |> child({:tee, :sub_stream}, Membrane.Tee.Master)
         |> via_out(:master)
         |> via_in(Pad.ref(:video, :sub_stream), options: [encoding: encoding])
         |> get_child(:hls_sink)
       ]
 
-    case device.storage_config.record_sub_stream do
-      :always ->
-        spec ++
-          [
-            get_child({:tee, :sub_stream})
-            |> via_out(:copy)
-            |> child({:storage, :sub_stream}, %Output.Storage{
-              device: device,
-              stream: :low,
-              correct_timestamp: true
-            })
-          ]
+    spec =
+      case device.storage_config.record_sub_stream do
+        :always ->
+          spec ++
+            [
+              get_child({:tee, :sub_stream})
+              |> via_out(:copy)
+              |> child({:storage, :sub_stream}, %Output.Storage{
+                device: device,
+                stream: :low,
+                correct_timestamp: true
+              })
+            ]
 
-      _other ->
-        spec
-    end
+        _other ->
+          spec
+      end
 
     if device.settings.generate_bif do
       spec ++
@@ -435,6 +444,9 @@ defmodule ExNVR.Pipelines.Main do
     [
       child(:source, %Source.File{device: device})
       |> via_out(:video)
+      |> child({:stats_reporter, :sub_stream}, %VideoStreamStatReporter{
+        device_id: device.id
+      })
       |> child(:video_tee, Membrane.Tee.Master)
       |> via_out(:master)
       |> via_in(Pad.ref(:video, :main_stream), options: [encoding: :H264])

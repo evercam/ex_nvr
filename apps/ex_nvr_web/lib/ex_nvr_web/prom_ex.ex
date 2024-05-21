@@ -11,7 +11,8 @@ defmodule ExNVRWeb.PromEx do
       Plugins.Application,
       Plugins.Beam,
       ExNVRWeb.PromEx.Device,
-      ExNVRWeb.PromEx.Recording
+      ExNVRWeb.PromEx.Recording,
+      ExNVRWeb.PromEx.DeviceStream
     ]
   end
 
