@@ -157,22 +157,22 @@ The main feature of this project is to store video streams retrieved from `devic
 
 * **Streaming**: live view and playback
    - [x] HLS
-   - [x] WebRTC (only mainstream, disabled for H265)
+   - [x] WebRTC (only mainstream, [disabled for H265]([url](https://github.com/evercam/ex_nvr/wiki/h265-Support)))
    - [ ] Webm
    - [ ] RTSP
    - [ ] RTMP
 
 * **Integration**: Integrate with third party software
    - [ ] Web Hooks: Notify external services of new recorded videos
-   - [x] Unix-domain Socket: Send snapshots via unix-domain socket 
+   - [x] Unix-domain Socket: Send snapshots via unix-domain socket
+   - [x] API / API documentation
 
 * **Other**: other interesting features
    - [ ] Support audio
    - [x] Support multiple devices in same instance
    - [x] Get snapshot from live/recorded stream
    - [x] Download videos of arbitrary durations
-   - [ ] Add stats/info about streams (for devs)
-   - [x] API / API documentation
+   - [x] Add stats/info about streams (for devs)
    - [ ] Gather metrics
    - [ ] Run machine learning models on video streams (live video / stored footages)
    - [ ] Sync recorded videos to cloud storage
