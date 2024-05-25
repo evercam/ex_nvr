@@ -13,7 +13,7 @@ defmodule ExNVR.Events.LPR do
              :list_type,
              :device_id
            ],
-           sortable: [:capture_time],
+           sortable: [:capture_time, :plate_number],
            default_order: %{
              order_by: [:capture_time],
              order_directions: [:desc]
@@ -28,8 +28,8 @@ defmodule ExNVR.Events.LPR do
              ]
            ],
            pagination_types: [:page],
-           default_limit: 100,
-           max_limit: 150}
+           default_limit: 20,
+           max_limit: 50}
 
   @type t :: %__MODULE__{}
 

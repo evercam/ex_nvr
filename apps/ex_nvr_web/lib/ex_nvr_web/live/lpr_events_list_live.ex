@@ -28,7 +28,7 @@ defmodule ExNVRWeb.LPREventsListLive do
         <:col :let={lpr_event} label="Plate number" field={:plate_number}>
           <%= lpr_event.plate_number %>
         </:col>
-        <:col :let={lpr_event} label="Diection" field={:direction}><%= lpr_event.direction %></:col>
+        <:col :let={lpr_event} label="Diection" field={:direction}><%= uppercase_direction(lpr_event.direction) %></:col>
 
         <:action :let={lpr_event}>
           <%!-- <div class="flex justify-end"> --%>
@@ -78,12 +78,12 @@ defmodule ExNVRWeb.LPREventsListLive do
             ],
             capture_time: [op: :>=, label: "Min capture time"],
             capture_time: [op: :<=, label: "Max capture time"],
-            plate_number: [op: :like]
+            plate_number: [op: :like, placeholder: "Filter by plate number"]
           ]}
         >
           <div>
             <.input
-              class="border rounded p-1"
+              class="border rounded p-1 kiw"
               field={f.field}
               label={f.label}
               type={f.type}
@@ -144,6 +144,10 @@ defmodule ExNVRWeb.LPREventsListLive do
      socket
      |> assign(pagination_params: pagination_params)
      |> push_patch(to: Routes.lpr_events_list_path(socket, :list, params), replace: true)}
+  end
+
+  defp uppercase_direction(direction) do
+    direction |> Atom.to_string() |> String.upcase()
   end
 
   defp load_lpr_events(params, socket) do

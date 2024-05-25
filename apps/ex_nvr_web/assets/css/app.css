@@ -84,3 +84,8 @@ video::-webkit-media-controls-current-time-display {
     background-color: #101111;
     opacity: 0.7;
 }
+
+select#flop_filters_0_value {
+    line-height: 1.5rem;
+    margin-top: 0.5rem;
+}
