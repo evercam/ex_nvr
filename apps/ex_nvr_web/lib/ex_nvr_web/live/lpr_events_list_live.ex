@@ -6,6 +6,8 @@ defmodule ExNVRWeb.LPREventsListLive do
   alias ExNVRWeb.Router.Helpers, as: Routes
   alias ExNVR.{Devices, Events}
 
+  @default_plate_image_path "priv/static/images/no_plate_image.jpg"
+
   @impl true
   def render(assigns) do
     ~H"""
@@ -19,7 +21,10 @@ defmodule ExNVRWeb.LPREventsListLive do
         path={~p"/events/lpr"}
       >
         <:col :let={lpr_event} label="Plate image" field={:plate_image}>
-          <img src={show_plate_image(lpr_event)} class="w-full h-auto max-w-full max-h-[80%]" />
+          <img
+            src={show_plate_image(lpr_event, @default_plate_image)}
+            class="mx-auto w-[80%] h-auto max-w-[80%] max-h-[80%]"
+          />
         </:col>
         <:col :let={lpr_event} label="Device" field={:device_name}><%= lpr_event.device.name %></:col>
         <:col :let={lpr_event} label="Capture time" field={:capture_time}>
@@ -28,7 +33,9 @@ defmodule ExNVRWeb.LPREventsListLive do
         <:col :let={lpr_event} label="Plate number" field={:plate_number}>
           <%= lpr_event.plate_number %>
         </:col>
-        <:col :let={lpr_event} label="Diection" field={:direction}><%= uppercase_direction(lpr_event.direction) %></:col>
+        <:col :let={lpr_event} label="Diection" field={:direction}>
+          <%= uppercase_direction(lpr_event.direction) %>
+        </:col>
 
         <:action :let={lpr_event}>
           <%!-- <div class="flex justify-end"> --%>
@@ -102,6 +109,7 @@ defmodule ExNVRWeb.LPREventsListLive do
     {:ok,
      assign(socket,
        devices: Devices.list(),
+       default_plate_image: default_plate_image(),
        filter_params: params,
        pagination_params: %{},
        sort_params: %{},
@@ -168,8 +176,21 @@ defmodule ExNVRWeb.LPREventsListLive do
     |> Calendar.strftime("%b %d, %Y %H:%M:%S %Z")
   end
 
-  defp show_plate_image(lpr_event) do
-    "data:image/png;base64,#{Events.lpr_event_thumbnail(lpr_event)}"
+  defp default_plate_image() do
+    Application.app_dir(:ex_nvr_web)
+    |> Path.join(@default_plate_image_path)
+    |> File.read!()
+    |> Base.encode64()
+  end
+
+  defp show_plate_image(lpr_event, default_plate_image) do
+    plate_image = Events.lpr_event_thumbnail(lpr_event)
+
+    if(plate_image) do
+      "data:image/png;base64,#{plate_image}"
+    else
+      "data:image/png;base64,#{default_plate_image}"
+    end
   end
 
   defp preview_event(lpr_event) do
