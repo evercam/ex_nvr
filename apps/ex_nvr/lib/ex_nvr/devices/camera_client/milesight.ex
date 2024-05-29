@@ -27,6 +27,14 @@ defmodule ExNVR.Devices.CameraClient.Milesight do
     end
   end
 
+  def device_info(_url, _opts) do
+    {:error, :not_implemented}
+  end
+
+  def get_stream_config(_url, _opts) do
+    {:error, :not_implemented}
+  end
+
   defp parse_response(body, opts) do
     body
     |> String.split("\n")

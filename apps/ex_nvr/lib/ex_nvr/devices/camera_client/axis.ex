@@ -32,6 +32,14 @@ defmodule ExNVR.Devices.CameraClient.Axis do
     end
   end
 
+  def device_info(_url, _opts) do
+    {:error, :not_implemented}
+  end
+
+  def get_stream_config(_url, _opts) do
+    {:error, :not_implemented}
+  end
+
   defp parse_response(body, timezone) do
     SweetXml.xpath(
       body,

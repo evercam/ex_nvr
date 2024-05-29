@@ -42,6 +42,8 @@ defmodule ExNVR.Devices do
   @spec list(map()) :: [Device.t()]
   def list(params \\ %{}), do: Repo.all(Device.filter(params) |> order_by([d], d.inserted_at))
 
+  def ip_cameras(), do: list(type: :ip)
+
   @spec get(binary()) :: Device.t() | nil
   def get(device_id), do: Repo.get(Device, device_id)
 

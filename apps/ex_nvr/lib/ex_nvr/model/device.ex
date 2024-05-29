@@ -248,6 +248,7 @@ defmodule ExNVR.Model.Device do
     Enum.reduce(params, query, fn
       {:state, value}, q when is_atom(value) -> where(q, [d], d.state == ^value)
       {:state, values}, q when is_list(values) -> where(q, [d], d.state in ^values)
+      {:type, value}, q -> where(q, [d], d.type == ^value)
       _, q -> q
     end)
   end
