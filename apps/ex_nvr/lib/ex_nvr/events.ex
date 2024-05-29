@@ -55,17 +55,20 @@ defmodule ExNVR.Events do
     |> Repo.one()
   end
 
+  @spec lpr_event_thumbnail(LPR.t()) :: binary() | nil
+  def lpr_event_thumbnail(lpr_event) do
+    ExNVR.Model.Device.lpr_thumbnails_dir(lpr_event.device)
+    |> Path.join(LPR.plate_name(lpr_event))
+    |> File.read()
+    |> case do
+      {:ok, image} -> Base.encode64(image)
+      _other -> nil
+    end
+  end
+
   defp maybe_include_lpr_thumbnails(true, entries) do
     Enum.map(entries, fn entry ->
-      plate_image =
-        ExNVR.Model.Device.lpr_thumbnails_dir(entry.device)
-        |> Path.join(LPR.plate_name(entry))
-        |> File.read()
-        |> case do
-          {:ok, image} -> Base.encode64(image)
-          _other -> nil
-        end
-
+      plate_image = lpr_event_thumbnail(entry)
       Map.put(entry, :plate_image, plate_image)
     end)
   end

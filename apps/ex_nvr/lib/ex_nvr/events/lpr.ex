@@ -13,23 +13,23 @@ defmodule ExNVR.Events.LPR do
              :list_type,
              :device_id
            ],
-           sortable: [:device_id, :capture_time],
+           sortable: [:capture_time, :plate_number],
            default_order: %{
-             order_by: [:device_id, :capture_time],
-             order_directions: [:asc, :desc]
+             order_by: [:capture_time],
+             order_directions: [:desc]
            },
            adapter_opts: [
              join_fields: [
                device_name: [
-                 binding: :joined_device,
+                 binding: :device,
                  field: :name,
                  ecto_type: :string
                ]
              ]
            ],
            pagination_types: [:page],
-           default_limit: 100,
-           max_limit: 150}
+           default_limit: 20,
+           max_limit: 50}
 
   @type t :: %__MODULE__{}
 

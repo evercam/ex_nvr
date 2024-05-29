@@ -112,6 +112,7 @@ defmodule ExNVRWeb.Router do
       live "/devices", DeviceListLive, :list
 
       live "/recordings", RecordingListLive, :list
+      live "/events/lpr", LPREventsListLive, :list
 
       live "/users/settings", UserSettingsLive, :edit
       live "/users/settings/confirm-email/:token", UserSettingsLive, :confirm_email
