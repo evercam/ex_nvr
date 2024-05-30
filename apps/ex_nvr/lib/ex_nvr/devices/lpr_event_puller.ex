@@ -3,8 +3,7 @@ defmodule ExNVR.Devices.LPREventPuller do
 
   require Logger
 
-  alias ExNVR.Devices.CameraClient
-  alias ExNVR.Events
+  alias ExNVR.{Devices, Events}
 
   @pulling_interval :timer.seconds(10)
 
@@ -26,7 +25,7 @@ defmodule ExNVR.Devices.LPREventPuller do
     %{device: device, last_event_timestamp: last_event_timestamp} = state
     Process.send_after(self(), :pull_events, @pulling_interval)
 
-    with {:ok, records, plates} <- CameraClient.fetch_lpr_event(device, last_event_timestamp),
+    with {:ok, records, plates} <- Devices.fetch_lpr_event(device, last_event_timestamp),
          stored_events <- save_events(device, records, plates) do
       Logger.info("LPR: stored #{length(stored_events)} events")
 

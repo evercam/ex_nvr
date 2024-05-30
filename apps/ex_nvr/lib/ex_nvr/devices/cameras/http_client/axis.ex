@@ -1,17 +1,23 @@
-defmodule ExNVR.Devices.CameraClient.Axis do
+defmodule ExNVR.Devices.Cameras.HttpClient.Axis do
   @moduledoc """
   Client for AXIS camera
   """
+  use ExNVR.Devices.Cameras.HttpClient
+
   require Logger
 
   import SweetXml
 
+  alias ExNVR.Devices.Cameras.DeviceInfo
   alias ExNVR.HTTP
 
+  @basic_info "/axis-cgi/basicdeviceinfo.cgi"
   @lpr_path "/local/fflprapp/search.cgi"
   @lpr_image_path_prefix "/local/fflprapp/"
+
   @timestamp_regex ~r/(\d+-\d+-\d+ \d+:\d+:\d+).*/
 
+  @impl true
   def fetch_lpr_event(url, opts) do
     timestamp =
       opts[:last_event_timestamp] && DateTime.to_unix(opts[:last_event_timestamp], :microsecond)
@@ -32,11 +38,18 @@ defmodule ExNVR.Devices.CameraClient.Axis do
     end
   end
 
-  def device_info(_url, _opts) do
-    {:error, :not_implemented}
+  @impl true
+  def device_info(url, opts) do
+    url = url <> @basic_info
+    body = %{"apiVersion" => "1.2", "method" => "getAllProperties"}
+
+    url
+    |> HTTP.post(body, opts)
+    |> parse_http_response(&parse_device_info_response/1)
   end
 
-  def get_stream_config(_url, _opts) do
+  @impl true
+  def stream_profiles(_url, _opts) do
     {:error, :not_implemented}
   end
 
@@ -77,6 +90,18 @@ defmodule ExNVR.Devices.CameraClient.Axis do
           Map.delete(response, :capture_time2)
       end
     end)
+  end
+
+  defp parse_device_info_response(body) do
+    data = body["data"]["propertyList"]
+
+    %DeviceInfo{
+      vendor: :axis,
+      name: data["ProductFullName"],
+      model: data["ProdNbr"],
+      serial: data["SerialNumber"],
+      firmware_version: data["Version"]
+    }
   end
 
   defp to_datetime(unix_timestamp) do
@@ -148,4 +173,15 @@ defmodule ExNVR.Devices.CameraClient.Axis do
 
     nil
   end
+
+  defp parse_http_response({:ok, %{body: body, status: status}}, parse_fn)
+       when status >= 200 and status < 300 do
+    {:ok, parse_fn.(body)}
+  end
+
+  defp parse_http_response({:ok, %{body: body, status: status}}, _parse_fn) do
+    {:error, {status, body}}
+  end
+
+  defp parse_http_response(error, _parse_fn), do: error
 end

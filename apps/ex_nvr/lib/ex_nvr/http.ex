@@ -104,6 +104,10 @@ defmodule ExNVR.HTTP do
     md5([ha1, opts.nonce, nonce_count, client_nonce, opts.qop, ha2])
   end
 
+  defp do_call(method, body, opts) when is_map(body) do
+    Req.request(method: method, url: opts[:url], auth: auth_from_opts(opts), json: body)
+  end
+
   defp do_call(method, body, opts) do
     Req.request(method: method, url: opts[:url], auth: auth_from_opts(opts), body: body)
   end

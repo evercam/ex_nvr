@@ -1,7 +1,10 @@
-defmodule ExNVR.Devices.CameraClient.Hik do
+defmodule ExNVR.Devices.Cameras.HttpClient.Hik do
   @moduledoc """
   Client for Hikvision camera
   """
+
+  use ExNVR.Devices.Cameras.HttpClient
+
   require Logger
 
   import SweetXml
@@ -13,6 +16,7 @@ defmodule ExNVR.Devices.CameraClient.Hik do
   @device_info "/ISAPI/System/deviceinfo"
   @stream_config_path "/ISAPI/Streaming/channels"
 
+  @impl true
   def fetch_lpr_event(url, opts) do
     last_event_timestamp = last_event_timestamp(opts[:last_event_timestamp], opts[:timezone])
     request_body = "<AfterTime><picTime>#{last_event_timestamp}</picTime></AfterTime>"
@@ -32,6 +36,7 @@ defmodule ExNVR.Devices.CameraClient.Hik do
     end
   end
 
+  @impl true
   def device_info(url, opts) do
     case HTTP.get(url <> @device_info, opts) do
       {:ok, %{status: 200, body: body}} -> {:ok, parse_device_info_response(body)}
@@ -40,7 +45,8 @@ defmodule ExNVR.Devices.CameraClient.Hik do
     end
   end
 
-  def get_stream_config(url, opts) do
+  @impl true
+  def stream_profiles(url, opts) do
     case HTTP.get(url <> @stream_config_path, opts) do
       {:ok, %{status: 200, body: body}} -> {:ok, parse_stream_response(body)}
       {:ok, response} -> {:error, response}
@@ -80,11 +86,10 @@ defmodule ExNVR.Devices.CameraClient.Hik do
       name: ~x"./deviceName/text()"s,
       model: ~x"./model/text()"s,
       serial: ~x"./serialNumber/text()"s,
-      mac: ~x"./macAddress/text()"s,
       firmware_version: ~x"./firmwareVersion/text()"s
     )
     |> Map.put(:vendor, :hikvision)
-    |> then(&struct(ExNVR.Devices.Camera.DeviceInfo, &1))
+    |> then(&struct(ExNVR.Devices.Cameras.DeviceInfo, &1))
   end
 
   defp parse_stream_response(body) do
@@ -119,7 +124,7 @@ defmodule ExNVR.Devices.CameraClient.Hik do
         end
 
       config = Map.merge(config, %{smart_codec: smart_codec, profile: profile})
-      struct(ExNVR.Devices.Camera.StreamConfig, config)
+      struct(ExNVR.Devices.Cameras.StreamProfile, config)
     end)
   end
 

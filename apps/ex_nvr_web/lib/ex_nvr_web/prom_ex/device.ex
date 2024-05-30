@@ -3,7 +3,7 @@ defmodule ExNVRWeb.PromEx.Device do
 
   use PromEx.Plugin
 
-  alias ExNVR.Devices.CameraClient
+  alias ExNVR.Devices
   alias PromEx.MetricTypes.Polling
 
   @device_status_event [:ex_nvr, :device, :state]
@@ -24,14 +24,7 @@ defmodule ExNVRWeb.PromEx.Device do
     :smart_codec
   ]
 
-  @camera_info_tags [
-    :device_id,
-    :vendor,
-    :model,
-    :serial,
-    :mac,
-    :firmware_version
-  ]
+  @camera_info_tags [:device_id, :vendor, :model, :serial, :firmware_version]
 
   @impl true
   def polling_metrics(opts) do
@@ -108,7 +101,7 @@ defmodule ExNVRWeb.PromEx.Device do
   end
 
   defp execute_stream_config(device) do
-    with {:ok, streams} <- CameraClient.get_stream_config(device) do
+    with {:ok, streams} <- Devices.stream_profiles(device) do
       for stream <- streams do
         metadata = Map.put(stream, :device_id, device.id)
         :telemetry.execute(@camera_stream_info_event, %{value: 1}, metadata)
@@ -117,7 +110,7 @@ defmodule ExNVRWeb.PromEx.Device do
   end
 
   defp execute_device_info(device) do
-    with {:ok, device_info} <- CameraClient.device_info(device) do
+    with {:ok, device_info} <- Devices.device_info(device) do
       metadata = Map.put(device_info, :device_id, device.id)
       :telemetry.execute(@camera_info_event, %{value: 1}, metadata)
     end

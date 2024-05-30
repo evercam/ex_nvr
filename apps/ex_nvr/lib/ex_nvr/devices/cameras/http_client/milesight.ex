@@ -1,7 +1,9 @@
-defmodule ExNVR.Devices.CameraClient.Milesight do
+defmodule ExNVR.Devices.Cameras.HttpClient.Milesight do
   @moduledoc """
   Client for Milesight camera
   """
+
+  use ExNVR.Devices.Cameras.HttpClient
 
   require Logger
 
@@ -10,6 +12,7 @@ defmodule ExNVR.Devices.CameraClient.Milesight do
   @lpr_path "/cgi-bin/operator/operator.cgi?action=get.lpr.lastdata&format=inf"
   @lpr_image_path "/LPR"
 
+  @impl true
   def fetch_lpr_event(url, opts) do
     full_url = url <> @lpr_path
 
@@ -25,14 +28,6 @@ defmodule ExNVR.Devices.CameraClient.Milesight do
       {:error, reason} ->
         {:error, reason}
     end
-  end
-
-  def device_info(_url, _opts) do
-    {:error, :not_implemented}
-  end
-
-  def get_stream_config(_url, _opts) do
-    {:error, :not_implemented}
   end
 
   defp parse_response(body, opts) do

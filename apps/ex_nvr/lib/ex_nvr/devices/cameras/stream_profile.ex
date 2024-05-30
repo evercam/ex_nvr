@@ -1,4 +1,4 @@
-defmodule ExNVR.Devices.Camera.StreamConfig do
+defmodule ExNVR.Devices.Cameras.StreamProfile do
   @moduledoc false
 
   @type t :: %__MODULE__{
