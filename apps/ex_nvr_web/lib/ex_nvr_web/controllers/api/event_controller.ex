@@ -19,8 +19,8 @@ defmodule ExNVRWeb.API.EventController do
     end
   end
 
-  @spec index(Conn.t(), map()) :: Conn.t() | {:error, Ecto.Changeset.t()}
-  def index(%Conn{} = conn, params) do
+  @spec lpr(Conn.t(), map()) :: Conn.t() | {:error, Ecto.Changeset.t()}
+  def lpr(%Conn{} = conn, params) do
     with {:ok, event_params} <- validate_get_events_req(params),
          {:ok, {events, meta}} <-
            Events.list_lpr_events(params, include_plate_image: event_params.include_plate_image) do
@@ -50,13 +50,11 @@ defmodule ExNVRWeb.API.EventController do
 
   defp validate_get_events_req(params) do
     types = %{
-      type: {:parameterized, Ecto.Enum, Ecto.Enum.init(values: [:lpr])},
       include_plate_image: :boolean
     }
 
     {%{include_plate_image: false}, types}
     |> Changeset.cast(params, Map.keys(types))
-    |> Changeset.validate_required([:type])
     |> Changeset.apply_action(:create)
   end
 end
