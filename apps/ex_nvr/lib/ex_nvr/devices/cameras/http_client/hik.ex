@@ -88,7 +88,7 @@ defmodule ExNVR.Devices.Cameras.HttpClient.Hik do
       serial: ~x"./serialNumber/text()"s,
       firmware_version: ~x"./firmwareVersion/text()"s
     )
-    |> Map.put(:vendor, :hikvision)
+    |> Map.put(:vendor, "HIKVISION")
     |> then(&struct(ExNVR.Devices.Cameras.DeviceInfo, &1))
   end
 

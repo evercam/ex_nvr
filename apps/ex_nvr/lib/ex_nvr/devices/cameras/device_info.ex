@@ -2,7 +2,7 @@ defmodule ExNVR.Devices.Cameras.DeviceInfo do
   @moduledoc false
 
   @type t :: %__MODULE__{
-          vendor: atom(),
+          vendor: binary(),
           name: binary(),
           model: binary(),
           serial: binary(),
