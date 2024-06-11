@@ -49,7 +49,7 @@ defmodule ExNVR.MixProject do
       {:membrane_rtp_plugin, "~> 0.27.0", override: true},
       {:membrane_file_plugin, "~> 0.17.0", override: true},
       {:membrane_rtsp_plugin, github: "gBillal/membrane_rtsp_plugin", tag: "v0.1.5"},
-      {:membrane_mp4_plugin, "~> 0.34.0"},
+      {:membrane_mp4_plugin, "~> 0.35.0"},
       {:membrane_http_adaptive_stream_plugin,
        github: "gBillal/membrane_http_adaptive_stream_plugin", ref: "8f75c6b"},
       {:membrane_h264_ffmpeg_plugin, "~> 0.31.0"},
