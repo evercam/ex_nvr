@@ -153,9 +153,7 @@ defmodule ExNVR.Recordings do
         :telemetry.execute(
           [:ex_nvr, :recording, :delete],
           %{count: length(high_res_recordings)},
-          %{
-            device_id: device.id
-          }
+          %{device_id: device.id}
         )
 
       {:error, _, changeset, _} ->
