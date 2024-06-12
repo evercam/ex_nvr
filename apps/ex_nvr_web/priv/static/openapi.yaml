@@ -980,22 +980,14 @@ paths:
           $ref: "#/components/responses/BadArg"
         '404':
           $ref: "#/components/responses/NotFound"
-  /api/events:
+  /api/events/lpr:
     get:
-      summary: Get events
-      description: Get all events
-      operationId: getEvents
+      summary: Get LPR events
+      description: Get all LPR events
+      operationId: getLPREvents
       tags:
         - Event
       parameters:
-        - name: type
-          in: query
-          required: true
-          description: Filter by type
-          schema:
-            type: string
-            enum: [lpr]
-          example: lpr
         - name: include_plate_image
           in: query
           required: false

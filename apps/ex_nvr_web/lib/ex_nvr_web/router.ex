@@ -38,7 +38,7 @@ defmodule ExNVRWeb.Router do
 
     resources "/devices", API.DeviceController, except: [:new, :edit]
 
-    get "/events", API.EventController, :index
+    get "/events/lpr", API.EventController, :lpr
 
     get "/recordings/chunks", API.RecordingController, :chunks
 
