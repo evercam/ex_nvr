@@ -262,7 +262,10 @@ defmodule ExNVRWeb.RecordingListLive do
 
     case Recordings.list(params) do
       {:ok, {recordings, meta}} ->
-        {:noreply, assign(socket, meta: meta, recordings: recordings, sort_params: sort_params)}
+        socket
+        |> assign(meta: meta, recordings: recordings, sort_params: sort_params)
+        |> push_event("reload-popovers", %{})
+        |> then(&{:noreply, &1})
 
       {:error, meta} ->
         {:noreply, assign(socket, meta: meta)}

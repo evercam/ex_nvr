@@ -23,7 +23,7 @@
         field={@device_form[:name]}
         type="text"
         label="Name"
-        placeholder="Camera Name"
+        placeholder="Device Name"
         required
       />
       <div class="flex justify-between">
@@ -45,15 +45,31 @@
         />
       </div>
 
-      <.input
-        :if={@device_type == "ip"}
-        field={@device_form[:vendor]}
-        id="device_vendor"
-        type="select"
-        options={ExNVR.Model.Device.vendors()}
-        label="Vendor"
-        prompt="Choose your device vendor"
-      />
+      <div :if={@device_type == "ip"} class="flex flex-col">
+        <div class="relative flex py-5 items-center">
+          <span class="flex-shrink mr-4 text-black dark:text-white">Device Info</span>
+          <div class="flex-grow border-t border-gray-400"></div>
+        </div>
+        <div class="flex flex-col md:flex-row">
+          <div class="grow mr-5">
+            <.input
+              field={@device_form[:url]}
+              id="device_url"
+              type="text"
+              label="Onvif URL (Base URL)"
+              placeholder="http://192.168.1.100/onvif/device_service"
+            />
+          </div>
+          <.input
+            field={@device_form[:vendor]}
+            id="device_vendor"
+            type="select"
+            options={ExNVR.Model.Device.vendors()}
+            label="Vendor"
+            prompt="Choose your device vendor"
+          />
+        </div>
+      </div>
       <div :if={@device_type == "ip"} class="flex flex-col">
         <div class="relative flex py-5 items-center">
           <span class="flex-shrink mr-4 text-black dark:text-white">Credentials</span>

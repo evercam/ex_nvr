@@ -77,13 +77,13 @@ defmodule ExNVR.Recordings.Snapshooter do
     last_frame =
       Enum.reduce([first_frame | rest], nil, fn frame, _last_frame ->
         {:ok, _pts, decoded_frames} =
-          decoder_module.decode(frame.payload, frame.pts, frame.dts, true, decoder)
+          decoder_module.decode(frame.payload, frame.pts, frame.dts, false, decoder)
 
         List.last(decoded_frames)
       end)
 
     last_frame =
-      case decoder_module.flush(true, decoder) do
+      case decoder_module.flush(false, decoder) do
         {:ok, _pts, []} -> last_frame
         {:ok, _pts, frames} -> List.last(frames)
       end
