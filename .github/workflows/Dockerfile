@@ -32,10 +32,6 @@ COPY assets assets
 COPY apps apps
 COPY rel rel
 
-RUN mkdir -p _build/prod/bundlex_precompiled/httpsgithub.comBtbNFFmpeg-Buildsreleasesdownloadlatestffmpeg-n6.0-latest-linuxarm64-gpl-shared-6.0.tar.xz && \ 
-    wget https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-n6.1-latest-linuxarm64-gpl-shared-6.1.tar.xz && \ 
-    tar -xvf ffmpeg-n6.1-latest-linuxarm64-gpl-shared-6.1.tar.xz -C _build/prod/bundlex_precompiled/httpsgithub.comBtbNFFmpeg-Buildsreleasesdownloadlatestffmpeg-n6.0-latest-linuxarm64-gpl-shared-6.0.tar.xz --strip-components=1
-
 RUN mix deps.get
 RUN mix deps.compile
 RUN mix do release
