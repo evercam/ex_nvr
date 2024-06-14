@@ -136,21 +136,18 @@ window.addEventListener("phx:stream", (e) => {
     startStreaming(e.detail.src, e.detail.poster)
 })
 
-// Listen for navigate events and re-init the popovers
+// Listen for reload-popovers events and re-init the popovers
 // phx-loading-xxx events are not triggered by push_patch
-// so this is why we listen for phx:navigate events instead
-// we set the timeout to allow the dom to updated first
-window.addEventListener('phx:navigate', (e) => {
-    if (e.detail.href.startsWith("/recordings")) {
-        setTimeout(() => initPopovers(), 1000); 
-    }
-})
+// so this is why we listen for this custom event instead
+window.addEventListener('phx:reload-popovers', (e) => initPopovers())
 
 window.addEventListener("phx:js-exec", ({ detail }) => {
     document.querySelectorAll(detail.to).forEach((el) => {
         liveSocket.execJS(el, el.getAttribute(detail.attr))
     })
 })
+
+window.addEventListener("phx:download-footage", (e) => downloadFile(e.detail.url))
 
 function downloadFile(url) {
     const anchor = document.createElement("a");
@@ -163,9 +160,5 @@ function downloadFile(url) {
 
     document.body.removeChild(anchor);
 }
-
-window.addEventListener("phx:download-footage", (e) => {
-    downloadFile(e.detail.url)
-})
 
 initDarkMode();
