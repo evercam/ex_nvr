@@ -7,11 +7,23 @@
       Create a new device
     </h3>
     <h3
-      :if={@device.id != nil}
+      :if={@live_action == :edit}
       class="mb-4 text-xl text-center font-medium text-black dark:text-white"
     >
       Update a device
     </h3>
+    <h3
+      :if={@live_action == :view}
+      class="mb-4 text-xl text-center font-medium text-black dark:text-white"
+    >
+      View a device
+    </h3>
+    <div :if={@live_action == :view} class="ml-4 sm:ml-0 flex justify-end">
+      <.link href={~p"/devices/#{@device.id}/edit"}>
+        <.button>Update device</.button>
+      </.link>
+    </div>
+
     <.simple_form
       id="device_form"
       for={@device_form}
@@ -25,6 +37,7 @@
         label="Name"
         placeholder="Device Name"
         required
+        disabled={@live_action == :view}
       />
       <div class="flex justify-between">
         <.input
@@ -42,6 +55,7 @@
           type="select"
           options={Tzdata.zone_list() ++ [nil]}
           label="Timezone"
+          disabled={@live_action == :view}
         />
       </div>
 
@@ -58,6 +72,7 @@
               type="text"
               label="Onvif URL (Base URL)"
               placeholder="http://192.168.1.100/onvif/device_service"
+              disabled={@live_action == :view}
             />
           </div>
           <.input
@@ -67,6 +82,7 @@
             options={ExNVR.Model.Device.vendors()}
             label="Vendor"
             prompt="Choose your device vendor"
+            disabled={@live_action == :view}
           />
         </div>
       </div>
@@ -82,12 +98,14 @@
               id="config_username"
               type="text"
               label="Username"
+              disabled={@live_action == :view}
             />
             <.input
               field={credentials[:password]}
               id="config_password"
               type="password"
               label="Password"
+              disabled={@live_action == :view}
             />
           </.inputs_for>
         </div>
@@ -107,6 +125,7 @@
               label="RTSP Uri"
               placeholder="rtsp://camera1:554/video/stream1"
               required
+              disabled={@live_action == :view}
             />
             <.input
               :if={@device_type == "ip"}
@@ -115,6 +134,7 @@
               type="text"
               label="Snapshot Uri"
               placeholder="http://camera1:80/snapshot"
+              disabled={@live_action == :view}
             />
             <div :if={@device_type == "ip"} class="relative flex py-5 items-center">
               <span class="flex-shrink mr-4 text-black dark:text-white">Sub Stream</span>
@@ -127,6 +147,7 @@
               type="text"
               label="RTSP Uri"
               placeholder="rtsp://camera1:554/video/stream2"
+              disabled={@live_action == :view}
             />
             <label
               :if={@device_type == "file" && is_nil(@device.id)}
@@ -206,6 +227,7 @@
                   label=""
                   min="0"
                   max="99"
+                  disabled={@live_action == :view}
                 />
 
                 <span class="col-span-2">Full drive action:</span>
@@ -214,6 +236,7 @@
                   type="select"
                   label=""
                   options={[{"nothing", "nothing"}, {"overwrite", "overwrite"}]}
+                  disabled={@live_action == :view}
                 />
 
                 <span class="col-span-2">Record sub stream:</span>
@@ -222,6 +245,7 @@
                   type="select"
                   label=""
                   options={[{"never", "never"}, {"always", "always"}]}
+                  disabled={@live_action == :view}
                 />
               </div>
             </div>
@@ -240,6 +264,7 @@
                 field={snapshot_config[:enabled]}
                 type="checkbox"
                 label="Enable snapshot upload to remote storage"
+                disabled={@live_action == :view}
               />
               <div
                 :if={snapshot_config[:enabled].value}
@@ -253,6 +278,7 @@
                   max="3600"
                   label=""
                   required
+                  disabled={@live_action == :view}
                 />
 
                 <span class="col-span-2">Remote storages:</span>
@@ -262,6 +288,7 @@
                   label=""
                   options={@remote_storages}
                   required
+                  disabled={@live_action == :view}
                 />
               </div>
             </.inputs_for>
@@ -273,8 +300,18 @@
             <div class="flex-grow border-t border-gray-400"></div>
           </div>
           <.inputs_for :let={settings} field={@device_form[:settings]}>
-            <.input field={settings[:generate_bif]} type="checkbox" label="Generate BIF" />
-            <.input field={settings[:enable_lpr]} type="checkbox" label="Pull LPR events" />
+            <.input
+              field={settings[:generate_bif]}
+              type="checkbox"
+              label="Generate BIF"
+              disabled={@live_action == :view}
+            />
+            <.input
+              field={settings[:enable_lpr]}
+              type="checkbox"
+              label="Pull LPR events"
+              disabled={@live_action == :view}
+            />
           </.inputs_for>
         </div>
       </div>
@@ -283,7 +320,11 @@
           Create
         </.button>
 
-        <.button :if={@device.id} class="w-full" phx-disable-with="Updating...">
+        <.button
+          :if={@device.id && @live_action == :edit}
+          class="w-full"
+          phx-disable-with="Updating..."
+        >
           Update
         </.button>
       </:actions>

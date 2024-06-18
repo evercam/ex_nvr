@@ -7,7 +7,7 @@ defmodule ExNVRWeb.DeviceLive do
   alias ExNVR.Model.Device
   alias ExNVR.MP4.Reader
 
-  def mount(%{"id" => "new"}, _session, socket) do
+  def mount(_params, _session, %{assigns: %{live_action: :new}} = socket) do
     device_params = get_device_params(socket.assigns.flash)
     device = init_device(device_params)
     changeset = Devices.change_device_creation(%Device{}, device_params)

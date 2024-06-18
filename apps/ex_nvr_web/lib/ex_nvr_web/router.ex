@@ -139,7 +139,9 @@ defmodule ExNVRWeb.Router do
         {ExNVRWeb.UserAuth, :ensure_authenticated},
         {ExNVRWeb.UserAuth, :ensure_user_is_admin}
       ] do
-      live "/devices/:id", DeviceLive, :edit
+      live "/devices/new", DeviceLive, :new
+      live "/devices/:id/edit", DeviceLive, :edit
+      live "/devices/:id/view", DeviceLive, :view
 
       live "/remote-storages", RemoteStorageListLive, :list
       live "/remote-storages/:id", RemoteStorageLive, :edit
