@@ -23,9 +23,17 @@ defmodule ExNVRWeb.DeviceLiveTest do
       assert html =~ "Creating..."
     end
 
+    test "render view device page", %{conn: conn, tmp_dir: tmp_dir} do
+      device = camera_device_fixture(tmp_dir)
+      {:ok, _lv, html} = live(conn, ~p"/devices/#{device.id}/view")
+
+      assert html =~ "View a device"
+      assert html =~ "Update device"
+    end
+
     test "render update device page", %{conn: conn, tmp_dir: tmp_dir} do
       device = camera_device_fixture(tmp_dir)
-      {:ok, _lv, html} = live(conn, ~p"/devices/#{device.id}")
+      {:ok, _lv, html} = live(conn, ~p"/devices/#{device.id}/edit")
 
       assert html =~ "Update a device"
       assert html =~ "Updating..."
@@ -157,7 +165,7 @@ defmodule ExNVRWeb.DeviceLiveTest do
     end
 
     test "update an IP Camera device", %{conn: conn, device: device} do
-      {:ok, lv, _} = live(conn, ~p"/devices/#{device.id}")
+      {:ok, lv, _} = live(conn, ~p"/devices/#{device.id}/edit")
 
       {:ok, conn} =
         lv
@@ -180,7 +188,7 @@ defmodule ExNVRWeb.DeviceLiveTest do
     end
 
     test "renders errors on invalid update params for an IP Device", %{conn: conn, device: device} do
-      {:ok, lv, _} = live(conn, ~p"/devices/#{device.id}")
+      {:ok, lv, _} = live(conn, ~p"/devices/#{device.id}/edit")
 
       result =
         lv
@@ -195,7 +203,7 @@ defmodule ExNVRWeb.DeviceLiveTest do
     end
 
     test "update a File Source device", %{conn: conn, file_device: device} do
-      {:ok, lv, _} = live(conn, ~p"/devices/#{device.id}")
+      {:ok, lv, _} = live(conn, ~p"/devices/#{device.id}/edit")
 
       {:ok, conn} =
         lv
