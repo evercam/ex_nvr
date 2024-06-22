@@ -192,13 +192,15 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
   defp validate_hls_stream_params(params) do
     types = %{
       pos: :utc_datetime,
-      stream: {:parameterized, Ecto.Enum, Ecto.Enum.init(values: ~w(high low)a)},
-      resolution: :integer
+      stream: {:parameterized, Ecto.Enum, Ecto.Enum.init(values: ~w(high low auto)a)},
+      resolution: :integer,
+      duration: :integer
     }
 
-    {%{pos: nil, stream: nil, resolution: nil}, types}
+    {%{pos: nil, stream: nil, resolution: nil, duration: 0}, types}
     |> Changeset.cast(params, Map.keys(types))
     |> Changeset.validate_inclusion(:resolution, [240, 480, 640, 720, 1080])
+    |> Changeset.validate_number(:duration, greater_than_or_equal_to: 5)
     |> Changeset.apply_action(:create)
   end
 
@@ -276,37 +278,58 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
   end
 
   defp start_hls_pipeline(device, params, stream_id) do
+    case get_stream(params, device) do
+      :error ->
+        {:error, :not_found}
+
+      stream ->
+        path = Utils.hls_dir(device.id) |> Path.join(stream_id)
+
+        pipeline_options = [
+          device: device,
+          start_date: params.pos,
+          duration: params.duration,
+          resolution: params.resolution,
+          stream: stream,
+          directory: path,
+          segment_name_prefix: UUID.uuid4()
+        ]
+
+        {:ok, _, pid} = HlsPlayback.start(pipeline_options)
+
+        ExNVRWeb.HlsStreamingMonitor.register(stream_id, fn -> HlsPlayback.stop_streaming(pid) end)
+
+        :ok = HlsPlayback.start_streaming(pid)
+
+        {:ok, path}
+    end
+  end
+
+  defp get_stream(params, device) do
     stream = params.stream || :high
 
-    if Recordings.exists?(device, stream, params.pos) do
-      path = Utils.hls_dir(device.id) |> Path.join(stream_id)
+    cond do
+      stream == :auto and Recordings.exists?(device, :low, params.pos) ->
+        :low
 
-      pipeline_options = [
-        device: device,
-        start_date: params.pos,
-        resolution: params.resolution,
-        stream: stream,
-        directory: path,
-        segment_name_prefix: UUID.uuid4()
-      ]
+      stream == :auto and Recordings.exists?(device, :high, params.pos) ->
+        :high
 
-      {:ok, _, pid} = HlsPlayback.start(pipeline_options)
-      ExNVRWeb.HlsStreamingMonitor.register(stream_id, fn -> HlsPlayback.stop_streaming(pid) end)
+      stream != :auto and Recordings.exists?(device, stream, params.pos) ->
+        stream
 
-      :ok = HlsPlayback.start_streaming(pid)
-
-      {:ok, path}
-    else
-      {:error, :not_found}
+      true ->
+        :error
     end
   end
 
   defp remove_unused_stream(manifest_file, %{pos: pos}) when not is_nil(pos), do: manifest_file
-  defp remove_unused_stream(manifest_file, %{stream: nil}), do: manifest_file
 
   defp remove_unused_stream(manifest_file, %{stream: :high}),
     do: HLS.Processor.delete_stream(manifest_file, "live_sub_stream")
 
   defp remove_unused_stream(manifest_file, %{stream: :low}),
     do: HLS.Processor.delete_stream(manifest_file, "live_main_stream")
+
+  defp remove_unused_stream(manifest_file, _params), do: manifest_file
 end

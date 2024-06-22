@@ -43,7 +43,8 @@ defmodule ExNVR.Pipelines.HlsPlayback do
       child(:source, %Elements.RecordingBin{
         device: options[:device],
         start_date: options[:start_date],
-        stream: options[:stream]
+        stream: options[:stream],
+        duration: Membrane.Time.seconds(options[:duration])
       })
     ]
 
