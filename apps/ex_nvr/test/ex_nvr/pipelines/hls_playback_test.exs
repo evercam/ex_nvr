@@ -45,7 +45,8 @@ defmodule ExNVR.Pipelines.HlsPlaybackTest do
     options = [
       module: ExNVR.Pipelines.HlsPlayback,
       custom_args:
-        [device: device, start_date: ~U(2023-06-23 10:00:02Z)] |> Keyword.merge(options)
+        [device: device, start_date: ~U(2023-06-23 10:00:02Z), duration: 0]
+        |> Keyword.merge(options)
     ]
 
     Testing.Pipeline.start_supervised!(options)

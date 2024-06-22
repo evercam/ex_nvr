@@ -661,6 +661,15 @@ paths:
           schema:
             type: string
             format: date-time
+        - duration:
+          in: query
+          description: |
+            Set the duration of the stream.
+
+            0 means no duration.
+          default: 0
+          schema:
+            type: integer
         - name: resolution
           in: query
           description: |
@@ -1347,10 +1356,13 @@ components:
       name: stream
       in: query
       required: false
-      description: Stream type.
+      description: |
+        Stream type.
+
+        `auto` value means try `low` stream first if available and then `high` stream.
       schema:
         type: string
-        enum: [high, low]
+        enum: [high, low, auto]
         default: high
     filters:
       name: filters

@@ -99,9 +99,7 @@ defmodule ExNVRWeb.Api.EventControllerTest do
 
       response =
         conn
-        |> get(
-          ~p"/api/events/lpr?filters[0][field]=device_id&filters[0][value]=#{device.id}"
-        )
+        |> get(~p"/api/events/lpr?filters[0][field]=device_id&filters[0][value]=#{device.id}")
         |> json_response(200)
 
       assert response["meta"]["total_count"] == 1
