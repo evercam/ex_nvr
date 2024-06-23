@@ -20,7 +20,7 @@ defmodule ExNVRWeb.DashboardLive do
 
   def render(assigns) do
     ~H"""
-    <div class="bg-gray-300 sm:w-2/3 dark:bg-gray-800">
+    <div class="bg-gray-300 w-full h-svh dark:bg-gray-800 mb-12 overflow-hidden">
       <div :if={@devices == []} class="grid tracking-wide text-lg text-center dark:text-gray-200">
         You have no devices, you can create one
         <span><.link href={~p"/devices"} class="ml-2 dark:text-blue-600">here</.link></span>
@@ -79,11 +79,11 @@ defmodule ExNVRWeb.DashboardLive do
           </div>
         </div>
 
-        <div class="relative mt-4">
+        <div class="relative h-svh">
           <div :if={@live_view_enabled?} class="relative">
             <video
               id="live-video"
-              class="w-full h-auto dark:bg-gray-500 rounded-tr rounded-tl"
+              class="z-10 w-auto min-w-full min-h-full max-w-none dark:bg-gray-500 rounded-tr rounded-tl"
               autoplay
               controls
               muted
