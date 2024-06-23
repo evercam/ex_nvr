@@ -83,7 +83,7 @@ defmodule ExNVRWeb.DashboardLive do
           <div :if={@live_view_enabled?} class="relative">
             <video
               id="live-video"
-              class="w-full h-auto dark:bg-gray-500 rounded-tr rounded-tl"
+              class="player w-full h-auto dark:bg-gray-500 rounded-tr rounded-tl"
               autoplay
               controls
               muted
