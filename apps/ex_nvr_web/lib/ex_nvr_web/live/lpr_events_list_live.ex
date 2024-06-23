@@ -72,7 +72,7 @@ defmodule ExNVRWeb.LPREventsListLive do
     >
       <button
         class="popup-close absolute top-4 right-4 text-white"
-        phx-click={JS.add_class("hide", to: "popup-container")}
+        phx-click={JS.add_class("hidden", to: "#popup-container")}
       >
         ×
       </button>
