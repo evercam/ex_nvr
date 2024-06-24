@@ -18,7 +18,9 @@ defmodule ExNVRWeb.DeviceListLive do
       </div>
 
       <.table id="devices" rows={@devices}>
-        <:col :let={device} label="Id"><%= device.id %></:col>
+        <:col :let={device} label="Id">
+          <.link href={~p"/devices/#{device.id}/view"}><%= device.id %></.link>
+        </:col>
         <:col :let={device} label="Type"><%= get_type_label(device.type) %></:col>
         <:col :let={device} label="Name"><%= device.name %></:col>
         <:col :let={device} label="Timezone"><%= device.timezone %></:col>
@@ -62,7 +64,7 @@ defmodule ExNVRWeb.DeviceListLive do
               >
                 <li>
                   <.link
-                    href={~p"/devices/#{device.id}"}
+                    href={~p"/devices/#{device.id}/edit"}
                     class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white"
                   >
                     Update
