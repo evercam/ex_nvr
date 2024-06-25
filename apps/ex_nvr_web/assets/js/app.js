@@ -113,8 +113,8 @@ function initDarkMode() {
 
 }
 
-startStreaming = (src, poster_url) => {
-    var video = document.getElementById("live-video")
+startStreaming = (elem_id, src, poster_url) => {
+    var video = document.getElementById(elem_id)
     if (video != null && Hls.isSupported()) {
         if (window.hls) {
             window.hls.destroy()
@@ -129,11 +129,20 @@ startStreaming = (src, poster_url) => {
         })
         window.hls.loadSource(src)
         window.hls.attachMedia(video)
+
+        window.hls.on(Hls.Events.ERROR, (event, data) => {
+            // handle error
+            console.log(data)
+        })
     }
 }
 
 window.addEventListener("phx:stream", (e) => {
-    startStreaming(e.detail.src, e.detail.poster)
+    startStreaming("live-video", e.detail.src, e.detail.poster)
+})
+
+window.addEventListener("events:play-clip", (e) => {
+    startStreaming(e.target.id, e.detail.src, e.detail.poster)
 })
 
 // Listen for reload-popovers events and re-init the popovers

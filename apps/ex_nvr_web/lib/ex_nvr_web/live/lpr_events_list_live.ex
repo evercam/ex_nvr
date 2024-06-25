@@ -40,13 +40,23 @@ defmodule ExNVRWeb.LPREventsListLive do
         <:action :let={lpr_event}>
           <%!-- <div class="flex justify-end"> --%>
           <span
-            title="Preview event"
+            title="Preview snapshot"
             phx-click={preview_event(lpr_event)}
             id={"thumbnail-#{lpr_event.id}"}
           >
             <.icon
               name="hero-eye-solid"
               class="w-6 h-6 z-auto mr-2 dark:text-gray-400 cursor-pointer thumbnail"
+            />
+          </span>
+          <span
+            title="Preview clip"
+            phx-click={preview_event_clip(lpr_event)}
+            id={"clip-#{lpr_event.id}"}
+          >
+            <.icon
+              name="hero-video-camera-solid"
+              class="w-6 h-6 z-auto mr-2 dark:text-gray-400 cursor-pointer"
             />
           </span>
           <%!-- </div> --%>
@@ -60,10 +70,23 @@ defmodule ExNVRWeb.LPREventsListLive do
       id="popup-container"
       class="popup-container fixed top-0 left-0 w-full h-full bg-black bg-opacity-75 flex justify-center items-center hidden"
     >
-      <button class="popup-close absolute top-4 right-4 text-white" phx-click={close_popup()}>
+      <button
+        class="popup-close absolute top-4 right-4 text-white"
+        phx-click={JS.add_class("hidden", to: "#popup-container")}
+      >
         ×
       </button>
-      <img id="event-image" autoplay class="w-full h-auto max-w-full max-h-[80%]" />
+      <img id="event-image" class="w-full h-auto max-w-full max-h-[80%]" />
+    </div>
+    <!-- Clip popup container -->
+    <div
+      id="clip-popup-container"
+      class="popup-container fixed top-0 left-0 w-full h-full bg-black bg-opacity-75 flex justify-center items-center hidden"
+    >
+      <button class="popup-close absolute top-4 right-4 text-white" phx-click={close_clip_popup()}>
+        ×
+      </button>
+      <video id="event-clip" autoplay controls class="w-full h-auto max-w-full max-h-[80%]" />
     </div>
     """
   end
@@ -196,13 +219,27 @@ defmodule ExNVRWeb.LPREventsListLive do
   defp preview_event(lpr_event) do
     JS.remove_class("hidden", to: "#popup-container")
     |> JS.set_attribute(
-      {"src", "/api/devices/#{lpr_event.device_id}/snapshot?time=#{lpr_event.capture_time}"},
+      {"src",
+       "/api/devices/#{lpr_event.device_id}/snapshot?time=#{lpr_event.capture_time}&method=precise"},
       to: "#event-image"
     )
   end
 
-  defp close_popup() do
-    JS.add_class("hidden", to: "#popup-container")
-    |> JS.set_attribute({"src", nil}, to: "#event-image")
+  defp preview_event_clip(lpr_event) do
+    params = %{
+      stream: :auto,
+      pos: DateTime.add(lpr_event.capture_time, -5) |> DateTime.to_iso8601(),
+      duration: 10
+    }
+
+    url = ~p"/api/devices/#{lpr_event.device_id}/hls/index.m3u8?#{params}"
+
+    JS.remove_class("hidden", to: "#clip-popup-container")
+    |> JS.dispatch("events:play-clip", to: "#event-clip", detail: %{src: url})
+  end
+
+  defp close_clip_popup() do
+    JS.add_class("hidden", to: "#clip-popup-container")
+    |> JS.set_attribute({"src", nil}, to: "#event-clip")
   end
 end
