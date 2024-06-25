@@ -118,6 +118,12 @@ defmodule ExNVR.Umbrella.MixProject do
         copy_libs(arch, libs_dest)
         release
 
+      {arch, "apple", "darwin22.4.0"} ->
+        libs_dest = Path.join(release.path, "external_lib")
+        File.mkdir_p!(libs_dest)
+        copy_libs(arch, libs_dest)
+        release
+
       _other ->
         release
     end
@@ -126,14 +132,27 @@ defmodule ExNVR.Umbrella.MixProject do
   defp copy_libs(arch, dest_dir) do
     # Tried to use `File.cp` to copy dependencies however links are not copied correctly
     # which made the size of the destination folder 3 times the original size.
-    libs = [
-      "/usr/lib/#{arch}-linux-gnu/libsrtp2.so*",
-      "/usr/lib/#{arch}-linux-gnu/libturbojpeg.so*",
-      "/usr/lib/#{arch}-linux-gnu/libssl.so*",
-      "/usr/lib/#{arch}-linux-gnu/libcrypto.so*"
-    ]
+    case arch do
+      "aarch64" ->
+        libs = [
+          "/opt/homebrew/lib/libsrtp2.dylib*",
+          "/opt/homebrew/lib/libturbojpeg.dylib*",
+          "/opt/homebrew/lib/libssl.dylib*",
+          "/opt/homebrew/lib/libcrypto*.dylib*"
+        ]
 
-    System.shell("cp -P #{Enum.join(libs, " ")} #{dest_dir}")
+        System.shell("cp -P #{Enum.join(libs, " ")} #{dest_dir}")
+
+      _ ->
+        libs = [
+          "/usr/lib/#{arch}-linux-gnu/libsrtp2.so*",
+          "/usr/lib/#{arch}-linux-gnu/libturbojpeg.so*",
+          "/usr/lib/#{arch}-linux-gnu/libssl.so*",
+          "/usr/lib/#{arch}-linux-gnu/libcrypto.so*"
+        ]
+
+        System.shell("cp -P #{Enum.join(libs, " ")} #{dest_dir}")
+    end
   end
 
   defp archive(release) do
@@ -217,12 +236,20 @@ defmodule ExNVR.Umbrella.MixProject do
   end
 
   defp get_target() do
-    [architecture, _vendor, os, abi] =
+    specs =
       :erlang.system_info(:system_architecture)
       |> List.to_string()
       |> String.split("-")
 
-    {architecture, os, abi}
+    case length(specs) do
+      3 ->
+        [architecture, os, abi] = specs
+        {architecture, os, abi}
+
+      _ ->
+        [architecture, _vendor, os, abi] = specs
+        {architecture, os, abi}
+    end
   end
 
   defp get_debian_arch("x86_64"), do: "amd64"
