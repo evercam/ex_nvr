@@ -46,7 +46,7 @@ defmodule ExNVR.MixProject do
       {:finch, "~> 0.13"},
       {:ex_sdp, "~> 0.17.0", override: true},
       {:membrane_core, "~> 1.0"},
-      {:membrane_rtp_plugin, "~> 0.27.1", override: true},
+      {:membrane_rtp_plugin, "~> 0.29.0", override: true},
       {:membrane_file_plugin, "~> 0.17.0", override: true},
       {:membrane_rtsp_plugin, github: "gBillal/membrane_rtsp_plugin", tag: "v0.1.5"},
       {:membrane_mp4_plugin, "~> 0.35.0", override: true},
