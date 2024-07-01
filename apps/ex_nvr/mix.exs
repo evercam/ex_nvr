@@ -54,7 +54,7 @@ defmodule ExNVR.MixProject do
        github: "gBillal/membrane_http_adaptive_stream_plugin", ref: "8f75c6b"},
       {:membrane_h264_ffmpeg_plugin, "~> 0.31.0"},
       {:membrane_h265_ffmpeg_plugin, "~> 0.4.0"},
-      {:membrane_ffmpeg_swscale_plugin, "~> 0.15.0"},
+      {:membrane_ffmpeg_swscale_plugin, "~> 0.16.1"},
       {:membrane_realtimer_plugin, "~> 0.9.0"},
       {:membrane_rtc_engine, "~> 0.21.0"},
       {:membrane_rtc_engine_webrtc, "~> 0.7.0"},
