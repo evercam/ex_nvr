@@ -1,5 +1,75 @@
 <div class="container mx-auto p-4">
-  <div class="flex flex-wrap items-stretch justify-between content-between mb-4 gap-2">
+  <div class="mb-4">
+    <.card class="p-4 bg-gray-300">
+      <ol class="flex items-center w-full text-sm font-medium text-center text-gray-500 dark:text-gray-400 sm:text-base mb-10">
+        <li class={
+          [
+            "flex md:w-full items-center after:content-[''] after:w-full after:h-1 after:border-b after:border-gray-200 after:border-1 after:hidden sm:after:inline-block after:mx-6 xl:after:mx-10 dark:after:border-gray-700"
+          ] ++ if @step == 1, do: ["text-blue-600 dark:text-blue-500"], else: []
+        }>
+          <span class="flex items-center after:content-['/'] sm:after:hidden after:mx-2 after:text-gray-200 dark:after:text-gray-500 whitespace-nowrap">
+            Discover Devices
+          </span>
+        </li>
+        <li class={
+          ["flex items-center"] ++
+            if @step == 2, do: ["text-blue-600 dark:text-blue-500"], else: []
+        }>
+          Confirmation
+        </li>
+      </ol>
+      <div :if={@step == 1}>
+        <.simple_form
+          class="flex justify-center mb-4"
+          for={@discover_form}
+          id="discover_form"
+          phx-submit="discover"
+        >
+          <.input
+            class="w-72"
+            field={@discover_form[:timeout]}
+            type="number"
+            min="1"
+            max="30"
+            label="Timeout (seconds)"
+          />
+
+          <:actions>
+            <.button class="w-72" phx-disable-with="Scanning...">Scan Network</.button>
+          </:actions>
+        </.simple_form>
+        <p
+          :if={@discovered_devices == [] && @network_scanned}
+          class="text-l text-center dark:text-white"
+        >
+          No devices found
+        </p>
+        <ul class="bg-gray-300 dark:bg-gray-800 h-200 dark:text-white">
+          <li
+            :for={new_device <- @discovered_devices}
+            id={new_device.url}
+            class={
+              [
+                "mb-2 p-4 shadow-md rounded cursor-pointer"
+              ] ++
+                if @selected_device && @selected_device.url == new_device.url,
+                  do: ["bg-gray-300 dark:bg-gray-500"],
+                  else: ["bg-gray-400 dark:bg-gray-700"]
+            }
+            phx-click="device-details"
+            phx-value-url={new_device.url}
+          >
+            <span class="text-xl font-bold"><%= new_device.name %></span>
+            <br />
+            <span class="text-sm"><%= new_device.hardware %></span>
+            - <span class="text-sm"><%= new_device.url %></span>
+          </li>
+        </ul>
+      </div>
+    </.card>
+  </div>
+
+  <%!-- <div class="flex flex-wrap items-stretch justify-between content-between mb-4 gap-2">
     <!-- Discover devices -->
     <.card class="w-full md:w-1/3 bg-gray-300">
       <h2 class="text-2xl font-bold mb-4 dark:text-white">Discover Devices</h2>
@@ -46,7 +116,7 @@
         </li>
       </ul>
     </.card>
-  </div>
+  </div> --%>
   <!-- Device details -->
   <.card class="p-4 bg-gray-300">
     <h2 class="text-2xl font-bold mb-4 gap-2 dark:text-white">Device Details</h2>

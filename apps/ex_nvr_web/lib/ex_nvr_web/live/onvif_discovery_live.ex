@@ -19,7 +19,13 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
     socket
     |> assign_discovery_form()
     |> assign_discovered_devices()
-    |> assign(selected_device: nil, device_details: nil, device_details_cache: %{})
+    |> assign(
+      step: 1,
+      network_scanned: false,
+      selected_device: nil,
+      device_details: nil,
+      device_details_cache: %{}
+    )
     |> then(&{:ok, &1})
   end
 
@@ -27,6 +33,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
     with {:ok, %{timeout: timeout} = validated_params} <- validate_discover_params(params),
          {:ok, discovered_devices} <- Devices.discover(:timer.seconds(timeout)) do
       socket
+      |> assign(:network_scanned, true)
       |> assign_discovery_form(params)
       |> assign_discovered_devices(
         Enum.map(

@@ -195,7 +195,7 @@ defmodule ExNVR.Devices do
 
         {:error, reason} ->
           Logger.error("""
-          Onvif: could not get date and time from '#{camera.url}'
+          Onvif: could not get device information from '#{camera.url}'
           due to: #{inspect(reason)}
           """)
 
@@ -213,7 +213,7 @@ defmodule ExNVR.Devices do
 
         {:error, reason} ->
           Logger.error("""
-          Onvif: could not get date and time from '#{camera.url}'
+          Onvif: could not get network interfaces from '#{camera.url}'
           due to: #{inspect(reason)}
           """)
 
