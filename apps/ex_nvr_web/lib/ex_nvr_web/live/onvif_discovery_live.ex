@@ -20,7 +20,8 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
 
   @step_titles %{
     1 => "Discover Devices",
-    2 => "Device Details"
+    2 => "Device Details",
+    3 => "Manage stream profiles"
   }
 
   def mount(_params, _session, socket) do
@@ -139,6 +140,37 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
 
   def handle_event("to-previous-step", _params, socket) do
     {:noreply, assign(socket, step: socket.assigns.step - 1)}
+  end
+
+  def handle_event("update-profile", %{"profile" => profile_name}, socket) do
+    device_details = socket.assigns.device_details
+
+    profile =
+      Enum.find(device_details.media_profiles, fn profile -> profile.name == profile_name end)
+
+    form_data = profile_form_data(profile)
+
+    socket
+    |> assign(profile_form: to_form(form_data), selected_profile: profile, step: 3)
+    |> then(&{:noreply, &1})
+  end
+
+  defp profile_form_data(profile) do
+    video_encoder = profile.configurations.video_encoder
+
+    resolution =
+      video_encoder[:resolution]
+      |> Enum.map(fn {_key, value} -> value end)
+      |> Enum.join("x")
+
+    frame_rate = get_in(video_encoder, [:rate_control, :frame_rate_limit])
+
+    video_encoder
+    |> Map.take([:encoding])
+    |> Map.put(:frame_rate, frame_rate)
+    |> Map.put(:resolution, resolution)
+    |> Enum.map(fn {key, value} -> {Atom.to_string(key), value} end)
+    |> Map.new()
   end
 
   defp assign_discovery_form(socket, params \\ nil) do

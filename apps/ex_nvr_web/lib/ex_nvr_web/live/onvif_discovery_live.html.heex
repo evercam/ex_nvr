@@ -199,6 +199,15 @@
                 </tr>
               </table>
             </div>
+            <div class="w-full pr-5">
+              <.button
+                phx-click="update-profile"
+                phx-value-profile={profile.name}
+                class="float-right"
+              >
+                Update profile
+              </.button>
+            </div>
           </div>
         </div>
         <div class="w-full pr-5 pb-5 mb-5">
@@ -206,6 +215,44 @@
             Add device
           </.button>
         </div>
+      </div>
+      <div :if={@step == 3}>
+        <h3
+          :if={@selected_profile.name == nil}
+          class="mb-4 text-xl text-center font-medium text-black dark:text-white"
+        >
+          Create media profile
+        </h3>
+        <h3
+          :if={@selected_profile.name != nil}
+          class="mb-4 text-xl text-center font-medium text-black dark:text-white"
+        >
+          Update media profile
+        </h3>
+        <.simple_form id="profile_form" for={@profile_form} phx-submit="save_profile">
+          <.input
+            field={@profile_form[:encoding]}
+            type="select"
+            options={["H264", "H265", "JPEG", "MJPEG"]}
+            label="Codec"
+            required
+          />
+          <.input
+            field={@profile_form[:resolution]}
+            type="select"
+            options={["3840x2160", "2592x1944", "1920x1080", "1280x720", "640x480", "320x240"]}
+            label="resolution"
+            required
+          />
+          <.input
+            field={@profile_form[:frame_rate]}
+            type="number"
+            min="10"
+            max="60"
+            label="Frame rate"
+            required
+          />
+        </.simple_form>
       </div>
     </.card>
   </div>
