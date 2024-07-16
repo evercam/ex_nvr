@@ -54,16 +54,33 @@ defmodule ExNVR.Umbrella.MixProject do
     if System.get_env("DOCKER_BUILD", "false") |> String.to_existing_atom() do
       [:assemble]
     else
-      [
-        &delete_wrong_symlink/1,
-        :assemble,
-        &copy_ffmpeg_deps/1,
-        &copy_external_libs/1,
-        &archive/1,
-        &generate_deb_package/1
-      ]
+      release_steps(get_target())
     end
   end
+
+  defp release_steps({arch, "linux", "gnu"}) do
+    [
+      &delete_wrong_symlink/1,
+      :assemble,
+      &copy_ffmpeg_deps/1,
+      &copy_external_libs(&1, {arch, "gnu"}),
+      &archive/1,
+      &generate_deb_package(&1, {arch, "gnu"})
+    ]
+  end
+
+  defp release_steps({"arm", "linux", "gnueabihf"}) do
+    arch = {"arm", "gnueabihf"}
+
+    [
+      :assemble,
+      &copy_external_libs(&1, arch),
+      &archive/1,
+      &generate_deb_package(&1, arch)
+    ]
+  end
+
+  defp release_steps(_other), do: [:assemble]
 
   defp delete_wrong_symlink(release) do
     Path.join([Application.app_dir(:ex_nvr), "priv", "bundlex", "nif", "*"])
@@ -111,29 +128,40 @@ defmodule ExNVR.Umbrella.MixProject do
     release
   end
 
-  defp copy_external_libs(release) do
-    case get_target() do
-      {arch, "linux", "gnu"} ->
-        libs_dest = Path.join(release.path, "external_lib")
-        copy_libs(arch, libs_dest)
-        release
+  defp copy_external_libs(release, {arch, abi}) do
+    libs_dest = Path.join(release.path, "external_lib")
 
-      _other ->
-        release
+    unless File.exists?(libs_dest) do
+      File.mkdir_p!(libs_dest)
     end
-  end
 
-  defp copy_libs(arch, dest_dir) do
     # Tried to use `File.cp` to copy dependencies however links are not copied correctly
     # which made the size of the destination folder 3 times the original size.
     libs = [
-      "/usr/lib/#{arch}-linux-gnu/libsrtp2.so*",
-      "/usr/lib/#{arch}-linux-gnu/libturbojpeg.so*",
-      "/usr/lib/#{arch}-linux-gnu/libssl.so*",
-      "/usr/lib/#{arch}-linux-gnu/libcrypto.so*"
+      "/usr/lib/#{arch}-linux-#{abi}/libsrtp2.so*",
+      "/usr/lib/#{arch}-linux-#{abi}/libturbojpeg.so*",
+      "/usr/lib/#{arch}-linux-#{abi}/libssl.so*",
+      "/usr/lib/#{arch}-linux-#{abi}/libcrypto.so*"
     ]
 
-    System.shell("cp -P #{Enum.join(libs, " ")} #{dest_dir}")
+    libs =
+      case arch do
+        "arm" ->
+          libs ++
+            [
+              "/usr/lib/#{arch}-linux-#{abi}/libavcodec.so*",
+              "/usr/lib/#{arch}-linux-#{abi}/libavformat.so*",
+              "/usr/lib/#{arch}-linux-#{abi}/libavutil.so*",
+              "/usr/lib/#{arch}-linux-#{abi}/libavfilter.so*",
+              "/usr/lib/#{arch}-linux-#{abi}/libavresample.so*"
+            ]
+
+        _other ->
+          libs
+      end
+
+    System.shell("cp -P #{Enum.join(libs, " ")} #{libs_dest}")
+    release
   end
 
   defp archive(release) do
@@ -154,65 +182,62 @@ defmodule ExNVR.Umbrella.MixProject do
     release
   end
 
-  defp generate_deb_package(release) do
+  defp generate_deb_package(release, {arch, _abi}) do
     generate_deb? = System.get_env("GENERATE_DEB_PACKAGE", "false") |> String.to_existing_atom()
-    {arch, os, abi} = get_target()
 
-    case {generate_deb?, os, abi} do
-      {true, "linux", "gnu"} ->
-        name = "ex-nvr_#{release.version}-1_#{get_debian_arch(arch)}"
-        pkg_dest = Path.expand("../..", release.path)
-        dest = Path.join(pkg_dest, name)
+    if generate_deb? do
+      name = "ex-nvr_#{release.version}-1_#{get_debian_arch(arch)}"
+      pkg_dest = Path.expand("../..", release.path)
+      dest = Path.join(pkg_dest, name)
 
-        File.rm_rf!(dest)
+      File.rm_rf!(dest)
 
-        File.mkdir!(dest)
-        File.mkdir_p!(Path.join([dest, "opt", "ex_nvr"]))
-        File.mkdir_p!(Path.join([dest, "var", "lib", "ex_nvr"]))
-        File.mkdir_p!(Path.join([dest, "usr", "lib", "systemd", "system"]))
-        File.mkdir_p!(Path.join(dest, "DEBIAN"))
+      File.mkdir!(dest)
+      File.mkdir_p!(Path.join([dest, "opt", "ex_nvr"]))
+      File.mkdir_p!(Path.join([dest, "var", "lib", "ex_nvr"]))
+      File.mkdir_p!(Path.join([dest, "usr", "lib", "systemd", "system"]))
+      File.mkdir_p!(Path.join(dest, "DEBIAN"))
 
-        File.cp_r!(release.path, Path.join([dest, "opt", "ex_nvr"]))
+      File.cp_r!(release.path, Path.join([dest, "opt", "ex_nvr"]))
 
-        File.write!(Path.join([dest, "DEBIAN", "control"]), """
-        Package: ex-nvr
-        Version: #{release.version}
-        Architecture: #{get_debian_arch(arch)}
-        Maintainer: Evercam <support@evercam.io>
-        Description: NVR (Network Video Recorder) software for Elixir.
-        Homepage: https://github.com/evercam/ex_nvr
-        """)
+      File.write!(Path.join([dest, "DEBIAN", "control"]), """
+      Package: ex-nvr
+      Version: #{release.version}
+      Architecture: #{get_debian_arch(arch)}
+      Maintainer: Evercam <support@evercam.io>
+      Description: NVR (Network Video Recorder) software for Elixir.
+      Homepage: https://github.com/evercam/ex_nvr
+      """)
 
-        File.write!(Path.join([dest, "usr", "lib", "systemd", "system", "ex_nvr.service"]), """
-        [Unit]
-        Description=ExNVR: Network Video Recorder
-        After=network.target
+      File.write!(Path.join([dest, "usr", "lib", "systemd", "system", "ex_nvr.service"]), """
+      [Unit]
+      Description=ExNVR: Network Video Recorder
+      After=network.target
 
-        [Service]
-        Type=simple
-        User=root
-        Group=root
-        ExecStart=/opt/ex_nvr/run
-        Restart=always
-        RestartSec=1
-        SyslogIdentifier=ex_nvr
-        WorkingDirectory=/opt/ex_nvr
-        LimitNOFILE=8192
+      [Service]
+      Type=simple
+      User=root
+      Group=root
+      ExecStart=/opt/ex_nvr/run
+      Restart=always
+      RestartSec=1
+      SyslogIdentifier=ex_nvr
+      WorkingDirectory=/opt/ex_nvr
+      LimitNOFILE=8192
 
-        [Install]
-        WantedBy=multi-user.target
-        """)
+      [Install]
+      WantedBy=multi-user.target
+      """)
 
-        {_result, 0} =
-          System.cmd("dpkg-deb", ["--root-owner-group", "--build", name],
-            stderr_to_stdout: true,
-            cd: pkg_dest
-          )
+      {_result, 0} =
+        System.cmd("dpkg-deb", ["--root-owner-group", "--build", name],
+          stderr_to_stdout: true,
+          cd: pkg_dest
+        )
 
-        release
-
-      _other ->
-        release
+      release
+    else
+      release
     end
   end
 
@@ -227,4 +252,5 @@ defmodule ExNVR.Umbrella.MixProject do
 
   defp get_debian_arch("x86_64"), do: "amd64"
   defp get_debian_arch("aarch64"), do: "arm64"
+  defp get_debian_arch("arm"), do: "armhf"
 end
