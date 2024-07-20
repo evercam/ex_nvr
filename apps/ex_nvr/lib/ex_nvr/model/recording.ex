@@ -39,6 +39,7 @@ defmodule ExNVR.Model.Recording do
     field :stream, Ecto.Enum, values: [:high, :low], default: :high
 
     belongs_to :device, ExNVR.Model.Device
+    belongs_to :run, ExNVR.Model.Run, type: :integer
   end
 
   def with_type(query \\ __MODULE__, stream_type) do
@@ -98,7 +99,7 @@ defmodule ExNVR.Model.Recording do
 
   def changeset(params) do
     %__MODULE__{}
-    |> Changeset.cast(params, @required_fields ++ [:stream])
+    |> Changeset.cast(params, @required_fields ++ [:stream, :run_id])
     |> Changeset.validate_required(@required_fields)
   end
 end

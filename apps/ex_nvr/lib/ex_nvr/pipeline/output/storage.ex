@@ -235,6 +235,10 @@ defmodule ExNVR.Pipeline.Output.Storage do
           %{device_id: state.device.id, stream: state.stream}
         )
 
+        unless run.active do
+          Membrane.Logger.info("run discontinuity: #{run.id}")
+        end
+
         {maybe_new_run(state, run), recording}
 
       {:error, error} ->

@@ -20,6 +20,7 @@ defmodule ExNVR.Pipeline.Output.Storage.Segmenter do
   alias Membrane.{Buffer, Event, H264, H265, Time}
 
   @time_error Time.milliseconds(30)
+  @time_drift_threshold Time.minutes(1)
   @jitter_buffer_delay Time.milliseconds(200)
 
   def_options target_duration: [
@@ -220,16 +221,19 @@ defmodule ExNVR.Pipeline.Output.Storage.Segmenter do
   end
 
   defp finalize_segment(%{segment: segment} = state, correct_timestamp \\ false) do
-    end_date = Time.os_time()
-    monotonic_end_date = Time.monotonic_time()
+    end_date = Time.os_time() - @jitter_buffer_delay
+    monotonic_duration = Time.monotonic_time() - state.monotonic_start_time
+
+    {segment, discontinuity?} =
+      maybe_correct_timestamp(segment, correct_timestamp, state, end_date)
 
     segment =
       segment
-      |> maybe_correct_timestamp(correct_timestamp, state, end_date)
-      |> Segment.with_realtime_duration(monotonic_end_date - state.monotonic_start_time)
-      |> then(&Segment.with_wall_clock_duration(&1, end_date - &1.start_date))
+      |> Segment.with_realtime_duration(monotonic_duration)
+      |> Segment.with_wall_clock_duration(end_date - segment.start_date)
+      |> then(&%{&1 | wallclock_end_date: end_date})
 
-    %{state | segment: %{segment | wallclock_end_date: end_date}}
+    {%{state | segment: segment}, discontinuity?}
   end
 
   defp maybe_correct_timestamp(segment, false, %{first_segment?: false}, _end_date), do: segment
@@ -237,12 +241,22 @@ defmodule ExNVR.Pipeline.Output.Storage.Segmenter do
   defp maybe_correct_timestamp(segment, true, %{first_segment?: false}, end_date) do
     # clap the time diff between -@time_error and @time_error
     time_diff = end_date - Segment.end_date(segment)
-    diff = time_diff |> max(-@time_error) |> min(@time_error)
-    Segment.add_duration(segment, diff)
+
+    if time_diff >= @time_drift_threshold do
+      Membrane.Logger.warning("""
+      Diff between segment end date and current date is more than #{Time.as_seconds(@time_drift_threshold, :round)} seconds
+      diff: #{Time.as_microseconds(time_diff, :round)}
+      """)
+
+      {segment, true}
+    else
+      diff = time_diff |> max(-@time_error) |> min(@time_error)
+      Segment.add_duration(segment, diff)
+    end
   end
 
   defp maybe_correct_timestamp(segment, _correct_timestamp, _state, end_date) do
-    start_date = end_date - Segment.duration(segment) - @jitter_buffer_delay
+    start_date = end_date - Segment.duration(segment)
     %{segment | start_date: start_date, end_date: end_date}
   end
 

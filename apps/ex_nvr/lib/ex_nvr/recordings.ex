@@ -20,14 +20,14 @@ defmodule ExNVR.Recordings do
     params = if is_struct(params), do: Map.from_struct(params), else: params
 
     with :ok <- copy_file(device, params, copy_file?) do
-      recording_changeset =
+      Multi.new()
+      |> Multi.insert(:run, run, on_conflict: {:replace_all_except, [:start_date]})
+      |> Multi.insert(:recording, fn %{run: run} ->
         params
         |> Map.put(:filename, recording_path(device, params) |> Path.basename())
+        |> Map.put(:run_id, run.id)
         |> Recording.changeset()
-
-      Multi.new()
-      |> Multi.insert(:recording, recording_changeset)
-      |> Multi.insert(:run, run, on_conflict: {:replace_all_except, [:start_date]})
+      end)
       |> Repo.transaction()
       |> case do
         {:ok, %{recording: recording, run: run}} ->
