@@ -5,6 +5,8 @@ defmodule ExNVR.Tasks.ShiftRun do
 
   require Logger
 
+  import Ecto.Query
+
   alias ExNVR.Model.{Recording, Run}
 
   @camera_clock_correction 30_000
@@ -42,16 +44,9 @@ defmodule ExNVR.Tasks.ShiftRun do
     ExNVR.Repo.update!(Run.changeset(run, params))
   end
 
-  defp list_recordings(run) do
-    do_list_recordings(run.start_date, [])
-  end
-
-  defp do_list_recordings(start_date, recordings) do
-    if rec = ExNVR.Repo.get_by(Recording, start_date: start_date) do
-      do_list_recordings(rec.end_date, [rec | recordings])
-    else
-      Enum.reverse(recordings)
-    end
+  def list_recordings(run) do
+    from(r in Recording, where: r.run_id == ^run.id, order_by: r.start_date)
+    |> ExNVR.Repo.all()
   end
 
   defp update_recording(rec, device, duration, add_correction) do

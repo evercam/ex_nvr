@@ -236,7 +236,7 @@ defmodule ExNVR.Pipeline.Output.Storage.Segmenter do
     {%{state | segment: segment}, discontinuity?}
   end
 
-  defp maybe_correct_timestamp(segment, false, %{first_segment?: false}, _end_date), do: segment
+  defp maybe_correct_timestamp(segment, false, %{first_segment?: false}, _end_date), do: {segment, false}
 
   defp maybe_correct_timestamp(segment, true, %{first_segment?: false}, end_date) do
     # clap the time diff between -@time_error and @time_error
@@ -251,13 +251,13 @@ defmodule ExNVR.Pipeline.Output.Storage.Segmenter do
       {segment, true}
     else
       diff = time_diff |> max(-@time_error) |> min(@time_error)
-      Segment.add_duration(segment, diff)
+      {Segment.add_duration(segment, diff), false}
     end
   end
 
   defp maybe_correct_timestamp(segment, _correct_timestamp, _state, end_date) do
     start_date = end_date - Segment.duration(segment)
-    %{segment | start_date: start_date, end_date: end_date}
+    {%{segment | start_date: start_date, end_date: end_date}, false}
   end
 
   defp completed_segment_action(state, discontinuity \\ false) do
