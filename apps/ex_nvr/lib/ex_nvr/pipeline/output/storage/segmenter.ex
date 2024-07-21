@@ -20,7 +20,7 @@ defmodule ExNVR.Pipeline.Output.Storage.Segmenter do
   alias Membrane.{Buffer, Event, H264, H265, Time}
 
   @time_error Time.milliseconds(30)
-  @time_drift_threshold Time.minutes(1)
+  @time_drift_threshold Time.seconds(30)
   @jitter_buffer_delay Time.milliseconds(200)
 
   def_options target_duration: [
@@ -156,10 +156,11 @@ defmodule ExNVR.Pipeline.Output.Storage.Segmenter do
 
   defp handle_buffer(state, %Buffer{} = buffer) do
     if Utils.keyframe(buffer) and Segment.duration(state.segment) >= state.target_duration do
-      state = finalize_segment(state, state.correct_timestamp)
+      {state, discontinuity} = finalize_segment(state, state.correct_timestamp)
 
       actions =
-        [end_of_stream: Pad.ref(:output, state.start_time)] ++ completed_segment_action(state)
+        [end_of_stream: Pad.ref(:output, state.start_time)] ++
+          completed_segment_action(state, discontinuity)
 
       start_time = Segment.end_date(state.segment)
 
@@ -187,7 +188,7 @@ defmodule ExNVR.Pipeline.Output.Storage.Segmenter do
   end
 
   defp do_handle_end_of_stream(state) do
-    state = finalize_segment(state)
+    {state, _discontinuity} = finalize_segment(state, false)
 
     {[end_of_stream: Pad.ref(:output, state.start_time)] ++ completed_segment_action(state, true),
      Map.merge(state, init_state())}
@@ -220,7 +221,7 @@ defmodule ExNVR.Pipeline.Output.Storage.Segmenter do
     }
   end
 
-  defp finalize_segment(%{segment: segment} = state, correct_timestamp \\ false) do
+  defp finalize_segment(%{segment: segment} = state, correct_timestamp) do
     end_date = Time.os_time() - @jitter_buffer_delay
     monotonic_duration = Time.monotonic_time() - state.monotonic_start_time
 
@@ -236,13 +237,14 @@ defmodule ExNVR.Pipeline.Output.Storage.Segmenter do
     {%{state | segment: segment}, discontinuity?}
   end
 
-  defp maybe_correct_timestamp(segment, false, %{first_segment?: false}, _end_date), do: {segment, false}
+  defp maybe_correct_timestamp(segment, false, %{first_segment?: false}, _end_date),
+    do: {segment, false}
 
   defp maybe_correct_timestamp(segment, true, %{first_segment?: false}, end_date) do
     # clap the time diff between -@time_error and @time_error
     time_diff = end_date - Segment.end_date(segment)
 
-    if time_diff >= @time_drift_threshold do
+    if abs(time_diff) >= @time_drift_threshold do
       Membrane.Logger.warning("""
       Diff between segment end date and current date is more than #{Time.as_seconds(@time_drift_threshold, :round)} seconds
       diff: #{Time.as_microseconds(time_diff, :round)}
