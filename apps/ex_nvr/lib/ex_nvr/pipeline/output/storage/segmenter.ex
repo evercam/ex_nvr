@@ -162,7 +162,10 @@ defmodule ExNVR.Pipeline.Output.Storage.Segmenter do
         [end_of_stream: Pad.ref(:output, state.start_time)] ++
           completed_segment_action(state, discontinuity)
 
-      start_time = Segment.end_date(state.segment)
+      start_time =
+        if discontinuity,
+          do: state.segment.wallclock_end_date,
+          else: Segment.end_date(state.segment)
 
       state =
         %{
