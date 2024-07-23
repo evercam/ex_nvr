@@ -128,19 +128,15 @@
               <table class="w-full table-auto">
                 <tr>
                   <td class="font-bold">Codec</td>
-                  <td><%= get_in(profile, [:configurations, :video_encoder, :encoding]) %></td>
+                  <td><%= profile.codec %></td>
                 </tr>
                 <tr>
                   <td class="font-bold">Profile</td>
-                  <td><%= get_in(profile, [:configurations, :video_encoder, :profile]) %></td>
+                  <td><%= profile.profile %></td>
                 </tr>
                 <tr>
                   <td class="font-bold">Group of Pictures</td>
-                  <td><%= get_in(profile, [:configurations, :video_encoder, :gov_length]) %></td>
-                </tr>
-                <tr>
-                  <td class="font-bold">Image Quality</td>
-                  <td><%= get_in(profile, [:configurations, :video_encoder, :quality]) %></td>
+                  <td><%= profile.gop %></td>
                 </tr>
               </table>
             </div>
@@ -149,40 +145,19 @@
                 <tr>
                   <td class="font-bold">Resolution</td>
                   <td>
-                    <%= get_in(profile, [:configurations, :video_encoder, :resolution, :width]) %> x <%= get_in(
-                      profile,
-                      [:configurations, :video_encoder, :resolution, :height]
-                    ) %>
-                  </td>
-                </tr>
-                <tr>
-                  <td class="font-bold">Constant Bitrate</td>
-                  <td>
-                    <%= String.upcase(
-                      "#{get_in(profile, [:configurations, :video_encoder, :rate_control, :constant_bit_rate])}"
-                    ) %>
+                    <%= profile.width %> x <%= profile.height %>
                   </td>
                 </tr>
                 <tr>
                   <td class="font-bold">Frame rate</td>
                   <td>
-                    <%= get_in(profile, [
-                      :configurations,
-                      :video_encoder,
-                      :rate_control,
-                      :frame_rate_limit
-                    ]) %> fps
+                    <%= profile.frame_rate %> fps
                   </td>
                 </tr>
                 <tr>
-                  <td class="font-bold">Max Bitrate</td>
+                  <td class="font-bold">Bitrate</td>
                   <td>
-                    <%= get_in(profile, [
-                      :configurations,
-                      :video_encoder,
-                      :rate_control,
-                      :bitrate_limit
-                    ]) %> kbps
+                    <%= profile.bitrate %> kbps
                   </td>
                 </tr>
               </table>
@@ -199,37 +174,26 @@
                 </tr>
               </table>
             </div>
-            <div class="w-full pr-5">
-              <.button
-                phx-click="update-profile"
-                phx-value-profile={profile.name}
-                class="float-right"
-              >
-                Update profile
-              </.button>
-            </div>
           </div>
         </div>
-        <div class="w-full pr-5 pb-5 mb-5">
-          <.button :if={@selected_device} phx-click="add-device" class="float-right">
+        <div :if={@selected_device} class="w-full pr-5 flex justify-end">
+          <.button phx-click="create-profile" class="mr-5">
+            Create new profile
+          </.button>
+          <.button
+            :if={@device_details[:media_profiles] && length(@device_details[:media_profiles]) > 0}
+            phx-click="add-device"
+          >
             Add device
           </.button>
         </div>
       </div>
       <div :if={@step == 3}>
-        <h3
-          :if={@selected_profile.name == nil}
-          class="mb-4 text-xl text-center font-medium text-black dark:text-white"
-        >
+        <h3 class="mb-4 text-xl text-center font-medium text-black dark:text-white">
           Create media profile
         </h3>
-        <h3
-          :if={@selected_profile.name != nil}
-          class="mb-4 text-xl text-center font-medium text-black dark:text-white"
-        >
-          Update media profile
-        </h3>
-        <.simple_form id="profile_form" for={@profile_form} phx-submit="save_profile">
+        <.simple_form id="profile_form" for={@profile_form} phx-submit="save-profile">
+          <.input field={@profile_form[:name]} type="text" label="Name" required />
           <.input
             field={@profile_form[:encoding]}
             type="select"
@@ -245,13 +209,19 @@
             required
           />
           <.input
-            field={@profile_form[:frame_rate]}
+            field={@profile_form[:fps]}
             type="number"
             min="10"
             max="60"
             label="Frame rate"
             required
           />
+          <.input field={@profile_form[:videobitrate]} type="number" label="Bitrate" required />
+          <:actions>
+            <.button class="w-full" phx-disable-with="Creating...">
+              Create
+            </.button>
+          </:actions>
         </.simple_form>
       </div>
     </.card>

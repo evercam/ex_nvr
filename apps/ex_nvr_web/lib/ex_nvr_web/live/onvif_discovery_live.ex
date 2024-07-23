@@ -8,6 +8,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
 
   alias Ecto.Changeset
   alias ExNVR.Devices
+  alias ExNVR.Model.Device
 
   @default_discovery_settings %{
     "timeout" => 5
@@ -69,38 +70,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
   end
 
   def handle_event("device-details", %{"device_details_settings" => params}, socket) do
-    device = socket.assigns.selected_device
-    device_details_cache = socket.assigns.device_details_cache
-
-    case Map.fetch(device_details_cache, device.url) do
-      {:ok, device_details} ->
-        socket
-        |> assign_device_details_form(params)
-        |> assign(selected_device: device, device_details: device_details, step: 2)
-        |> then(&{:noreply, &1})
-
-        {:noreply,
-         assign(socket, selected_device: device, device_details: device_details, step: 2)}
-
-      :error ->
-        opts = [username: params["username"], password: params["password"]]
-
-        device_details =
-          device.url
-          |> Devices.fetch_camera_details(opts)
-          |> map_date_time()
-          |> select_network_interface()
-
-        socket
-        |> assign_device_details_form(params)
-        |> assign(
-          selected_device: device,
-          device_details: device_details,
-          device_details_cache: Map.put(device_details_cache, device.url, device_details),
-          step: 2
-        )
-        |> then(&{:noreply, &1})
-    end
+    fetch_device_details(socket, params)
   end
 
   def handle_event("add-device", _params, socket) do
@@ -142,35 +112,85 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
     {:noreply, assign(socket, step: socket.assigns.step - 1)}
   end
 
-  def handle_event("update-profile", %{"profile" => profile_name}, socket) do
-    device_details = socket.assigns.device_details
-
-    profile =
-      Enum.find(device_details.media_profiles, fn profile -> profile.name == profile_name end)
-
-    form_data = profile_form_data(profile)
+  def handle_event("create-profile", _params, socket) do
+    form_data = %{
+      "name" => "",
+      "encoding" => "",
+      "resolution" => "",
+      "fps" => "",
+      "videobitrate" => ""
+    }
 
     socket
-    |> assign(profile_form: to_form(form_data), selected_profile: profile, step: 3)
+    |> assign(profile_form: to_form(form_data), step: 3)
     |> then(&{:noreply, &1})
   end
 
-  defp profile_form_data(profile) do
-    video_encoder = profile.configurations.video_encoder
+  def handle_event("save-profile", params, socket) do
+    device_details = socket.assigns.device_details
+    selected_device = socket.assigns.selected_device
+    device_details_form_params = socket.assigns.device_details_form.params
 
-    resolution =
-      video_encoder[:resolution]
-      |> Enum.map(fn {_key, value} -> value end)
-      |> Enum.join("x")
+    device = %Device{
+      vendor: device_details.device_information.manufacturer,
+      url: selected_device.url,
+      credentials: %Device.Credentials{
+        username: device_details_form_params["username"],
+        password: device_details_form_params["password"]
+      }
+    }
 
-    frame_rate = get_in(video_encoder, [:rate_control, :frame_rate_limit])
+    case Devices.create_stream_profile(device, params) do
+      :ok ->
+        socket
+        |> put_flash(:info, "Profile created successfully")
+        |> assign(device_details_cache: %{})
+        |> fetch_device_details(device_details_form_params)
 
-    video_encoder
-    |> Map.take([:encoding])
-    |> Map.put(:frame_rate, frame_rate)
-    |> Map.put(:resolution, resolution)
-    |> Enum.map(fn {key, value} -> {Atom.to_string(key), value} end)
-    |> Map.new()
+      :error ->
+        socket
+        |> put_flash(:error, "An error occured during profile creation")
+        |> assign(step: 2)
+        |> then(&{:noreply, &1})
+    end
+  end
+
+  defp fetch_device_details(socket, device_details_form_params) do
+    device = socket.assigns.selected_device
+    device_details_cache = socket.assigns.device_details_cache
+
+    case Map.fetch(device_details_cache, device.url) do
+      {:ok, device_details} ->
+        socket
+        |> assign_device_details_form(device_details_form_params)
+        |> assign(selected_device: device, device_details: device_details, step: 2)
+        |> then(&{:noreply, &1})
+
+        {:noreply,
+         assign(socket, selected_device: device, device_details: device_details, step: 2)}
+
+      :error ->
+        opts = [
+          username: device_details_form_params["username"],
+          password: device_details_form_params["password"]
+        ]
+
+        device_details =
+          device.url
+          |> Devices.fetch_camera_details(opts)
+          |> map_date_time()
+          |> select_network_interface()
+
+        socket
+        |> assign_device_details_form(device_details_form_params)
+        |> assign(
+          selected_device: device,
+          device_details: device_details,
+          device_details_cache: Map.put(device_details_cache, device.url, device_details),
+          step: 2
+        )
+        |> then(&{:noreply, &1})
+    end
   end
 
   defp assign_discovery_form(socket, params \\ nil) do

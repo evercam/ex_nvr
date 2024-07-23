@@ -138,6 +138,13 @@ defmodule ExNVR.Devices do
     end
   end
 
+  def create_stream_profile(device, params) do
+    with {:ok, module} <- camera_module(Device.vendor(device)),
+         {:ok, {url, opts}} <- url_and_opts(device) do
+      module.create_stream_profile(url, params, opts)
+    end
+  end
+
   def fetch_lpr_event(device, last_event_timestamp \\ nil) do
     with {:ok, {url, opts}} <- url_and_opts(device) do
       opts = opts ++ [last_event_timestamp: last_event_timestamp, timezone: device.timezone]
@@ -225,19 +232,66 @@ defmodule ExNVR.Devices do
 
   defp get_media_profiles(camera, opts) do
     with {:ok, %{media: media}} <- ExNVR.Onvif.get_capabilities(camera.url, opts),
-         {:ok, media_profiles} <- ExNVR.Onvif.get_media_profiles(media.x_addr, opts) do
+         {:ok, media_profiles} <- get_media_profiles(camera, media, opts) do
       media_profiles
       |> Enum.map(fn profile ->
-        uri = ExNVR.Onvif.get_media_stream_uri!(media.x_addr, profile.token, opts)
+        uri = get_media_stream_uri!(camera, media, profile, opts)
         Map.put(profile, :stream_uri, uri)
       end)
       |> Enum.map(fn profile ->
-        uri = ExNVR.Onvif.get_media_snapshot_uri!(media.x_addr, profile.token, opts)
+        uri = get_media_snapshot_uri!(camera, media, profile, opts)
         Map.put(profile, :snapshot_uri, uri)
       end)
       |> then(&Map.put(camera, :media_profiles, &1))
     else
       _other -> Map.put(camera, :media_profiles, [])
+    end
+  end
+
+  defp get_media_profiles(camera, media, opts) do
+    case camera.device_information.manufacturer do
+      "AXIS" ->
+        device = %Device{
+          vendor: camera.device_information.manufacturer,
+          url: camera.url,
+          credentials: %Device.Credentials{
+            username: opts[:username],
+            password: opts[:password]
+          }
+        }
+
+        stream_profiles(device)
+
+      _other ->
+        ExNVR.Onvif.get_media_profiles(media.x_addr, opts)
+    end
+  end
+
+  defp get_media_stream_uri!(camera, media, profile, opts) do
+    case camera.device_information.manufacturer do
+      "AXIS" ->
+        "rtsp://#{URI.parse(camera.url).host}/axis-media/media.amp?resolution=800x600"
+
+      _other ->
+        ExNVR.Onvif.get_media_stream_uri!(
+          media.x_addr,
+          profile.token,
+          opts
+        )
+    end
+  end
+
+  defp get_media_snapshot_uri!(camera, media, profile, opts) do
+    case camera.device_information.manufacturer do
+      "AXIS" ->
+        "http://#{URI.parse(camera.url).host}/axis-cgi/jpg/image.cgi"
+
+      _other ->
+        ExNVR.Onvif.get_media_snapshot_uri!(
+          media.x_addr,
+          profile.token,
+          opts
+        )
     end
   end
 

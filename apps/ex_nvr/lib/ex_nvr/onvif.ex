@@ -5,6 +5,7 @@ defmodule ExNVR.Onvif do
 
   import ExNVR.Onvif.Utils, only: [delete_namespaces: 1]
 
+  alias ExNVR.Devices.Cameras.StreamProfile
   alias ExNVR.Onvif.{Discovery, Http}
 
   @default_timeout 3_000
@@ -96,8 +97,31 @@ defmodule ExNVR.Onvif do
       result =
         Keyword.values(result.get_profiles_response)
         |> Enum.map(fn media_profile ->
-          configurations = Map.drop(media_profile.configurations, [:analytics])
-          %{media_profile | configurations: configurations}
+          %StreamProfile{
+            id: media_profile.name,
+            enabled: true,
+            name: media_profile.name,
+            codec: get_in(media_profile, [:configurations, :video_encoder, :encoding]),
+            profile: get_in(media_profile, [:configurations, :video_encoder, :profile]),
+            width: get_in(media_profile, [:configurations, :video_encoder, :resolution, :width]),
+            height:
+              get_in(media_profile, [:configurations, :video_encoder, :resolution, :height]),
+            frame_rate:
+              get_in(media_profile, [
+                :configurations,
+                :video_encoder,
+                :rate_control,
+                :frame_rate_limit
+              ]),
+            bitrate:
+              get_in(media_profile, [
+                :configurations,
+                :video_encoder,
+                :rate_control,
+                :bitrate_limit
+              ]),
+            gop: get_in(media_profile, [:configurations, :video_encoder, :gov_length])
+          }
         end)
 
       {:ok, result}
