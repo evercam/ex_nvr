@@ -114,6 +114,43 @@ defmodule ExNVR.Recordings do
     )
   end
 
+  @doc """
+  Correct run and recordings dates in case of clock jumps (NTP sync)
+  """
+  @spec correct_run_dates(Device.t(), Run.t(), integer()) :: Run.t()
+  def correct_run_dates(device, run, duration) do
+    recs = Repo.all(from(r in Recording, where: r.run_id == ^run.id, order_by: r.start_date))
+
+    Enum.each(recs, fn rec ->
+      start_date = DateTime.add(rec.start_date, duration, :microsecond)
+      end_date = DateTime.add(rec.end_date, duration, :microsecond)
+
+      changeset =
+        Ecto.Changeset.change(
+          rec,
+          %{
+            start_date: start_date,
+            end_date: end_date,
+            filename: "#{DateTime.to_unix(start_date, :microsecond)}.mp4"
+          }
+        )
+
+      new_rec = ExNVR.Repo.update!(changeset)
+
+      File.rename!(
+        ExNVR.Recordings.recording_path(device, rec),
+        ExNVR.Recordings.recording_path(device, new_rec)
+      )
+    end)
+
+    run
+    |> Run.changeset(%{
+      start_date: DateTime.add(run.start_date, duration, :microsecond),
+      end_date: DateTime.add(run.end_date, duration, :microsecond)
+    })
+    |> Repo.update!()
+  end
+
   @spec delete_oldest_recordings(Device.t(), integer()) ::
           :ok | {:error, Ecto.Changeset.t()}
   def delete_oldest_recordings(device, limit) do
