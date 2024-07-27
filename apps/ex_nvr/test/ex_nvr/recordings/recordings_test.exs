@@ -143,6 +143,55 @@ defmodule ExNVR.RecordingTest do
     end
   end
 
+  test "correct run dates", %{device: device} do
+    start_date = ~U(2024-07-27 10:10:00.000000Z)
+    duration = 150_000_000
+
+    run =
+      run_fixture(device,
+        start_date: start_date,
+        end_date: DateTime.add(start_date, 5, :minute)
+      )
+
+    recs =
+      Enum.map(0..4, fn idx ->
+        recording_fixture(device,
+          run_id: run.id,
+          start_date: DateTime.add(start_date, idx, :minute),
+          end_date: DateTime.add(start_date, idx + 1, :minute)
+        )
+      end)
+
+    assert updated_run = Recordings.correct_run_dates(device, run, duration)
+
+    assert DateTime.compare(
+             updated_run.start_date,
+             DateTime.add(run.start_date, duration, :microsecond)
+           ) == :eq
+
+    assert DateTime.compare(
+             updated_run.end_date,
+             DateTime.add(run.end_date, duration, :microsecond)
+           ) == :eq
+
+    assert updated_recs = list_recordings(updated_run)
+
+    for {rec, updated_rec} <- Enum.zip(recs, updated_recs) do
+      assert DateTime.compare(
+               updated_rec.start_date,
+               DateTime.add(rec.start_date, duration, :microsecond)
+             ) == :eq
+
+      assert DateTime.compare(
+               updated_rec.end_date,
+               DateTime.add(rec.end_date, duration, :microsecond)
+             ) == :eq
+
+      refute File.exists?(Recordings.recording_path(device, rec))
+      assert File.exists?(Recordings.recording_path(device, updated_rec))
+    end
+  end
+
   defp assert_files_deleted(device, stream_type, recordings, count) do
     recordings_path =
       recordings
@@ -155,5 +204,10 @@ defmodule ExNVR.RecordingTest do
   defp assert_run_start_date(device, stream_type, date) do
     run = Recordings.list_runs([device_id: device.id], stream_type) |> List.first()
     assert DateTime.compare(run.start_date, date) == :eq
+  end
+
+  def list_recordings(run) do
+    from(r in Recording, where: r.run_id == ^run.id, order_by: r.start_date)
+    |> ExNVR.Repo.all()
   end
 end

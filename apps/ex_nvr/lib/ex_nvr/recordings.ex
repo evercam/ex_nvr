@@ -20,14 +20,14 @@ defmodule ExNVR.Recordings do
     params = if is_struct(params), do: Map.from_struct(params), else: params
 
     with :ok <- copy_file(device, params, copy_file?) do
-      recording_changeset =
+      Multi.new()
+      |> Multi.insert(:run, run, on_conflict: {:replace_all_except, [:start_date]})
+      |> Multi.insert(:recording, fn %{run: run} ->
         params
         |> Map.put(:filename, recording_path(device, params) |> Path.basename())
+        |> Map.put(:run_id, run.id)
         |> Recording.changeset()
-
-      Multi.new()
-      |> Multi.insert(:recording, recording_changeset)
-      |> Multi.insert(:run, run, on_conflict: {:replace_all_except, [:start_date]})
+      end)
       |> Repo.transaction()
       |> case do
         {:ok, %{recording: recording, run: run}} ->
@@ -112,6 +112,43 @@ defmodule ExNVR.Recordings do
       [Device.recording_dir(device, stream_type) | ExNVR.Utils.date_components(start_date)] ++
         ["#{DateTime.to_unix(start_date, :microsecond)}.mp4"]
     )
+  end
+
+  @doc """
+  Correct run and recordings dates in case of clock jumps (NTP sync)
+  """
+  @spec correct_run_dates(Device.t(), Run.t(), integer()) :: Run.t()
+  def correct_run_dates(device, run, duration) do
+    recs = Repo.all(from(r in Recording, where: r.run_id == ^run.id, order_by: r.start_date))
+
+    Enum.each(recs, fn rec ->
+      start_date = DateTime.add(rec.start_date, duration, :microsecond)
+      end_date = DateTime.add(rec.end_date, duration, :microsecond)
+
+      changeset =
+        Ecto.Changeset.change(
+          rec,
+          %{
+            start_date: start_date,
+            end_date: end_date,
+            filename: "#{DateTime.to_unix(start_date, :microsecond)}.mp4"
+          }
+        )
+
+      new_rec = ExNVR.Repo.update!(changeset)
+
+      File.rename!(
+        ExNVR.Recordings.recording_path(device, rec),
+        ExNVR.Recordings.recording_path(device, new_rec)
+      )
+    end)
+
+    run
+    |> Run.changeset(%{
+      start_date: DateTime.add(run.start_date, duration, :microsecond),
+      end_date: DateTime.add(run.end_date, duration, :microsecond)
+    })
+    |> Repo.update!()
   end
 
   @spec delete_oldest_recordings(Device.t(), integer()) ::
