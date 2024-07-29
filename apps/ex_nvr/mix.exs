@@ -4,7 +4,7 @@ defmodule ExNVR.MixProject do
   def project do
     [
       app: :ex_nvr,
-      version: "0.13.0",
+      version: "0.14.0",
       build_path: "../../_build",
       config_path: "../../config/config.exs",
       deps_path: "../../deps",
@@ -48,7 +48,7 @@ defmodule ExNVR.MixProject do
       {:membrane_core, "~> 1.0"},
       {:membrane_rtp_plugin, "~> 0.27.1", override: true},
       {:membrane_file_plugin, "~> 0.17.0", override: true},
-      {:membrane_rtsp_plugin, github: "gBillal/membrane_rtsp_plugin", tag: "v0.1.5"},
+      {:membrane_rtsp_plugin, github: "gBillal/membrane_rtsp_plugin", branch: "fix-out-of-memory"},
       {:membrane_mp4_plugin, "~> 0.35.0", override: true},
       {:membrane_http_adaptive_stream_plugin,
        github: "gBillal/membrane_http_adaptive_stream_plugin", ref: "8f75c6b"},
