@@ -26,7 +26,7 @@ defmodule ExNVR.Umbrella.MixProject do
     [
       ex_nvr: [
         version: @version,
-        applications: [ex_nvr: :permanent, ex_nvr_web: :permanent],
+        applications: [ex_nvr_rtsp: :permanent, ex_nvr: :permanent, ex_nvr_web: :permanent],
         include_executables_for: [:unix],
         steps: steps()
       ]
