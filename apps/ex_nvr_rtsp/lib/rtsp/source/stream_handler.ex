@@ -11,8 +11,6 @@ defmodule ExNVR.RTSP.Source.StreamHandler do
   @seq_number_limit Bitwise.bsl(1, 16)
 
   @type t :: %__MODULE__{
-          depayloader_mod: module(),
-          depayloader_state: any(),
           timestamps: {integer(), integer()} | nil,
           clock_rate: pos_integer(),
           parser_mod: module(),
@@ -22,8 +20,6 @@ defmodule ExNVR.RTSP.Source.StreamHandler do
         }
 
   defstruct [
-    :depayloader_mod,
-    :depayloader_state,
     :parser_mod,
     :parser_state,
     timestamps: nil,
@@ -32,7 +28,7 @@ defmodule ExNVR.RTSP.Source.StreamHandler do
     previous_seq_num: nil
   ]
 
-  @spec handle_packet(t(), ExRTP.Packet.t()) :: {t(), [Buffer.t()]}
+  @spec handle_packet(t(), ExRTP.Packet.t()) :: {[Buffer.t()], t()}
   def handle_packet(handler, packet) do
     {event, handler} =
       if discontinuty?(packet, handler.previous_seq_num) do

@@ -3,7 +3,7 @@ defmodule ExNVR.Elements.VideoStreamStatReporter do
   An element calculating realtime stats from a video stream (avg bitrate, avg fps, ..etc).
   """
 
-  use Membrane.Filter
+  use Membrane.Sink
 
   require ExNVR.Utils
 
@@ -11,8 +11,6 @@ defmodule ExNVR.Elements.VideoStreamStatReporter do
   alias Membrane.{H264, H265, Time}
 
   def_input_pad :input, accepted_format: any_of(H264, H265)
-
-  def_output_pad :output, accepted_format: any_of(H264, H265)
 
   def_options device_id: [
                 spec: binary()
@@ -68,7 +66,7 @@ defmodule ExNVR.Elements.VideoStreamStatReporter do
       }
     )
 
-    {[stream_format: {:output, stream_format}], state}
+    {[], state}
   end
 
   @impl true
@@ -104,7 +102,7 @@ defmodule ExNVR.Elements.VideoStreamStatReporter do
       Map.take(state, [:device_id, :stream])
     )
 
-    {[buffer: {:output, buffer}], state}
+    {[], state}
   end
 
   defp init_state() do

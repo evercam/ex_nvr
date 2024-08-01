@@ -7,7 +7,7 @@ defmodule ExNVR.RTSP.Parser.H265 do
 
   require Membrane.H265.NALuTypes
 
-  alias ExNVR.RTSPH265.{AP, FU, NAL}
+  alias ExNVR.RTSP.H265.{AP, FU, NAL}
   alias Membrane.{Buffer, H265}
   alias Membrane.H265.{AUSplitter, NALuParser, NALuTypes}
 

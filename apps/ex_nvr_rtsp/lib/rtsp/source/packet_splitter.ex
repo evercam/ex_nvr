@@ -7,6 +7,8 @@ defmodule ExNVR.RTSP.Source.PacketSplitter do
 
   alias Membrane.RTSP
 
+  @max_buffer_size 5 * 1024 * 1024
+
   @doc """
   Split the binary into RTSP, RTP and RTCP packets.
   """
@@ -42,10 +44,19 @@ defmodule ExNVR.RTSP.Source.PacketSplitter do
     end
   end
 
+  def split_packets(rest, _rtsp_session, _packets) when byte_size(rest) >= @max_buffer_size do
+    raise """
+    Buffered rtp data exceeded the allowed limit
+    Limit: #{@max_buffer_size} bytes.
+    Current buffer size: #{byte_size(rest)} bytes
+    """
+  end
+
   def split_packets(rest, _rtsp_session, {rtp_packets, rtcp_packets}) do
-    Logger.debug("not parsed packets size: #{byte_size(rest)} bytes")
     {Enum.reverse(rtp_packets), Enum.reverse(rtcp_packets), rest}
   end
+
+  defp handle_rtsp_response(nil, response), do: :ok
 
   defp handle_rtsp_response(session, response) do
     case RTSP.handle_response(session, response) do
