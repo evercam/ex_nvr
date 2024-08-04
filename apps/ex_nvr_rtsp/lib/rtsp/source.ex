@@ -31,7 +31,7 @@ defmodule ExNVR.RTSP.Source do
               ],
               keep_alive_interval: [
                 spec: non_neg_integer(),
-                default: :timer.seconds(15),
+                default: Time.seconds(15),
                 description: """
                 Send a heartbeat to the RTSP server at a regular interval to
                 keep the session alive.
@@ -96,8 +96,10 @@ defmodule ExNVR.RTSP.Source do
 
   @impl true
   def handle_tick(:check_recbuf, _ctx, state) do
-    {:ok, [recbuf: recbuf]} = :inet.getopts(state.socket, [:recbuf])
-    :ok = :inet.setopts(state.socket, buffer: recbuf)
+    with {:ok, [recbuf: recbuf]} <- :inet.getopts(state.socket, [:recbuf]) do
+      :ok = :inet.setopts(state.socket, buffer: recbuf)
+    end
+
     {[], state}
   end
 
@@ -142,14 +144,13 @@ defmodule ExNVR.RTSP.Source do
         {actions, %{state | stream_handlers: stream_handlers, unprocessed_data: unprocessed_data}}
 
       {:error, reason} ->
-        Membrane.Logger.error("""
-        Error occurred while reading packets from socket.
-        Reason: #{inspect(reason)}
-        """)
-
-        actions = Enum.map(Map.keys(ctx.pads), &{:end_of_stream, &1})
-        {actions, state}
+        raise "cannot read data from socket: #{inspect(reason)}"
     end
+  end
+
+  @impl true
+  def handle_info(:keep_alive, _ctx, state) do
+    {[], ConnectionManager.keep_alive(state)}
   end
 
   @impl true

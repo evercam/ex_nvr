@@ -45,10 +45,10 @@ defmodule ExNVR.Pipeline.Output.Storage.SegmenterTest do
       state = init_element()
 
       buffer1 = build_buffer(10, true, 1_000)
-      buffer2 = build_buffer(10, true, 1_000)
+      buffer2 = build_buffer(10, false, 1_000)
 
       assert {_, state} = Segmenter.handle_buffer(:input, buffer1, %{}, state)
-      assert {_, state} = Segmenter.handle_buffer(:input, buffer1, %{}, state)
+      assert {_, state} = Segmenter.handle_buffer(:input, buffer2, %{}, state)
 
       pad = Pad.ref(:output, state.start_time)
 
@@ -129,7 +129,7 @@ defmodule ExNVR.Pipeline.Output.Storage.SegmenterTest do
   defp build_buffer(payload_size, keyframe? \\ false, dts \\ nil) do
     %Buffer{
       payload: :binary.copy(<<1>>, payload_size),
-      metadata: %{h264: %{key_frame?: keyframe?}},
+      metadata: %{h264: %{key_frame?: keyframe?}, timestamp: DateTime.utc_now()},
       dts: dts
     }
   end

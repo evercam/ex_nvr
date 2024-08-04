@@ -56,7 +56,7 @@ defmodule ExNVR.RTSP.Source.PacketSplitter do
     {Enum.reverse(rtp_packets), Enum.reverse(rtcp_packets), rest}
   end
 
-  defp handle_rtsp_response(nil, response), do: :ok
+  defp handle_rtsp_response(nil, _response), do: :ok
 
   defp handle_rtsp_response(session, response) do
     case RTSP.handle_response(session, response) do

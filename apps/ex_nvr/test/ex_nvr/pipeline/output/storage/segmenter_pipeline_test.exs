@@ -49,7 +49,7 @@ defmodule ExNVR.Pipeline.Output.Storage.SegmenterPipelineTest do
     %Buffer{
       payload: @buffer_payload,
       dts: Membrane.Time.milliseconds(dts),
-      metadata: %{h264: %{key_frame?: key_frame?}}
+      metadata: %{h264: %{key_frame?: key_frame?}, timestamp: DateTime.utc_now()}
     }
   end
 

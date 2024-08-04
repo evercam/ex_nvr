@@ -30,8 +30,8 @@ defmodule ExNVR.Elements.VideoStreamStatReporter do
   end
 
   @impl true
-  def handle_event(:input, %Membrane.Event.Discontinuity{} = ev, _ctx, state) do
-    {[forward: {:output, ev}], Map.merge(state, init_state())}
+  def handle_event(:input, %Membrane.Event.Discontinuity{}, _ctx, state) do
+    {[], Map.merge(state, init_state())}
   end
 
   @impl true

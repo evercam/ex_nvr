@@ -32,7 +32,8 @@ defmodule ExNVR.RTSP.Source.StreamHandler do
   def handle_packet(handler, packet) do
     {event, handler} =
       if discontinuty?(packet, handler.previous_seq_num) do
-        {%Membrane.Event.Discontinuity{}, reset_state(handler)}
+        parser_state = handler.parser_mod.handle_discontinuity(handler.parser_state)
+        {[%Membrane.Event.Discontinuity{}], %{handler | parser_state: parser_state}}
       else
         {[], handler}
       end
@@ -86,10 +87,6 @@ defmodule ExNVR.RTSP.Source.StreamHandler do
 
         {[], %{handler | parser_state: state}}
     end
-  end
-
-  defp reset_state(handler) do
-    %{handler | depayloader_state: handler.depayloader_mod.init()}
   end
 
   @spec from_which_rollover(number(), number(), number()) :: :current | :previous | :next

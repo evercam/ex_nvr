@@ -48,7 +48,6 @@ defmodule ExNVR.Pipelines.Main do
   @type encoding :: :H264 | :H265
 
   @event_prefix [:ex_nvr, :main_pipeline]
-  @supported_video_codecs ["H264", "H265"]
   @default_segment_duration 60
   @base_back_off_in_ms 10
   @max_back_off_in_ms :timer.minutes(2)
@@ -237,22 +236,6 @@ defmodule ExNVR.Pipelines.Main do
   end
 
   @impl true
-  def handle_child_pad_removed(:rtsp_source, Pad.ref(:output, _ssrc), _ctx, state) do
-    state = maybe_update_device_and_report(state, :failed)
-    {[remove_link: {:webrtc, Pad.ref(:input, :main_stream)}], state}
-  end
-
-  @impl true
-  def handle_child_pad_removed({:rtsp_source, :sub_stream}, Pad.ref(:output, _ssrc), _ctx, state) do
-    {[], state}
-  end
-
-  @impl true
-  def handle_child_pad_removed(_child, _pad, _ctx, state) do
-    {[], state}
-  end
-
-  @impl true
   def handle_info({:pipeline_supervisor, pid}, _ctx, state) do
     {[], %{state | supervisor_pid: pid}}
   end
@@ -324,12 +307,17 @@ defmodule ExNVR.Pipelines.Main do
     Reason: #{inspect(ctx.crash_reason)}
     """)
 
+    actions =
+      if state.device.state != :failed,
+        do: [remove_link: {:webrtc, Pad.ref(:input, :main_stream)}],
+        else: []
+
     state = %{
       maybe_update_device_and_report(state, :failed)
       | rtsp_reconnect_attempt: {main + 1, sub}
     }
 
-    {[start_timer: {:start_main_stream, Membrane.Time.milliseconds(delay)}], state}
+    {actions ++ [start_timer: {:start_main_stream, Membrane.Time.milliseconds(delay)}], state}
   end
 
   @impl true
