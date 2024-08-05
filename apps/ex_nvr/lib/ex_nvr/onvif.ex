@@ -122,6 +122,7 @@ defmodule ExNVR.Onvif do
               ]),
             gop: get_in(media_profile, [:configurations, :video_encoder, :gov_length])
           }
+          |> Map.put(:token, media_profile.token)
         end)
 
       {:ok, result}

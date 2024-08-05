@@ -76,6 +76,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
   def handle_event("add-device", _params, socket) do
     selected_device = socket.assigns.selected_device
     device_details = socket.assigns.device_details
+    device_details_form_params = socket.assigns.device_details_form.params
 
     stream_config =
       case device_details.media_profiles do
@@ -102,7 +103,10 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
       mac: device_details.network_interface.mac_address,
       url: selected_device.url,
       stream_config: stream_config,
-      credentials: %{username: selected_device.username, password: selected_device.password}
+      credentials: %{
+        username: device_details_form_params["username"],
+        password: device_details_form_params["password"]
+      }
     })
     |> redirect(to: ~p"/devices/new")
     |> then(&{:noreply, &1})
@@ -165,9 +169,6 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
         |> assign_device_details_form(device_details_form_params)
         |> assign(selected_device: device, device_details: device_details, step: 2)
         |> then(&{:noreply, &1})
-
-        {:noreply,
-         assign(socket, selected_device: device, device_details: device_details, step: 2)}
 
       :error ->
         opts = [

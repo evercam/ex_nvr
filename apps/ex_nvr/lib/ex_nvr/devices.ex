@@ -270,7 +270,7 @@ defmodule ExNVR.Devices do
   defp get_media_stream_uri!(camera, media, profile, opts) do
     case camera.device_information.manufacturer do
       "AXIS" ->
-        "rtsp://#{URI.parse(camera.url).host}/axis-media/media.amp?resolution=800x600"
+        "rtsp://#{URI.parse(camera.url).host}/axis-media/media.amp?streamprofile=#{profile.name}"
 
       _other ->
         ExNVR.Onvif.get_media_stream_uri!(

@@ -58,73 +58,29 @@ defmodule ExNVR.Onvif.TestUtils do
      [
        %{
          token: "Profile_1",
+         id: "mainStream",
+         enabled: true,
          name: "mainStream",
-         configurations: %{
-           video_encoder: %{
-             token: "VideoEncoderToken_1",
-             name: "VideoEncoder_1",
-             resolution: %{width: "3840", height: "2160"},
-             rate_control: %{
-               constant_bit_rate: "false",
-               frame_rate_limit: "8.000000",
-               bitrate_limit: "5120"
-             },
-             encoding: "H265",
-             profile: "Main",
-             gov_length: "25",
-             quality: "3.000000",
-             use_count: "1",
-             multicast: %{
-               port: "8860",
-               address: %{type: "IPv4", ip_v4_address: "0.0.0.0"},
-               ttl: "128",
-               auto_start: "false"
-             }
-           },
-           video_source: %{
-             token: "VideoSourceToken",
-             name: "VideoSourceConfig",
-             use_count: "2",
-             source_token: "VideoSource_1",
-             bounds: %{width: "3840", y: "0", x: "0", height: "2160"}
-           }
-         },
-         fixed: "true"
+         codec: "H265",
+         profile: "Main",
+         width: "3840",
+         height: "2160",
+         frame_rate: "8.000000",
+         bitrate: "5120",
+         gop: "25"
        },
        %{
          token: "Profile_2",
+         id: "subStream",
+         enabled: true,
          name: "subStream",
-         configurations: %{
-           video_encoder: %{
-             token: "VideoEncoderToken_2",
-             name: "VideoEncoder_2",
-             resolution: %{width: "640", height: "480"},
-             rate_control: %{
-               constant_bit_rate: "false",
-               frame_rate_limit: "8.000000",
-               bitrate_limit: "768"
-             },
-             encoding: "H265",
-             profile: "Main",
-             gov_length: "50",
-             quality: "3.000000",
-             use_count: "1",
-             multicast: %{
-               port: "8866",
-               address: %{type: "IPv4", ip_v4_address: "0.0.0.0"},
-               ttl: "128",
-               auto_start: "false"
-             }
-           },
-           video_source: %{
-             token: "VideoSourceToken",
-             name: "VideoSourceConfig",
-             use_count: "2",
-             source_token: "VideoSource_1",
-             bounds: %{width: "640", y: "0", x: "0", height: "480"}
-           }
-         },
-         fixed: "true"
+         codec: "H265",
+         profile: "Main",
+         width: "640",
+         height: "480",
+         frame_rate: "8.000000",
+         bitrate: "768",
+         gop: "50"
        }
      ]}
   end
