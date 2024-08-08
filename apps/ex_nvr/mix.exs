@@ -34,6 +34,8 @@ defmodule ExNVR.MixProject do
   # Type `mix help deps` for examples and options.
   defp deps do
     [
+      {:ex_nvr_rtsp, in_umbrella: true},
+      {:ex_sdp, "~> 1.0", override: true},
       {:unifex, "~> 1.1"},
       {:bundlex, "~> 1.4.6"},
       {:bcrypt_elixir, "~> 3.0"},
@@ -44,11 +46,7 @@ defmodule ExNVR.MixProject do
       {:jason, "~> 1.2"},
       {:swoosh, "~> 1.15"},
       {:finch, "~> 0.13"},
-      {:ex_sdp, "~> 0.17.0", override: true},
-      {:membrane_core, "~> 1.0"},
-      {:membrane_rtp_plugin, "~> 0.27.1", override: true},
       {:membrane_file_plugin, "~> 0.17.0", override: true},
-      {:membrane_rtsp_plugin, github: "gBillal/membrane_rtsp_plugin", branch: "fix-out-of-memory"},
       {:membrane_mp4_plugin, "~> 0.35.0", override: true},
       {:membrane_http_adaptive_stream_plugin,
        github: "gBillal/membrane_http_adaptive_stream_plugin", ref: "8f75c6b"},
@@ -56,8 +54,8 @@ defmodule ExNVR.MixProject do
       {:membrane_h265_ffmpeg_plugin, "~> 0.4.0"},
       {:membrane_ffmpeg_swscale_plugin, "~> 0.15.0"},
       {:membrane_realtimer_plugin, "~> 0.9.0"},
-      {:membrane_rtc_engine, "~> 0.21.0"},
-      {:membrane_rtc_engine_webrtc, "~> 0.7.0"},
+      {:membrane_rtc_engine, "~> 0.22.0"},
+      {:membrane_rtc_engine_webrtc, "~> 0.8.0"},
       {:membrane_fake_plugin, "~> 0.11.0"},
       {:ex_libsrtp, "~> 0.7.0"},
       {:ex_m3u8, "~> 0.14.2"},

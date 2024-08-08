@@ -21,7 +21,6 @@ defmodule ExNVR.Pipeline.Output.Storage.Segmenter do
 
   @time_error Time.milliseconds(30)
   @time_drift_threshold Time.seconds(30)
-  @jitter_buffer_delay Time.milliseconds(200)
 
   def_options target_duration: [
                 spec: non_neg_integer(),
@@ -113,10 +112,7 @@ defmodule ExNVR.Pipeline.Output.Storage.Segmenter do
   @impl true
   def handle_buffer(:input, buffer, _ctx, %{start_time: nil} = state)
       when Utils.keyframe(buffer) do
-    # we chose the os_time instead of vm_time since the
-    # VM will not adjust the time when the the system is suspended
-    # check https://erlangforums.com/t/why-is-there-a-discrepancy-between-values-returned-by-os-system-time-1-and-erlang-system-time-1/2050/2
-    start_time = Time.os_time()
+    start_time = Time.from_datetime(buffer.metadata.timestamp)
 
     state =
       %{
@@ -156,7 +152,8 @@ defmodule ExNVR.Pipeline.Output.Storage.Segmenter do
 
   defp handle_buffer(state, %Buffer{} = buffer) do
     if Utils.keyframe(buffer) and Segment.duration(state.segment) >= state.target_duration do
-      {state, discontinuity} = finalize_segment(state, state.correct_timestamp)
+      {state, discontinuity} =
+        finalize_segment(state, buffer.metadata.timestamp, state.correct_timestamp)
 
       actions =
         [end_of_stream: Pad.ref(:output, state.start_time)] ++
@@ -191,7 +188,7 @@ defmodule ExNVR.Pipeline.Output.Storage.Segmenter do
   end
 
   defp do_handle_end_of_stream(state) do
-    {state, _discontinuity} = finalize_segment(state, false)
+    {state, _discontinuity} = finalize_segment(state, DateTime.utc_now(), false)
 
     {[end_of_stream: Pad.ref(:output, state.start_time)] ++ completed_segment_action(state, true),
      Map.merge(state, init_state())}
@@ -224,8 +221,8 @@ defmodule ExNVR.Pipeline.Output.Storage.Segmenter do
     }
   end
 
-  defp finalize_segment(%{segment: segment} = state, correct_timestamp) do
-    end_date = Time.os_time() - @jitter_buffer_delay
+  defp finalize_segment(%{segment: segment} = state, end_date, correct_timestamp) do
+    end_date = Time.from_datetime(end_date)
     monotonic_duration = Time.monotonic_time() - state.monotonic_start_time
 
     {segment, discontinuity?} =
@@ -265,7 +262,7 @@ defmodule ExNVR.Pipeline.Output.Storage.Segmenter do
     {%{segment | start_date: start_date, end_date: end_date}, false}
   end
 
-  defp completed_segment_action(state, discontinuity \\ false) do
+  defp completed_segment_action(state, discontinuity) do
     [notify_parent: {:completed_segment, {state.start_time, state.segment, discontinuity}}]
   end
 end

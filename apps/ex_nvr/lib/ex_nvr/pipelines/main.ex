@@ -39,18 +39,18 @@ defmodule ExNVR.Pipelines.Main do
 
   require Membrane.Logger
 
-  alias ExNVR.{Devices, Recordings, Utils}
+  alias ExNVR.{Devices, Recordings, RTSP, Utils}
   alias ExNVR.Elements.VideoStreamStatReporter
   alias ExNVR.Media.Track
   alias ExNVR.Model.Device
   alias ExNVR.Pipeline.{Output, Source}
-  alias Membrane.RTSP
 
   @type encoding :: :H264 | :H265
 
   @event_prefix [:ex_nvr, :main_pipeline]
-  @supported_video_codecs ["H264", "H265"]
   @default_segment_duration 60
+  @base_back_off_in_ms 10
+  @max_back_off_in_ms :timer.minutes(2)
 
   defmodule State do
     @moduledoc false
@@ -76,7 +76,8 @@ defmodule ExNVR.Pipelines.Main do
             segment_duration: non_neg_integer(),
             supervisor_pid: pid(),
             live_snapshot_waiting_pids: list(),
-            video_tracks: {Track.t(), Track.t()}
+            video_tracks: {Track.t(), Track.t()},
+            rtsp_reconnect_attempt: integer()
           }
 
     @enforce_keys [:device]
@@ -86,7 +87,8 @@ defmodule ExNVR.Pipelines.Main do
                   segment_duration: @default_segment_duration,
                   supervisor_pid: nil,
                   live_snapshot_waiting_pids: [],
-                  video_tracks: {nil, nil}
+                  video_tracks: {nil, nil},
+                  rtsp_reconnect_attempt: {0, 0}
                 ]
   end
 
@@ -140,63 +142,21 @@ defmodule ExNVR.Pipelines.Main do
 
   @impl true
   def handle_setup(_ctx, %{device: device} = state) do
-    common_spec = [
-      child(:hls_sink, %Output.HLS{
-        location: Path.join(Utils.hls_dir(device.id), "live"),
-        segment_name_prefix: "live"
-      }),
-      child(:snapshooter, ExNVR.Elements.SnapshotBin),
-      child(:webrtc, %Output.WebRTC{stream_id: device.id})
-    ]
-
-    actions =
-      if device.type == :ip do
-        {stream_uri, sub_stream_uri} = Device.streams(device)
-
-        Membrane.Logger.info("""
-        Start streaming for
-        main stream: #{stream_uri}
-        sub stream: #{sub_stream_uri}
-        """)
-
-        spec =
-          common_spec ++
-            [
-              child(:rtsp_source, %RTSP.Source{
-                stream_uri: stream_uri,
-                allowed_media_types: [:video],
-                transport: :tcp
-              })
-            ]
-
-        if sub_stream_uri do
-          sub_stream_spec =
-            [
-              child({:rtsp_source, :sub_stream}, %RTSP.Source{
-                stream_uri: sub_stream_uri,
-                allowed_media_types: [:video],
-                transport: :tcp
-              })
-            ]
-
-          [spec: spec ++ sub_stream_spec]
-        else
-          [spec: spec]
-        end
-      else
-        Membrane.Logger.info("""
-        Start streaming for
-        location: #{Device.file_location(device)}
-        """)
-
-        [spec: common_spec ++ build_file_stream_spec(device)]
-      end
+    spec =
+      [
+        child(:hls_sink, %Output.HLS{
+          location: Path.join(Utils.hls_dir(device.id), "live"),
+          segment_name_prefix: "live"
+        }),
+        child(:snapshooter, ExNVR.Elements.SnapshotBin),
+        child(:webrtc, %Output.WebRTC{stream_id: device.id})
+      ] ++ build_device_spec(device)
 
     # Set device state and make last active run inactive
     # may happens on application crash
     device_state = if state.device.type == :file, do: :recording, else: :failed
     Recordings.deactivate_runs(state.device)
-    {actions, maybe_update_device_and_report(state, device_state)}
+    {[spec: spec], maybe_update_device_and_report(state, device_state)}
   end
 
   @impl true
@@ -205,8 +165,8 @@ defmodule ExNVR.Pipelines.Main do
         :rtsp_source,
         _ctx,
         %State{} = state
-      )
-      when track.rtpmap.encoding in @supported_video_codecs do
+      ) do
+    %{rtsp_reconnect_attempt: {_main, sub}} = state
     track = Track.new(track.type, track.rtpmap.encoding)
 
     state = maybe_update_device_and_report(state, :recording)
@@ -226,18 +186,9 @@ defmodule ExNVR.Pipelines.Main do
     main_spec = if is_nil(old_track), do: build_main_stream_spec(state, track.encoding), else: []
 
     video_tracks = put_elem(state.video_tracks, 0, track)
-    {[spec: main_spec ++ spec], %{state | video_tracks: video_tracks}}
-  end
+    state = %{state | video_tracks: video_tracks, rtsp_reconnect_attempt: {0, sub}}
 
-  @impl true
-  def handle_child_notification({:new_track, _ssrc, track}, :rtsp_source, _ctx, state) do
-    Membrane.Logger.error("""
-    Video codec #{track.rtpmap.encoding} is not supported
-    Supported codecs are: #{Enum.join(@supported_video_codecs, " ")}
-    """)
-
-    state = maybe_update_device_and_report(state, :stopped)
-    {[terminate: :normal], state}
+    {[spec: main_spec ++ spec], state}
   end
 
   @impl true
@@ -247,6 +198,7 @@ defmodule ExNVR.Pipelines.Main do
         _ctx,
         %State{} = state
       ) do
+    %{rtsp_reconnect_attempt: {main, _sub}} = state
     track = Track.new(track.type, track.rtpmap.encoding)
     old_track = elem(state.video_tracks, 1)
     spec = if is_nil(old_track), do: build_sub_stream_spec(state.device, track.encoding), else: []
@@ -261,7 +213,8 @@ defmodule ExNVR.Pipelines.Main do
         ]
 
     video_tracks = put_elem(state.video_tracks, 1, track)
-    {[spec: spec], %{state | video_tracks: video_tracks}}
+    state = %{state | video_tracks: video_tracks, rtsp_reconnect_attempt: {main, 0}}
+    {[spec: spec], state}
   end
 
   @impl true
@@ -279,22 +232,6 @@ defmodule ExNVR.Pipelines.Main do
 
   @impl true
   def handle_child_notification(_notification, _element, _ctx, state) do
-    {[], state}
-  end
-
-  @impl true
-  def handle_child_pad_removed(:rtsp_source, Pad.ref(:output, _ssrc), _ctx, state) do
-    state = maybe_update_device_and_report(state, :failed)
-    {[remove_link: {:webrtc, Pad.ref(:input, :main_stream)}], state}
-  end
-
-  @impl true
-  def handle_child_pad_removed({:rtsp_source, :sub_stream}, Pad.ref(:output, _ssrc), _ctx, state) do
-    {[], state}
-  end
-
-  @impl true
-  def handle_child_pad_removed(_child, _pad, _ctx, state) do
     {[], state}
   end
 
@@ -362,6 +299,55 @@ defmodule ExNVR.Pipelines.Main do
   end
 
   @impl true
+  def handle_crash_group_down(:main_stream, ctx, %{rtsp_reconnect_attempt: {main, sub}} = state) do
+    delay = calculate_retry_delay(main)
+
+    Membrane.Logger.error("""
+    Error while connecting to main stream, retrying in #{delay} ms
+    Reason: #{inspect(ctx.crash_reason)}
+    """)
+
+    actions =
+      if state.device.state != :failed,
+        do: [remove_link: {:webrtc, Pad.ref(:input, :main_stream)}],
+        else: []
+
+    state = %{
+      maybe_update_device_and_report(state, :failed)
+      | rtsp_reconnect_attempt: {main + 1, sub}
+    }
+
+    {actions ++ [start_timer: {:start_main_stream, Membrane.Time.milliseconds(delay)}], state}
+  end
+
+  @impl true
+  def handle_crash_group_down(:sub_stream, ctx, %{rtsp_reconnect_attempt: {main, sub}} = state) do
+    delay = calculate_retry_delay(sub)
+
+    Membrane.Logger.error("""
+    Error while connecting to sub stream, retrying in #{delay} ms
+    Reason: #{inspect(ctx.crash_reason)}
+    """)
+
+    state = %{state | rtsp_reconnect_attempt: {main, sub + 1}}
+    {[start_timer: {:start_sub_stream, Membrane.Time.milliseconds(delay)}], state}
+  end
+
+  @impl true
+  def handle_tick(:start_main_stream, _ctx, state) do
+    {main_stream_uri, _sub_stream_uri} = Device.streams(state.device)
+
+    {[spec: build_device_main_stream_spec(main_stream_uri), stop_timer: :start_main_stream],
+     state}
+  end
+
+  @impl true
+  def handle_tick(:start_sub_stream, _ctx, state) do
+    {_main_stream_uri, sub_stream_uri} = Device.streams(state.device)
+    {[spec: build_device_sub_stream_spec(sub_stream_uri), stop_timer: :start_sub_stream], state}
+  end
+
+  @impl true
   def handle_terminate_request(_ctx, state) do
     :telemetry.execute(@event_prefix ++ [:terminate], %{system_time: System.system_time()}, %{
       device_id: state.device.id
@@ -370,12 +356,65 @@ defmodule ExNVR.Pipelines.Main do
     {[terminate: :normal], state}
   end
 
+  defp build_device_spec(%{type: :file} = device) do
+    Membrane.Logger.info("""
+    Start streaming for
+    location: #{Device.file_location(device)}
+    """)
+
+    [
+      child(:source, %Source.File{device: device})
+      |> via_out(:video)
+      |> child(:video_tee, Membrane.Tee.Master)
+      |> via_out(:master)
+      |> via_in(Pad.ref(:video, :main_stream), options: [encoding: :H264])
+      |> get_child(:hls_sink),
+      get_child(:video_tee)
+      |> via_out(:copy)
+      |> child({:cvs_bufferer, :main_stream}, ExNVR.Elements.CVSBufferer),
+      get_child(:video_tee)
+      |> via_out(:copy)
+      |> child({:stats_reporter, :main_stream}, %VideoStreamStatReporter{
+        device_id: device.id
+      })
+    ]
+  end
+
+  defp build_device_spec(device) do
+    {stream_uri, sub_stream_uri} = Device.streams(device)
+
+    Membrane.Logger.info("""
+    Start streaming for
+    main stream: #{stream_uri}
+    sub stream: #{sub_stream_uri}
+    """)
+
+    build_device_main_stream_spec(stream_uri) ++ build_device_sub_stream_spec(sub_stream_uri)
+  end
+
+  defp build_device_main_stream_spec(stream_uri) do
+    [
+      {child(:rtsp_source, %RTSP.Source{
+         stream_uri: stream_uri,
+         allowed_media_types: [:video]
+       }), group: :main_stream, crash_group_mode: :temporary}
+    ]
+  end
+
+  defp build_device_sub_stream_spec(nil), do: []
+
+  defp build_device_sub_stream_spec(stream_uri) do
+    [
+      {child({:rtsp_source, :sub_stream}, %RTSP.Source{
+         stream_uri: stream_uri,
+         allowed_media_types: [:video]
+       }), group: :sub_stream, crash_group_mode: :temporary}
+    ]
+  end
+
   defp build_main_stream_spec(state, encoding) do
     [
       child(:funnel, ExNVR.Elements.DiscontinuityFunnel)
-      |> child({:stats_reporter, :main_stream}, %VideoStreamStatReporter{
-        device_id: state.device.id
-      })
       |> child(:video_tee, Membrane.Tee.Master)
       |> via_out(:master)
       |> child({:storage_bin, :main_stream}, %Output.Storage{
@@ -389,7 +428,12 @@ defmodule ExNVR.Pipelines.Main do
       |> get_child(:hls_sink),
       get_child(:video_tee)
       |> via_out(:copy)
-      |> child({:cvs_bufferer, :main_stream}, ExNVR.Elements.CVSBufferer)
+      |> child({:cvs_bufferer, :main_stream}, ExNVR.Elements.CVSBufferer),
+      get_child(:video_tee)
+      |> via_out(:copy)
+      |> child({:stats_reporter, :main_stream}, %VideoStreamStatReporter{
+        device_id: state.device.id
+      })
     ]
   end
 
@@ -397,14 +441,16 @@ defmodule ExNVR.Pipelines.Main do
     spec =
       [
         child({:funnel, :sub_stream}, ExNVR.Elements.DiscontinuityFunnel)
+        |> child({:tee, :sub_stream}, Membrane.Tee.Master)
+        |> via_out(:master)
+        |> via_in(Pad.ref(:video, :sub_stream), options: [encoding: encoding])
+        |> get_child(:hls_sink),
+        get_child({:tee, :sub_stream})
+        |> via_out(:copy)
         |> child({:stats_reporter, :sub_stream}, %VideoStreamStatReporter{
           device_id: device.id,
           stream: :low
         })
-        |> child({:tee, :sub_stream}, Membrane.Tee.Master)
-        |> via_out(:master)
-        |> via_in(Pad.ref(:video, :sub_stream), options: [encoding: encoding])
-        |> get_child(:hls_sink)
       ]
 
     spec =
@@ -440,23 +486,6 @@ defmodule ExNVR.Pipelines.Main do
     end
   end
 
-  defp build_file_stream_spec(device) do
-    [
-      child(:source, %Source.File{device: device})
-      |> via_out(:video)
-      |> child({:stats_reporter, :sub_stream}, %VideoStreamStatReporter{
-        device_id: device.id
-      })
-      |> child(:video_tee, Membrane.Tee.Master)
-      |> via_out(:master)
-      |> via_in(Pad.ref(:video, :main_stream), options: [encoding: :H264])
-      |> get_child(:hls_sink),
-      get_child(:video_tee)
-      |> via_out(:copy)
-      |> child({:cvs_bufferer, :main_stream}, ExNVR.Elements.CVSBufferer)
-    ]
-  end
-
   defp link_live_snapshot_elements(state, image_format) do
     ref = make_ref()
 
@@ -483,6 +512,13 @@ defmodule ExNVR.Pipelines.Main do
     })
 
     %{state | device: updated_device}
+  end
+
+  defp calculate_retry_delay(reconnect_attempt) do
+    :math.pow(2, reconnect_attempt)
+    |> Kernel.*(@base_back_off_in_ms)
+    |> min(@max_back_off_in_ms)
+    |> trunc()
   end
 
   # Pipeline process details
