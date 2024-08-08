@@ -46,16 +46,23 @@ defmodule ExNVR.RTSP.Parser.H264 do
 
   defp parse_initial_parameter_set(state, _parameter_set, nil), do: state
 
-  defp parse_initial_parameter_set(%State{} = state, key, data) do
-    id_key = if key == :sps, do: :seq_parameter_set_id, else: :pic_parameter_set_id
-
-    data = maybe_add_prefix(data)
-    {sps, nalu_parser} = NALuParser.parse(data, state.nalu_parser)
+  defp parse_initial_parameter_set(%State{} = state, :sps, data) do
+    {sps, nalu_parser} = maybe_add_prefix(data) |> NALuParser.parse(state.nalu_parser)
 
     %State{
       state
       | nalu_parser: nalu_parser,
-        sps: Map.get(state, key) |> Map.put(sps.parsed_fields[id_key], sps)
+        sps: Map.put(state.sps, sps.parsed_fields.seq_parameter_set_id, sps)
+    }
+  end
+
+  defp parse_initial_parameter_set(%State{} = state, :pps, data) do
+    {pps, nalu_parser} = maybe_add_prefix(data) |> NALuParser.parse(state.nalu_parser)
+
+    %State{
+      state
+      | nalu_parser: nalu_parser,
+        pps: Map.put(state.pps, pps.parsed_fields.pic_parameter_set_id, pps)
     }
   end
 
@@ -130,8 +137,8 @@ defmodule ExNVR.RTSP.Parser.H264 do
 
     cond do
       key_frame? ->
-        {stream_format, state} = get_stream_format(au, state)
         au = add_parameter_sets(au, state)
+        {stream_format, state} = get_stream_format(au, state)
         {[stream_format, wrap_into_buffer(au)], %{state | seen_key_frame?: true}}
 
       state.seen_key_frame? ->
