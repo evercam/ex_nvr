@@ -125,8 +125,8 @@ defmodule ExNVR.RTSP.Parser.H265 do
 
     cond do
       key_frame? ->
-        {stream_format, state} = get_stream_format(au, state)
         au = add_parameter_sets(au, state)
+        {stream_format, state} = get_stream_format(au, state)
         {[stream_format, wrap_into_buffer(au)], %{state | seen_key_frame?: true}}
 
       state.seen_key_frame? ->
