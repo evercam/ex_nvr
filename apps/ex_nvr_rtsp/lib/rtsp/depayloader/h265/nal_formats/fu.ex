@@ -1,11 +1,11 @@
-defmodule ExNVR.RTSP.H265.FU do
+defmodule ExNVR.RTSP.Depayloader.H265.FU do
   @moduledoc """
   Module responsible for parsing H265 Fragmentation Unit.
   """
   use Bunch
 
   alias __MODULE__
-  alias ExNVR.RTSP.H265.NAL
+  alias ExNVR.RTSP.Depayloader.H265.NAL
 
   defstruct [:last_seq_num, data: [], type: nil, donl?: false, don: nil]
 

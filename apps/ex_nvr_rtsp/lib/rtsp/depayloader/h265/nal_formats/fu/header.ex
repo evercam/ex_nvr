@@ -1,4 +1,4 @@
-defmodule ExNVR.RTSP.H265.FU.Header do
+defmodule ExNVR.RTSP.Depayloader.H265.FU.Header do
   @moduledoc """
   Defines a structure representing Fragmentation Unit (FU) header
   which is defined in [RFC7798](https://tools.ietf.org/html/rfc7798#page-30)
@@ -12,7 +12,7 @@ defmodule ExNVR.RTSP.H265.FU.Header do
   ```
   """
 
-  alias ExNVR.RTSP.H265.NAL
+  alias ExNVR.RTSP.Depayloader.H265.NAL
 
   @typedoc """
   MUST be set to true only in the first packet in a sequence.

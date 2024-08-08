@@ -12,6 +12,24 @@ defmodule ExNVR.Pipeline.Output.StoragePipelineTest do
 
   @moduletag :tmp_dir
 
+  defmodule Timestamper do
+    @moduledoc false
+
+    use Membrane.Filter
+
+    def_input_pad :input, accepted_format: _any
+    def_output_pad :output, accepted_format: _any
+
+    @impl true
+    def handle_init(_ctx, _opts), do: {[], nil}
+
+    @impl true
+    def handle_buffer(:input, buffer, _ctx, state) do
+      buffer = %{buffer | metadata: Map.put(buffer.metadata, :timestamp, DateTime.utc_now())}
+      {[buffer: {:output, buffer}], state}
+    end
+  end
+
   @h264_fixtures "../../../../fixtures/video-30-10s.h264" |> Path.expand(__DIR__)
   @h265_fixtures "../../../../fixtures/video-30-10s.h265" |> Path.expand(__DIR__)
 
@@ -58,6 +76,7 @@ defmodule ExNVR.Pipeline.Output.StoragePipelineTest do
     spec = [
       child(:source, %Source{output: chunk_file(filename)})
       |> child(:parser, parser)
+      |> child(:timestamper, Timestamper)
       |> child(:storage, %Storage{
         device: device,
         target_segment_duration: 4

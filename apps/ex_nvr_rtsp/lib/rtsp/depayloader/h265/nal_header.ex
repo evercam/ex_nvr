@@ -1,4 +1,4 @@
-defmodule ExNVR.RTSP.H265.NAL.Header do
+defmodule ExNVR.RTSP.Depayloader.H265.NAL.Header do
   @moduledoc """
   Defines a structure representing Network Abstraction Layer Unit Header
 

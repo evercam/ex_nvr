@@ -31,8 +31,8 @@ defmodule ExNVR.Pipeline.Output.SocketPipelineTest do
       send_buffer_actions =
         for buffer <- chunk_file(@fixture_path), do: {:buffer, {:output, buffer}}
 
-      Pipeline.message_child(pid, :sink, {:new_socket, server_socket})
-      Pipeline.message_child(pid, :source, send_buffer_actions ++ [end_of_stream: :output])
+      Pipeline.notify_child(pid, :sink, {:new_socket, server_socket})
+      Pipeline.notify_child(pid, :source, send_buffer_actions ++ [end_of_stream: :output])
       assert_end_of_stream(pid, :parser)
 
       for _idx <- 1..300 do

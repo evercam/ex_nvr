@@ -1,4 +1,4 @@
-defmodule ExNVR.RTSP.H265.AP do
+defmodule ExNVR.RTSP.Depayloader.H265.AP do
   @moduledoc """
   Module responsible for parsing Aggregation Packets.
 
@@ -54,7 +54,7 @@ defmodule ExNVR.RTSP.H265.AP do
   """
   use Bunch
 
-  alias ExNVR.RTSP.H265.NAL
+  alias ExNVR.RTSP.Depayloader.H265.NAL
 
   @type don :: nil | non_neg_integer()
 
