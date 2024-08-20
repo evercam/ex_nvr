@@ -153,7 +153,7 @@ end
 Livebook.config_runtime()
 
 # Store notebooks in a writable location on the device
-notebook_path = "/notebooks/"
+notebook_path = File.cwd!() <> "/notebooks/"
 
 config :livebook,
   home: notebook_path,

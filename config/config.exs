@@ -92,6 +92,9 @@ config :livebook, :storage, Livebook.Storage.Ets
 # Enable the embedded runtime which isn't available by default
 config :livebook, :runtime_modules, [Livebook.Runtime.Embedded, Livebook.Runtime.Attached]
 
+# Allow Livebook to power off  the device
+config :livebook, :shutdown_callback, {Process, :spawn, [System, :cmd, ["sudo", ["poweroff"]], []]}
+
 # Defaults for required configurations
 config :livebook,
   agent_name: "default",
