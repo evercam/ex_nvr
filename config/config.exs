@@ -80,6 +80,38 @@ config :os_mon,
 
 config :bundlex, :disable_precompiled_os_deps, apps: [:ex_libsrtp]
 
+# Additional mime types
+config :mime, :types, %{
+  "audio/m4a" => ["m4a"],
+  "text/plain" => ["livemd"]
+}
+
+# Sets the default storage backend
+config :livebook, :storage, Livebook.Storage.Ets
+
+# Enable the embedded runtime which isn't available by default
+config :livebook, :runtime_modules, [Livebook.Runtime.Embedded, Livebook.Runtime.Attached]
+
+# Defaults for required configurations
+config :livebook,
+  agent_name: "default",
+  allowed_uri_schemes: [],
+  app_service_name: nil,
+  app_service_url: nil,
+  authentication: {:password, "password"},
+  aws_credentials: false,
+  epmdless: false,
+  feature_flags: [],
+  force_ssl_host: nil,
+  plugs: [],
+  rewrite_on: [],
+  teams_auth?: false,
+  teams_url: "https://teams.livebook.dev",
+  update_instructions_url: nil,
+  within_iframe: false
+
+config :livebook, Livebook.Apps.Manager, retry_backoff_base_ms: 5_000
+
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
 import_config "#{config_env()}.exs"
