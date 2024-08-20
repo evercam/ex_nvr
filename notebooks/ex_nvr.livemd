@@ -1,0 +1,21 @@
+<!-- livebook:{"hub_id":"team-evercam"} -->
+
+# ExNVR
+
+## Restart ExNVR
+
+Livebook connection will close, and any unsaved changes will be lost.
+
+```elixir
+System.restart()
+```
+
+## Reboot the Pi
+
+Livebook connection will close, and any unsaved changes will be lost.
+
+```elixir
+System.cmd("sudo", ["reboot"])
+```
+
+<!-- livebook:{"offset":309,"stamp":{"token":"XCP.sH084kzKPuAA584qseHmNXxPeP0qke48G8ZKiZkjxpOPBIw_dk5H8-IIvF4aKA","token_signature":"EBqbVWFzoAtYnIq1bTm3yu1U81Dg5D-b7Lkf8SLTSO0UFEzaTENNg5hwnQ8Dw1OW9nXvG7GQbLseTJBE-0ssUQiaaeVEs_7S5uoHpgCvmM4PUreWvzS-JPrXv5lkoUM-PzRnd6rnyUtmO1Yf2xWrXuhafffkEswrlmYCTWdY3dCe957i7qEqzVcFpFsYUfzW-53iERjIdSmIRkncnRb501SJ53vHLTGocnjyGnFuHB697VuWqlFNscFYzUAopfn3mGiOl3HSPtg_v7udxrYueJJMH9v3FloY5dcSmKvl1T86hbnyZEPjl2o-Zfc3dF0GXDIX_o53CCWsCPjoHX7fMQ","version":1}} -->

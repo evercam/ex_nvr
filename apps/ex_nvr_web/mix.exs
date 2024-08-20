@@ -39,13 +39,13 @@ defmodule ExNVRWeb.MixProject do
       {:floki, "~> 0.36.0"},
       {:phoenix, "~> 1.7.2"},
       {:phoenix_ecto, "~> 4.4"},
-      {:phoenix_html, "~> 3.3"},
+      {:phoenix_html, "~> 4.1.1"},
       {:phoenix_live_reload, "~> 1.2", only: :dev},
-      {:phoenix_live_view, "~> 0.20.0"},
+      {:phoenix_live_view, "~> 1.0.0-rc.5"},
       {:phoenix_live_dashboard, "~> 0.8.1"},
       {:esbuild, "~> 0.7", runtime: Mix.env() == :dev},
       {:tailwind, "~> 0.2.0", runtime: Mix.env() == :dev},
-      {:telemetry_metrics, "~> 0.6"},
+      {:telemetry_metrics, "~> 0.6", override: true},
       {:telemetry_poller, "~> 1.0"},
       {:gettext, "~> 0.20"},
       {:ex_nvr, in_umbrella: true},
@@ -53,9 +53,12 @@ defmodule ExNVRWeb.MixProject do
       {:plug_cowboy, "~> 2.5"},
       {:corsica, "~> 2.1"},
       {:logger_json, "~> 5.1"},
-      {:flop_phoenix, "~> 0.21.1"},
+      {:flop_phoenix, "~> 0.23.0"},
       {:prom_ex, "~> 1.9.0"},
-      {:mock, "~> 0.3", only: :test}
+      {:mock, "~> 0.3", only: :test},
+      {:phoenix_html_helpers, "~> 1.0"},
+      {:livebook, "~> 0.13.0"},
+      {:kino, "~> 0.13.2"}
     ]
   end
 
