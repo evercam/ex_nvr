@@ -160,10 +160,10 @@ defmodule ExNVRWeb.RecordingListLive do
           </tr>
         </table>
         <p :if={@video_track} class="text-left text-sm font-bold dark:text-white">Video</p>
-        <table class="ml-3 text-left text-xs">
+        <table :if={@video_track} class="ml-3 text-left text-xs">
           <tr>
             <td class="font-semibold">Codec:</td>
-            <td><%= @video_track.codec %> (<%= @video_track.codec_tag %>)</td>
+            <td><%= @video_track.media %> (<%= @video_track.media_tag %>)</td>
           </tr>
           <tr>
             <td class="font-semibold">Resolution:</td>
@@ -171,11 +171,11 @@ defmodule ExNVRWeb.RecordingListLive do
           </tr>
           <tr>
             <td class="font-semibold">Bitrate:</td>
-            <td><%= humanize_bitrate(@video_track.bitrate) %></td>
+            <td><%= humanize_bitrate(ExMP4.Track.bitrate(@video_track)) %></td>
           </tr>
           <tr>
             <td class="font-semibold">fps:</td>
-            <td><%= @video_track.fps %></td>
+            <td><%= Float.round(ExMP4.Track.fps(@video_track), 2) %></td>
           </tr>
         </table>
       </div>

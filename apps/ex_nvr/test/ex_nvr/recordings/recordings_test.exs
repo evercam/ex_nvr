@@ -121,17 +121,18 @@ defmodule ExNVR.RecordingTest do
                 duration: 5_000,
                 size: 298_854,
                 track_details: [
-                  %{
+                  track = %{
                     type: :video,
-                    codec: :H264,
-                    codec_tag: :avc1,
+                    media: :h264,
+                    media_tag: :avc1,
                     width: 428,
-                    height: 240,
-                    fps: 30.0,
-                    bitrate: 473_458
+                    height: 240
                   }
                 ]
               }} = Recordings.details(device, recording)
+
+      assert ExMP4.Track.bitrate(track) == 473_457
+      assert ExMP4.Track.fps(track) == 30.0
     end
 
     test "get details of not existing recording", %{device: device} do
