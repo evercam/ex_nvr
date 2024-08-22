@@ -1,4 +1,6 @@
 defmodule ExNVR.RecordingTest do
+  @moduledoc false
+
   use ExNVR.DataCase
 
   import ExNVR.DevicesFixtures
@@ -119,19 +121,19 @@ defmodule ExNVR.RecordingTest do
       assert {:ok,
               %{
                 duration: 5_000,
-                size: 298_854,
+                size: 292_713,
                 track_details: [
                   track = %{
                     type: :video,
                     media: :h264,
                     media_tag: :avc1,
-                    width: 428,
+                    width: 480,
                     height: 240
                   }
                 ]
               }} = Recordings.details(device, recording)
 
-      assert ExMP4.Track.bitrate(track) == 473_457
+      assert ExMP4.Track.bitrate(track) == 465_555
       assert ExMP4.Track.fps(track) == 30.0
     end
 
@@ -141,6 +143,65 @@ defmodule ExNVR.RecordingTest do
                  start_date: DateTime.utc_now(),
                  filename: "233434.mp4"
                })
+    end
+  end
+
+  describe "get snapshot from recording" do
+    setup %{device: device} do
+      avc_recording =
+        recording_fixture(device,
+          start_date: ~U(2023-06-23 10:00:00Z),
+          end_date: ~U(2023-06-23 10:00:05Z)
+        )
+
+      hevc_recording =
+        recording_fixture(device,
+          start_date: ~U(2023-06-23 10:00:10Z),
+          end_date: ~U(2023-06-23 10:00:15Z),
+          encoding: :H265
+        )
+
+      %{avc_recording: avc_recording, hevc_recording: hevc_recording}
+    end
+
+    test "get snapshot from closest keyframe before specified date time", ctx do
+      perform_snapshot_test(
+        ctx.device,
+        ctx.avc_recording,
+        ref_path(:h264, "before-keyframe"),
+        ~U(2023-06-23 10:00:03Z),
+        ~U(2023-06-23 10:00:02Z),
+        :before
+      )
+
+      perform_snapshot_test(
+        ctx.device,
+        ctx.hevc_recording,
+        ref_path(:h265, "before-keyframe"),
+        ~U(2023-06-23 10:00:13Z),
+        ~U(2023-06-23 10:00:12Z),
+        :before
+      )
+    end
+
+    test "get snapshot at the provided date time", ctx do
+      perform_snapshot_test(
+        ctx.device,
+        ctx.avc_recording,
+        ref_path(:h264, "precise"),
+        ~U(2023-06-23 10:00:03Z),
+        ~U(2023-06-23 10:00:03Z),
+        :precise
+      )
+
+      perform_snapshot_test(
+        ctx.device,
+        ctx.hevc_recording,
+        ref_path(:h265, "precise"),
+        ~U(2023-06-23 10:00:13Z),
+        ~U(2023-06-23 10:00:13Z),
+        :precise
+      )
     end
   end
 
@@ -210,5 +271,29 @@ defmodule ExNVR.RecordingTest do
   def list_recordings(run) do
     from(r in Recording, where: r.run_id == ^run.id, order_by: r.start_date)
     |> ExNVR.Repo.all()
+  end
+
+  defp perform_snapshot_test(
+           device,
+           recording,
+           ref_path,
+           requested_datetime,
+           snapshot_timestamp,
+           method
+         ) do
+      assert {:ok, timestamp, snapshot} =
+               Recordings.snapshot(device, recording, requested_datetime, method: method)
+
+      assert snapshot == File.read!(ref_path)
+
+      assert_in_delta(
+        DateTime.to_unix(timestamp, :millisecond),
+        DateTime.to_unix(snapshot_timestamp, :millisecond),
+        100
+      )
+    end
+
+  defp ref_path(encoding, method) do
+    Path.expand("../../fixtures/images/#{encoding}/ref-#{method}.jpeg", __DIR__)
   end
 end
