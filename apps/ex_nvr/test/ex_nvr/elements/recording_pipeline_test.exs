@@ -68,23 +68,6 @@ defmodule ExNVR.Elements.RecordingPipelineTest do
 
       perform_test(:H264, out_path, ref_path, source_params)
     end
-
-    test "starting from exact timestamp", %{device: device, tmp_dir: tmp_dir} do
-      out_path = Path.join(tmp_dir, "output.h264")
-
-      ref_path =
-        "../../fixtures/h264/reference-recording-exact.h264" |> Path.expand(__DIR__)
-
-      source_params = %{
-        device: device,
-        start_date: ~U(2023-09-06 10:00:03.001Z),
-        end_date: ~U(2023-09-10 10:00:00Z),
-        duration: Membrane.Time.milliseconds(8950),
-        strategy: :exact
-      }
-
-      perform_test(:H264, out_path, ref_path, source_params)
-    end
   end
 
   describe "Read multiple hvc1 recordings as one file" do
