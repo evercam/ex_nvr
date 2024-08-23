@@ -3,9 +3,9 @@ defmodule ExNVRWeb.DeviceLive do
 
   use ExNVRWeb, :live_view
 
+  alias ExMP4.Reader
   alias ExNVR.{Devices, DeviceSupervisor, RemoteStorages}
   alias ExNVR.Model.Device
-  alias ExNVR.MP4.Reader
 
   def mount(%{"id" => "new"}, _session, socket) do
     device_params = get_device_params(socket.assigns.flash)
@@ -154,7 +154,7 @@ defmodule ExNVRWeb.DeviceLive do
       Map.put(device_params, "stream_config", %{
         "temporary_path" => path,
         "filename" => filename,
-        "duration" => Reader.duration(reader)
+        "duration" => Reader.duration(reader, :microsecond)
       })
     end
   end

@@ -98,7 +98,7 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
 
     with [recording] <- Recordings.get_recordings_between(device.id, params.stream, time, time),
          {:ok, timestamp, snapshot} <-
-           Recordings.Snapshooter.snapshot(device, recording, time, method: params.method) do
+           Recordings.snapshot(device, recording, time, method: params.method) do
       conn
       |> put_resp_header("x-timestamp", "#{DateTime.to_unix(timestamp, :millisecond)}")
       |> put_resp_content_type("image/jpeg")

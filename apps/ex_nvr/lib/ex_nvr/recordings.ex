@@ -6,10 +6,11 @@ defmodule ExNVR.Recordings do
 
   alias Ecto.Multi
   alias ExNVR.Model.{Device, Recording, Run}
-  alias ExNVR.{MP4, Repo}
+  alias ExNVR.Repo
   alias Phoenix.PubSub
 
   @recordings_topic "recordings"
+  @nalu_prefix <<0, 0, 0, 1>>
 
   @type stream_type :: :low | :high
   @type error :: {:error, Ecto.Changeset.t() | File.posix()}
@@ -84,12 +85,53 @@ defmodule ExNVR.Recordings do
     path = recording_path(device, recording.stream, recording)
 
     with {:ok, stat} <- File.stat(path),
-         {:ok, reader} <- MP4.Reader.new(path) do
-      details = MP4.Reader.summary(reader)
-      details = Map.update!(details, :duration, &Membrane.Time.as_milliseconds(&1, :round))
-      MP4.Reader.close(reader)
+         {:ok, reader} <- ExMP4.Reader.new(path) do
+      details = %{
+        size: stat.size,
+        duration: ExMP4.Reader.duration(reader, :millisecond),
+        track_details: ExMP4.Reader.tracks(reader)
+      }
 
-      {:ok, Map.put(details, :size, stat.size)}
+      ExMP4.Reader.close(reader)
+
+      {:ok, details}
+    end
+  end
+
+  @spec snapshot(Device.t(), Recording.t(), DateTime.t(), Keyword.t()) ::
+          {:ok, binary()} | {:error, any()}
+  def snapshot(device, recording, datetime, opts \\ []) do
+    path = recording_path(device, recording.stream, recording)
+    offset = DateTime.diff(datetime, recording.start_date, :microsecond)
+    method = Keyword.get(opts, :method, :before)
+
+    with {:ok, reader} <- ExMP4.Reader.new(path) do
+      track = ExMP4.Reader.tracks(reader) |> Enum.find(&(&1.type == :video))
+      offset = ExMP4.Helper.timescalify(offset, :microsecond, track.timescale)
+      samples = read_samples(reader, track, offset, method)
+
+      {decoder, decoder_state} = ExNVR.Decoder.new!(track.media)
+
+      samples
+      |> Stream.map(&%Membrane.Buffer{payload: &1.payload, dts: &1.dts, pts: &1.pts})
+      |> Stream.map(&decoder.decode!(decoder_state, &1))
+      |> Enum.to_list()
+      |> Kernel.++(decoder.flush!(decoder_state))
+      |> List.flatten()
+      |> List.last()
+      |> then(fn buffer ->
+        datetime =
+          DateTime.add(
+            recording.start_date,
+            ExMP4.Helper.timescalify(buffer.pts, track.timescale, :microsecond),
+            :microsecond
+          )
+
+        {:ok, snapshot} =
+          Turbojpeg.yuv_to_jpeg(buffer.payload, track.width, track.height, 75, :I420)
+
+        {:ok, datetime, snapshot}
+      end)
     end
   end
 
@@ -164,6 +206,11 @@ defmodule ExNVR.Recordings do
       |> Recording.before_date(List.last(high_res_recordings).end_date)
       |> Repo.all()
 
+    delete_file = fn filename ->
+      if File.exists?(filename), do: File.rm!(filename)
+      :ok
+    end
+
     ids = Enum.concat(high_res_recordings, low_res_recordings) |> Enum.map(& &1.id)
     delete_recordings_query = from(r in Recording, where: r.id in ^ids)
 
@@ -174,11 +221,11 @@ defmodule ExNVR.Recordings do
     |> Multi.run(:delete_files, fn _repo, _params ->
       high_res_recordings
       |> Enum.map(&recording_path(device, &1))
-      |> Enum.each(&File.rm!/1)
+      |> Enum.each(&delete_file.(&1))
 
       low_res_recordings
       |> Enum.map(&recording_path(device, :low, &1))
-      |> Enum.each(&File.rm!/1)
+      |> Enum.each(&delete_file.(&1))
 
       {:ok, nil}
     end)
@@ -237,5 +284,53 @@ defmodule ExNVR.Recordings do
 
   defp broadcast_recordings_event(event) do
     PubSub.broadcast(ExNVR.PubSub, @recordings_topic, {event, nil})
+  end
+
+  # get snapshot private functions
+  defp read_samples(reader, track, offset, method) do
+    {prefix_size, parameter_sets} = get_parameter_sets(track)
+
+    [first_sample | samples] =
+      ExMP4.Reader.stream(reader, tracks: [track.id])
+      |> Enum.reduce_while([], fn sample_metadata, samples ->
+        cond do
+          sample_metadata.dts > offset and method == :precise ->
+            {:halt, Enum.reverse([sample_metadata | samples])}
+
+          sample_metadata.dts > offset ->
+            {:halt, [List.last(samples)]}
+
+          sample_metadata.sync? ->
+            {:cont, [sample_metadata]}
+
+          true ->
+            {:cont, [sample_metadata | samples]}
+        end
+      end)
+      |> ExMP4.Reader.samples(reader)
+      |> Enum.map(&%{&1 | payload: to_annexb(&1.payload, prefix_size)})
+
+    [%{first_sample | payload: parameter_sets <> first_sample.payload} | samples]
+  end
+
+  defp get_parameter_sets(%{priv_data: %ExMP4.Box.Avcc{} = priv_data}) do
+    {priv_data.nalu_length_size,
+     Enum.map_join(priv_data.spss ++ priv_data.ppss, &(@nalu_prefix <> &1))}
+  end
+
+  defp get_parameter_sets(%{priv_data: %ExMP4.Box.Hvcc{} = priv_data}) do
+    parameter_sets =
+      Enum.map_join(
+        priv_data.vpss ++ priv_data.spss ++ priv_data.ppss,
+        &(@nalu_prefix <> &1)
+      )
+
+    {priv_data.nalu_length_size, parameter_sets}
+  end
+
+  defp to_annexb(access_unit, nalu_prefix_size) do
+    for <<size::size(8 * nalu_prefix_size), nalu::binary-size(size) <- access_unit>>,
+      into: <<>>,
+      do: @nalu_prefix <> nalu
   end
 end
