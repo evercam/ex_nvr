@@ -50,7 +50,7 @@ defmodule ExNVR.MixProject do
       {:membrane_mp4_plugin, "~> 0.35.0", override: true},
       {:membrane_http_adaptive_stream_plugin,
        github: "gBillal/membrane_http_adaptive_stream_plugin", ref: "8f75c6b"},
-      {:membrane_h264_ffmpeg_plugin, "~> 0.31.0"},
+      {:membrane_h264_ffmpeg_plugin, "~> 0.32.2"},
       {:membrane_h265_ffmpeg_plugin, "~> 0.4.0"},
       {:membrane_ffmpeg_swscale_plugin, "~> 0.15.0"},
       {:membrane_realtimer_plugin, "~> 0.9.0"},
