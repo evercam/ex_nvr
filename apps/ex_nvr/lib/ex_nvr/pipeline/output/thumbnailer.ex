@@ -3,12 +3,13 @@ defmodule ExNVR.Pipeline.Output.Thumbnailer do
   Generate thumbnails at regular interval. The element will only decode keyframes at the expense of exact timestamps.
   """
 
-  use Membrane.Bin
+  use Membrane.Sink
 
+  require ExNVR.Utils
   require Membrane.Logger
 
-  alias __MODULE__.{KeyFrameSelector, Sink}
-  alias Membrane.{FFmpeg, H264, H265}
+  alias ExNVR.{Decoder, Image}
+  alias Membrane.{Buffer, H264, H265}
 
   def_input_pad :input,
     accepted_format:
@@ -18,8 +19,8 @@ defmodule ExNVR.Pipeline.Output.Thumbnailer do
       )
 
   def_options interval: [
-                spec: Membrane.Time.t(),
-                default: Membrane.Time.seconds(10),
+                spec: integer(),
+                default: 10,
                 description: """
                 The rate of thumbnails generation.
                 Defaults to one thumbnail per 10 seconds.
@@ -33,78 +34,78 @@ defmodule ExNVR.Pipeline.Output.Thumbnailer do
               dest: [
                 spec: Path.t(),
                 description: "The destination folder where the thumbnails will be stored"
-              ],
-              encoding: [
-                spec: :H264 | :H265,
-                description: "The codec used to compress the frames"
               ]
-
-  @interval Membrane.Time.seconds(5)
 
   @impl true
   def handle_init(_ctx, options) do
-    state = Map.from_struct(options)
+    state =
+      options
+      |> Map.from_struct()
+      |> Map.merge(%{
+        thumbnail_height: nil,
+        decoder: nil,
+        decoder_state: nil,
+        scaler: nil,
+        last_buffer_pts: nil
+      })
 
-    spec = [bin_input() |> child(:tee, Membrane.Tee.Parallel)]
-
-    case check_directory(state.dest) do
-      :ok ->
-        {[spec: spec, spec: get_spec(state)], state}
-
-      {:error, reason} ->
-        Membrane.Logger.error(
-          "Could not make directory or directory not writable '#{state.dest}', error: #{inspect(reason)}"
-        )
-
-        {[spec: spec, start_timer: {:check_directory, @interval}], state}
-    end
-  end
-
-  @impl true
-  def handle_element_end_of_stream(:sink, _pad, _ctx, state) do
-    {[notify_parent: :end_of_stream], state}
-  end
-
-  @impl true
-  def handle_element_end_of_stream(_element, _pad, _ctx, state) do
     {[], state}
   end
 
   @impl true
-  def handle_tick(:check_directory, _ctx, state) do
-    case check_directory(state.dest) do
-      :ok ->
-        {[spec: get_spec(state), stop_timer: :check_directory], state}
+  def handle_stream_format(:input, format, _ctx, state) do
+    codec = if is_struct(format, H264), do: :h264, else: :h265
 
-      _error ->
+    out_height = div(state.thumbnail_width * format.height, format.width)
+    out_height = out_height - rem(out_height, 2)
+
+    {decoder, decoder_state} = Decoder.new!(codec)
+    scaler = Image.Scaler.new!(format.width, format.height, state.thumbnail_width, out_height)
+
+    {[],
+     %{
+       state
+       | thumbnail_height: out_height,
+         decoder: decoder,
+         decoder_state: decoder_state,
+         scaler: scaler
+     }}
+  end
+
+  @impl true
+  def handle_buffer(:input, buffer, _ctx, state) when ExNVR.Utils.keyframe(buffer) do
+    last_pts = state.last_buffer_pts || Buffer.get_dts_or_pts(buffer)
+    interval = Membrane.Time.as_seconds(Buffer.get_dts_or_pts(buffer) - last_pts, :round)
+
+    if is_nil(state.last_buffer_pts) or interval >= state.interval,
+      do: do_decode(buffer, state),
+      else: {[], state}
+  end
+
+  @impl true
+  def handle_buffer(:input, _buffer, _ctx, state), do: {[], state}
+
+  defp do_decode(buffer, state) do
+    with {:ok, decoded} <- state.decoder.decode(state.decoder_state, buffer),
+         {:ok, scaled} <- scale(decoded, state),
+         {:ok, jpeg_image} <- to_jpeg(scaled, state),
+         :ok <- File.write(image_path(state.dest, buffer), jpeg_image) do
+      {[], %{state | last_buffer_pts: buffer.pts}}
+    else
+      error ->
+        Membrane.Logger.error("Failed to generate thumbnail: #{inspect(error)}")
         {[], state}
     end
   end
 
-  @impl true
-  def handle_crash_group_down(_group_name, _ctx, state) do
-    Membrane.Logger.error("crash in thumbnailer")
-    {[start_timer: {:check_directory, @interval}], state}
+  defp scale([], _state), do: {:ok, nil}
+  defp scale([buffer], state), do: Image.Scaler.scale(state.scaler, buffer.payload)
+
+  defp to_jpeg(raw_image, state) do
+    Turbojpeg.yuv_to_jpeg(raw_image, state.thumbnail_width, state.thumbnail_height, 75, :I420)
   end
 
-  defp get_spec(state) do
-    {[
-       get_child(:tee)
-       |> child(:key_frame_selector, %KeyFrameSelector{interval: state.interval})
-       |> child(:decoder, get_decoder(state.encoding))
-       |> child(:scaler, %FFmpeg.SWScale.Scaler{
-         output_width: state.thumbnail_width,
-         use_shm?: true
-       })
-       |> child(:image_encoder, Turbojpeg.Filter)
-       |> child(:sink, %Sink{dest: state.dest})
-     ], group: make_ref(), crash_group_mode: :temporary}
-  end
-
-  defp get_decoder(:H264), do: %H264.FFmpeg.Decoder{use_shm?: true}
-  defp get_decoder(:H265), do: %H265.FFmpeg.Decoder{use_shm?: true}
-
-  defp check_directory(dest) do
-    if File.exists?(dest), do: ExNVR.Utils.writable(dest), else: File.mkdir(dest)
+  defp image_path(dest_folder, buffer) do
+    Path.join(dest_folder, "#{Membrane.Buffer.get_dts_or_pts(buffer)}.jpg")
   end
 end

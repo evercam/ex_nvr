@@ -274,24 +274,24 @@ defmodule ExNVR.RecordingTest do
   end
 
   defp perform_snapshot_test(
-           device,
-           recording,
-           ref_path,
-           requested_datetime,
-           snapshot_timestamp,
-           method
-         ) do
-      assert {:ok, timestamp, snapshot} =
-               Recordings.snapshot(device, recording, requested_datetime, method: method)
+         device,
+         recording,
+         ref_path,
+         requested_datetime,
+         snapshot_timestamp,
+         method
+       ) do
+    assert {:ok, timestamp, snapshot} =
+             Recordings.snapshot(device, recording, requested_datetime, method: method)
 
-      assert snapshot == File.read!(ref_path)
+    assert snapshot == File.read!(ref_path)
 
-      assert_in_delta(
-        DateTime.to_unix(timestamp, :millisecond),
-        DateTime.to_unix(snapshot_timestamp, :millisecond),
-        100
-      )
-    end
+    assert_in_delta(
+      DateTime.to_unix(timestamp, :millisecond),
+      DateTime.to_unix(snapshot_timestamp, :millisecond),
+      100
+    )
+  end
 
   defp ref_path(encoding, method) do
     Path.expand("../../fixtures/images/#{encoding}/ref-#{method}.jpeg", __DIR__)
