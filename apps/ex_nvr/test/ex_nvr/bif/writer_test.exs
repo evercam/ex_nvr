@@ -11,7 +11,7 @@ defmodule ExNVR.BIF.WriterTest do
 
   test "create bif file", %{tmp_dir: tmp_dir} do
     out_file = Path.join(tmp_dir, "out.bif")
-    writer = Writer.new(out_file)
+    {:ok, writer} = Writer.new(out_file)
 
     writer =
       @images_folder

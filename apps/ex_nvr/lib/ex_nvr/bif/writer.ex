@@ -26,11 +26,12 @@ defmodule ExNVR.BIF.Writer do
   @spec new(Path.t()) :: t()
   def new(out_path) do
     with {:ok, io_device} <- File.open(out_path <> ".tmp", [:binary, :read, :write]) do
-      %__MODULE__{
-        device: io_device,
-        index: Index.new(),
-        path: out_path
-      }
+      {:ok,
+       %__MODULE__{
+         device: io_device,
+         index: Index.new(),
+         path: out_path
+       }}
     end
   end
 
@@ -39,15 +40,15 @@ defmodule ExNVR.BIF.Writer do
     index = Index.add_entry(writer.index, timestamp, byte_size(image))
 
     with :ok <- IO.binwrite(writer.device, image) do
-      %__MODULE__{writer | index: index}
+      {:ok, %__MODULE__{writer | index: index}}
     end
   end
 
   @spec write!(t(), binary(), unix_timestamp()) :: t()
   def write!(%__MODULE__{} = writer, image, timestamp) do
     case write(writer, image, timestamp) do
+      {:ok, writer} -> writer
       {:error, error} -> raise("could not write image to BIF file: #{inspect(error)}")
-      writer -> writer
     end
   end
 
