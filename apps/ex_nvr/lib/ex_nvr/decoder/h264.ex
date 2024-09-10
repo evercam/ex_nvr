@@ -13,7 +13,9 @@ defmodule ExNVR.Decoder.H264 do
 
   @impl true
   def decode(decoder, buffer) do
-    case Decoder.Native.decode(buffer.payload, buffer.pts, buffer.dts, false, decoder) do
+    dts = Buffer.get_dts_or_pts(buffer)
+
+    case Decoder.Native.decode(buffer.payload, buffer.pts, dts, false, decoder) do
       {:ok, pts, decoded_frames} -> {:ok, map_to_buffers(pts, decoded_frames)}
       error -> error
     end

@@ -26,16 +26,14 @@ defmodule ExNVR.Pipeline.Output.ThumbnailerPipelineTest do
       child(:source, %Membrane.File.Source{location: file})
       |> child(:parser, get_parser(encoding))
       |> child(:thumbnailer, %ExNVR.Pipeline.Output.Thumbnailer{
-        interval: Membrane.Time.seconds(2),
-        encoding: encoding,
+        interval: 2,
         dest: dest
       })
     ]
 
     pid = Pipeline.start_supervised!(spec: spec)
 
-    assert_end_of_stream(pid, :parser)
-    assert_pipeline_notified(pid, :thumbnailer, :end_of_stream)
+    assert_end_of_stream(pid, :thumbnailer)
     Pipeline.terminate(pid)
 
     assert length(File.ls!(dest)) == 5

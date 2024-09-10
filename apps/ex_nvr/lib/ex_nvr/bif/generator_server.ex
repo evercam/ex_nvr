@@ -47,12 +47,20 @@ defmodule ExNVR.BIF.GeneratorServer do
       delete_files!(files)
     end)
 
-    schedule_next_tick()
     {:noreply, state}
+  rescue
+    exception ->
+      Logger.error("""
+      BifGenerator: could not generate a bif file.
+      Exception: #{inspect(exception)}
+      """)
+      {:noreply, state}
+  after
+    schedule_next_tick()
   end
 
   defp generate_bif!(device, {hour, files}) do
-    writer = Writer.new(file_location(device, hour))
+    {:ok, writer} = Writer.new(file_location(device, hour))
 
     files
     |> Enum.reduce(writer, fn file, writer ->

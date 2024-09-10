@@ -477,8 +477,7 @@ defmodule ExNVR.Pipelines.Main do
           get_child({:tee, :sub_stream})
           |> via_out(:copy)
           |> child({:thumbnailer, :sub_stream}, %Output.Thumbnailer{
-            dest: Device.bif_thumbnails_dir(device),
-            encoding: encoding
+            dest: Device.bif_thumbnails_dir(device)
           })
         ]
     else
