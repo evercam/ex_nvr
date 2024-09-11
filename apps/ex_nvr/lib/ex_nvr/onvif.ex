@@ -115,7 +115,7 @@ defmodule ExNVR.Onvif do
   @spec get_media_snapshot_uri!(url(), binary(), opts()) :: response()
   @spec get_media_snapshot_uri!(url(), binary()) :: response()
   def get_media_snapshot_uri!(url, profile_token, opts \\ []) do
-    body = %{"ProfileToken" => profile_token, "Protocol" => ""}
+    body = %{"ProfileToken" => profile_token}
     result = call!(url, :get_snapshot_uri, body, opts)
     get_in(result, [:get_snapshot_uri_response, :uri])
   end

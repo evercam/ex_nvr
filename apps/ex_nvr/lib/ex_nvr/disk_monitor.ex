@@ -55,12 +55,17 @@ defmodule ExNVR.DiskMonitor do
   end
 
   defp get_device_disk_usage(device) do
-    [{_mountpoint, total, avail, _percentage}] =
-      :disksup.get_disk_info(device.storage_config.address)
-
-    case total do
-      0 -> 0
-      total -> (1 - avail / total) * 100
+    if Kernel.function_exported?(:disksup, :get_disk_info, 1) do
+      case :disksup.get_disk_info(device.storage_config.address) do
+        [] -> 0
+        [{_mountpoint, 0, avail, _percentage}] -> 0
+        [{_mountpoint, total, avail, _percentage}] -> (1 - avail / total) * 100
+      end
+    else
+      :disksup.get_disk_data()
+      |> Enum.map(fn {mountpoint, _total, usage} -> {to_string(mountpoint), usage} end)
+      |> Enum.find(& elem(&1, 0) == device.storage_config.address, {nil, 0})
+      |> elem(1)
     end
   end
 end

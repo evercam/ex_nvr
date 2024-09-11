@@ -95,7 +95,7 @@ if config_env() == :prod do
 
   config :ex_nvr_web, ExNVRWeb.Endpoint,
     http: [
-      ip: {0, 0, 0, 0, 0, 0, 0, 0},
+      ip: {0, 0, 0, 0},
       port: String.to_integer(System.get_env("EXNVR_HTTP_PORT") || "4000")
     ],
     secret_key_base: secret_key_base,
@@ -108,7 +108,7 @@ if config_env() == :prod do
   if enable_ssl do
     config :ex_nvr_web, ExNVRWeb.Endpoint,
       https: [
-        ip: {0, 0, 0, 0, 0, 0, 0, 0},
+        ip: {0, 0, 0, 0},
         port: String.to_integer(System.get_env("EXNVR_HTTPS_PORT") || "443"),
         cipher_suite: :compatible,
         keyfile: System.get_env("EXNVR_SSL_KEY_PATH"),
