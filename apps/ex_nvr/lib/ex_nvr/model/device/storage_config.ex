@@ -12,7 +12,7 @@ defmodule ExNVR.Model.Device.StorageConfig do
     field :address, :string
     # full drive
     field :full_drive_threshold, :float, default: 95.0
-    field :full_drive_action, Ecto.Enum, values: [:nothing, :overwrite], default: :nothing
+    field :full_drive_action, Ecto.Enum, values: [:nothing, :overwrite], default: :overwrite
     # Sub stream
     field :record_sub_stream, Ecto.Enum, values: [:never, :always], default: :never
   end

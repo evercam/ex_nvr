@@ -54,6 +54,7 @@ defmodule ExNVR.BIF.GeneratorServer do
       BifGenerator: could not generate a bif file.
       Exception: #{inspect(exception)}
       """)
+
       {:noreply, state}
   after
     schedule_next_tick()

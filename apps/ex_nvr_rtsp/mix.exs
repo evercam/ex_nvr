@@ -4,7 +4,7 @@ defmodule ExNvrRtsp.MixProject do
   def project do
     [
       app: :ex_nvr_rtsp,
-      version: "0.14.0",
+      version: "0.15.0",
       build_path: "../../_build",
       config_path: "../../config/config.exs",
       deps_path: "../../deps",
@@ -33,7 +33,7 @@ defmodule ExNvrRtsp.MixProject do
       {:membrane_core, "~> 1.1"},
       {:ex_rtp, "~> 0.4.0"},
       {:ex_rtcp, "~> 0.4.0"},
-      {:membrane_rtsp, "~> 0.7.0"},
+      {:membrane_rtsp, "~> 0.10.0"},
       {:membrane_h26x_plugin, "~> 0.10.0"},
       {:dialyxir, ">= 0.0.0", only: :dev, runtime: false},
       {:credo, ">= 0.0.0", only: :dev, runtime: false},

@@ -1,7 +1,7 @@
 defmodule ExNVR.Umbrella.MixProject do
   use Mix.Project
 
-  @version "0.14.0"
+  @version "0.15.0"
 
   def project do
     [
@@ -209,25 +209,10 @@ defmodule ExNVR.Umbrella.MixProject do
       Homepage: https://github.com/evercam/ex_nvr
       """)
 
-      File.write!(Path.join([dest, "usr", "lib", "systemd", "system", "ex_nvr.service"]), """
-      [Unit]
-      Description=ExNVR: Network Video Recorder
-      After=network.target
-
-      [Service]
-      Type=simple
-      User=root
-      Group=root
-      ExecStart=/opt/ex_nvr/run
-      Restart=always
-      RestartSec=1
-      SyslogIdentifier=ex_nvr
-      WorkingDirectory=/opt/ex_nvr
-      LimitNOFILE=8192
-
-      [Install]
-      WantedBy=multi-user.target
-      """)
+      File.write!(
+        Path.join([dest, "usr", "lib", "systemd", "system", "ex_nvr.service"]),
+        systemd_service_content()
+      )
 
       {_result, 0} =
         System.cmd("dpkg-deb", ["--root-owner-group", "--build", name],
@@ -253,4 +238,26 @@ defmodule ExNVR.Umbrella.MixProject do
   defp get_debian_arch("x86_64"), do: "amd64"
   defp get_debian_arch("aarch64"), do: "arm64"
   defp get_debian_arch("arm"), do: "armhf"
+
+  defp systemd_service_content() do
+    """
+    [Unit]
+    Description=ExNVR: Network Video Recorder
+    After=network.target
+
+    [Service]
+    Type=simple
+    User=root
+    Group=root
+    ExecStart=/opt/ex_nvr/run
+    Restart=always
+    RestartSec=1
+    SyslogIdentifier=ex_nvr
+    WorkingDirectory=/opt/ex_nvr
+    LimitNOFILE=8192
+
+    [Install]
+    WantedBy=multi-user.target
+    """
+  end
 end

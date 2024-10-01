@@ -14,10 +14,10 @@ defmodule ExNVRWeb.CoreComponents do
 
   Icons are provided by [heroicons](https://heroicons.com). See `icon/1` for usage.
   """
+  use Gettext, backend: ExNVRWeb.Gettext
   use Phoenix.Component
 
   alias Phoenix.LiveView.JS
-  import ExNVRWeb.Gettext
 
   @doc """
   Renders a modal.
