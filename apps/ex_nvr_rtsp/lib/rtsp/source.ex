@@ -31,7 +31,7 @@ defmodule ExNVR.RTSP.Source do
               ],
               keep_alive_interval: [
                 spec: non_neg_integer(),
-                default: Time.seconds(5),
+                default: Time.seconds(15),
                 description: """
                 Send a heartbeat to the RTSP server at a regular interval to
                 keep the session alive.
