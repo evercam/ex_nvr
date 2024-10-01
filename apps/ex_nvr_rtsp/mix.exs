@@ -33,7 +33,7 @@ defmodule ExNvrRtsp.MixProject do
       {:membrane_core, "~> 1.1"},
       {:ex_rtp, "~> 0.4.0"},
       {:ex_rtcp, "~> 0.4.0"},
-      {:membrane_rtsp, "== 0.7.1"},
+      {:membrane_rtsp, "~> 0.10.0"},
       {:membrane_h26x_plugin, "~> 0.10.0"},
       {:dialyxir, ">= 0.0.0", only: :dev, runtime: false},
       {:credo, ">= 0.0.0", only: :dev, runtime: false},

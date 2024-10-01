@@ -31,7 +31,7 @@ defmodule ExNVR.RTSP.Source do
               ],
               keep_alive_interval: [
                 spec: non_neg_integer(),
-                default: Time.seconds(15),
+                default: Time.seconds(5),
                 description: """
                 Send a heartbeat to the RTSP server at a regular interval to
                 keep the session alive.
@@ -80,18 +80,19 @@ defmodule ExNVR.RTSP.Source do
   @impl true
   def handle_setup(_ctx, state) do
     state = ConnectionManager.establish_connection(state)
-
     {:tcp, socket} = List.first(state.tracks).transport
-    :ok = Membrane.RTSP.transfer_socket_control(state.rtsp_session, self())
-    :ok = :inet.setopts(socket, buffer: @initial_recv_buffer)
-
     {[start_timer: {:check_recbuf, Time.seconds(10)}], %{state | socket: socket}}
   end
 
   @impl true
   def handle_playing(_ctx, state) do
     Process.send_after(self(), :recv, 0)
-    {[], ConnectionManager.play(state)}
+
+    state = ConnectionManager.play(state)
+    :ok = Membrane.RTSP.transfer_socket_control(state.rtsp_session, self())
+    :ok = :inet.setopts(state.socket, buffer: @initial_recv_buffer, active: false)
+
+    {[], state}
   end
 
   @impl true
@@ -150,7 +151,8 @@ defmodule ExNVR.RTSP.Source do
 
   @impl true
   def handle_info(:keep_alive, _ctx, state) do
-    {[], ConnectionManager.keep_alive(state)}
+    Task.start(fn -> ConnectionManager.keep_alive(state) end)
+    {[], state}
   end
 
   @impl true

@@ -58,13 +58,13 @@ defmodule ExNVR.DiskMonitor do
     if Kernel.function_exported?(:disksup, :get_disk_info, 1) do
       case :disksup.get_disk_info(device.storage_config.address) do
         [] -> 0
-        [{_mountpoint, 0, avail, _percentage}] -> 0
+        [{_mountpoint, 0, _avail, _percentage}] -> 0
         [{_mountpoint, total, avail, _percentage}] -> (1 - avail / total) * 100
       end
     else
       :disksup.get_disk_data()
       |> Enum.map(fn {mountpoint, _total, usage} -> {to_string(mountpoint), usage} end)
-      |> Enum.find(& elem(&1, 0) == device.storage_config.address, {nil, 0})
+      |> Enum.find(&(elem(&1, 0) == device.storage_config.address), {nil, 0})
       |> elem(1)
     end
   end

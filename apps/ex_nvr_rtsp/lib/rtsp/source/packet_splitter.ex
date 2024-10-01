@@ -57,21 +57,5 @@ defmodule ExNVR.RTSP.Source.PacketSplitter do
   end
 
   defp handle_rtsp_response(nil, _response), do: :ok
-
-  defp handle_rtsp_response(session, response) do
-    case RTSP.handle_response(session, response) do
-      {:ok, %RTSP.Response{status: 200}} ->
-        :ok
-
-      {:ok, %RTSP.Response{status: 401}} ->
-        RTSP.get_parameter_no_response(session)
-
-      {:error, reason} ->
-        raise """
-        An error occurred while parsing rtsp response
-        Response: #{inspect(response)}
-        Reason: #{inspect(reason)}
-        """
-    end
-  end
+  defp handle_rtsp_response(session, response), do: RTSP.handle_response(session, response)
 end

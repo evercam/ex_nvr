@@ -46,7 +46,7 @@ defmodule ExNVR.RTSP.Source.ConnectionManager do
   end
 
   @spec play(State.t()) :: State.t()
-  def play(%State{transport: {:udp, _, _}} = state) do
+  def play(state) do
     Membrane.Logger.debug("ConnectionManager: Setting RTSP on play mode")
 
     case RTSP.play(state.rtsp_session) do
@@ -58,24 +58,11 @@ defmodule ExNVR.RTSP.Source.ConnectionManager do
     end
   end
 
-  def play(%State{transport: :tcp} = state) do
-    Membrane.Logger.debug("ConnectionManager: Setting RTSP on play mode")
-
-    RTSP.play_no_response(state.rtsp_session)
-    %{state | keep_alive_timer: start_keep_alive_timer(state)}
-  end
-
   @spec keep_alive(State.t()) :: State.t()
   def keep_alive(state) do
     Membrane.Logger.debug("Send GET_PARAMETER to keep session alive")
 
-    case state.transport do
-      :tcp ->
-        RTSP.get_parameter_no_response(state.rtsp_session)
-
-      {:udp, _port_range_start, _port_range_end} ->
-        {:ok, %{status: 200}} = RTSP.get_parameter(state.rtsp_session)
-    end
+    {:ok, %{status: 200}} = RTSP.get_parameter(state.rtsp_session)
 
     %{state | keep_alive_timer: start_keep_alive_timer(state)}
   end
