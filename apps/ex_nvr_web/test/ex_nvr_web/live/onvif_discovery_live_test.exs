@@ -17,8 +17,6 @@ defmodule ExNVRWeb.OnvifDiscoveryLiveTest do
     {:ok, lv, html} = live(conn, ~p"/onvif-discovery")
 
     assert html =~ "Discover Devices"
-    assert html =~ "Found Devices"
-    assert html =~ "Device Details"
 
     assert lv
            |> form("#discover_form")
@@ -136,7 +134,14 @@ defmodule ExNVRWeb.OnvifDiscoveryLiveTest do
       {:ok, lv, _html} = live(conn, ~p"/onvif-discovery")
 
       lv |> form("#discover_form") |> render_submit()
-      html = lv |> element("li[phx-click='device-details']") |> render_click()
+      lv |> element("li[phx-click='select-device']") |> render_click()
+
+      html =
+        lv
+        |> form("#device_details_form")
+        |> render_submit(%{
+          "device_details_settings" => %{"username" => "admin", "password" => "password"}
+        })
 
       for term <- [
             "Evercam",
@@ -165,8 +170,23 @@ defmodule ExNVRWeb.OnvifDiscoveryLiveTest do
       {:ok, lv, _html} = live(conn, ~p"/onvif-discovery")
 
       lv |> form("#discover_form") |> render_submit()
-      lv |> element("li[phx-click='device-details']") |> render_click()
-      lv |> element("li[phx-click='device-details']") |> render_click()
+      lv |> element("li[phx-click='select-device']") |> render_click()
+
+      lv
+      |> form("#device_details_form")
+      |> render_submit(%{
+        "device_details_settings" => %{"username" => "admin", "password" => "password"}
+      })
+
+      lv |> element("button[phx-click='to-previous-step']") |> render_click()
+
+      lv |> element("li[phx-click='select-device']") |> render_click()
+
+      lv
+      |> form("#device_details_form")
+      |> render_submit(%{
+        "device_details_settings" => %{"username" => "admin", "password" => "password"}
+      })
 
       assert_called_exactly(Onvif.get_system_date_and_time(:_), 1)
       assert_called_exactly(Onvif.get_device_information(:_, :_), 1)
@@ -181,7 +201,13 @@ defmodule ExNVRWeb.OnvifDiscoveryLiveTest do
       {:ok, lv, _html} = live(conn, ~p"/onvif-discovery")
 
       lv |> form("#discover_form") |> render_submit()
-      lv |> element("li[phx-click='device-details']") |> render_click()
+      lv |> element("li[phx-click='select-device']") |> render_click()
+
+      lv
+      |> form("#device_details_form")
+      |> render_submit(%{
+        "device_details_settings" => %{"username" => "admin", "password" => "password"}
+      })
 
       {:ok, conn} =
         lv
