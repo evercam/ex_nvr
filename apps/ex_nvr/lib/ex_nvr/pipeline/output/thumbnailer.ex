@@ -86,7 +86,7 @@ defmodule ExNVR.Pipeline.Output.Thumbnailer do
   def handle_buffer(:input, _buffer, _ctx, state), do: {[], state}
 
   defp do_decode(buffer, state) do
-    with {:ok, decoded} <- state.decoder.decode(state.decoder_state, buffer),
+    with {:ok, decoded} <- decode(state, buffer),
          {:ok, scaled} <- scale(decoded, state),
          {:ok, jpeg_image} <- to_jpeg(scaled, state),
          :ok <- File.write(image_path(state.dest, buffer), jpeg_image) do
@@ -98,7 +98,13 @@ defmodule ExNVR.Pipeline.Output.Thumbnailer do
     end
   end
 
-  defp scale([], _state), do: {:ok, nil}
+  defp decode(state, buffer) do
+    with {:ok, []} <- state.decoder.decode(state.decoder_state, buffer) do
+      state.decoder.flush(state.decoder_state)
+    end
+  end
+
+  defp scale([], _state), do: {:error, nil}
   defp scale([buffer], state), do: Image.Scaler.scale(state.scaler, buffer.payload)
 
   defp to_jpeg(raw_image, state) do
@@ -106,6 +112,11 @@ defmodule ExNVR.Pipeline.Output.Thumbnailer do
   end
 
   defp image_path(dest_folder, buffer) do
-    Path.join(dest_folder, "#{Membrane.Buffer.get_dts_or_pts(buffer)}.jpg")
+    filename =
+      if Application.get_env(:ex_nvr, :env) == :test,
+        do: "#{Membrane.Buffer.get_dts_or_pts(buffer)}.jpg",
+        else: "#{DateTime.utc_now() |> DateTime.to_unix()}.jpg"
+
+    Path.join(dest_folder, filename)
   end
 end
