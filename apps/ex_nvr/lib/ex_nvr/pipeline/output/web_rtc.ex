@@ -94,7 +94,10 @@ defmodule ExNVR.Pipeline.Output.WebRTC do
 
   @impl true
   def handle_pad_removed(Pad.ref(:input, :main_stream), _ctx, state) do
-    Engine.message_endpoint(state.rtc_engine, state.stream_endpoint_id, :remove_track)
+    if state.encoding == :H264 do
+      Engine.message_endpoint(state.rtc_engine, state.stream_endpoint_id, :remove_track)
+    end
+
     {[remove_children: :sink], %{state | encoding: nil}}
   end
 
@@ -199,11 +202,11 @@ defmodule ExNVR.Pipeline.Output.WebRTC do
     Membrane.Logger.error("Stream endpoint #{endpoint_id} crashed")
     Engine.add_endpoint(state.rtc_engine, %Output.WebRTC.StreamEndpoint{}, id: endpoint_id)
 
-    if state.media_track do
+    if state.encoding do
       Engine.message_endpoint(
         state.rtc_engine,
         endpoint_id,
-        {:media_track, state.media_track}
+        {:encoding, state.encoding}
       )
     end
 

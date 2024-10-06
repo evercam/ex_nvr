@@ -51,20 +51,20 @@ defmodule ExNVR.RTSP.Source.ConnectionManager do
 
     case RTSP.play(state.rtsp_session) do
       {:ok, %{status: 200}} ->
-        %{state | keep_alive_timer: start_keep_alive_timer(state)}
+        %{state | keep_alive_timer: start_keep_alive_timer(state, self())}
 
       _error ->
         handle_rtsp_error(:play_rtsp_failed, state)
     end
   end
 
-  @spec keep_alive(State.t()) :: State.t()
-  def keep_alive(state) do
+  @spec keep_alive(State.t(), pid()) :: State.t()
+  def keep_alive(state, pid) do
     Membrane.Logger.debug("Send GET_PARAMETER to keep session alive")
 
     {:ok, %{status: 200}} = RTSP.get_parameter(state.rtsp_session)
 
-    %{state | keep_alive_timer: start_keep_alive_timer(state)}
+    %{state | keep_alive_timer: start_keep_alive_timer(state, pid)}
   end
 
   @spec start_rtsp_connection(State.t()) :: connection_establishment_phase_return()
@@ -112,9 +112,9 @@ defmodule ExNVR.RTSP.Source.ConnectionManager do
     end
   end
 
-  @spec start_keep_alive_timer(State.t()) :: reference()
-  defp start_keep_alive_timer(%{keep_alive_interval: interval}) do
-    Process.send_after(self(), :keep_alive, interval |> Membrane.Time.as_milliseconds(:round))
+  @spec start_keep_alive_timer(State.t(), pid()) :: reference()
+  defp start_keep_alive_timer(%{keep_alive_interval: interval}, pid) do
+    Process.send_after(pid, :keep_alive, interval |> Membrane.Time.as_milliseconds(:round))
   end
 
   @spec setup_rtsp_connection_with_tcp(RTSP.t(), [track()]) ::

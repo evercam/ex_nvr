@@ -151,7 +151,8 @@ defmodule ExNVR.RTSP.Source do
 
   @impl true
   def handle_info(:keep_alive, _ctx, state) do
-    Task.start(fn -> ConnectionManager.keep_alive(state) end)
+    pid = self()
+    Task.start(fn -> ConnectionManager.keep_alive(state, pid) end)
     {[], state}
   end
 
