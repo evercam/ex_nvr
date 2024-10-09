@@ -80,6 +80,8 @@ config :os_mon,
 
 config :bundlex, :disable_precompiled_os_deps, apps: [:ex_libsrtp]
 
+config :req, legacy_headers_as_lists: true
+
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
 import_config "#{config_env()}.exs"
