@@ -1,0 +1,1474 @@
+openapi: 3.0.0
+info:
+  title: ExNVR API
+  description: Manage ExNVR via API endpoints
+  version: 0.15.2
+servers:
+  - url: '{protocol}://{host}:{port}'
+    variables:
+      protocol:
+        enum: [http, https]
+        default: http
+      host:
+        default: localhost
+      port:
+        default: "4000"
+paths:
+  /api/users/login:
+    post:
+      summary: Login user
+      description: |
+        Login the user into the system
+
+        The issued access token has a validity of `2 days`.
+      operationId: login
+      tags:
+        - User
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+              required: [username, password]
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                    description: An access token to use to authorize subsequent requests
+        '400':
+          $ref: "#/components/responses/BadArg"
+  /api/users:
+    get: 
+      summary: Get all users.
+      description: Get all existing users.
+      operationId: getUsers
+      tags:
+        - User
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+    post:
+      summary: Create user
+      description: |
+        Create a new user.
+      operationId: createUser
+      tags:
+        - User
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                first_name:
+                  type: string
+                  description: User first name
+                last_name:
+                  type: string
+                  description: User last name
+                email:
+                  type: string
+                  description: User email
+                role:
+                  type: string
+                  enum: ["admin", "user"]
+                  default: admin
+                  description: |
+                    User's role.
+
+                    * `admin` - Has access to all features.
+                    * `user` - Has only "read" access to devices, recordings as well as streaming features.
+                      Does not have access to Onvif Discovery and users management.
+                language:
+                  type: string
+                  enum: ["en"]
+                  default: en
+                  description: |
+                    User's application language.
+
+                    * Only english available for now.              
+              required: [first_name, last_name, email]
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          $ref: "#/components/responses/BadArg"
+        '403':
+          $ref: "#/components/responses/Unauthorized"
+  /api/users/{user_id}:
+    parameters:
+      - $ref: '#/components/parameters/user_id'
+    get: 
+      summary: Get user
+      description: Get user by id.
+      operationId: getUser
+      tags:
+        - User
+      responses:
+        '200':
+            description: Success
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/User'
+        '404':
+          $ref: "#/components/responses/NotFound"
+        '403':
+          $ref: "#/components/responses/Unauthorized"
+    put:
+      summary: Update user
+      description: |
+        Update user details.
+      operationId: updateUser
+      tags:
+        - User
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                first_name:
+                  type: string
+                  description: User first name
+                last_name:
+                  type: string
+                  description: User last name
+                email:
+                  type: string
+                  description: User email
+                role:
+                  type: string
+                  enum: ["admin", "user"]
+                  default: admin
+                  description: |
+                    User's role.
+
+                    * `admin` - Has access to all features.
+                    * `user` - Has only "read" access to devices, recordings as well as streaming features.
+                      Does not have access to Onvif Discovery and users management.
+                language:
+                  type: string
+                  enum: ["en"]
+                  default: en
+                  description: |
+                    User's application language.
+
+                    * Only english available for now.
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          $ref: "#/components/responses/BadArg"
+        '403':
+          $ref: "#/components/responses/Unauthorized"
+    delete: 
+      summary: Delete user
+      description: |
+        Delete a user giving the user id
+
+        All associated will be removed along the user's deletion.
+      operationId: deleteUser
+      tags:
+        - User
+      responses:
+        '204':
+            description: Success
+        '404':
+          $ref: "#/components/responses/NotFound"
+        '403':
+          $ref: "#/components/responses/Unauthorized"
+  /api/remote_storages:
+    get: 
+      summary: Get all remote storages.
+      description: Get all existing remote storages.
+      operationId: getRemoteStorages
+      tags:
+        - RemoteStorage
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RemoteStorage'
+    post:
+      summary: Create a remote storage.
+      description: |
+        Create a new remote storage.
+      operationId: createRemoteStorage
+      tags:
+        - RemoteStorage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: Remote Storage name
+                url:
+                  type: string
+                  description: Remote Storage url
+                type:
+                  type: string
+                  enum: ["s3", "http"]
+                  description: The type of the remote storage.   
+                s3_config:
+                  $ref: "#/components/schemas/S3Config"
+                http_config:
+                  $ref: "#/components/schemas/HttpConfig"
+
+              required: [name, url, type]
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RemoteStorage'
+        '400':
+          $ref: "#/components/responses/BadArg"
+        '403':
+          $ref: "#/components/responses/Unauthorized"
+  /api/remote_storages/{remote_storage_id}:
+    parameters:
+      - $ref: '#/components/parameters/remote_storage_id'
+    get: 
+      summary: Get remote storage
+      description: Get remote storage by id.
+      operationId: getRemoteStorage
+      tags:
+        - RemoteStorage
+      responses:
+        '200':
+            description: Success
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/RemoteStorage'
+        '404':
+          $ref: "#/components/responses/NotFound"
+        '403':
+          $ref: "#/components/responses/Unauthorized"
+    put:
+      summary: Update a Remote Storage
+      description: |
+        Update Remote Storage details.
+      operationId: updateRemoteStorage
+      tags:
+        - RemoteStorage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                url:
+                  type: string
+                  description: Remote Storage url
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RemoteStorage'
+        '400':
+          $ref: "#/components/responses/BadArg"
+        '403':
+          $ref: "#/components/responses/Unauthorized"
+    delete: 
+      summary: Delete a remote storage
+      description: |
+        Delete a remote storage identified by the provided id.
+      operationId: deleteRemoteStorage
+      tags:
+        - RemoteStorage
+      responses:
+        '204':
+            description: Success
+        '404':
+          $ref: "#/components/responses/NotFound"
+        '403':
+          $ref: "#/components/responses/Unauthorized"
+  /api/devices:
+    get: 
+      summary: Get all devices.
+      description: Get all existing devices.
+      operationId: getDevices
+      tags:
+        - Device
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Device'
+    post:
+      summary: Create device
+      description: |
+        Create a new device.
+
+        Once the device is created, a pipeline will be started and will attempt to connect and 
+        retrieve a stream from it.
+      operationId: createDevice
+      tags:
+        - Device
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: Device name
+                type:
+                  type: string
+                  enum: [ip, file]
+                  description: Device type
+                vendor:
+                  type: string
+                  description: Device vendor
+                mac:
+                  type: string
+                  description: Device mac address
+                url:
+                  type: string
+                  description: Device url
+                model:
+                  type: string
+                  description: Device model  
+                timezone:
+                  type: string
+                  description: Device timezone
+                  default: UTC
+                state:
+                  type: string
+                  enum: ["recording", "stopped"]
+                  default: recording
+                  description: |
+                    Initial state of the device.
+
+                    * `recording` - The device will attempt connecting and recording videos
+                    on creation
+                    * `stopped` - The device will be created and will not try to connect or record
+                    videos.
+                stream_config:
+                  $ref: "#/components/schemas/StreamConfig"
+                credentials:
+                  $ref: "#/components/schemas/Credentials"
+                settings:
+                  $ref: "#/components/schemas/DeviceSettings"
+                storage_config: 
+                  $ref: "#/components/schemas/DeviceStorageConfig"
+                snapshot_config:
+                  $ref: "#/components/schemas/DeviceSnapshotConfig"
+              required: [name, type, storage_config]
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Device'
+        '400':
+          $ref: "#/components/responses/BadArg"
+        '403':
+          $ref: "#/components/responses/Unauthorized"
+  /api/devices/{device_id}:
+    parameters:
+      - $ref: '#/components/parameters/device_id'
+    get: 
+      summary: Get device
+      description: Get device by id.
+      operationId: getDevice
+      tags:
+        - Device
+      responses:
+        '200':
+            description: Success
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/Device'
+        '404':
+          $ref: "#/components/responses/NotFound"
+    put:
+      summary: Update device
+      description: |
+        Update device details.
+
+        If the device config (e.g. `stream_config`) is updated, the pipeline is restarted 
+        to pick up the new configuration.
+      operationId: updateDevice
+      tags:
+        - Device
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: Device name
+                vendor:
+                  type: string
+                  description: Device vendor
+                mac:
+                  type: string
+                  description: Device mac address
+                url:
+                  type: string
+                  description: Device url
+                model:
+                  type: string
+                  description: Device model
+                timezone:
+                  type: string
+                  description: Device timezoned
+                  default: UTC
+                state:
+                  type: string
+                  enum: ["recording", "stopped"]
+                  default: recording
+                  description: |
+                    Initial state of the device.
+
+                    * `recording` - The device will attempt connecting and recording videos
+                    on creation
+                    * `stopped` - The device will be created and will not try to connect or record
+                    videos.
+                stream_config:
+                  $ref: "#/components/schemas/StreamConfig"
+                credentials:
+                  $ref: "#/components/schemas/Credentials"
+                settings:
+                  $ref: "#/components/schemas/DeviceSettings"
+                storage_config: 
+                  $ref: "#/components/schemas/DeviceStorageConfig"
+                snapshot_config:
+                  $ref: "#/components/schemas/DeviceSnapshotConfig"
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Device'
+        '400':
+          $ref: "#/components/responses/BadArg"
+        '403':
+          $ref: "#/components/responses/Unauthorized"
+    delete: 
+      summary: Delete device
+      description: |
+        Delete a device giving the device id
+
+        The actual recording files are not deleted. 
+        If you want to delete them delete the folder:
+
+          `{device.settings.storage_address}/ex_nvr/{device.id}`
+      operationId: deleteDevice
+      tags:
+        - Device
+      responses:
+        '204':
+          description: Success
+        '404':
+          $ref: "#/components/responses/NotFound"
+        '403':
+          $ref: "#/components/responses/Unauthorized"
+  /api/recordings/chunks:
+    get:
+      summary: Get recordings chunks
+      description: | 
+        Get all the recorded videos chunks order by decreasing start date.
+      operationId: getRecordingChunks
+      tags:
+        - Recording
+      parameters:
+        - $ref: '#/components/parameters/stream_type'
+        - $ref: '#/components/parameters/filters'
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/page_size'
+        - $ref: '#/components/parameters/order_by'
+        - $ref: '#/components/parameters/order_directions'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Recording'
+                  meta:
+                    $ref: '#/components/schemas/ResultMeta'
+        '400':
+          $ref: "#/components/responses/BadArg"
+  /api/devices/{device_id}/recordings:
+    get:
+      summary: Get recordings
+      description: Get all dates where there's available footages
+      operationId: getRecordings
+      tags:
+        - Recording
+      parameters:
+        - $ref: '#/components/parameters/device_id'
+        - $ref: '#/components/parameters/stream_type'
+        - name: start_date
+          in: query
+          required: false
+          description: Filter by start date
+          schema:
+            type: string
+            format: date-time
+          example: 2023-01-15T10:00:01Z
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    start_date:
+                      type: string
+                      format: date-time
+                      description: The start date of the run
+                    end_date:
+                      type: string
+                      format: date-time
+                      description: The end date of the run
+                    active:
+                      type: boolean
+                      description: |
+                        `true` if this an active run (still recording), `false` otherwise
+        '400':
+          $ref: "#/components/responses/BadArg"
+  /api/devices/{device_id}/recordings/{recording_id}/blob:
+    get:
+      summary: Get recording blob
+      description: | 
+        Download the video chunk with the specified `recording id` in the specified `device`
+      operationId: getRecordingBlob
+      tags:
+        - Recording
+      parameters:
+        - $ref: '#/components/parameters/device_id'
+        - $ref: '#/components/parameters/recording_id'
+        - $ref: '#/components/parameters/stream_type'
+      responses:
+        '200':
+          description: Success
+          content:
+            video/mp4:
+              schema:
+                type: string
+                format: binary
+        '400':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: The error message
+  /api/devices/{device_id}/hls/index.m3u8:
+    get:
+      summary: Start HLS streaming
+      description: | 
+        Start HLS live view streaming or playback of recorded videos.
+
+        By default, there'll be no transcoding since we currently only support H264, the stream is 
+        muxed as it is into fMP4 files.
+
+        If the device has sub stream provided, the manifest will also contain the lower resolution.
+
+        For playback, only the high resolution stream can be provided, since we don't support storing
+        sub-streams to file system.
+
+        ## Stream Selection
+
+        if the `stream` query parameter is provided, only the requested stream will be included in the 
+        manifest. 
+        
+        Note that we don't do any checks on the existence of the requested stream (e.g. if you 
+        request the sub stream and the device has no sub stream, then you'll get an empty manifest).
+      operationId: startHlsStreaming
+      tags:
+        - Media Streaming
+      parameters:
+        - $ref: '#/components/parameters/device_id'
+        - $ref: '#/components/parameters/stream_type'
+        - name: pos
+          in: query
+          description: |
+            Start streaming from the given date time.
+
+            If this `param` is provided, only high quality is enabled 
+          schema:
+            type: string
+            format: date-time
+        - duration:
+          in: query
+          description: |
+            Set the duration of the stream.
+
+            0 means no duration.
+          default: 0
+          schema:
+            type: integer
+        - name: resolution
+          in: query
+          description: |
+            The resolution (height) of the video, defaults to `nil`. If provided the video will be
+            trancoded.
+
+            Transcoding is a CPU intensive operation.
+          schema:
+            type: integer
+            enum: [240, 480, 640, 720, 1080] 
+      responses:
+        '200':
+          description: Success
+          content:
+            application/vnd.apple.mpegurl:
+              schema:
+                type: string
+  /api/devices/{device_id}/snapshot:
+    get:
+      summary: Get snapshot
+      description: |
+        Get a snapshot from live feed or the recorded videos.
+      operationId: getSnapshot
+      tags:
+        - Media Streaming
+      parameters:
+        - $ref: '#/components/parameters/device_id'
+        - name: time
+          in: query
+          required: false
+          description: |
+            Timestamp of the requested snapshot.
+
+            A missing or `null` value means `now`, the latest snapshot from the live feed. 
+          schema:
+            type: string
+            format: date-time
+          example: '2023-10-10T10:00:00Z'
+        - name: method
+          in: query
+          required: false
+          description: |
+            Getting a snapshot at the exact timestamp is costly, so, it can be rounded 
+            to the nearest keyframe, thus, the default value is "before".
+
+            Possible values are:
+              * `before` - Get the snapshot from the nearest keyframe before the requested timestamp.
+              * `precise` - Get the snapshot as near as possible from the requested timestamp.
+          schema:
+            type: string
+            enum: [before, precise]
+        - name: format
+          in: query
+          required: false
+          description: Image format
+          schema:
+            type: string
+            enum: [jpeg]
+        - $ref: '#/components/parameters/stream_type'
+      responses:
+        '200':
+          description: success
+          headers:
+            x-timestamp:
+              schema: 
+                type: integer
+              description: Timestamp of the snapshot in milliseconds since unix epoch.
+          content:
+            image/jpeg:
+              schema:
+                type: string
+                format: byte
+        '400':
+          $ref: '#/components/responses/NotFound'
+  /api/devices/{device_id}/footage:
+    get:
+      summary: Download video footage
+      description: |
+        Download footages in the `mp4` format up to a maximum of 2 hours.
+
+        ### Duration and End date
+        
+        In addition to the query parameter `start_date` which is required, either `end_date` 
+        or `duration` should be provided.
+
+        If the `end_date` is provided, the total time between `start_date` and `end_date` should be within 
+        2 hours.
+
+        ### Downloaded Footage Start Date
+        
+        Note that for this endpoint to be efficient, there's no transcoding done 
+        to the recorded footage. So the start date of the downloaded video may not
+        be the same as the requested one through `start_date` since we need to 
+        start the footage from the nearest keyframe before the provided start date.
+
+        ### Recording Discontinuity
+
+        A discontinuity in the recorded videos may be present due to several reasons (e.g. lost 
+        connection to the camera, NVR reboot, ...etc.). In this case the video duration may not be 
+        the one expected.
+
+        In the case `end_date` is provided, the interval between `start_date` and `end_date` will be greater
+        or equal to the duration of the downloaded video
+
+        In the case `duration` is provided, the end date reported in the downloaded video may be far from 
+        the `start_date + duration`.
+      operationId: downloadFootage
+      tags:
+        - Media Streaming
+      parameters:
+        - $ref: '#/components/parameters/device_id'
+        - $ref: '#/components/parameters/stream_type'
+        - name: start_date
+          in: query
+          required: true
+          description: |
+            Start date of the footage.
+          schema:
+            type: string
+            format: date-time
+        - name: end_date
+          in: query
+          required: false
+          description: |
+            The end date of the footage.
+
+            If `end_date` and `duration` is provided, the first condition
+            that's met will end the video footage.
+          schema:
+            type: string
+            format: date-time
+        - name: duration
+          in: query
+          required: false
+          description: | 
+            The duration of the footage in seconds.
+
+            If `end_date` and `duration` is provided, the first condition
+            that's met will end the video footage.
+          schema:
+            type: integer
+            minimum: 5
+            maximum: 7200
+      responses:
+        '200':
+          description: success
+          headers:
+            x-start-date:
+              schema: 
+                type: integer
+              description: |
+                Since the video must start from the nearest keyframe before the requested start date. 
+                
+                This header reports the actual start date in milliseconds unix timestamp.
+          content:
+            video/mp4:
+              schema:
+                type: string
+                format: binary
+        '400':
+          $ref: '#/components/responses/BadArg'
+  /api/devices/{device_id}/bif/{hour}:
+    get:
+      summary: Download BIF file
+      description: |
+        Download [BIF](https://developer.roku.com/en-gb/docs/developer-program/media-playback/trick-mode/bif-file-creation.md) (Base Index Frames) files.
+
+        `BIF` files are used for trick mode (play) and generated perdiocally on a 1-hour increments, therefore
+        they're not available for live content or content that's not older than one hour.
+      operationId: downloadBif
+      tags:
+        - Media Streaming
+      parameters:
+        - $ref: '#/components/parameters/device_id'
+        - name: hour
+          in: path
+          required: true
+          description: |
+            The hour of the BIF file.
+          schema:
+            type: string
+            format: date-time
+            example: 2023-08-31T13:00:00Z
+      responses:
+        '200':
+          description: success
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: byte
+        '400':
+          $ref: '#/components/responses/BadArg'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/onvif/discover:
+    post:
+      summary: Onvif discovery
+      description: |
+        Scan the local network for Onvif compliant devices.
+
+        The following information are retrieved from the devices:
+          
+          * The url, name and hardware.
+          * Date time settings
+          * Basic information about the device (vendor, model, firware version, ...etc.)
+          * Available Network interfaces
+          * Media profiles (including stream uri and snapshot uri).
+
+        Most of the operations above needs authentication, so if a `username` and `password` are not provided,
+        only public information are retrieved, the other fields will contain a `null` or `empty` values.
+
+        The schema of the data above can be looked up on the onvif wsdl documents [here](https://www.onvif.org/ver10/device/wsdl/devicemgmt.wsdl) 
+        and [here](https://www.onvif.org/ver20/media/wsdl/media.wsdl).
+
+        ***Note***
+
+        This endpoint is also available using http `GET`, The request body should be sent as query params 
+      operationId: onvifDiscovery
+      tags: [Onvif]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                timeout:
+                  type: integer
+                  description: Maximum time to wait for a response from an onvif device to discovery requests.
+                  minimum: 1
+                  maximum: 60
+                username:
+                  type: string
+                  description: username to use to authorize requests to discovered devices.
+                password:
+                  type: string
+                  description: password to use to authorize requests to discovered devices.
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  name:
+                    type: string
+                    description: Name of the discovered device
+                  url:
+                    type: string
+                    format: uri
+                    description: The url of the discovered device
+                  hardware:
+                    type: string
+                    description: The hardware reference of the discovered device
+                  date_time_settings:
+                    type: object
+                    description: Date time settings of the device (see GetSystemDateAndTime on onvif spec)
+                  device_information:
+                    type: object
+                    description: Basic device information (see GetDeviceInformation on onvif spec)
+                  network_interfaces:
+                    type: object
+                    description: Network interfaces (see GetNetworkInterfaces on onvif spec)
+                  media_profiles:
+                    type: object
+                    description: Media profiles including stream and snapshot uris (see GetProfiles, GetStreamUri and GetSnapshotUri on onvif spec)
+        '400':
+          $ref: "#/components/responses/BadArg"
+  /api/devices/{device_id}/events:
+    post:
+      summary: Create an event
+      description: |
+        Create a new event.
+
+        The endpoint is a webhook to be used by third party services to push events to the NVR.
+
+        ## Event Types
+        ### LPR
+        Some IP Cameras has support for `LPR` (License Plate Recognizer) and they can be configured to 
+        push event via webhook in realtime. Since each camera event has a different schema, we have parsers 
+        for each type of IP Camera that we need to support.
+
+        Currently we support the following camera:
+          * Milesight
+
+        ## Authorization
+        Since event are pushed by third party systems, we need to authenticate this requests. For this
+        we need to create a `webhook` token. A webhook token has no expiry date and only authorize this 
+        endpoint.
+
+        The webhook token should be sent in the `Authorization` header (recommneded) or as a query param `token`.
+        ```
+        curl -XPOST http://my.server/api/devices/:device_id/events?event_type=lpr&token=mytoken
+        ```
+      operationId: createEvent
+      tags:
+        - Event
+      parameters:
+        - $ref: '#/components/parameters/device_id'
+        - name: event_type
+          in: query
+          required: true
+          description: The event type
+          schema:
+            type: string
+            enum: [lpr]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: Created
+        '400':
+          $ref: "#/components/responses/BadArg"
+        '404':
+          $ref: "#/components/responses/NotFound"
+  /api/events/lpr:
+    get:
+      summary: Get LPR events
+      description: Get all LPR events
+      operationId: getLPREvents
+      tags:
+        - Event
+      parameters:
+        - name: include_plate_image
+          in: query
+          required: false
+          description: |
+            Include base64 encoded plate images. This param is ignored if the event type is not `lpr`
+          schema:
+            type: boolean
+            default: false
+        - $ref: '#/components/parameters/filters'
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/page_size'
+        - $ref: '#/components/parameters/order_by'
+        - $ref: '#/components/parameters/order_directions'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LPREvent'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: opaque
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: user ID
+        first_name:
+          type: string
+          description: User first name
+        last_name:
+          type: string
+          description: User last name
+        username:
+          type: string
+          description: User username
+        email:
+          type: string
+          description: User email
+        role:
+          type: string
+          enum: ["admin", "user"]
+          description: |
+            User's role.
+
+            * `admin` - Has access to all features (Default).
+            * `user` - Has only "read" access to devices, recordings as well as streaming features.
+              Does not have access to Onvif Discovery and users management.
+        language:
+          type: string
+          enum: ["en"]
+          description: |
+            User's application language.
+            Default to: en (English)
+            * Only english available for now.
+    Credentials:
+      type: object
+      description: Streaming Device credentials (Only when Device type is ip)
+      properties:
+        username:
+          type: string
+          description: Username to authenticate
+        password:
+          type: string
+          format: password
+          description: Password to authenticate
+    LPREvent:
+      type: object
+      properties:
+        device_id:
+          type: string
+          format: uuid
+          description: The device id where the event belongs.
+        capture_time:
+          type: string
+          format: date-time
+          description: Capture time of the LPR event
+        plate_number:
+          type: string
+          description: Plate number of the LPR event
+        direction:
+          type: string
+          enum: [in, away]
+          description: Direction of the LPR Event
+        list_type:
+          type: string
+          enum: [white, black, other]
+        plate_image:
+          type: string
+          format: binary
+          description: The plate image
+        metadata:
+          type: object
+          properties:
+            confidence:
+              type: number
+              description: The confidence level of the recognized plate
+              minimum: 0.0
+              maximum: 1.0
+            bounding_box:
+              type: array
+              items:
+                type: number
+                minimum: 0.0
+                maximum: 1.0
+              minItems: 4
+              maxItems: 4
+              description: The normalized coordinates of the plate.
+            plate_color:
+              type: string
+              description: The color of the vehicle plate.
+            vehicle_type:
+              type: string
+              description: The type of the vehicle
+            vehicle_color:
+              type: string
+              description: The vehicle color.
+    RemoteStorage:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Remote storage id
+        name:
+          type: string
+          description: Remote storage name
+        url:
+          type: string
+          description: Remote storage url
+        type:
+          type: string
+          enum: ["s3", "http"]
+          description: The type of the remote storage..
+    S3Config:
+      type: object
+      properties:
+        bucket:
+          type: string
+          description: S3 bucket name.
+        region:
+          type: string
+          description: Remote Storage region
+          default: "us-east-1"
+        access_key_id:
+          type: string
+          description: Remote Storage access_key_id.
+        secret_access_key:
+          type: string
+          description: Remote Storage secret_access_key.
+    HttpConfig:
+      type: object
+      properties:
+        username:
+          type: string
+          description: Remote Storage username
+        password:
+          type: string
+          description: Remote Storage password
+        token:
+          type: string
+          description: Remote Storage token
+
+    Device:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Device ID
+        name:
+          type: string
+          description: Device name
+        type:
+          type: string
+          enum: [ip, file]
+          description: Device type
+        timezone:
+          type: string
+        state:
+          type: string
+          enum: [recording, failed, stopped]
+          description: Device state
+        stream_config:
+          $ref: "#/components/schemas/StreamConfig"
+        credentials:
+          $ref: "#/components/schemas/Credentials"
+        settings:
+          $ref: "#/components/schemas/DeviceSettings"
+        storage_config:
+          $ref: "#/components/schemas/DeviceStorageConfig"
+        snapshot_config:
+          $ref: "#components/schemas/DeviceSnapshotConfig"
+    DeviceStorageConfig:
+      type: object
+      description: Storage settings
+      properties:
+        address:
+          type: string
+          description: "The mountpoint/location where to store the device data"
+        record_sub_stream:
+          type: string
+          enum: [never, always]
+          description: |
+            When the sub stream should be recorded, it accept one of the following values:
+
+              * `never` - Do not record the sub stream.
+              * `always` - Always record the sub stream.
+        full_drive_threshold:
+          type: number
+          minimum: 0
+          maximum: 99
+          description: The percentage when a drive should be considered full.
+        full_drive_action:
+          type: string
+          enum: [nothing, overwrite]
+          description: |
+            The action to take when a drive is full, it can be one of the following values:
+
+              * `nothing` - Do nothing, keep recording.
+              * `overwrite` - Delete old recordings.
+      required: [address]
+    DeviceSnapshotConfig:
+      type: object
+      description: snapshot config
+      properties:
+        enabled:
+          type: boolean
+          default: false
+          description: Indicates if snapshot upload to remote storage is enabled for the device or not.
+        upload_interval:
+          type: number
+          minimum: 5
+          maximum: 3600
+          description: The interval in seconds for snapshots upload.
+        remote_storage:
+          type: string
+          description: The remote storage name where the snapshots will be uploaded
+        schedule:
+          type: object
+          description: |
+            Describe the time slots during which the snapshots are uploaded. 
+            The keys are the week days indexes (from 1 to 7) and the values are an array of time intervals.
+            If a key is missing, then it default value will be an empty array and no snapshots will be uploaded for this day.
+          example: 
+            1: ["08:00-20:00"]
+            2: ["08:00-18:00"]
+            3: ["08:00-12:00", "14:00-18:00"]
+            4: []
+            5: ["00:00-23:59"]
+            6: ["00:00-18:00"]
+            7: []
+    DeviceSettings:
+      type: object
+      description: Device settings that controls how the device behaves.
+      properties:
+        generate_bif:
+          type: boolean
+          default: true
+          description: Indicates whether BIF (Base Index File) used for trick play should be generated.
+      required: [storage_address]
+    Error:
+      type: object
+      properties:
+        code:
+          type: string
+          description: A unique error code
+        description:
+          type: string
+          description: The description of the error
+        details:
+          type: object
+          description: Other details related to the error.
+    Recording:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Recording unique id
+        filename:
+          type: string
+          description: The filename of the recording
+        start_date:
+          type: string
+          format: date-time
+          description: The start date of the recording
+        end_date:
+          type: string
+          format: date-time
+          description: The end date of the recording
+        device_id:
+          type: string
+          format: uuid
+          description: The device id where this recording belongs
+    ResultMeta:
+      type: object
+      properties:
+        current_page:
+          type: integer
+        page_size:
+          type: integer
+        total_count:
+          type: integer
+        total_pages:
+          type: integer
+    StreamConfig:
+      type: object
+      description: Device stream configuration
+      properties:
+        stream_uri:
+          type: string
+          format: uri
+          description: The RTSP URL where to get the video stream (Only when Device type is ip)
+        substream_uri:
+          type: string
+          format: uri
+          description: The RTSP URL where to get the video sub-stream (Only when Device type is ip)
+        location: 
+          type: string
+          format: path
+          description: The Path of the file location to be used as a streaming source (Only when Device type is file)
+  parameters:
+    remote_storage_id:
+      name: remote_storage_id
+      description: The id of the remote_storage
+      in: path
+      required: true
+      schema:
+        type: number
+      example: 11
+    device_id:
+      name: device_id
+      description: The id of the device
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      example: d0d83123-b3af-48b0-b9ea-2569179a7517
+    recording_id:
+      name: recording_id
+      description: The filename of the recording
+      in: path
+      required: true
+      schema:
+        type: string
+      example: 11236565645.mp4
+    stream_type:
+      name: stream
+      in: query
+      required: false
+      description: |
+        Stream type.
+
+        `auto` value means try `low` stream first if available and then `high` stream.
+      schema:
+        type: string
+        enum: [high, low, auto]
+        default: high
+    filters:
+      name: filters
+      in: query
+      required: false
+      explode: true
+      description: |
+        Apply a filter.
+
+        An example:
+        ```
+        filters[0][field]=device_id&filters[0][value]=value1&filters[1][field]=start_date&filters[1][op]=>=&filters[1][value]=2023-11-27T10:00:00Z
+        ```
+      schema:
+        type: array
+        items:
+          type: object
+          properties:
+            field:
+              type: string
+              description: The field to filter on
+            op:
+              type: string
+              description: The operator to use for comparison
+            value:
+              type: string
+              description: The value of the filter
+    order_by:
+      name: order_by[]
+      in: query
+      required: false
+      explode: true
+      description: |
+        Order by a field.
+
+        An example:
+        ```
+        order_by[]=name&order_by[]=age
+        ```
+      schema:
+        type: array
+        items:
+          type: string
+    order_directions:
+      name: order_directions[]
+      in: query
+      required: false
+      description: |
+        Specify the order direction.
+
+        An example:
+        ```
+        order_directions[]=asc&order_directions[]=desc
+        ```
+      schema:
+        type: array
+        items:
+          type: string
+    page:
+      name: page
+      in: query
+      required: false
+      explode: true
+      description: The requested page number
+      schema:
+        type: integer
+    page_size:
+      name: page_size
+      in: query
+      required: false
+      description: The size of the requested page.
+      schema:
+        type: integer
+    user_id:
+      name: user_id
+      description: The id of the user
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      example: 1d7c7f47-63c1-4bef-91a6-124cbaf3ecea
+  responses:
+    BadArg:
+      description: Bad Arguments
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    NotFound:
+        description: Not Found
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+    Unauthorized:
+        description: Unauthorized access
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+security:
+  - bearerAuth: []

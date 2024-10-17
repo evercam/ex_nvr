@@ -1,0 +1,185 @@
+<div class="container mx-auto p-4">
+  <div class="flex flex-wrap items-stretch justify-between content-between mb-4 gap-2">
+    <!-- Discover devices -->
+    <.card class="w-full md:w-1/3 bg-gray-300">
+      <h2 class="text-2xl font-bold mb-4 dark:text-white">Discover Devices</h2>
+      <.simple_form for={@discover_form} id="discover_form" phx-submit="discover">
+        <.input field={@discover_form[:username]} type="text" label="Username" />
+        <.input field={@discover_form[:password]} type="password" label="Password" />
+        <.input
+          field={@discover_form[:timeout]}
+          type="number"
+          min="1"
+          max="30"
+          label="Timeout (seconds)"
+        />
+
+        <:actions>
+          <.button phx-disable-with="Scanning...">Scan Network</.button>
+        </:actions>
+      </.simple_form>
+    </.card>
+    <!-- Found devices -->
+    <.card class="w-full md:w-3/5 p-4 h-[500px] overflow-y-auto bg-gray-300">
+      <h2 class="text-2xl font-bold mb-4 dark:text-white">Found Devices</h2>
+      <p :if={@discovered_devices == []} class="text-l dark:text-white">No devices found</p>
+
+      <ul class="bg-gray-300 dark:bg-gray-800 h-200 dark:text-white">
+        <li
+          :for={new_device <- @discovered_devices}
+          id={new_device.url}
+          class={
+            [
+              "mb-2 p-4 shadow-md rounded cursor-pointer"
+            ] ++
+              if @selected_device && @selected_device.url == new_device.url,
+                do: ["bg-gray-300 dark:bg-gray-500"],
+                else: ["bg-gray-400 dark:bg-gray-700"]
+          }
+          phx-click="device-details"
+          phx-value-url={new_device.url}
+        >
+          <span class="text-xl font-bold"><%= new_device.name %></span>
+          <br />
+          <span class="text-sm"><%= new_device.hardware %></span>
+          - <span class="text-sm"><%= new_device.url %></span>
+        </li>
+      </ul>
+    </.card>
+  </div>
+  <!-- Device details -->
+  <.card class="p-4 bg-gray-300">
+    <h2 class="text-2xl font-bold mb-4 gap-2 dark:text-white">Device Details</h2>
+    <div class="flex flex-wrap items-stretch justify-between content-between p-4 dark:text-white">
+      <!-- Device Information -->
+      <div class="md:w-1/3 p-5 border border-gray-400 card-shadow">
+        <h2 class="text-xl font-bold mb-4">Device Information</h2>
+        <p :if={!@device_details[:device_information]}>N/A</p>
+        <div :if={@device_details[:device_information]} class="mb-4 dark:text-gray-400">
+          <table class="w-full table-auto">
+            <tr :for={{key, value} <- @device_details[:device_information]}>
+              <td class="font-bold"><%= display_key(key) %></td>
+              <td class="break-anywhere"><%= value %></td>
+            </tr>
+          </table>
+        </div>
+      </div>
+      <!-- Time Settings -->
+      <div class="md:w-1/4 p-5 border border-gray-400 card-shadow">
+        <h2 class="text-xl font-bold mb-4">Time Settings</h2>
+        <p :if={!@device_details[:date_time_settings]}>N/A</p>
+        <div :if={@device_details[:date_time_settings]} class="dark:text-gray-400 mb-4">
+          <table class="w-full table-auto">
+            <tr :for={{key, value} <- @device_details[:date_time_settings]}>
+              <td class="font-bold"><%= display_key(key) %></td>
+              <td class="break-anywhere"><%= value %></td>
+            </tr>
+          </table>
+        </div>
+      </div>
+      <!-- Network Interface -->
+      <div class="md:w-1/4 p-5 border border-gray-400 card-shadow">
+        <h2 class="text-xl font-bold mb-4">Network Interface</h2>
+        <p :if={!@device_details[:network_interface]}>N/A</p>
+        <div :if={@device_details[:network_interface]} class="dark:text-gray-400 mb-4">
+          <table class="w-full table-auto">
+            <tr :for={{key, value} <- @device_details[:network_interface]}>
+              <td class="font-bold"><%= display_key(key) %></td>
+              <td class="break-anywhere"><%= value %></td>
+            </tr>
+          </table>
+        </div>
+      </div>
+    </div>
+    <!-- Media Profiles -->
+    <h2 class="text-2xl font-bold mb-4 dark:text-white">Media Profiles</h2>
+    <div class="flex flex-wrap p-4 dark:text-white">
+      <div
+        :for={profile <- @device_details[:media_profiles] || []}
+        class="w-full flex flex-wrap justify-between mb-5 p-5 card-shadow"
+      >
+        <h3 class="w-full font-bold text-xl"><%= profile.name %></h3>
+        <div class="md:w-2/5 p-5 dark:text-gray-400">
+          <table class="w-full table-auto">
+            <tr>
+              <td class="font-bold">Codec</td>
+              <td><%= get_in(profile, [:configurations, :video_encoder, :encoding]) %></td>
+            </tr>
+            <tr>
+              <td class="font-bold">Profile</td>
+              <td><%= get_in(profile, [:configurations, :video_encoder, :profile]) %></td>
+            </tr>
+            <tr>
+              <td class="font-bold">Group of Pictures</td>
+              <td><%= get_in(profile, [:configurations, :video_encoder, :gov_length]) %></td>
+            </tr>
+            <tr>
+              <td class="font-bold">Image Quality</td>
+              <td><%= get_in(profile, [:configurations, :video_encoder, :quality]) %></td>
+            </tr>
+          </table>
+        </div>
+        <div class="md:w-2/5 p-5 dark:text-gray-400">
+          <table class="w-full table-auto">
+            <tr>
+              <td class="font-bold">Resolution</td>
+              <td>
+                <%= get_in(profile, [:configurations, :video_encoder, :resolution, :width]) %> x <%= get_in(
+                  profile,
+                  [:configurations, :video_encoder, :resolution, :height]
+                ) %>
+              </td>
+            </tr>
+            <tr>
+              <td class="font-bold">Constant Bitrate</td>
+              <td>
+                <%= String.upcase(
+                  "#{get_in(profile, [:configurations, :video_encoder, :rate_control, :constant_bit_rate])}"
+                ) %>
+              </td>
+            </tr>
+            <tr>
+              <td class="font-bold">Frame rate</td>
+              <td>
+                <%= get_in(profile, [
+                  :configurations,
+                  :video_encoder,
+                  :rate_control,
+                  :frame_rate_limit
+                ]) %> fps
+              </td>
+            </tr>
+            <tr>
+              <td class="font-bold">Max Bitrate</td>
+              <td>
+                <%= get_in(profile, [
+                  :configurations,
+                  :video_encoder,
+                  :rate_control,
+                  :bitrate_limit
+                ]) %> kbps
+              </td>
+            </tr>
+          </table>
+        </div>
+        <div class="w-full p-5 dark:text-gray-400">
+          <table class="w-full table-auto">
+            <tr>
+              <td class="font-bold">Stream URI</td>
+              <td><%= profile.stream_uri %></td>
+            </tr>
+            <tr>
+              <td class="font-bold">Snapshot URI</td>
+              <td><%= profile.snapshot_uri %></td>
+            </tr>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="w-full pr-5 pb-5 mb-5">
+      <.button :if={@selected_device} phx-click="add-device" class="float-right">
+        Add device
+      </.button>
+    </div>
+  </.card>
+</div>

@@ -1,0 +1,96 @@
+@import "tailwindcss/base";
+@import "tailwindcss/components";
+@import "tailwindcss/utilities";
+
+/* This file is for your main application CSS */
+#timeline .x-axis g {
+    color: white;
+    fill: white;
+}
+#timeline .x-axis text {
+    font-size: 12px;
+    font-weight: 600;
+    paint-order: stroke;
+    stroke: #000000aa;
+    stroke-width: 1px;
+}
+#timeline path {
+    stroke: #0000;
+}
+
+.player::-webkit-media-controls-timeline, 
+.player::-webkit-media-controls-play-button,
+.player::-webkit-media-controls-time-remaining-display, 
+.player::-webkit-media-controls-current-time-display { 
+    display: none 
+}
+::-webkit-calendar-picker-indicator {
+    filter: invert(0.7);
+}
+
+.popup-container {
+    z-index: 9999; /* Make sure the popup is above everything */
+}
+  
+.popup-close {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+}
+
+.card-shadow {
+    box-shadow: rgba(0, 0, 0, 0.2) 0px 8px 24px;
+}
+
+/* custom scrollbar */
+::-webkit-scrollbar {
+    width: 15px;
+}
+
+::-webkit-scrollbar-track {
+    background-color: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background-color: #a8bbbf;
+    border-radius: 20px;
+    border: 6px solid transparent;
+    background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background-color: #7f8c8f;
+}
+
+.break-anywhere {
+    overflow-wrap: anywhere;
+}
+
+#webRtcPlayer {
+    width: 100vw;
+    height: 100vh;
+}
+
+#webRtcLogs {
+    position: fixed;
+    padding: 0px 10px;
+    right: 0%;
+    z-index: 10;
+    text-wrap: pretty;
+    max-width: 15vw;
+    max-height: 50vw;
+    overflow-y: scroll;
+    background-color: #101111;
+    opacity: 0.7;
+}
+
+select#flop_filters_0_value {
+    line-height: 1.5rem;
+    margin-top: 0.5rem;
+}
+
+tr {
+    --tw-border-opacity: 0.4;
+    border-color: rgb(55 65 81 / var(--tw-border-opacity));
+}
