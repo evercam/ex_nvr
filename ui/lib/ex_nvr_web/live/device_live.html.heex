@@ -1,0 +1,292 @@
+<div class="grow max-w-2xl">
+  <div class="px-6 lg:px-8 bg-gray-300 dark:bg-gray-800">
+    <h3
+      :if={@device.id == nil}
+      class="mb-4 text-xl text-center font-medium text-black dark:text-white"
+    >
+      Create a new device
+    </h3>
+    <h3
+      :if={@device.id != nil}
+      class="mb-4 text-xl text-center font-medium text-black dark:text-white"
+    >
+      Update a device
+    </h3>
+    <.simple_form
+      id="device_form"
+      for={@device_form}
+      class="space-y-6"
+      phx-change="validate"
+      phx-submit="save_device"
+    >
+      <.input
+        field={@device_form[:name]}
+        type="text"
+        label="Name"
+        placeholder="Device Name"
+        required
+      />
+      <div class="flex justify-between">
+        <.input
+          field={@device_form[:type]}
+          id="device_type"
+          type="select"
+          options={[{"IP Camera", "ip"}, {"File", "file"}]}
+          label="Type"
+          placeholder="Choose your device type"
+          disabled={@device.id != nil}
+        />
+
+        <.input
+          field={@device_form[:timezone]}
+          type="select"
+          options={Tzdata.zone_list() ++ [nil]}
+          label="Timezone"
+        />
+      </div>
+
+      <div :if={@device_type == "ip"} class="flex flex-col">
+        <div class="relative flex py-5 items-center">
+          <span class="flex-shrink mr-4 text-black dark:text-white">Device Info</span>
+          <div class="flex-grow border-t border-gray-400"></div>
+        </div>
+        <div class="flex flex-col md:flex-row">
+          <div class="grow mr-5">
+            <.input
+              field={@device_form[:url]}
+              id="device_url"
+              type="text"
+              label="Onvif URL (Base URL)"
+              placeholder="http://192.168.1.100/onvif/device_service"
+            />
+          </div>
+          <.input
+            field={@device_form[:vendor]}
+            id="device_vendor"
+            type="select"
+            options={ExNVR.Model.Device.vendors()}
+            label="Vendor"
+            prompt="Choose your device vendor"
+          />
+        </div>
+      </div>
+      <div :if={@device_type == "ip"} class="flex flex-col">
+        <div class="relative flex py-5 items-center">
+          <span class="flex-shrink mr-4 text-black dark:text-white">Credentials</span>
+          <div class="flex-grow border-t border-gray-400"></div>
+        </div>
+        <div class="flex flex-col">
+          <.inputs_for :let={credentials} field={@device_form[:credentials]}>
+            <.input
+              field={credentials[:username]}
+              id="config_username"
+              type="text"
+              label="Username"
+            />
+            <.input
+              field={credentials[:password]}
+              id="config_password"
+              type="password"
+              label="Password"
+            />
+          </.inputs_for>
+        </div>
+      </div>
+      <div class="flex flex-col">
+        <div class="flex flex-col">
+          <.inputs_for :let={config} field={@device_form[:stream_config]}>
+            <div :if={@device_type == "ip"} class="relative flex py-5 items-center">
+              <span class="flex-shrink mr-4 text-black dark:text-white">Main Stream</span>
+              <div class="flex-grow border-t border-gray-400"></div>
+            </div>
+            <.input
+              :if={@device_type == "ip"}
+              field={config[:stream_uri]}
+              id="config_stream_uri"
+              type="text"
+              label="RTSP Uri"
+              placeholder="rtsp://camera1:554/video/stream1"
+              required
+            />
+            <.input
+              :if={@device_type == "ip"}
+              field={config[:snapshot_uri]}
+              id="config_snapshot_uri"
+              type="text"
+              label="Snapshot Uri"
+              placeholder="http://camera1:80/snapshot"
+            />
+            <div :if={@device_type == "ip"} class="relative flex py-5 items-center">
+              <span class="flex-shrink mr-4 text-black dark:text-white">Sub Stream</span>
+              <div class="flex-grow border-t border-gray-400"></div>
+            </div>
+            <.input
+              :if={@device_type == "ip"}
+              field={config[:sub_stream_uri]}
+              id="config_sub_stream_uri"
+              type="text"
+              label="RTSP Uri"
+              placeholder="rtsp://camera1:554/video/stream2"
+            />
+            <label
+              :if={@device_type == "file" && is_nil(@device.id)}
+              for={@uploads.file_to_upload.ref}
+              class="block text-gray-800 dark:text-white font-medium"
+            >
+              File
+            </label>
+            <.live_file_input
+              :if={@device_type == "file" && is_nil(@device.id)}
+              class="w-full dark:text-white dark:bg-gray-700 rounded-lg"
+              upload={@uploads.file_to_upload}
+              required
+            />
+            <div :if={@device_type == "file" && is_nil(@device.id)}>
+              <div :for={entry <- @uploads.file_to_upload.entries}>
+                <div
+                  :for={err <- upload_errors(@uploads.file_to_upload, entry)}
+                  style="color: #E11D48;"
+                >
+                  <%= error_to_string(err) %>
+                </div>
+              </div>
+            </div>
+            <.input
+              :if={@device_type == "file" && @device.id}
+              field={config[:filename]}
+              type="text"
+              label="File"
+              readonly
+            />
+          </.inputs_for>
+        </div>
+      </div>
+
+      <div id="device-settings" class="flex flex-col">
+        <div class="relative flex py-5 items-center">
+          <span class="flex-shrink mr-4 text-black dark:text-white">Storage</span>
+          <div class="flex-grow border-t border-gray-400"></div>
+        </div>
+        <div class="flex flex-col text-black dark:text-white">
+          <.inputs_for :let={storage_config} field={@device_form[:storage_config]}>
+            <div class="w-full mb-5 font-medium bg-gray-300 dark:bg-gray-800">
+              <h2 class="mb-2">Select storage address</h2>
+              <.input
+                :let={option}
+                field={storage_config[:address]}
+                id="settings-storage-address"
+                type="radio"
+                options={@disks_data}
+                disabled={not is_nil(@device.id)}
+              >
+                <div class="w-full px-2 font-normal text-xs">
+                  <div class="flex justify-between mb-1">
+                    <span class="text-black dark:text-white">
+                      <%= elem(option, 0) %>
+                    </span>
+                    <span class="text-black dark:text-white">
+                      <%= humanize_capacity(elem(option, 1)) %>
+                    </span>
+                  </div>
+                  <div class="w-full bg-gray-200 rounded-full dark:bg-gray-700">
+                    <div
+                      class="bg-blue-800 text-xs font-medium text-blue-100 text-center leading-none rounded-full"
+                      style={"width: #{elem(option, 1) |> elem(1)}%"}
+                    >
+                      <%= elem(option, 1) |> elem(1) %>%
+                    </div>
+                  </div>
+                </div>
+              </.input>
+              <div :if={@device_type == "ip"} class="grid grid-cols-3 gap-5 items-center my-5">
+                <span class="col-span-2">Full drive threshold:</span>
+                <.input
+                  field={storage_config[:full_drive_threshold]}
+                  type="number"
+                  label=""
+                  min="0"
+                  max="99"
+                />
+
+                <span class="col-span-2">Full drive action:</span>
+                <.input
+                  field={storage_config[:full_drive_action]}
+                  type="select"
+                  label=""
+                  options={[{"nothing", "nothing"}, {"overwrite", "overwrite"}]}
+                />
+
+                <span class="col-span-2">Record sub stream:</span>
+                <.input
+                  field={storage_config[:record_sub_stream]}
+                  type="select"
+                  label=""
+                  options={[{"never", "never"}, {"always", "always"}]}
+                />
+              </div>
+            </div>
+          </.inputs_for>
+        </div>
+        <div :if={@device_type == "ip"} id="snapshot-config" class="flex flex-col">
+          <div class="relative flex py-5 items-center">
+            <span class="flex-shrink mr-4 text-black dark:text-white">
+              Snapshot Config
+            </span>
+            <div class="flex-grow border-t border-gray-400"></div>
+          </div>
+          <div class="flex flex-col text-black dark:text-white">
+            <.inputs_for :let={snapshot_config} field={@device_form[:snapshot_config]}>
+              <.input
+                field={snapshot_config[:enabled]}
+                type="checkbox"
+                label="Enable snapshot upload to remote storage"
+              />
+              <div
+                :if={snapshot_config[:enabled].value}
+                class="grid grid-cols-3 gap-5 items-center my-5"
+              >
+                <span class="col-span-2">Upload interval (seconds):</span>
+                <.input
+                  field={snapshot_config[:upload_interval]}
+                  type="number"
+                  min="5"
+                  max="3600"
+                  label=""
+                  required
+                />
+
+                <span class="col-span-2">Remote storages:</span>
+                <.input
+                  field={snapshot_config[:remote_storage]}
+                  type="select"
+                  label=""
+                  options={@remote_storages}
+                  required
+                />
+              </div>
+            </.inputs_for>
+          </div>
+        </div>
+        <div :if={@device_type == "ip"} class="flex flex-col">
+          <div class="relative flex py-5 items-center">
+            <span class="flex-shrink mr-4 text-black dark:text-white">Other Settings</span>
+            <div class="flex-grow border-t border-gray-400"></div>
+          </div>
+          <.inputs_for :let={settings} field={@device_form[:settings]}>
+            <.input field={settings[:generate_bif]} type="checkbox" label="Generate BIF" />
+            <.input field={settings[:enable_lpr]} type="checkbox" label="Pull LPR events" />
+          </.inputs_for>
+        </div>
+      </div>
+      <:actions>
+        <.button :if={is_nil(@device.id)} class="w-full" phx-disable-with="Creating...">
+          Create
+        </.button>
+
+        <.button :if={@device.id} class="w-full" phx-disable-with="Updating...">
+          Update
+        </.button>
+      </:actions>
+    </.simple_form>
+  </div>
+</div>
