@@ -209,11 +209,9 @@ defmodule ExNVRWeb.LPREventsListLive do
   defp show_plate_image(lpr_event, default_plate_image) do
     plate_image = Events.lpr_event_thumbnail(lpr_event)
 
-    if(plate_image) do
-      "data:image/png;base64,#{plate_image}"
-    else
-      "data:image/png;base64,#{default_plate_image}"
-    end
+    if plate_image,
+      do: "data:image/png;base64,#{plate_image}",
+      else: "data:image/png;base64,#{default_plate_image}"
   end
 
   defp preview_event(lpr_event) do

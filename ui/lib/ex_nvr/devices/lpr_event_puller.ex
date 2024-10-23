@@ -59,8 +59,6 @@ defmodule ExNVR.Devices.LPREventPuller do
           nil
       end
     end)
-    |> Enum.reject(&is_nil/1)
-    # ignore already stored events (id is null)
-    |> Enum.reject(&is_nil(&1.id))
+    |> Enum.reject(&(is_nil(&1) or is_nil(&1.id)))
   end
 end

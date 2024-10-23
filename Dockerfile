@@ -32,11 +32,10 @@ RUN mix local.hex --force && \
 ENV MIX_ENV=prod
 
 # install mix dependencies
-COPY mix.exs mix.lock ./
-COPY config config
-COPY assets assets
-COPY apps apps
-COPY rel rel
+COPY rtsp rtsp
+COPY ui ui
+
+WORKDIR /app/ui
 
 RUN mix deps.get
 RUN mix deps.compile
@@ -66,7 +65,7 @@ RUN chown nobody:nobody /app /var/lib/ex_nvr
 
 USER nobody:nobody
 
-COPY --from=build --chown=nobody:nobody /app/_build/prod/rel/ex_nvr ./
+COPY --from=build --chown=nobody:nobody /app/ui/_build/prod/rel/ex_nvr ./
 
 ENV HOME=/app
 
