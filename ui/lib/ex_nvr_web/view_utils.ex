@@ -11,8 +11,7 @@ defmodule ExNVRWeb.ViewUtils do
     duration =
       [hours, minutes, seconds]
       |> Enum.map(&to_string/1)
-      |> Enum.map(&String.pad_leading(&1, 2, "0"))
-      |> Enum.join(":")
+      |> Enum.map_join(":", &String.pad_leading(&1, 2, "0"))
 
     "#{duration}.#{String.pad_leading(to_string(milliseconds), 3, "0")}"
   end
