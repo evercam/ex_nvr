@@ -72,7 +72,7 @@ defmodule ExNVR.Pipeline.Output.WebRTC.StreamEndpoint do
           track: state.track,
           variant_bitrates: %{},
           is_keyframe_fun: fn buf, :H264 ->
-            Membrane.RTP.H264.Utils.is_keyframe(buf.payload, :idr)
+            Membrane.RTP.H264.Utils.keyframe?(buf.payload, :idr)
           end
         }
       )

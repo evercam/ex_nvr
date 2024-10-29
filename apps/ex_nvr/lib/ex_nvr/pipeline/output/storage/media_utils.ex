@@ -1,4 +1,4 @@
-defmodule ExNVR.Pipeline.Output.StorageV2.MediaUtils do
+defmodule ExNVR.Pipeline.Output.Storage.MediaUtils do
   @moduledoc false
 
   alias Membrane.Buffer

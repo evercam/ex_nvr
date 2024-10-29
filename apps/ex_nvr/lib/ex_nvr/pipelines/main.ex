@@ -417,7 +417,7 @@ defmodule ExNVR.Pipelines.Main do
       child(:funnel, ExNVR.Elements.DiscontinuityFunnel)
       |> child(:video_tee, Membrane.Tee.Master)
       |> via_out(:master)
-      |> child({:storage_bin, :main_stream}, %Output.StorageV2{
+      |> child({:storage_bin, :main_stream}, %Output.Storage{
         device: state.device,
         target_segment_duration: state.segment_duration,
         correct_timestamp: true
