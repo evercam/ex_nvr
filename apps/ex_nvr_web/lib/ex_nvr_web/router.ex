@@ -4,6 +4,11 @@ defmodule ExNVRWeb.Router do
   import ExNVRWeb.UserAuth
 
   pipeline :browser do
+    plug Plug.Parsers,
+      parsers: [:urlencoded, :multipart, :json],
+      pass: ["*/*"],
+      json_decoder: Phoenix.json_library()
+
     plug :accepts, ["html"]
     plug :fetch_session
     plug :fetch_live_flash
@@ -14,6 +19,11 @@ defmodule ExNVRWeb.Router do
   end
 
   pipeline :api do
+    plug Plug.Parsers,
+      parsers: [:urlencoded, :multipart, :json],
+      pass: ["*/*"],
+      json_decoder: Phoenix.json_library()
+
     plug :accepts, ["json", "jpg", "mp4"]
     plug :fetch_session
     plug :fetch_current_user
@@ -21,6 +31,10 @@ defmodule ExNVRWeb.Router do
 
   pipeline :api_require_authenticated_user do
     plug :require_authenticated_user, api: true
+  end
+
+  pipeline :path_rewriter do
+    plug ExNVRWeb.Plug.PathRewriter
   end
 
   scope "/api", ExNVRWeb do
@@ -149,5 +163,14 @@ defmodule ExNVRWeb.Router do
       live "/users", UserListLive, :list
       live "/users/:id", UserLive, :edit
     end
+  end
+
+  scope "/service" do
+    pipe_through [:path_rewriter]
+
+    forward "/", ReverseProxyPlug,
+      upstream: &ExNVRWeb.ReverseProxy.reverse_proxy/1,
+      error_callback: &ExNVRWeb.ReverseProxy.handle_error/2,
+      preserve_host_header: true
   end
 end

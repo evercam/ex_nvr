@@ -55,6 +55,7 @@ defmodule ExNVRWeb.MixProject do
       {:logger_json, "~> 5.1"},
       {:flop_phoenix, "~> 0.21.1"},
       {:prom_ex, "~> 1.9.0"},
+      {:reverse_proxy_plug, "~> 3.0"},
       {:mock, "~> 0.3", only: :test}
     ]
   end
