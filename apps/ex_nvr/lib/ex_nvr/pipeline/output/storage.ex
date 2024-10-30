@@ -314,6 +314,8 @@ defmodule ExNVR.Pipeline.Output.Storage do
   defp update_track_priv_data(state, _buf), do: state
 
   defp open_file(%{current_segment: segment} = state) do
+    Membrane.Logger.info("Start recording a new segment")
+
     start_date = Segment.start_date(segment)
     recording_path = recording_path(state, start_date)
     File.mkdir_p!(Path.dirname(recording_path))
@@ -323,7 +325,7 @@ defmodule ExNVR.Pipeline.Output.Storage do
       |> Writer.write_header()
       |> Writer.add_track(state.track)
 
-    %{state | writer: writer, track: %{state.track | id: 1}}
+    %{state | writer: writer, track: Writer.tracks(writer) |> List.first()}
   end
 
   defp write_data(state, buffer) do
@@ -354,8 +356,13 @@ defmodule ExNVR.Pipeline.Output.Storage do
     }
   end
 
-  defp close_file(%{current_segment: segment} = state, discontinuity?) do
-    :ok = Writer.write_trailer(state.writer)
+  defp close_file(state, discontinuity?) do
+    %{writer: writer, track: track, current_segment: segment} = state
+
+    :ok =
+      writer
+      |> Writer.update_track(track.id, priv_data: track.priv_data)
+      |> Writer.write_trailer()
 
     state = %{run_from_segment(state, segment, discontinuity?) | writer: nil}
 
