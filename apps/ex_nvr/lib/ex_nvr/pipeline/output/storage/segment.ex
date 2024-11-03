@@ -1,9 +1,9 @@
-defmodule ExNVR.Pipeline.Output.Storage.Segmenter.Segment do
+defmodule ExNVR.Pipeline.Output.Storage.Segment do
   @moduledoc """
   A struct describing a segment (video chunk)
   """
 
-  alias ExNVR.Pipeline.Output.Storage.Segmenter.SegmentMetadata
+  alias ExNVR.Pipeline.Output.Storage.SegmentMetadata
 
   @type t :: %__MODULE__{
           start_date: Membrane.Time.t(),

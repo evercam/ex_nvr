@@ -48,7 +48,7 @@ defmodule ExNVR.Pipelines.Main do
   @type encoding :: :H264 | :H265
 
   @event_prefix [:ex_nvr, :main_pipeline]
-  @default_segment_duration 60
+  @default_segment_duration Membrane.Time.seconds(60)
   @base_back_off_in_ms 10
   @max_back_off_in_ms :timer.minutes(2)
 
@@ -60,7 +60,7 @@ defmodule ExNVR.Pipelines.Main do
     alias ExNVR.Media.Track
     alias ExNVR.Model.Device
 
-    @default_segment_duration 60
+    @default_segment_duration Membrane.Time.seconds(60)
 
     @typedoc """
     Pipeline state
@@ -73,7 +73,7 @@ defmodule ExNVR.Pipelines.Main do
     """
     @type t :: %__MODULE__{
             device: Device.t(),
-            segment_duration: non_neg_integer(),
+            segment_duration: Membrane.Time.t(),
             supervisor_pid: pid(),
             live_snapshot_waiting_pids: list(),
             video_tracks: {Track.t(), Track.t()},

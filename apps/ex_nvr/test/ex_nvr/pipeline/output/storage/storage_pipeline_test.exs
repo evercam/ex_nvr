@@ -1,4 +1,4 @@
-defmodule ExNVR.Pipeline.Output.StoragePipelineTest do
+defmodule ExNVR.Pipeline.Output.Storage.StoragePipelineTest do
   @moduledoc false
 
   use ExNVR.DataCase
@@ -25,8 +25,23 @@ defmodule ExNVR.Pipeline.Output.StoragePipelineTest do
 
     @impl true
     def handle_buffer(:input, buffer, _ctx, state) do
-      buffer = %{buffer | metadata: Map.put(buffer.metadata, :timestamp, DateTime.utc_now())}
+      # flatten metadata to match the format created by `ex_nvr_rtsp`
+      metadata =
+        update_nalus_metadata(buffer.metadata)
+        |> Map.put(:timestamp, DateTime.utc_now())
+
+      buffer = %{buffer | metadata: metadata}
       {[buffer: {:output, buffer}], state}
+    end
+
+    defp update_nalus_metadata(%{h264: %{nalus: nalus}} = metadata) do
+      nalus = Enum.map(nalus, & &1.metadata.h264.type)
+      put_in(metadata, [:h264, :nalus], nalus)
+    end
+
+    defp update_nalus_metadata(%{h265: %{nalus: nalus}} = metadata) do
+      nalus = Enum.map(nalus, & &1.metadata.h265.type)
+      put_in(metadata, [:h265, :nalus], nalus)
     end
   end
 
@@ -48,22 +63,18 @@ defmodule ExNVR.Pipeline.Output.StoragePipelineTest do
   defp perform_test(device, fixture) do
     pid = start_pipeline(device, fixture)
 
-    assert_pipeline_notified(pid, :storage, {:segment_stored, :high, segment1})
-    assert_pipeline_notified(pid, :storage, {:segment_stored, :high, segment2})
-    assert_pipeline_notified(pid, :storage, {:segment_stored, :high, segment3})
-
-    assert DateTime.diff(segment1.end_date, segment1.start_date) == 6
-    assert DateTime.diff(segment2.end_date, segment2.start_date) == 6
-    assert DateTime.diff(segment3.end_date, segment3.start_date) == 3
+    assert_end_of_stream(pid, :storage)
+    Pipeline.terminate(pid)
 
     assert {:ok, {recordings, _meta}} = ExNVR.Recordings.list()
     assert length(recordings) == 3
 
-    assert ExNVR.Recordings.recording_path(device, segment1) |> File.exists?()
-    assert ExNVR.Recordings.recording_path(device, segment2) |> File.exists?()
-    assert ExNVR.Recordings.recording_path(device, segment3) |> File.exists?()
+    assert Enum.sort_by(recordings, & &1.id, :asc)
+           |> Enum.map(&DateTime.diff(&1.end_date, &1.start_date)) == [6, 6, 3]
 
-    Pipeline.terminate(pid)
+    for recording <- recordings do
+      assert ExNVR.Recordings.recording_path(device, recording) |> File.exists?()
+    end
   end
 
   defp start_pipeline(device, filename) do
@@ -79,7 +90,7 @@ defmodule ExNVR.Pipeline.Output.StoragePipelineTest do
       |> child(:timestamper, Timestamper)
       |> child(:storage, %Storage{
         device: device,
-        target_segment_duration: 4
+        target_segment_duration: Membrane.Time.seconds(4)
       })
     ]
 
