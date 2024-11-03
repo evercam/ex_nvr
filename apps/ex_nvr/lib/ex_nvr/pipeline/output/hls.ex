@@ -5,10 +5,11 @@ defmodule ExNVR.Pipeline.Output.HLS do
 
   use Membrane.Bin
 
+  alias __MODULE__.TimestampAdjuster
   alias Membrane.{H264, H265, ResourceGuard}
   alias Membrane.HTTPAdaptiveStream.{SinkBin, Storages}
 
-  @segment_duration Membrane.Time.seconds(5)
+  @segment_duration Membrane.Time.seconds(2)
 
   def_input_pad :video,
     accepted_format: any_of(%H264{alignment: :au}, %H265{alignment: :au}),
@@ -74,6 +75,7 @@ defmodule ExNVR.Pipeline.Output.HLS do
     spec = [
       bin_input(pad)
       |> add_transcoding_spec(ctx.pad_options[:encoding], ref, ctx.pad_options[:resolution])
+      |> child({:adjuster, ref}, TimestampAdjuster)
       |> via_in(Pad.ref(:input, ref),
         options: [
           encoding: ctx.pad_options[:encoding],

@@ -11,6 +11,7 @@ defmodule ExNVR.Pipeline.Output.Storage do
   alias ExMP4.Writer
   alias ExNVR.Model.Device
   alias ExNVR.Model.Run
+  alias ExNVR.Pipeline.Event.StreamClosed
   alias ExNVR.Pipeline.Output.Storage.Segment
   alias ExNVR.Utils
   alias Membrane.Buffer
@@ -198,6 +199,11 @@ defmodule ExNVR.Pipeline.Output.Storage do
   end
 
   @impl true
+  def handle_event(:input, %StreamClosed{}, _ctx, state) do
+    {[], handle_discontinuity(state)}
+  end
+
+  @impl true
   def handle_event(:input, _event, _ctx, state) do
     {[], state}
   end
@@ -268,6 +274,7 @@ defmodule ExNVR.Pipeline.Output.Storage do
 
   defp finalize_segment(%{current_segment: segment} = state, end_date, correct_timestamp) do
     end_date = Time.from_datetime(end_date)
+    current_end_date = Time.os_time()
     monotonic_duration = Time.monotonic_time() - state.monotonic_start_time
 
     {segment, discontinuity?} =
@@ -276,8 +283,8 @@ defmodule ExNVR.Pipeline.Output.Storage do
     segment =
       segment
       |> Segment.with_realtime_duration(monotonic_duration)
-      |> Segment.with_wall_clock_duration(end_date - segment.start_date)
-      |> then(&%{&1 | wallclock_end_date: end_date})
+      |> Segment.with_wall_clock_duration(current_end_date - segment.start_date)
+      |> then(&%{&1 | wallclock_end_date: current_end_date})
 
     {%{state | current_segment: segment}, discontinuity?}
   end
