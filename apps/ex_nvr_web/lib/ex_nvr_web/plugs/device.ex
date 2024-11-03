@@ -22,9 +22,7 @@ defmodule ExNVRWeb.Plug.Device do
         Conn.assign(conn, :device, device)
 
       nil ->
-        conn
-        |> not_found()
-        |> Conn.halt()
+        not_found(conn)
     end
   end
 end

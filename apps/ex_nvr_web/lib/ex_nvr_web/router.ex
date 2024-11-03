@@ -33,8 +33,9 @@ defmodule ExNVRWeb.Router do
     plug :require_authenticated_user, api: true
   end
 
-  pipeline :path_rewriter do
-    plug ExNVRWeb.Plug.PathRewriter
+  pipeline :reverse_proxy do
+    plug ExNVRWeb.Plug.ProxyAllow
+    plug ExNVRWeb.Plug.ProxyPathRewriter
   end
 
   scope "/api", ExNVRWeb do
@@ -166,7 +167,7 @@ defmodule ExNVRWeb.Router do
   end
 
   scope "/service" do
-    pipe_through [:path_rewriter]
+    pipe_through [:reverse_proxy]
 
     forward "/", ReverseProxyPlug,
       upstream: &ExNVRWeb.ReverseProxy.reverse_proxy/1,

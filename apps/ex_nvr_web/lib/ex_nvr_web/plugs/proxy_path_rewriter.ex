@@ -1,4 +1,4 @@
-defmodule ExNVRWeb.Plug.PathRewriter do
+defmodule ExNVRWeb.Plug.ProxyPathRewriter do
   @moduledoc false
 
   alias Plug.Conn
