@@ -4,7 +4,7 @@ defmodule ExNVR.MixProject do
   def project do
     [
       app: :ex_nvr,
-      version: "0.15.2",
+      version: "0.16.0",
       build_path: "../../_build",
       config_path: "../../config/config.exs",
       deps_path: "../../deps",
@@ -37,7 +37,7 @@ defmodule ExNVR.MixProject do
       {:ex_nvr_rtsp, in_umbrella: true},
       {:ex_sdp, "~> 1.0", override: true},
       {:unifex, "~> 1.1"},
-      {:bundlex, "~> 1.4.6"},
+      {:bundlex, "~> 1.5", override: true},
       {:bcrypt_elixir, "~> 3.0"},
       {:phoenix_pubsub, "~> 2.1"},
       {:ecto_sql, "~> 3.6"},
