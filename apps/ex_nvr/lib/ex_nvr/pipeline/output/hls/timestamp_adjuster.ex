@@ -8,18 +8,39 @@ defmodule ExNVR.Pipeline.Output.HLS.TimestampAdjuster do
 
   use Membrane.Filter
 
-  alias ExNVR.Pipeline.Event.StreamClosed
+  alias Membrane.Buffer
+  alias Membrane.Time
 
   def_input_pad :input, accepted_format: _any
   def_output_pad :output, accepted_format: _any
 
   @impl true
   def handle_init(_ctx, _opts) do
-    {[], %{last_buffer_timestamp: 0, offset: 0}}
+    {[], %{last_buffer_timestamp: 0, offset: 0, adjust_offset: false}}
+  end
+
+  @impl true
+  def handle_buffer(_pad, buffer, _ctx, %{adjust_offset: true} = state) do
+    offset =
+      max(
+        0,
+        state.last_buffer_timestamp - Buffer.get_dts_or_pts(buffer) + Time.milliseconds(30)
+      )
+
+    do_handle_buffer(buffer, %{state | adjust_offset: false, offset: offset})
   end
 
   @impl true
   def handle_buffer(_pad, buffer, _ctx, state) do
+    do_handle_buffer(buffer, state)
+  end
+
+  @impl true
+  def handle_event(_pad, event, _ctx, state) do
+    {[event: {:output, event}], %{state | adjust_offset: true}}
+  end
+
+  defp do_handle_buffer(buffer, state) do
     buffer = %{
       buffer
       | dts: buffer.dts && buffer.dts + state.offset,
@@ -29,17 +50,5 @@ defmodule ExNVR.Pipeline.Output.HLS.TimestampAdjuster do
     state = %{state | last_buffer_timestamp: Membrane.Buffer.get_dts_or_pts(buffer)}
 
     {[buffer: {:output, buffer}], state}
-  end
-
-  @impl true
-  def handle_event(_pad, %StreamClosed{}, _ctx, state) do
-    # put a 30 millisecond as the duration of the last frame
-    offset = state.last_buffer_timestamp + Membrane.Time.milliseconds(30)
-    {[], %{last_buffer_timestamp: 0, offset: offset}}
-  end
-
-  @impl true
-  def handle_event(pad, event, ctx, state) do
-    super(pad, event, ctx, state)
   end
 end
