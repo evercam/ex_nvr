@@ -27,6 +27,7 @@ UNIFEX_TERM assemble_recordings(UnifexEnv *env, recording *recordings, unsigned 
   int64_t last_dts = -1;
   int64_t duration = 0, offset = 0;
   AVRational time_base = {1, 1};
+  AVRational target_time_base;
 
   // init write context
   if (avformat_alloc_output_context2(&write_ctx, NULL, "mp4", NULL) < 0)
@@ -78,6 +79,9 @@ UNIFEX_TERM assemble_recordings(UnifexEnv *env, recording *recordings, unsigned 
         res = assemble_recordings_result_error(env, "write_header");
         goto exit_assemble_files;
       }
+
+      // time_base of the writer stream may be updated by the muxer
+      target_time_base = write_ctx->streams[0]->time_base;
     }
 
     av_read_frame(read_ctx, packet);
@@ -95,8 +99,9 @@ UNIFEX_TERM assemble_recordings(UnifexEnv *env, recording *recordings, unsigned 
 
     do
     {
-      packet->dts += last_dts;
-      packet->pts += last_dts;
+      packet->dts = av_rescale_q(packet->dts + last_dts, time_base, target_time_base);
+      packet->pts = av_rescale_q(packet->pts + last_dts, time_base, target_time_base);
+
       duration += packet->duration;
       recording_duration += packet->duration;
 
