@@ -120,16 +120,7 @@ defmodule ExNVR.Disk do
         hotplug: device["hotplug"],
         tran: device["tran"],
         parts: Enum.map(device["children"] || [], &map_part/1),
-        fs:
-          device["fstype"] &&
-            %FS{
-              type: device["fstype"],
-              size: device["fssize"],
-              avail: device["fsavail"],
-              uuid: device["uuid"],
-              read_only: device["ro"],
-              mountpoint: device["mountpoint"]
-            }
+        fs: map_fs(device)
       }
     end)
   end
@@ -138,16 +129,20 @@ defmodule ExNVR.Disk do
     %Part{
       name: part["name"],
       path: part["path"],
-      fs:
-        part["fstype"] &&
-          %FS{
-            type: part["fstype"],
-            size: part["fssize"],
-            avail: part["fsavail"],
-            uuid: part["uuid"],
-            read_only: part["ro"],
-            mountpoint: part["mountpoint"]
-          }
+      fs: map_fs(part)
+    }
+  end
+
+  defp map_fs(%{"fstype" => nil}), do: nil
+
+  defp map_fs(device_or_part) do
+    %FS{
+      type: device_or_part["fstype"],
+      size: device_or_part["fssize"],
+      avail: device_or_part["fsavail"],
+      uuid: device_or_part["uuid"],
+      read_only: device_or_part["ro"],
+      mountpoint: device_or_part["mountpoint"]
     }
   end
 
