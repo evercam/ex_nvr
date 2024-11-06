@@ -4,7 +4,7 @@ defmodule ExNVRWeb.MixProject do
   def project do
     [
       app: :ex_nvr_web,
-      version: "0.15.2",
+      version: "0.16.0",
       build_path: "../../_build",
       config_path: "../../config/config.exs",
       deps_path: "../../deps",
@@ -55,6 +55,7 @@ defmodule ExNVRWeb.MixProject do
       {:logger_json, "~> 5.1"},
       {:flop_phoenix, "~> 0.21.1"},
       {:prom_ex, "~> 1.9.0"},
+      {:reverse_proxy_plug, "~> 3.0"},
       {:mock, "~> 0.3", only: :test}
     ]
   end

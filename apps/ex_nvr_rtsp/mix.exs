@@ -4,7 +4,7 @@ defmodule ExNvrRtsp.MixProject do
   def project do
     [
       app: :ex_nvr_rtsp,
-      version: "0.15.2",
+      version: "0.16.0",
       build_path: "../../_build",
       config_path: "../../config/config.exs",
       deps_path: "../../deps",

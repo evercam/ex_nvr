@@ -31,6 +31,7 @@ COPY config config
 COPY assets assets
 COPY apps apps
 COPY rel rel
+RUN rm -rf apps/ex_nvr/priv/bundlex
 
 RUN mix deps.get
 RUN mix deps.compile
