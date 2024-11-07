@@ -5,6 +5,7 @@ defmodule ExNVR.Elements.DiscontinuityFunnel do
 
   use Membrane.Filter
 
+  alias ExNVR.Pipeline.Event.StreamClosed
   alias Membrane.Funnel
 
   def_input_pad :input, accepted_format: _any, flow_control: :auto, availability: :on_request
@@ -20,12 +21,12 @@ defmodule ExNVR.Elements.DiscontinuityFunnel do
   defdelegate handle_pad_added(pad, ctx, state), to: Funnel
 
   @impl true
-  def handle_pad_removed(Pad.ref(:input, _ref), _ctx, state) do
-    {[event: {:output, %Membrane.Event.Discontinuity{}}], state}
+  def handle_pad_removed(_pad, _ctx, state) do
+    {[event: {:output, %StreamClosed{}}], state}
   end
 
   @impl true
   def handle_end_of_stream(_pad, _ctx, state) do
-    {[event: {:output, %Membrane.Event.Discontinuity{}}], state}
+    {[], state}
   end
 end

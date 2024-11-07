@@ -2,7 +2,7 @@ defmodule ExNVR.MixProject do
   use Mix.Project
 
   @app :ex_nvr
-  @version "0.15.2"
+  @version "0.16.0"
 
   def project do
     [
@@ -40,7 +40,7 @@ defmodule ExNVR.MixProject do
       {:ex_nvr_rtsp, path: "../rtsp"},
       {:ex_sdp, "~> 1.0", override: true},
       {:unifex, "~> 1.1"},
-      {:bundlex, "~> 1.4.6"},
+      {:bundlex, "~> 1.5", override: true},
       {:bcrypt_elixir, "~> 3.0"},
       {:phoenix_pubsub, "~> 2.1"},
       {:ecto_sql, "~> 3.6"},
@@ -69,7 +69,7 @@ defmodule ExNVR.MixProject do
       {:soap, github: "gBillal/soap", branch: "parse-attributes"},
       {:req, "~> 0.4.0"},
       {:multipart, "~> 0.4.0"},
-      {:ex_mp4, "~> 0.6.0"},
+      {:ex_mp4, "~> 0.7.0"},
       {:floki, "~> 0.36.0"},
       {:phoenix, "~> 1.7.2"},
       {:phoenix_ecto, "~> 4.4"},
