@@ -1,0 +1,76 @@
+defmodule NervesFw.MixProject do
+  use Mix.Project
+
+  @app :ex_nvr_fw
+  @version "0.16.0"
+  @all_targets [:ex_nvr_rpi4]
+
+  def project do
+    [
+      app: @app,
+      version: @version,
+      elixir: "~> 1.11",
+      archives: [nerves_bootstrap: "~> 1.13"],
+      start_permanent: Mix.env() == :prod,
+      deps: deps(),
+      aliases: aliases(),
+      releases: [{@app, release()}],
+      preferred_cli_target: [run: :host, test: :host]
+    ]
+  end
+
+  # Run "mix help compile.app" to learn about applications.
+  def application do
+    [
+      mod: {ExNVR.Nerves.Application, []},
+      extra_applications: [:logger, :runtime_tools]
+    ]
+  end
+
+  # Run "mix help deps" to learn about dependencies.
+  defp deps do
+    [
+      {:ex_dtls, "~> 0.16.0", override: true},
+
+      # Dependencies for all targets
+      {:nerves, "~> 1.10", runtime: false},
+      {:shoehorn, "~> 0.9.1"},
+      {:ring_logger, "~> 0.10.0"},
+      {:toolshed, "~> 0.3.0"},
+
+      # Allow Nerves.Runtime on host to support development, testing and CI.
+      # See config/host.exs for usage.
+      {:nerves_runtime, "~> 0.13.0"},
+
+      # Dependencies for all targets except :host
+      {:nerves_pack, "~> 0.7.0", targets: @all_targets},
+      {:nerves_hub_link, "~> 2.5"},
+      {:nerves_hub_cli, "~> 2.0"},
+      {:ex_nvr, path: "../ui"},
+
+      # Dependencies for specific targets
+      # NOTE: It's generally low risk and recommended to follow minor version
+      # bumps to Nerves systems. Since these include Linux kernel and Erlang
+      # version updates, please review their release notes in case
+      # changes to your application are needed.
+      {:ex_nvr_system_rpi4,
+       path: "/samsung/p/ex_nvr_system_rpi4", runtime: false, targets: :ex_nvr_rpi4}
+    ]
+  end
+
+  def release do
+    [
+      overwrite: true,
+      # Erlang distribution is not started automatically.
+      # See https://hexdocs.pm/nerves_pack/readme.html#erlang-distribution
+      cookie: "#{@app}_cookie",
+      include_erts: &Nerves.Release.erts/0,
+      steps: [&Nerves.Release.init/1, :assemble],
+      strip_beams: Mix.env() == :prod or [keep: ["Docs"]]
+    ]
+  end
+
+  defp aliases do
+    []
+  end
+end
