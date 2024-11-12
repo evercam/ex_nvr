@@ -87,7 +87,7 @@ defmodule ExNVRWeb.Router do
     end
   end
 
-  if Application.compile_env(:ex_nvr_web, :dev_routes) do
+  if Application.compile_env(:ex_nvr, :dev_routes) do
     scope "/dev" do
       pipe_through :browser
 

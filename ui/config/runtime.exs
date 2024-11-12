@@ -130,7 +130,7 @@ if config_env() == :prod do
     config :logger, level: :info, backends: [LoggerJSON]
   end
 
-  config :ex_nvr_web,
+  config :ex_nvr,
     enable_reverse_proxy: System.get_env("ENABLE_REVERSE_PROXY", "false") == "true"
 
   # ## Configuring the mailer

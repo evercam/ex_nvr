@@ -10,7 +10,7 @@ defmodule ExNVRWeb.Plug.ProxyAllow do
   def init(opts), do: opts
 
   def call(%Conn{} = conn, _opts) do
-    if Application.get_env(:ex_nvr_web, :enable_reverse_proxy, false),
+    if Application.get_env(:ex_nvr, :enable_reverse_proxy, false),
       do: conn,
       else: not_found(conn)
   end

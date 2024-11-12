@@ -85,7 +85,7 @@ jobs:
         ref: ${{ github.ref }}
 
     - name: Copy Documentation
-      run:  cp apps/ex_nvr_web/priv/static/openapi.yaml docs/
+      run:  cp ui/priv/static/openapi.yaml docs/
 
     - name: Deploy to GitHub Pages
       run: |
