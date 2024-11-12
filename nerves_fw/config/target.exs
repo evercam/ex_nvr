@@ -95,6 +95,17 @@ config :mdns_lite,
     }
   ]
 
+config :nerves_hub_link,
+  host: "manage.nervescloud.com",
+  remote_iex: true,
+  shared_secret: [
+    product_key: System.get_env("NERVES_HUB_PRODUCT_KEY", "fake_key"),
+    product_secret: System.get_env("NERVES_HUB_PRODUCT_SECRET", "fake_secret")
+  ],
+  fwup_public_keys: [
+    "iKuGXqQaMi4xwDRYobdGM0uO/BS4Kmpt0sFrkGGTLSE="
+  ]
+
 # Import target specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
 # Uncomment to use target specific configurations

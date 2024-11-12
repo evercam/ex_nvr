@@ -9,7 +9,7 @@ defmodule ExNVR.Nerves.Netbird do
     config_file: "/data/netbird/config.json",
     daemon_addr: "unix:///data/netbird/netbird.sock",
     log_level: "info",
-    log_file: "/data/netbird/client.log"
+    log_file: "console"
   ]
 
   def start_link(opts) do
@@ -29,7 +29,8 @@ defmodule ExNVR.Nerves.Netbird do
     opts = Keyword.merge(@default_config, opts)
 
     children = [
-      {MuonTrap.Daemon, ["netbird", netbird_args(opts), []]},
+      {MuonTrap.Daemon,
+       ["netbird", netbird_args(opts), [log_output: :info, stderr_to_stdout: true]]},
       {__MODULE__.Client, opts}
     ]
 
