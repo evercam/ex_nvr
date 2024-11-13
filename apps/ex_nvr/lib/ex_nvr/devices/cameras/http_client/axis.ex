@@ -59,6 +59,34 @@ defmodule ExNVR.Devices.Cameras.HttpClient.Axis do
     |> parse_http_response(&parse_stream_profile_response/1)
   end
 
+  @impl true
+  def create_stream_profile(url, params, opts) do
+    url = url <> @stream_profiles
+
+    parameters =
+      params
+      |> Map.delete("name")
+      |> Enum.map(fn {key, value} -> "#{key}=#{value}" end)
+      |> Enum.join("&")
+
+    body = %{
+      "apiVersion" => "1.0",
+      "method" => "create",
+      "params" => %{
+        "streamProfile" => [
+          %{"name" => params["name"], "description" => params["name"], "parameters" => parameters}
+        ]
+      }
+    }
+
+    url
+    |> HTTP.post(body, opts)
+    |> case do
+      {:ok, %{body: %{"data" => _data}}} -> :ok
+      _else -> :error
+    end
+  end
+
   defp parse_response(body, timezone) do
     SweetXml.xpath(
       body,
@@ -131,7 +159,7 @@ defmodule ExNVR.Devices.Cameras.HttpClient.Axis do
         width: width,
         height: height,
         gop: Map.get(params, "videokeyframeinterval", "32") |> String.to_integer(),
-        bitrate: 0,
+        bitrate: Map.get(params, "videobitrate", "0") |> String.to_integer(),
         bitrate_mode: Map.get(params, "videobitratemode", "abr"),
         smart_codec: false
       }

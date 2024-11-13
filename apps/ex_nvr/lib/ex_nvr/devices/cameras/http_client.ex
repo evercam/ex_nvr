@@ -22,7 +22,15 @@ defmodule ExNVR.Devices.Cameras.HttpClient do
   """
   @callback stream_profiles(url(), camera_opts()) :: {:ok, [StreamProfile.t()]} | error()
 
-  @optional_callbacks fetch_lpr_event: 2, device_info: 2, stream_profiles: 2
+  @doc """
+  Create a new stream profile for camera.
+  """
+  @callback create_stream_profile(url(), map(), camera_opts()) :: :ok | :error
+
+  @optional_callbacks fetch_lpr_event: 2,
+                      device_info: 2,
+                      stream_profiles: 2,
+                      create_stream_profile: 3
 
   defmacro __using__(_opts) do
     quote location: :keep do
@@ -37,7 +45,13 @@ defmodule ExNVR.Devices.Cameras.HttpClient do
       @impl true
       def stream_profiles(_url, _opts), do: {:error, :not_implemented}
 
-      defoverridable fetch_lpr_event: 2, device_info: 2, stream_profiles: 2
+      @impl true
+      def create_stream_profile(_url, _params, _opts), do: {:error, :not_implemented}
+
+      defoverridable fetch_lpr_event: 2,
+                     device_info: 2,
+                     stream_profiles: 2,
+                     create_stream_profile: 3
     end
   end
 end
