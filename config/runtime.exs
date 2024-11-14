@@ -42,6 +42,11 @@ defmodule ConfigParser do
   end
 end
 
+url = URI.parse(System.get_env("EXNVR_URL", "http://localhost:4000"))
+
+## SSL Support
+enable_ssl = String.to_existing_atom(System.get_env("EXNVR_ENABLE_HTTPS", "false"))
+
 if config_env() == :prod do
   database_path =
     System.get_env("DATABASE_PATH") ||
@@ -84,8 +89,6 @@ if config_env() == :prod do
       You can generate one by calling: mix phx.gen.secret
       """
 
-  url = URI.parse(System.get_env("EXNVR_URL", "http://localhost:4000"))
-
   check_origin =
     case System.get_env("EXNVR_CHECK_ORIGIN", "true") do
       "true" -> true
@@ -101,9 +104,6 @@ if config_env() == :prod do
     secret_key_base: secret_key_base,
     url: [scheme: url.scheme, host: url.host, port: url.port],
     check_origin: check_origin
-
-  ## SSL Support
-  enable_ssl = String.to_existing_atom(System.get_env("EXNVR_ENABLE_HTTPS", "false"))
 
   if enable_ssl do
     config :ex_nvr_web, ExNVRWeb.Endpoint,
@@ -150,4 +150,40 @@ if config_env() == :prod do
   #     config :swoosh, :api_client, Swoosh.ApiClient.Hackney
   #
   # See https://hexdocs.pm/swoosh/Swoosh.html#module-installation for details.
+end
+
+# Start with Livebook defaults
+Livebook.config_runtime()
+
+notebook_path = (File.cwd!() |> Path.join("notebooks")) <> "/"
+
+config :livebook,
+  home: notebook_path,
+  file_systems: [Livebook.FileSystem.Local.new(default_path: notebook_path)],
+  default_runtime: Livebook.Runtime.Embedded.new(),
+  default_app_runtime: Livebook.Runtime.Embedded.new()
+
+config :livebook, LivebookWeb.Endpoint,
+  url: [host: url.host, path: "/"],
+  http: [
+    port: String.to_integer(System.get_env("EXNVR_LB_HTTP_PORT") || "9100"),
+    http_1_options: [max_header_length: 32768]
+  ]
+
+if enable_ssl do
+  config :livebook, LivebookWeb.Endpoint,
+    https: [
+      ip: {0, 0, 0, 0, 0, 0, 0, 0},
+      port: String.to_integer(System.get_env("EXNVR_LB_HTTPS_PORT") || "9101"),
+      cipher_suite: :compatible,
+      keyfile: System.get_env("EXNVR_SSL_KEY_PATH"),
+      certfile: System.get_env("EXNVR_SSL_CERT_PATH")
+    ]
+end
+
+# Setup Erlang distribution
+with {_, 0} <- System.cmd("epmd", ["-daemon"]),
+    {:ok, _pid} <- Node.start(:"livebook@#{url.host}") do
+  # Livebook always sets the cookie, so let it set it. See the Livebook application config.
+  :ok
 end

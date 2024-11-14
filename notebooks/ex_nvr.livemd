@@ -1,0 +1,17 @@
+# ExNVR
+
+## Restart ExNVR
+
+Livebook connection will close, and any unsaved changes will be lost.
+
+```elixir
+System.restart()
+```
+
+## Reboot the Pi
+
+Livebook connection will close, and any unsaved changes will be lost.
+
+```elixir
+System.cmd("sudo", ["reboot"])
+```

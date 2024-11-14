@@ -42,6 +42,15 @@ config :ex_nvr_web, ExNVRWeb.Endpoint,
   pubsub_server: ExNVR.PubSub,
   live_view: [signing_salt: "ASTBdstw"]
 
+config :livebook, LivebookWeb.Endpoint,
+  adapter: Bandit.PhoenixAdapter,
+  pubsub_server: Livebook.PubSub,
+  live_view: [signing_salt: "livebook"],
+  drainer: [shutdown: 1000],
+  render_errors: [formats: [html: LivebookWeb.ErrorHTML], layout: false],
+  code_reloader: false,
+  server: true
+
 # Configure esbuild (the version is required)
 config :esbuild,
   version: "0.17.11",
@@ -83,6 +92,43 @@ config :bundlex, :disable_precompiled_os_deps, apps: [:ex_libsrtp]
 config :req, legacy_headers_as_lists: true
 
 config :reverse_proxy_plugin, :http_client, ReverseProxyPlug.HTTPClient.Adapters.HTTPoison
+
+# Additional mime types
+config :mime, :types, %{
+  "audio/m4a" => ["m4a"],
+  "text/plain" => ["livemd"]
+}
+
+# Sets the default storage backend
+config :livebook, :storage, Livebook.Storage.Ets
+
+# Enable the embedded runtime which isn't available by default
+config :livebook, :runtime_modules, [Livebook.Runtime.Embedded, Livebook.Runtime.Attached]
+
+# Allow Livebook to power off  the device
+config :livebook, :shutdown_callback, {Process, :spawn, [System, :cmd, ["sudo", ["poweroff"]], []]}
+
+# Defaults for required configurations
+config :livebook,
+  agent_name: "default",
+  allowed_uri_schemes: [],
+  app_service_name: nil,
+  app_service_url: nil,
+  authentication: {:password, "password"},
+  aws_credentials: false,
+  epmdless: false,
+  feature_flags: [],
+  force_ssl_host: nil,
+  plugs: [],
+  rewrite_on: [],
+  teams_auth?: false,
+  teams_url: "https://teams.livebook.dev",
+  update_instructions_url: nil,
+  within_iframe: true,
+  iframe_port: String.to_integer(System.get_env("EXNVR_LB_IFRAME_PORT") || "9102"),
+  cookie: :ex_nvr_cookie
+
+config :livebook, Livebook.Apps.Manager, retry_backoff_base_ms: 5_000
 
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.

@@ -52,9 +52,9 @@ defmodule ExNVR.Umbrella.MixProject do
 
   defp steps() do
     if System.get_env("DOCKER_BUILD", "false") |> String.to_existing_atom() do
-      [:assemble]
+      [:assemble, &copy_notebooks/1]
     else
-      release_steps(get_target())
+      release_steps(get_target()) ++ [&copy_notebooks/1]
     end
   end
 
@@ -81,6 +81,18 @@ defmodule ExNVR.Umbrella.MixProject do
   end
 
   defp release_steps(_other), do: [:assemble]
+
+  defp copy_notebooks(release) do
+    notebooks_dest = Path.join(release.path, "notebooks")
+
+    unless File.exists?(notebooks_dest) do
+      File.mkdir_p!(notebooks_dest)
+    end
+
+    {:ok, _} = File.cp_r(File.cwd!() |> Path.join("notebooks/"), notebooks_dest)
+
+    release
+  end
 
   defp delete_wrong_symlink(release) do
     Path.join([Application.app_dir(:ex_nvr), "priv", "bundlex", "nif", "*"])

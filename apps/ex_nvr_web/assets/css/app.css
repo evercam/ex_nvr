@@ -94,3 +94,7 @@ tr {
     --tw-border-opacity: 0.4;
     border-color: rgb(55 65 81 / var(--tw-border-opacity));
 }
+
+html, body, .phx-connected {
+    height: 100%;
+}

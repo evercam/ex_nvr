@@ -123,6 +123,7 @@ defmodule ExNVRWeb.Router do
     live_session :require_authenticated_user,
       on_mount: [{ExNVRWeb.UserAuth, :ensure_authenticated}] do
       live "/dashboard", DashboardLive, :new
+      live "/livebook", LivebookLive, :show
 
       live "/devices", DeviceListLive, :list
 

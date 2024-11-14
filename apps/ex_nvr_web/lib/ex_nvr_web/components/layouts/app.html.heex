@@ -232,6 +232,15 @@
         <ul class="pt-4 mt-4 space-y-2 font-medium border-t border-white dark:border-gray-700">
           <li>
             <.link
+              href={~p"/livebook"}
+              class="flex items-center p-2 text-gray-900 rounded-lg text-white dark:text-white hover:bg-gray-500 dark:hover:bg-gray-700"
+            >
+              <.icon name="hero-book-open-solid" class="w-6 h-6 dark:text-gray-400" />
+              <span class="flex-1 ml-3 whitespace-nowrap">Livebook</span>
+            </.link>
+          </li>
+          <li>
+            <.link
               href={~p"/live-dashboard"}
               target="_blank"
               class="flex items-center p-2 text-gray-900 rounded-lg text-white dark:text-white hover:bg-gray-500 dark:hover:bg-gray-700"
@@ -278,8 +287,8 @@
     </div>
   </aside>
 </header>
-<main class="px-4 py-20 sm:px-6 lg:px-8 bg-gray-300 dark:bg-gray-800">
-  <div class="flex justify-center mx-auto sm:ml-64 bg-gray-300 dark:bg-gray-800">
+<main class="h-full pt-16 pb-5 sm:px-6 lg:px-8 bg-gray-300 dark:bg-gray-800">
+  <div class="flex justify-center mx-auto sm:ml-64 h-full bg-gray-300 dark:bg-gray-800">
     <.flash_group flash={@flash} />
     <%= @inner_content %>
   </div>
