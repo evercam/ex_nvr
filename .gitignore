@@ -62,3 +62,6 @@ npm-debug.log
 
 # Vscode settings
 .vscode
+
+# .env files
+/nerves_fw/.env

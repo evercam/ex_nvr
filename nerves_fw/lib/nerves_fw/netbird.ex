@@ -27,6 +27,11 @@ defmodule ExNVR.Nerves.Netbird do
   @impl true
   def init(opts) do
     opts = Keyword.merge(@default_config, opts)
+    config_dir = opts[:config_file] |> Path.dirname()
+
+    unless File.exists?(config_dir) do
+      File.mkdir!(config_dir)
+    end
 
     children = [
       {MuonTrap.Daemon,

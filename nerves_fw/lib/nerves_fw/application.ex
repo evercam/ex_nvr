@@ -11,6 +11,8 @@ defmodule ExNVR.Nerves.Application do
 
     children = [] ++ children(target())
 
+    ExNVR.Release.migrate()
+
     Supervisor.start_link(children, opts)
   end
 
@@ -35,7 +37,7 @@ defmodule ExNVR.Nerves.Application do
     [
       mac_address: VintageNet.get(["interface", "eth0", "mac_address"]),
       serial_number:
-        File.read!("/sys/firmware/devicetree/base/serial-number") |> String.slice(0..-2),
+        File.read!("/sys/firmware/devicetree/base/serial-number") |> String.slice(0..-2//-1),
       platform: Nerves.Runtime.KV.get("a.nerves_fw_platform"),
       kit_id: Nerves.Runtime.KV.get("nerves_evercam_id")
     ]

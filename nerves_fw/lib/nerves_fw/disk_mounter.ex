@@ -34,6 +34,7 @@ defmodule ExNVR.Nerves.DiskMounter do
   def handle_call({:add_fstab_entry, {uuid, mountpoint, fstype}}, _from, state) do
     entry = "UUID=\"#{uuid}\" #{mountpoint} #{fstype} defaults 0 1\n"
     res = File.write(state.fstab, entry, [:append])
+    mount_all(state)
 
     {:reply, res, state}
   end

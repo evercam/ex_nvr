@@ -80,7 +80,7 @@ if config_env() == :prod do
   url = URI.parse(System.get_env("EXNVR_URL", "http://localhost:4000"))
 
   check_origin =
-    case System.get_env("EXNVR_CHECK_ORIGIN", "http://192.168.8.147:4000,http://*.evercam.io") do
+    case System.get_env("EXNVR_CHECK_ORIGIN", "//*.evercam.io") do
       "true" -> true
       "false" -> false
       origins -> String.split(origins, ",")
