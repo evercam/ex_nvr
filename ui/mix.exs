@@ -67,7 +67,7 @@ defmodule ExNVR.MixProject do
       {:ex_aws_s3, "~> 2.5"},
       {:flop, "~> 0.22.1"},
       {:soap, github: "gBillal/soap", branch: "parse-attributes"},
-      {:req, "~> 0.4.0"},
+      {:req, "~> 0.5.7"},
       {:multipart, "~> 0.4.0"},
       {:ex_mp4, "~> 0.7.0"},
       {:floki, "~> 0.36.0"},
