@@ -54,7 +54,7 @@ defmodule ExNVR.MixProject do
       {:membrane_h264_ffmpeg_plugin, "~> 0.32.0"},
       {:membrane_h265_ffmpeg_plugin, "~> 0.4.0"},
       {:membrane_ffmpeg_swscale_plugin, "~> 0.16.0"},
-      {:membrane_realtimer_plugin, "~> 0.9.0"},
+      {:membrane_realtimer_plugin, "~> 0.10.1"},
       {:membrane_rtc_engine, "~> 0.22.0"},
       {:membrane_rtc_engine_webrtc, "~> 0.8.0"},
       {:membrane_fake_plugin, "~> 0.11.0"},
