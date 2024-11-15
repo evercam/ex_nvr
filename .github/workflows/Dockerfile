@@ -26,16 +26,16 @@ RUN mix local.hex --force && \
   mix local.rebar --force
 
 # install mix dependencies
-COPY mix.exs mix.lock ./
-COPY config config
-COPY assets assets
-COPY apps apps
-COPY rel rel
-RUN rm -rf apps/ex_nvr/priv/bundlex
+COPY rtsp rtsp
+COPY ui ui
+RUN rm -rf ui/priv/bundlex
+
+WORKDIR /app/ui
 
 RUN mix deps.get
 RUN mix deps.compile
-RUN mix do release
+
+RUN mix release
 
 RUN mkdir build-assets
 RUN cp _build/prod/*.tar.gz _build/prod/*.deb build-assets/

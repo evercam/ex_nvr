@@ -17,6 +17,7 @@ NVR (Network Video Recorder) for Elixir using [Membrane Framework](https://githu
     - [Page URL](#page-url)
     - [Embedding](#embedding)
   - [Features](#features)
+  - [Project Structure](#project-structure)
 
 ## Installation
 
@@ -179,3 +180,11 @@ The main feature of this project is to store video streams retrieved from `devic
    - [ ] Sync recorded videos to cloud storage
    - [ ] Application for management of multiple NVRs
    - [x] Support HTTPS
+
+
+## Project Structure
+
+The project is in a `poncho` style, it consists of the following (sub)projects:
+
+   * `rtsp` - Contains the code needed to connect to cameras via `RTSP` and parsing `RTP` packets.
+   * `ui` - Contains the core logic of `ex_nvr` and a live view web app.

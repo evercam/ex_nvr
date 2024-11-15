@@ -24,9 +24,11 @@ jobs:
    
       - name: Get deps
         run: mix deps.get --only prod
+        working-directory: ./ui
 
       - name: Create release
         run: mix release
+        working-directory: ./ui
 
       - name: Setup QEMU
         uses: docker/setup-qemu-action@v2
@@ -60,8 +62,8 @@ jobs:
           arm64_id=$(docker create ex_nvr:${{ github.ref_name }}-arm64)
           arm_id=$(docker create ex_nvr:${{ github.ref_name }}-armhf)
 
-          docker cp $arm64_id:/app/build-assets/. _build/prod/
-          docker cp $arm_id:/app/build-assets/. _build/prod/
+          docker cp $arm64_id:/app/ui/build-assets/. ui/_build/prod/
+          docker cp $arm_id:/app/ui/build-assets/. ui/_build/prod/
           docker rm -v $arm64_id $arm_id
 
       - name: Create GH release
@@ -70,8 +72,8 @@ jobs:
           name: ${{ github.ref_name }}
           generate_release_notes: true
           files: |
-            _build/prod/*.deb
-            _build/prod/*.tar.gz
+            ui/_build/prod/*.deb
+            ui/_build/prod/*.tar.gz
 
   publish-docs:
     needs: [release]
@@ -85,7 +87,7 @@ jobs:
         ref: ${{ github.ref }}
 
     - name: Copy Documentation
-      run:  cp apps/ex_nvr_web/priv/static/openapi.yaml docs/
+      run:  cp ui/priv/static/openapi.yaml docs/
 
     - name: Deploy to GitHub Pages
       run: |
