@@ -295,7 +295,7 @@ defmodule ExNVR.Recordings do
       |> Enum.reduce_while([], fn sample_metadata, samples ->
         cond do
           sample_metadata.dts > offset and method == :precise ->
-            {:halt, Enum.reverse([sample_metadata | samples])}
+            {:halt, [sample_metadata | samples]}
 
           sample_metadata.dts > offset ->
             {:halt, [List.last(samples)]}
@@ -307,6 +307,7 @@ defmodule ExNVR.Recordings do
             {:cont, [sample_metadata | samples]}
         end
       end)
+      |> Enum.reverse()
       |> ExMP4.Reader.samples(reader)
       |> Enum.map(&%{&1 | payload: to_annexb(&1.payload, prefix_size)})
 

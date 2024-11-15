@@ -88,6 +88,7 @@ defmodule ExNVR.MixProject do
       {:logger_json, "~> 5.1"},
       {:flop_phoenix, "~> 0.21.1"},
       {:prom_ex, "~> 1.9.0"},
+      {:reverse_proxy_plug, "~> 3.0"},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:mock, "~> 0.3", only: :test},
       {:faker, "~> 0.17", only: :test},
@@ -259,6 +260,7 @@ defmodule ExNVR.MixProject do
 
       File.rm_rf!(dest)
 
+      # Create folder structure
       File.mkdir!(dest)
       File.mkdir_p!(Path.join([dest, "opt", "ex_nvr"]))
       File.mkdir_p!(Path.join([dest, "var", "lib", "ex_nvr"]))
@@ -267,19 +269,14 @@ defmodule ExNVR.MixProject do
 
       File.cp_r!(release.path, Path.join([dest, "opt", "ex_nvr"]))
 
-      File.write!(Path.join([dest, "DEBIAN", "control"]), """
-      Package: ex-nvr
-      Version: #{release.version}
-      Architecture: #{get_debian_arch(arch)}
-      Maintainer: Evercam <support@evercam.io>
-      Description: NVR (Network Video Recorder) software for Elixir.
-      Homepage: https://github.com/evercam/ex_nvr
-      """)
+      # control file
+      Path.join([templates_dir(), "debian", "control.eex"])
+      |> EEx.eval_file(assigns: %{version: release.version, arch: get_debian_arch(arch)})
+      |> then(&File.write!(Path.join([dest, "DEBIAN", "control"]), &1))
 
-      File.write!(
-        Path.join([dest, "usr", "lib", "systemd", "system", "ex_nvr.service"]),
-        systemd_service_content()
-      )
+      # systemd service
+      dest = Path.join([dest, "usr", "lib", "systemd", "system", "ex_nvr.service"])
+      Path.join([templates_dir(), "debian", "ex_nvr.service"]) |> File.cp!(dest)
 
       {_result, 0} =
         System.cmd("dpkg-deb", ["--root-owner-group", "--build", name],
@@ -306,25 +303,5 @@ defmodule ExNVR.MixProject do
   defp get_debian_arch("aarch64"), do: "arm64"
   defp get_debian_arch("arm"), do: "armhf"
 
-  defp systemd_service_content() do
-    """
-    [Unit]
-    Description=ExNVR: Network Video Recorder
-    After=network.target
-
-    [Service]
-    Type=simple
-    User=root
-    Group=root
-    ExecStart=/opt/ex_nvr/run
-    Restart=always
-    RestartSec=1
-    SyslogIdentifier=ex_nvr
-    WorkingDirectory=/opt/ex_nvr
-    LimitNOFILE=8192
-
-    [Install]
-    WantedBy=multi-user.target
-    """
-  end
+  defp templates_dir(), do: :code.priv_dir(:ex_nvr) |> List.to_string()
 end

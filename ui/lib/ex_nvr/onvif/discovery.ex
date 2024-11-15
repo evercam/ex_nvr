@@ -29,8 +29,7 @@ defmodule ExNVR.Onvif.Discovery do
   def probe(timeout) do
     msg = String.replace(@probe_message, "$id", UUID.uuid4())
 
-    with {:ok, socket} <-
-           mockable(:gen_udp).open(0, [:binary, active: false, ifaddr: {192, 168, 8, 1}]),
+    with {:ok, socket} <- mockable(:gen_udp).open(0, [:binary, active: false]),
          :ok <- mockable(:gen_udp).send(socket, @multicast_addr, @multicast_port, msg) do
       socket
       |> recv(timeout)

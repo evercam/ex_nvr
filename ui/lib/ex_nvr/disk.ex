@@ -67,14 +67,19 @@ defmodule ExNVR.Disk do
   @doc """
   List available hard drives
   """
-  @spec list_drives() :: [t()]
+  @spec list_drives() :: {:ok, [t()]} | {:error, any()}
   def list_drives() do
     case :os.type() do
-      {:unix, _} ->
-        list_unix_drives()
+      {:unix, _} -> list_unix_drives()
+      _other -> {:error, :not_supported}
+    end
+  end
 
-      other ->
-        raise "list hard drives for os: #{inspect(other)} is not supported"
+  @spec list_drives!() :: [t()]
+  def list_drives!() do
+    case list_drives() do
+      {:ok, drives} -> drives
+      {:error, reason} -> raise "cannot list hard drives due to: #{inspect(reason)}"
     end
   end
 
