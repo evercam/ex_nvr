@@ -215,14 +215,19 @@ defmodule ExNVR.MixProject do
     libs =
       case arch do
         "arm" ->
-          libs ++
-            [
-              "/usr/lib/#{arch}-linux-#{abi}/libavcodec.so*",
-              "/usr/lib/#{arch}-linux-#{abi}/libavformat.so*",
-              "/usr/lib/#{arch}-linux-#{abi}/libavutil.so*",
-              "/usr/lib/#{arch}-linux-#{abi}/libavfilter.so*",
-              "/usr/lib/#{arch}-linux-#{abi}/libavresample.so*"
-            ]
+          {libdir, 0} =
+            System.cmd("pkg-config", ["--variable=libdir", "libavformat"], stderr_to_stdout: true)
+
+          [
+            "libavcodec.so*",
+            "libavformat.so*",
+            "libavutil.so*",
+            "libavfilter.so*",
+            "libswresample.so*",
+            "libswscale.so*",
+          ]
+          |> Enum.map(&Path.join(libdir, &1))
+          |> Kernel.++(libs)
 
         _other ->
           libs

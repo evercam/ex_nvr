@@ -11,11 +11,11 @@ RUN \
   cmake \
   libsrtp2-dev \
   libturbojpeg-dev \ 
-  libavcodec-dev \
-  libavformat-dev \
-  libavutil-dev \
-  libswscale-dev \
   && rm -rf /var/lib/apt/lists/*
+
+# Download ffmpeg
+RUN wget https://a7u4.c16.e2-3.dev/public/ffmpeg-armhf.tar.xz && tar -xf ffmpeg-armhf.tar.xz -C /opt
+ENV PKG_CONFIG_PATH="/opt/ffmpeg/lib/pkgconfig:$PKG_CONFIG_PATH"
 
 ARG ERL_FLAGS
 ENV ERL_FLAGS=$ERL_FLAGS
