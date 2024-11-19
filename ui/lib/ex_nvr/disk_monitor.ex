@@ -64,7 +64,7 @@ defmodule ExNVR.DiskMonitor do
     else
       :disksup.get_disk_data()
       |> Enum.map(fn {mountpoint, _total, usage} -> {to_string(mountpoint), usage} end)
-      |> Enum.find(&(elem(&1, 0) == device.storage_config.address), {nil, 0})
+      |> Enum.find({nil, 0}, &(elem(&1, 0) == device.storage_config.address))
       |> elem(1)
     end
   end
