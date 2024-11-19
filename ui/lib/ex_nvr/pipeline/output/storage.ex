@@ -71,20 +71,23 @@ defmodule ExNVR.Pipeline.Output.Storage do
 
   @impl true
   def handle_init(_ctx, opts) do
-    dest = Device.recording_dir(opts.device, opts.stream)
-
     state =
       %{
         record?: true,
         device: opts.device,
         stream: opts.stream,
-        directory: dest,
+        directory: Device.recording_dir(opts.device, opts.stream),
         target_duration: opts.target_segment_duration,
         correct_timestamp: opts.correct_timestamp,
         track: nil
       }
       |> reset_state_fields()
 
+    {[], state}
+  end
+
+  @impl true
+  def handle_setup(_ctx, %{directory: dest} = state) do
     case Utils.writable(dest) do
       :ok ->
         {[], state}
