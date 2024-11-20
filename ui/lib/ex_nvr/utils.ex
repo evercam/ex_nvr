@@ -58,6 +58,19 @@ defmodule ExNVR.Utils do
     end
   end
 
+  @doc """
+  Get the system architecture
+  """
+  @spec system_architecture() :: {binary(), binary(), binary()}
+  def system_architecture() do
+    [architecture, _vendor, os, abi] =
+      :erlang.system_info(:system_architecture)
+      |> List.to_string()
+      |> String.split("-")
+
+    {architecture, os, abi}
+  end
+
   # Streaming & Codecs utilities
   defguard keyframe(buffer)
            when (is_map_key(buffer.metadata, :h264) and buffer.metadata.h264.key_frame?) or
