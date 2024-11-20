@@ -224,7 +224,7 @@ defmodule ExNVR.MixProject do
             "libavutil.so*",
             "libavfilter.so*",
             "libswresample.so*",
-            "libswscale.so*",
+            "libswscale.so*"
           ]
           |> Enum.map(&Path.join(String.trim(libdir), &1))
           |> Kernel.++(libs)
