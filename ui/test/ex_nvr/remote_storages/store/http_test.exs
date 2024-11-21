@@ -62,7 +62,7 @@ defmodule ExNVR.RemoteStorages.Store.HTTPTest do
 
       Bypass.down(bypass)
 
-      assert {:error, %Mint.TransportError{reason: :econnrefused}} =
+      assert {:error, %Req.TransportError{reason: :econnrefused}} =
                HTTP.save_recording(device, recording,
                  url: endpoint_url(bypass.port, @recording_path)
                )

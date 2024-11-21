@@ -2,7 +2,7 @@ defmodule ExNVR.MixProject do
   use Mix.Project
 
   @app :ex_nvr
-  @version "0.16.0"
+  @version "0.16.1"
 
   def project do
     [
@@ -54,7 +54,7 @@ defmodule ExNVR.MixProject do
       {:membrane_h264_ffmpeg_plugin, "~> 0.32.0"},
       {:membrane_h265_ffmpeg_plugin, "~> 0.4.0"},
       {:membrane_ffmpeg_swscale_plugin, "~> 0.16.0"},
-      {:membrane_realtimer_plugin, "~> 0.9.0"},
+      {:membrane_realtimer_plugin, "~> 0.10.0"},
       {:membrane_rtc_engine, "~> 0.22.0"},
       {:membrane_rtc_engine_webrtc, "~> 0.8.0"},
       {:membrane_fake_plugin, "~> 0.11.0"},
@@ -67,7 +67,7 @@ defmodule ExNVR.MixProject do
       {:ex_aws_s3, "~> 2.5"},
       {:flop, "~> 0.22.1"},
       {:soap, github: "gBillal/soap", branch: "parse-attributes"},
-      {:req, "~> 0.4.0"},
+      {:req, "~> 0.5.0"},
       {:multipart, "~> 0.4.0"},
       {:ex_mp4, "~> 0.7.0"},
       {:floki, "~> 0.36.0"},
