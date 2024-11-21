@@ -107,7 +107,8 @@ defmodule ExNVR.Onvif do
   @spec get_media_stream_uri!(url(), binary(), opts()) :: response()
   @spec get_media_stream_uri!(url(), binary()) :: response()
   def get_media_stream_uri!(url, profile_token, opts \\ []) do
-    body = %{"ProfileToken" => profile_token, "Protocol" => ""}
+    protocol = Keyword.get(opts, :protocol, "RTSP")
+    body = %{"ProfileToken" => profile_token, "Protocol" => protocol}
     result = call!(url, :get_stream_uri, body, opts)
     get_in(result, [:get_stream_uri_response, :uri])
   end
