@@ -11,10 +11,12 @@ defmodule ExNVR.Pipeline.Output.Storage.MediaUtils do
   """
   @spec get_priv_data(Buffer.t()) :: ExMP4.Box.t()
   def get_priv_data(buffer) do
+    codec = if Map.has_key?(buffer.metadata, :h264), do: :h264, else: :h265
+
     {vpss, spss, ppss} =
       :binary.split(buffer.payload, @nalu_prefixes, [:global])
-      |> Enum.reject(&(&1 == ""))
-      |> Enum.zip(get_nalu_types(buffer.metadata))
+      |> Enum.reject(&(&1 == "" or not pss?(codec, &1)))
+      |> Enum.map(&{&1, pss_type(codec, &1)})
       |> Enum.reduce({[], [], []}, fn
         {data, :vps}, {vpss, spss, ppss} -> {[data | vpss], spss, ppss}
         {data, :sps}, {vpss, spss, ppss} -> {vpss, [data | spss], ppss}
@@ -25,23 +27,28 @@ defmodule ExNVR.Pipeline.Output.Storage.MediaUtils do
         {Enum.reverse(vpss), Enum.reverse(spss), Enum.reverse(ppss)}
       end)
 
-    if Map.has_key?(buffer.metadata, :h264),
+    if codec == :h264,
       do: ExMP4.Box.Avcc.new(spss, ppss),
       else: get_hevc_dcr(vpss, spss, ppss)
   end
 
-  @spec convert_annexb_to_elementary_stream(Buffer.t()) :: binary()
-  def convert_annexb_to_elementary_stream(buffer) do
+  @spec convert_annexb_to_elementary_stream(Buffer.t(), :h264 | :h265) :: binary()
+  def convert_annexb_to_elementary_stream(buffer, codec) do
     :binary.split(buffer.payload, @nalu_prefixes, [:global])
-    |> Stream.reject(&(&1 == ""))
-    |> Stream.zip(get_nalu_types(buffer.metadata))
-    |> Stream.reject(fn {_data, type} -> type in [:vps, :sps, :pps] end)
-    |> Stream.map(fn {data, _type} -> <<byte_size(data)::32, data::binary>> end)
+    |> Stream.reject(&(&1 == "" or pss?(codec, &1)))
+    |> Stream.map(&<<byte_size(&1)::32, &1::binary>>)
     |> Enum.join()
   end
 
-  defp get_nalu_types(%{h264: %{nalus: nalus}}), do: nalus
-  defp get_nalu_types(%{h265: %{nalus: nalus}}), do: nalus
+  defp pss?(:h264, <<_prefix::3, type::5, _rest::binary>>) when type == 7 or type == 8, do: true
+  defp pss?(:h265, <<0::1, type::6, _rest::bitstring>>) when type in 32..34, do: true
+  defp pss?(_codec, _nalu), do: false
+
+  defp pss_type(:h264, <<_prefix::3, 7::5, _rest::binary>>), do: :sps
+  defp pss_type(:h264, <<_prefix::3, 8::5, _rest::binary>>), do: :pps
+  defp pss_type(:h265, <<0::1, 32::6, _rest::bitstring>>), do: :vps
+  defp pss_type(:h265, <<0::1, 33::6, _rest::bitstring>>), do: :sps
+  defp pss_type(:h265, <<0::1, 34::6, _rest::bitstring>>), do: :pps
 
   defp get_hevc_dcr(vpss, spss, ppss) do
     {sps, _nalu_parser} = NALuParser.parse(<<0, 0, 1, List.last(spss)::binary>>, NALuParser.new())
