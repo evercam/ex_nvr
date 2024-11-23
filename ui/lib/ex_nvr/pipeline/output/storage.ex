@@ -349,7 +349,7 @@ defmodule ExNVR.Pipeline.Output.Storage do
         dts: ExMP4.Helper.timescalify(Buffer.get_dts_or_pts(last_buffer), :nanosecond, timescale),
         pts: ExMP4.Helper.timescalify(last_buffer.pts, :nanosecond, timescale),
         sync?: Utils.keyframe(last_buffer),
-        payload: convert_annexb_to_elementary_stream(last_buffer),
+        payload: convert_annexb_to_elementary_stream(last_buffer, state.track.media),
         duration: ExMP4.Helper.timescalify(duration, :nanosecond, timescale)
       })
 

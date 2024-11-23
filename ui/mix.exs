@@ -2,7 +2,7 @@ defmodule ExNVR.MixProject do
   use Mix.Project
 
   @app :ex_nvr
-  @version "0.16.1"
+  @version "0.16.2"
 
   def project do
     [
