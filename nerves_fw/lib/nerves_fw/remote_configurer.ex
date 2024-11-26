@@ -15,11 +15,14 @@ defmodule ExNVR.Nerves.RemoteConfigurer do
 
   require Logger
 
+  alias ExNVR.Accounts
   alias Req.Response
 
   @netbird_mangement_url "https://vpn.evercam.io"
   @mountpoint "/data/media"
   @admin_user "admin@evercam.io"
+  @default_admin_user "admin@localhost"
+  @config_completed_file "/data/.kit_config"
 
   def start_link(remote_url) do
     GenServer.start_link(__MODULE__, remote_url, name: __MODULE__)
@@ -29,10 +32,15 @@ defmodule ExNVR.Nerves.RemoteConfigurer do
   def init(config) do
     state = %{
       url: config[:url],
-      token: config[:token]
+      token: config[:token],
+      api_version: config[:api_version]
     }
 
-    {[], state, continue: :configure}
+    if File.exists?(@config_completed_file) do
+      :ignore
+    else
+      {:ok, state, {:continue, :configure}}
+    end
   end
 
   @impl true
@@ -42,9 +50,14 @@ defmodule ExNVR.Nerves.RemoteConfigurer do
   def handle_info(:configure, state), do: configure(state)
 
   defp configure(state) do
-    case Req.get(url(state), headers: [{"x-api-key", state.token}]) do
+    case Req.get(url(state),
+           params: [version: state.api_version],
+           headers: [{"x-api-key", state.token}]
+         ) do
       {:ok, %Response{status: 200, body: config}} ->
         do_configure(config)
+        finalize_config(state, config)
+        File.touch!(@config_completed_file)
         {:stop, :normal, state}
 
       {:ok, %Response{status: 204}} ->
@@ -72,11 +85,11 @@ defmodule ExNVR.Nerves.RemoteConfigurer do
   end
 
   defp log_error({:ok, %Response{status: status, body: body}}) do
-    Logger.error("Received status: #{status} with content: #{inspect(body)}")
+    Logger.error("[RemoteConfigurer] Received status: #{status} with content: #{inspect(body)}")
   end
 
   defp log_error({:error, reason}) do
-    Logger.error("Failed to contact remote server: #{inspect(reason)}")
+    Logger.error("[RemoteConfigurer] Failed to contact remote server: #{inspect(reason)}")
   end
 
   defp do_configure(config) do
@@ -109,9 +122,14 @@ defmodule ExNVR.Nerves.RemoteConfigurer do
         {_output, 0} = System.cmd("mkfs.ext4", [drive.path <> "1"], stderr_to_stdout: true)
 
         Logger.info("[RemoteConfigurer] Create mountpoint directory: #{@mountpoint}")
-        File.mkdir_p!(@mountpoint)
+
+        unless File.exists?(@mountpoint) do
+          File.mkdir_p!(@mountpoint)
+          {_output, 0} = System.cmd("chattr", ["+i", @mountpoint])
+        end
 
         Logger.info("[RemoteConfigurer] Add mountpoint to fstab and mount it")
+
         part =
           ExNVR.Disk.list_drives!()
           |> Enum.find(&(&1.path == drive.path))
@@ -125,7 +143,11 @@ defmodule ExNVR.Nerves.RemoteConfigurer do
   defp create_user!(config) do
     Logger.info("[RemoteConfigurer] Create admin user")
 
-    unless ExNVR.Accounts.get_user(@admin_user) do
+    if user = Accounts.get_user_by_email(@default_admin_user) do
+      Accounts.delete_user(user)
+    end
+
+    unless Accounts.get_user_by_email(@admin_user) do
       params = %{
         email: "admin@evercam.io",
         password: config["ex_nvr_password"],
@@ -134,7 +156,7 @@ defmodule ExNVR.Nerves.RemoteConfigurer do
         last_name: "Admin"
       }
 
-      {:ok, _user} = ExNVR.Accounts.register_user(params)
+      {:ok, _user} = Accounts.register_user(params)
     end
   end
 
@@ -150,5 +172,17 @@ defmodule ExNVR.Nerves.RemoteConfigurer do
       )
 
     ExNVR.Nerves.GrafanaAgent.reconfigure(config)
+  end
+
+  defp finalize_config(state, config) do
+    body = %{
+      mac_address: VintageNet.get(["interface", "eth0", "mac_address"]),
+      serial_number: Nerves.Runtime.serial_number(),
+      device_name: Nerves.Runtime.KV.get("a.nerves_fw_platform"),
+      username: @admin_user,
+      password: config["ex_nvr_password"]
+    }
+
+    Req.post!(url(state), headers: [{"x-api-key", state.token}], json: body)
   end
 end

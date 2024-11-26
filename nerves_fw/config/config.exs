@@ -5,6 +5,8 @@
 # this project.
 import Config
 
+config :logger, :console, level: :info
+
 config :ex_nvr, ExNVR.Repo,
   database: Path.expand("../../ui/ex_nvr_dev.db", Path.dirname(__ENV__.file)),
   pool_size: 5,
@@ -73,6 +75,8 @@ config :bundlex, :disable_precompiled_os_deps,
 config :membrane_core, enable_metrics: false
 
 config :tzdata, data_dir: "/data/elixir_tzdata"
+
+config :nerves_hub_link, connect: false
 
 if Mix.target() == :host do
   import_config "host.exs"

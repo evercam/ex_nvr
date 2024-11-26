@@ -3,7 +3,7 @@ defmodule NervesFw.MixProject do
 
   @app :ex_nvr_fw
   @version "0.16.0"
-  @all_targets [:ex_nvr_rpi4]
+  @all_targets [:ex_nvr_rpi4, :ex_nvr_rpi5]
 
   def project do
     [
@@ -56,7 +56,9 @@ defmodule NervesFw.MixProject do
       # version updates, please review their release notes in case
       # changes to your application are needed.
       {:ex_nvr_system_rpi4,
-       path: "/samsung/p/ex_nvr_system_rpi4", runtime: false, targets: :ex_nvr_rpi4}
+       path: "/samsung/p/ex_nvr_system_rpi4", runtime: false, targets: :ex_nvr_rpi4},
+      {:ex_nvr_system_rpi5,
+       path: "/samsung/p/ex_nvr_system_rpi5", runtime: false, targets: :ex_nvr_rpi5}
     ]
   end
 

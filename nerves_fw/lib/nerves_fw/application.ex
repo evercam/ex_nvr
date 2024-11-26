@@ -5,6 +5,8 @@ defmodule ExNVR.Nerves.Application do
 
   use Application
 
+  alias Nerves.Runtime
+
   @impl true
   def start(_type, _args) do
     opts = [strategy: :one_for_one, name: ExNVR.Nerves.Supervisor]
@@ -25,7 +27,8 @@ defmodule ExNVR.Nerves.Application do
     [
       {ExNVR.Nerves.Netbird, []},
       {ExNVR.Nerves.DiskMounter, []},
-      {ExNVR.Nerves.GrafanaAgent, grafana_agent_config()}
+      {ExNVR.Nerves.GrafanaAgent, grafana_agent_config()},
+      {ExNVR.Nerves.RemoteConfigurer, Application.get_env(:ex_nvr_fw, :remote_configurer)}
     ]
   end
 
@@ -36,10 +39,9 @@ defmodule ExNVR.Nerves.Application do
   def grafana_agent_config() do
     [
       mac_address: VintageNet.get(["interface", "eth0", "mac_address"]),
-      serial_number:
-        File.read!("/sys/firmware/devicetree/base/serial-number") |> String.slice(0..-2//-1),
-      platform: Nerves.Runtime.KV.get("a.nerves_fw_platform"),
-      kit_id: Nerves.Runtime.KV.get("nerves_evercam_id")
+      serial_number: Runtime.serial_number(),
+      platform: Runtime.KV.get("a.nerves_fw_platform"),
+      kit_id: Runtime.KV.get("nerves_evercam_id")
     ]
   end
 end
