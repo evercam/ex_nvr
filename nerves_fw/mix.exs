@@ -2,14 +2,14 @@ defmodule NervesFw.MixProject do
   use Mix.Project
 
   @app :ex_nvr_fw
-  @version "0.16.0"
+  @version "0.16.2"
   @all_targets [:ex_nvr_rpi4, :ex_nvr_rpi5]
 
   def project do
     [
       app: @app,
       version: @version,
-      elixir: "~> 1.11",
+      elixir: "~> 1.17",
       archives: [nerves_bootstrap: "~> 1.13"],
       start_permanent: Mix.env() == :prod,
       deps: deps(),
@@ -56,9 +56,9 @@ defmodule NervesFw.MixProject do
       # version updates, please review their release notes in case
       # changes to your application are needed.
       {:ex_nvr_system_rpi4,
-       github: "evercam/ex_nvr_system_rpi4", tag: "v1.29.0", target: :ex_nvr_rpi4},
+       github: "evercam/ex_nvr_system_rpi4", tag: "v1.29.0", runtime: false, targets: :ex_nvr_rpi4},
       {:ex_nvr_system_rpi5,
-       path: "/samsung/p/ex_nvr_system_rpi5", runtime: false, targets: :ex_nvr_rpi5}
+       github: "evercam/ex_nvr_system_rpi5", tag: "v0.4.0", runtime: false, targets: :ex_nvr_rpi5}
     ]
   end
 
