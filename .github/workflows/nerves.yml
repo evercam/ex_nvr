@@ -1,0 +1,73 @@
+name: nerves
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  firmware:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./nerves_fw
+    env:
+      MIX_ENV: prod
+      MIX_TARGET: ex_nvr_rpi4
+      NERVES_HUB_PRODUCT_KEY: ${{ secrets.NERVES_HUB_PRODUCT_KEY }}
+      NERVES_HUB_PRODUCT_SECRET: ${{ secrets.NERVES_HUB_PRODUCT_SECRET }}
+      SECRET_KEY_BASE: ${{ secrets.SECRET_KEY_BASE }}
+      REMOTE_CONFIGURER_URL: ${{ secrets.REMOTE_CONFIGURER_URL }}
+      REMOTE_CONFIGURER_TOKEN: ${{ secrets.REMOTE_CONFIGURER_TOKEN }}
+      REMOTE_CONFIGURER_VERSION: ${{ secrets.REMOTE_CONFIGURER_VERSION }}
+      NH_TOKEN: ${{ secrets.NH_TOKEN }}
+      NERVES_HUB_URI: ${{ secrets.NERVES_HUB_URI }}
+      NERVES_HUB_ORG: ${{ secrets.NERVES_HUB_ORG }}
+      NERVES_HUB_NON_INTERACTIVE: true
+      NERVES_HUB_PRODUCT: ex_nvr_fw
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: erlef/setup-beam@v1.16
+        with:
+          otp-version: 27.1
+          elixir-version: 1.17.3
+
+      - name: Install dependencies
+        run: | 
+          sudo apt-get update && \
+          sudo apt-get -y install npm wget build-essential automake autoconf git squashfs-tools ssh-askpass \
+                                  pkg-config curl libmnl-dev libssl-dev libncurses5-dev help2man libconfuse-dev \
+                                  libarchive-dev libsrtp2-dev libturbojpeg-dev
+
+      - name: Install fwup
+        run: |
+          wget https://github.com/fwup-home/fwup/releases/download/v1.11.0/fwup_1.11.0_amd64.deb && \
+          sudo dpkg -i fwup_1.11.0_amd64.deb && \
+          rm fwup_1.11.0_amd64.deb
+
+      - name: Install Nerves
+        run: |
+          mix local.hex --force && \
+          mix local.rebar --force && \
+          mix archive.install hex nerves_bootstrap --force
+
+      - name: Build assets
+        run: mix do deps.get, cmd --cd assets npm install, assets.deploy
+        working-directory: ./ui
+
+      - name: Download firmware dependencies
+        run: mix do deps.get, firmware.deps
+
+      - name: Delete bundlex precompiled deps
+        run: rm -rf ../ui/priv/bundlex/nif/https*
+
+      - name: Create firmware
+        run: mix firmware
+
+      - name: Sign firmware
+        run: |
+          fwup -S --private-key ${{ secrets.NERVES_FIRMWARE_SIGNING_KEY }} -i _build/${{ env.MIX_TARGET }}_${{ env.MIX_ENV}}/nerves/images/ex_nvr_fw.fw -o ex_nvr_fw.fw
+
+      - name: Upload to Nerves hub
+        run: mix nerves_hub.firmware publish --product ${{ env.NERVES_HUB_PRODUCT }} ex_nvr_fw.fw

@@ -84,14 +84,6 @@ keys =
   ]
   |> Enum.filter(&File.exists?/1)
 
-if keys == [],
-  do:
-    Mix.raise("""
-    No SSH public keys found in ~/.ssh. An ssh authorized key is needed to
-    log into the Nerves device and update firmware on it using ssh.
-    See your project's config.exs for this error message.
-    """)
-
 config :nerves_ssh,
   authorized_keys:
     Enum.map(keys, &File.read!/1) ++
@@ -157,7 +149,8 @@ config :nerves_hub_link,
     product_secret: System.get_env("NERVES_HUB_PRODUCT_SECRET", "fake_secret")
   ],
   fwup_public_keys: [
-    "iKuGXqQaMi4xwDRYobdGM0uO/BS4Kmpt0sFrkGGTLSE="
+    "iKuGXqQaMi4xwDRYobdGM0uO/BS4Kmpt0sFrkGGTLSE=",
+    "cu1VGLQcf81MODI7Pd/l1Zx8WtMslxM99IRGOZx/ezw="
   ]
 
 config :ex_nvr_fw, :remote_configurer,

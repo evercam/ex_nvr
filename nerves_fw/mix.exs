@@ -56,7 +56,7 @@ defmodule NervesFw.MixProject do
       # version updates, please review their release notes in case
       # changes to your application are needed.
       {:ex_nvr_system_rpi4,
-       path: "/samsung/p/ex_nvr_system_rpi4", runtime: false, targets: :ex_nvr_rpi4},
+       github: "evercam/ex_nvr_system_rpi4", tag: "v1.29.0", target: :ex_nvr_rpi4},
       {:ex_nvr_system_rpi5,
        path: "/samsung/p/ex_nvr_system_rpi5", runtime: false, targets: :ex_nvr_rpi5}
     ]
