@@ -11,6 +11,8 @@ config :ex_nvr,
   admin_username: System.get_env("EXNVR_ADMIN_USERNAME", "admin@localhost"),
   admin_password: System.get_env("EXNVR_ADMIN_PASSWORD", "P@ssw0rd")
 
+config :ex_nvr, enable_reverse_proxy: true
+
 url = URI.parse(System.get_env("EXNVR_URL", "http://localhost:4000"))
 
 check_origin =

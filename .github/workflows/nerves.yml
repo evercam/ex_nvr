@@ -12,6 +12,7 @@ jobs:
       run:
         working-directory: ./nerves_fw
     strategy:
+      max-parallel: 1 # mix nerves_hub.firmware publish does not work on parallel uploads
       matrix:
         target: [ex_nvr_rpi4, ex_nvr_rpi5]
     env:
