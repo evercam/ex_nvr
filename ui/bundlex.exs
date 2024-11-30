@@ -5,11 +5,11 @@ defmodule ExNVR.BundlexProject do
 
   def project() do
     [
-      natives: natives(Bundlex.platform())
+      natives: natives()
     ]
   end
 
-  defp natives(_platform) do
+  defp natives() do
     [
       video_assembler: [
         interface: :nif,
