@@ -173,10 +173,10 @@ defmodule ExNVR.Pipelines.Main do
     spec = [
       get_child(:rtsp_source)
       |> via_out(Pad.ref(:main_stream_output, ssrc))
-      |> via_in(Pad.ref(:input, make_ref()))
-      |> get_child(:funnel),
-      get_child(:video_tee)
-      |> via_out(:copy)
+      |> via_in(Pad.ref(:video, make_ref()))
+      |> get_child(:tee),
+      get_child(:tee)
+      |> via_out(:video_output)
       |> via_in(Pad.ref(:input, :main_stream), options: [encoding: track.encoding])
       |> get_child(:webrtc)
     ]
@@ -201,8 +201,8 @@ defmodule ExNVR.Pipelines.Main do
         [
           get_child(:rtsp_source)
           |> via_out(Pad.ref(:sub_stream_output, ssrc))
-          |> via_in(Pad.ref(:input, make_ref()))
-          |> get_child({:funnel, :sub_stream})
+          |> via_in(Pad.ref(:video, make_ref()))
+          |> get_child({:tee, :sub_stream})
         ]
 
     {[spec: spec], %{state | sub_stream_video_track: track}}
@@ -260,12 +260,12 @@ defmodule ExNVR.Pipelines.Main do
         if Enum.member?(childs, {:tee, :sub_stream}) do
           {get_child({:tee, :sub_stream}), state.sub_stream_video_track}
         else
-          {get_child(:video_tee), state.main_stream_video_track}
+          {get_child(:tee), state.main_stream_video_track}
         end
 
       spec = [
         source
-        |> via_out(:copy)
+        |> via_out(:video_output)
         |> child(:unix_socket, %ExNVR.Pipeline.Output.Socket{encoding: track.encoding})
       ]
 
@@ -324,15 +324,16 @@ defmodule ExNVR.Pipelines.Main do
     [
       child(:source, %Source.File{device: device})
       |> via_out(:video)
-      |> child(:video_tee, Membrane.Tee.Master)
-      |> via_out(:master)
+      |> via_in(:video)
+      |> child(:tee, ExNVR.Elements.FunnelTee)
+      |> via_out(:video_output)
       |> via_in(Pad.ref(:video, :main_stream), options: [encoding: :H264])
       |> get_child(:hls_sink),
-      get_child(:video_tee)
-      |> via_out(:copy)
+      get_child(:tee)
+      |> via_out(:video_output)
       |> child({:cvs_bufferer, :main_stream}, ExNVR.Elements.CVSBufferer),
-      get_child(:video_tee)
-      |> via_out(:copy)
+      get_child(:tee)
+      |> via_out(:video_output)
       |> child({:stats_reporter, :main_stream}, %VideoStreamStatReporter{
         device_id: device.id
       })
@@ -345,23 +346,22 @@ defmodule ExNVR.Pipelines.Main do
 
   defp build_main_stream_spec(state, encoding) do
     [
-      child(:funnel, ExNVR.Elements.DiscontinuityFunnel)
-      |> child(:video_tee, Membrane.Tee.Master)
-      |> via_out(:master)
+      child(:tee, ExNVR.Elements.FunnelTee)
+      |> via_out(:video_output)
       |> child({:storage_bin, :main_stream}, %Output.Storage{
         device: state.device,
         target_segment_duration: state.segment_duration,
         correct_timestamp: true
       }),
-      get_child(:video_tee)
-      |> via_out(:copy)
+      get_child(:tee)
+      |> via_out(:video_output)
       |> via_in(Pad.ref(:video, :main_stream), options: [encoding: encoding])
       |> get_child(:hls_sink),
-      get_child(:video_tee)
-      |> via_out(:copy)
+      get_child(:tee)
+      |> via_out(:video_output)
       |> child({:cvs_bufferer, :main_stream}, ExNVR.Elements.CVSBufferer),
-      get_child(:video_tee)
-      |> via_out(:copy)
+      get_child(:tee)
+      |> via_out(:video_output)
       |> child({:stats_reporter, :main_stream}, %VideoStreamStatReporter{
         device_id: state.device.id
       })
@@ -371,13 +371,12 @@ defmodule ExNVR.Pipelines.Main do
   defp build_sub_stream_spec(device, encoding) do
     spec =
       [
-        child({:funnel, :sub_stream}, ExNVR.Elements.DiscontinuityFunnel)
-        |> child({:tee, :sub_stream}, Membrane.Tee.Master)
-        |> via_out(:master)
+        child({:tee, :sub_stream}, ExNVR.Elements.FunnelTee)
+        |> via_out(:video_output)
         |> via_in(Pad.ref(:video, :sub_stream), options: [encoding: encoding])
         |> get_child(:hls_sink),
         get_child({:tee, :sub_stream})
-        |> via_out(:copy)
+        |> via_out(:video_output)
         |> child({:stats_reporter, :sub_stream}, %VideoStreamStatReporter{
           device_id: device.id,
           stream: :low
@@ -390,7 +389,7 @@ defmodule ExNVR.Pipelines.Main do
           spec ++
             [
               get_child({:tee, :sub_stream})
-              |> via_out(:copy)
+              |> via_out(:video_output)
               |> child({:storage, :sub_stream}, %Output.Storage{
                 device: device,
                 stream: :low,
@@ -406,7 +405,7 @@ defmodule ExNVR.Pipelines.Main do
       spec ++
         [
           get_child({:tee, :sub_stream})
-          |> via_out(:copy)
+          |> via_out(:video_output)
           |> child({:thumbnailer, :sub_stream}, %Output.Thumbnailer{
             dest: Device.bif_thumbnails_dir(device)
           })
