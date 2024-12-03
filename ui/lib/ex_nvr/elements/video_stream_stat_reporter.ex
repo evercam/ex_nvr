@@ -7,7 +7,6 @@ defmodule ExNVR.Elements.VideoStreamStatReporter do
 
   require ExNVR.Utils
 
-  require Membrane.TelemetryMetrics
   alias Membrane.{H264, H265, Time}
 
   def_input_pad :input, accepted_format: any_of(H264, H265)
@@ -31,6 +30,11 @@ defmodule ExNVR.Elements.VideoStreamStatReporter do
 
   @impl true
   def handle_event(:input, %Membrane.Event.Discontinuity{}, _ctx, state) do
+    {[], Map.merge(state, init_state())}
+  end
+
+  @impl true
+  def handle_event(:input, %ExNVR.Pipeline.Event.StreamClosed{}, _ctx, state) do
     {[], Map.merge(state, init_state())}
   end
 

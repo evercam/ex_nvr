@@ -24,7 +24,7 @@ erl_crash.dump
 
 /.elixir_ls/
 
-/data/
+/ui/data/
 
 /**/priv/bundlex
 

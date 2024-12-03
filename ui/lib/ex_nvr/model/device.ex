@@ -17,6 +17,7 @@ defmodule ExNVR.Model.Device do
   @type t :: %__MODULE__{}
 
   defmodule Credentials do
+    @moduledoc false
     use Ecto.Schema
 
     import Ecto.Changeset
@@ -40,6 +41,7 @@ defmodule ExNVR.Model.Device do
   end
 
   defmodule StreamConfig do
+    @moduledoc false
     use Ecto.Schema
 
     import Ecto.Changeset
@@ -106,6 +108,7 @@ defmodule ExNVR.Model.Device do
   end
 
   defmodule Settings do
+    @moduledoc false
     use Ecto.Schema
 
     import Ecto.Changeset

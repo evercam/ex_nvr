@@ -10,7 +10,6 @@ defmodule ExNVR.Recordings do
   alias Phoenix.PubSub
 
   @recordings_topic "recordings"
-  @nalu_prefix <<0, 0, 0, 1>>
 
   @type stream_type :: :low | :high
   @type error :: {:error, Ecto.Changeset.t() | File.posix()}
@@ -288,50 +287,26 @@ defmodule ExNVR.Recordings do
 
   # get snapshot private functions
   defp read_samples(reader, track, offset, method) do
-    {prefix_size, parameter_sets} = get_parameter_sets(track)
+    bit_stream_filter = ExNVR.MP4.MP4ToAnnexb.init(track)
 
-    [first_sample | samples] =
-      ExMP4.Reader.stream(reader, tracks: [track.id])
-      |> Enum.reduce_while([], fn sample_metadata, samples ->
-        cond do
-          sample_metadata.dts > offset and method == :precise ->
-            {:halt, [sample_metadata | samples]}
+    ExMP4.Reader.stream(reader, tracks: [track.id])
+    |> Enum.reduce_while([], fn sample_metadata, samples ->
+      cond do
+        sample_metadata.dts > offset and method == :precise ->
+          {:halt, [sample_metadata | samples]}
 
-          sample_metadata.dts > offset ->
-            {:halt, [List.last(samples)]}
+        sample_metadata.dts > offset ->
+          {:halt, [List.last(samples)]}
 
-          sample_metadata.sync? ->
-            {:cont, [sample_metadata]}
+        sample_metadata.sync? ->
+          {:cont, [sample_metadata]}
 
-          true ->
-            {:cont, [sample_metadata | samples]}
-        end
-      end)
-      |> Enum.reverse()
-      |> ExMP4.Reader.samples(reader)
-      |> Enum.map(&%{&1 | payload: to_annexb(&1.payload, prefix_size)})
-
-    [%{first_sample | payload: parameter_sets <> first_sample.payload} | samples]
-  end
-
-  defp get_parameter_sets(%{priv_data: %ExMP4.Box.Avcc{} = priv_data}) do
-    {priv_data.nalu_length_size,
-     Enum.map_join(priv_data.spss ++ priv_data.ppss, &(@nalu_prefix <> &1))}
-  end
-
-  defp get_parameter_sets(%{priv_data: %ExMP4.Box.Hvcc{} = priv_data}) do
-    parameter_sets =
-      Enum.map_join(
-        priv_data.vpss ++ priv_data.spss ++ priv_data.ppss,
-        &(@nalu_prefix <> &1)
-      )
-
-    {priv_data.nalu_length_size, parameter_sets}
-  end
-
-  defp to_annexb(access_unit, nalu_prefix_size) do
-    for <<size::size(8 * nalu_prefix_size), nalu::binary-size(size) <- access_unit>>,
-      into: <<>>,
-      do: @nalu_prefix <> nalu
+        true ->
+          {:cont, [sample_metadata | samples]}
+      end
+    end)
+    |> Enum.reverse()
+    |> ExMP4.Reader.samples(reader)
+    |> Enum.map(&ExNVR.MP4.MP4ToAnnexb.filter(bit_stream_filter, &1))
   end
 end

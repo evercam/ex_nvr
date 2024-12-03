@@ -28,11 +28,14 @@ defmodule ExNVRWeb.API.DeviceJSON do
         device
         |> Map.from_struct()
         |> Map.drop([:__meta__])
-        |> Map.put(:stream_config, Map.from_struct(device.stream_config))
-        |> Map.put(:credentials, Map.from_struct(device.credentials))
-        |> Map.put(:settings, Map.from_struct(device.settings))
-        |> Map.put(:snapshot_config, Map.from_struct(device.snapshot_config))
-        |> Map.put(:storage_config, Map.from_struct(device.storage_config))
+        |> Map.put(:stream_config, to_map(device.stream_config))
+        |> Map.put(:credentials, to_map(device.credentials))
+        |> Map.put(:settings, to_map(device.settings))
+        |> Map.put(:snapshot_config, to_map(device.snapshot_config))
+        |> Map.put(:storage_config, to_map(device.storage_config))
     end
   end
+
+  defp to_map(nil), do: nil
+  defp to_map(struct), do: Map.from_struct(struct)
 end
