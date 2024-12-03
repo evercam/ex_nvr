@@ -135,7 +135,8 @@ defmodule ExNVR.Pipelines.Main do
 
     state = %State{
       device: device,
-      segment_duration: options[:segment_duration] || @default_segment_duration
+      segment_duration: options[:segment_duration] || @default_segment_duration,
+      record_main_stream?: device.type != :file
     }
 
     {[], state}
@@ -163,7 +164,7 @@ defmodule ExNVR.Pipelines.Main do
   @impl true
   def handle_child_notification(
         {:main_stream, ssrc, track},
-        :rtsp_source,
+        child_name,
         _ctx,
         %State{} = state
       ) do
@@ -171,7 +172,7 @@ defmodule ExNVR.Pipelines.Main do
     old_track = state.main_stream_video_track
 
     spec = [
-      get_child(:rtsp_source)
+      get_child(child_name)
       |> via_out(Pad.ref(:main_stream_output, ssrc))
       |> via_in(Pad.ref(:video, make_ref()))
       |> get_child(:tee),
@@ -189,7 +190,7 @@ defmodule ExNVR.Pipelines.Main do
   @impl true
   def handle_child_notification(
         {:sub_stream, ssrc, track},
-        :rtsp_source,
+        child_name,
         _ctx,
         %State{} = state
       ) do
@@ -199,7 +200,7 @@ defmodule ExNVR.Pipelines.Main do
     spec =
       spec ++
         [
-          get_child(:rtsp_source)
+          get_child(child_name)
           |> via_out(Pad.ref(:sub_stream_output, ssrc))
           |> via_in(Pad.ref(:video, make_ref()))
           |> get_child({:tee, :sub_stream})
@@ -316,28 +317,7 @@ defmodule ExNVR.Pipelines.Main do
   end
 
   defp build_device_spec(%{type: :file} = device) do
-    Membrane.Logger.info("""
-    Start streaming for
-    location: #{Device.file_location(device)}
-    """)
-
-    [
-      child(:source, %Source.File{device: device})
-      |> via_out(:video)
-      |> via_in(:video)
-      |> child(:tee, ExNVR.Elements.FunnelTee)
-      |> via_out(:video_output)
-      |> via_in(Pad.ref(:video, :main_stream), options: [encoding: :H264])
-      |> get_child(:hls_sink),
-      get_child(:tee)
-      |> via_out(:video_output)
-      |> child({:cvs_bufferer, :main_stream}, ExNVR.Elements.CVSBufferer),
-      get_child(:tee)
-      |> via_out(:video_output)
-      |> child({:stats_reporter, :main_stream}, %VideoStreamStatReporter{
-        device_id: device.id
-      })
-    ]
+    [child(:file_source, %ExNVR.Pipeline.Source.File{device: device})]
   end
 
   defp build_device_spec(device) do
@@ -345,27 +325,39 @@ defmodule ExNVR.Pipelines.Main do
   end
 
   defp build_main_stream_spec(state, encoding) do
-    [
-      child(:tee, ExNVR.Elements.FunnelTee)
-      |> via_out(:video_output)
-      |> child({:storage_bin, :main_stream}, %Output.Storage{
-        device: state.device,
-        target_segment_duration: state.segment_duration,
-        correct_timestamp: true
-      }),
-      get_child(:tee)
-      |> via_out(:video_output)
-      |> via_in(Pad.ref(:video, :main_stream), options: [encoding: encoding])
-      |> get_child(:hls_sink),
-      get_child(:tee)
-      |> via_out(:video_output)
-      |> child({:cvs_bufferer, :main_stream}, ExNVR.Elements.CVSBufferer),
-      get_child(:tee)
-      |> via_out(:video_output)
-      |> child({:stats_reporter, :main_stream}, %VideoStreamStatReporter{
-        device_id: state.device.id
-      })
-    ]
+    spec = [child(:tee, ExNVR.Elements.FunnelTee)]
+
+    spec =
+      if state.record_main_stream? do
+        spec ++
+          [
+            get_child(:tee)
+            |> via_out(:video_output)
+            |> child({:storage_bin, :main_stream}, %Output.Storage{
+              device: state.device,
+              target_segment_duration: state.segment_duration,
+              correct_timestamp: true
+            })
+          ]
+      else
+        spec
+      end
+
+    spec ++
+      [
+        get_child(:tee)
+        |> via_out(:video_output)
+        |> via_in(Pad.ref(:video, :main_stream), options: [encoding: encoding])
+        |> get_child(:hls_sink),
+        get_child(:tee)
+        |> via_out(:video_output)
+        |> child({:cvs_bufferer, :main_stream}, ExNVR.Elements.CVSBufferer),
+        get_child(:tee)
+        |> via_out(:video_output)
+        |> child({:stats_reporter, :main_stream}, %VideoStreamStatReporter{
+          device_id: state.device.id
+        })
+      ]
   end
 
   defp build_sub_stream_spec(device, encoding) do
