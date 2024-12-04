@@ -1,11 +1,10 @@
 import { Socket } from "phoenix"
-import { WebRTCEndpoint } from "@jellyfish-dev/membrane-webrtc-js"
 
 window.onload = function (_event) {
     const player = document.getElementById("webRtcPlayer")
     const logsComponent = document.getElementById("webRtcLogs")
     const deviceId = player.dataset.device
-    const webrtc = new WebRTCEndpoint()
+    const pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
     
     const socket = new Socket("/socket", {params: {token: window.token}})
     const channel = socket.channel(`device:${deviceId}`)
@@ -19,37 +18,39 @@ window.onload = function (_event) {
         logsComponent.scrollTop = logsComponent.scrollHeight
     }
 
-    channel.on("media_event", ({ data }) => {
-        log("Received event from channel: \n" + data + "\n")
-        webrtc.receiveMediaEvent(data)
+    channel.join()
+        .receive("ok", resp => {log("Joined channel successfully")})
+        .receive("error", resp => { 
+            log("Unable to join channel: " + resp)
+            console.log("Unable to join channel", resp) 
+        })
+
+    channel.on("offer", ({ data }) => {
+        log("Received offer: " + data)
+
+        pc.setRemoteDescription(JSON.parse(data))
+        pc.createAnswer().then(answer => {
+            pc.setLocalDescription(answer)
+            channel.push("answer", JSON.stringify(answer))
+        })
+    })
+    
+    channel.on("ice_candidate", ({ data }) => {
+        log("received new ice candidate: " + data)
+        pc.addIceCandidate(JSON.parse(data))
     })
 
-    channel.join()
-        .receive("ok", resp => {
-            log("Joined device channel successfully ", resp)
-
-            // WebRTC
-            webrtc.on("connected", (endpoint_id) => {
-                log("Peer connected successfully: " + endpoint_id)
-            })
-
-            webrtc.on("connectionError", (message) => {
-                log("Unable to connect peer: " + message)
-            })
-            
-            webrtc.on("sendMediaEvent", event => {
-                log("Peer will send media event: \n" + event)
-                channel.push("media_event", event)
-            })
-
-            webrtc.on("trackReady", (track_context) => {
-                log("Track is ready, playing...")
-                player.srcObject = track_context.stream
-            })
-
-            webrtc.connect({displayName: "webrtc"})
-        })
-        .receive("error", resp => {log("Unable to join: \n" + resp)})
+    pc.onicecandidate = (event) => {
+        log("new local ice candidate: " + JSON.stringify(event.candidate))
+        if (event.candidate) {
+            channel.push("ice_candidate", JSON.stringify(event.candidate))
+        }
+    }
+    
+    pc.ontrack = (track) => {
+        log("received new track: " + JSON.stringify(track))
+        player.srcObject = track.streams[0]
+    }
 
     socket.connect()
 }

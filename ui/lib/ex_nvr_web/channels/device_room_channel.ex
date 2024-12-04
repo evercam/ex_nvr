@@ -6,15 +6,15 @@ defmodule ExNVRWeb.DeviceRoomChannel do
   require Logger
 
   alias ExNVR.Model.Device
+  alias ExNVR.Pipelines.Main, as: MainPipeline
 
   @impl true
   def join("device:" <> device_id, _params, socket) do
     device = ExNVR.Devices.get!(device_id)
-    peer_id = UUID.uuid4()
 
     with true <- Device.recording?(device),
-         :ok <- ExNVR.Pipelines.Main.add_webrtc_peer(device, peer_id, self()) do
-      {:ok, assign(socket, device: device, peer_id: peer_id)}
+         :ok <- MainPipeline.add_webrtc_peer(device) do
+      {:ok, assign(socket, :device, device)}
     else
       _ ->
         {:error, :offline}
@@ -22,26 +22,31 @@ defmodule ExNVRWeb.DeviceRoomChannel do
   end
 
   @impl true
-  def handle_in("media_event", media_event, socket) do
-    %{device: device, peer_id: peer_id} = socket.assigns
-    ExNVR.Pipelines.Main.add_webrtc_media_event(device, peer_id, media_event)
+  def handle_in("answer", answer, socket) do
+    MainPipeline.forward_peer_message(socket.assigns.device, {:answer, Jason.decode!(answer)})
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_in("ice_candidate", candidate, socket) do
+    MainPipeline.forward_peer_message(
+      socket.assigns.device,
+      {:ice_candidate, Jason.decode!(candidate)}
+    )
 
     {:noreply, socket}
   end
 
   @impl true
-  def handle_info({:media_event, media_event}, socket) do
-    push(socket, "media_event", %{data: media_event})
+  def handle_info({:offer, offer}, socket) do
+    push(socket, "offer", %{data: Jason.encode!(offer)})
     {:noreply, socket}
   end
 
   @impl true
-  def handle_info(:endpoint_crashed, socket) do
-    push(socket, "error", %{
-      message: "WebRTC Endpoint has crashed. Please refresh the page to reconnect"
-    })
-
-    {:stop, :normal, socket}
+  def handle_info({:ice_candidate, ice_candidate}, socket) do
+    push(socket, "ice_candidate", %{data: Jason.encode!(ice_candidate)})
+    {:noreply, socket}
   end
 
   @impl true
