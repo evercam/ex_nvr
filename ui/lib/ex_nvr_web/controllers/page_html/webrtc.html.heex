@@ -4,7 +4,7 @@
     class="text-xs text-white"
     id="webRtcLogs"
   />
-  <video id="webRtcPlayer" data-device={@device.id} controls muted autoplay></video>
+  <video id="webRtcPlayer" data-device={@device.id} data-stream={@stream} controls muted autoplay />
   <script>
     window.token = "<%= @user_token %>"
   </script>

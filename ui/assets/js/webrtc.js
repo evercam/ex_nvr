@@ -4,10 +4,11 @@ window.onload = function (_event) {
     const player = document.getElementById("webRtcPlayer")
     const logsComponent = document.getElementById("webRtcLogs")
     const deviceId = player.dataset.device
+    const stream = player.dataset.stream
     const pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
     
     const socket = new Socket("/socket", {params: {token: window.token}})
-    const channel = socket.channel(`device:${deviceId}`)
+    const channel = socket.channel(`device:${deviceId}`, {stream: stream})
 
     function log(message) {
         if (!logsComponent) {
@@ -69,6 +70,8 @@ function format_join_error(error) {
             return "Unsupported Codec"
         case "offline":
             return "Camera Offline"
+        case "stream_unavailable":
+            return "Unavailable Stream"
         default:
             return "Unknown Error"
     }

@@ -7,12 +7,24 @@ defmodule ExNVRWeb.PageController do
     redirect(conn, to: ~p"/dashboard")
   end
 
-  def webrtc(conn, _params) do
+  def webrtc(conn, params) do
     %{device: device, current_user: user} = conn.assigns
     token = Phoenix.Token.sign(conn, "user socket", user.id)
 
     conn
     |> delete_resp_header("x-frame-options")
-    |> render(:webrtc, device: device, user_token: token, layout: false)
+    |> render(:webrtc,
+      device: device,
+      user_token: token,
+      stream: parse_stream(params),
+      layout: false
+    )
+  end
+
+  defp parse_stream(params) do
+    case params["stream"] do
+      "low" -> :low
+      _other -> :high
+    end
   end
 end
