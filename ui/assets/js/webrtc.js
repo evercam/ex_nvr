@@ -20,9 +20,10 @@ window.onload = function (_event) {
 
     channel.join()
         .receive("ok", resp => {log("Joined channel successfully")})
-        .receive("error", resp => { 
-            log("Unable to join channel: " + resp)
-            console.log("Unable to join channel", resp) 
+        .receive("error", reason => { 
+            log("Unable to join channel: " + format_join_error(reason))
+            alert("could not join channel: " + format_join_error(reason))
+            channel.leave()
         })
 
     channel.on("offer", ({ data }) => {
@@ -52,5 +53,23 @@ window.onload = function (_event) {
         player.srcObject = track.streams[0]
     }
 
+    pc.onconnectionstatechange = (event) => {
+        if (pc.connectionState == "disconnected") {
+            alert("connection closed, refresh browser to retry")
+            pc.close()
+        }
+    }
+
     socket.connect()
+}
+
+function format_join_error(error) {
+    switch (error) {
+        case "unsupported_codec":
+            return "Unsupported Codec"
+        case "offline":
+            return "Camera Offline"
+        default:
+            return "Unknown Error"
+    }
 }

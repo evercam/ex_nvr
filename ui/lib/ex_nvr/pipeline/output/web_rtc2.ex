@@ -107,7 +107,7 @@ defmodule ExNVR.Pipeline.Output.WebRTC2 do
   @impl true
   def handle_event(:video, %StreamClosed{}, _ctx, state) do
     Map.keys(state.peers) |> Enum.each(&PeerConnection.close/1)
-    {[], %{state | peers: %{}, peers_tate: %{}}}
+    {[], %{state | peers: %{}, peers_state: %{}}}
   end
 
   @impl true

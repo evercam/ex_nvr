@@ -206,11 +206,6 @@ defmodule ExNVR.Pipelines.Main do
 
   @impl true
   def handle_child_notification({:connection_lost, :main_stream}, :rtsp_source, _ctx, state) do
-    # actions =
-    #   if state.device.state != :failed,
-    #     do: [remove_link: {:webrtc, Pad.ref(:input, :main_stream)}],
-    #     else: []
-
     {[], maybe_update_device_and_report(state, :failed)}
   end
 
@@ -288,12 +283,13 @@ defmodule ExNVR.Pipelines.Main do
 
   @impl true
   def handle_call({:add_peer, _peer} = message, _ctx, state) do
-    case state.device.state do
-      :recording ->
-        {[reply: :ok, notify_child: {:webrtc, message}], state}
-
-      _ ->
-        {[reply: {:error, :offline}], state}
+    track = state.main_stream_video_track
+    with {:streaming, true} <- {:streaming, Device.streaming?(state.device)},
+         {:codec, :H264} <- {:codec, track.encoding} do
+      {[reply: :ok, notify_child: {:webrtc, message}], state}
+    else
+      {:streaming, false} -> {[reply: {:error, :offline}], state}
+      {:codec, _codec} -> {[reply: {:error, :unsupported_codec}], state}
     end
   end
 

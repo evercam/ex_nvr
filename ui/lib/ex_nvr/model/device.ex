@@ -198,6 +198,10 @@ defmodule ExNVR.Model.Device do
   @spec recording?(t()) :: boolean()
   def recording?(%__MODULE__{state: state}), do: state != :stopped
 
+  @spec streaming?(t()) :: boolean()
+  def streaming?(%__MODULE__{state: :recording}), do: true
+  def streaming?(%__MODULE__{}), do: false
+
   # directories path
 
   @spec base_dir(t()) :: Path.t()
