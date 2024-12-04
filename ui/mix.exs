@@ -38,8 +38,7 @@ defmodule ExNVR.MixProject do
   defp deps do
     [
       {:ex_nvr_rtsp, path: "../rtsp"},
-      {:ex_dtls, "~> 0.16.0", override: true},
-      {:ex_sdp, "~> 1.0", override: true},
+      {:ex_sdp, "~> 1.0"},
       {:unifex, "~> 1.1"},
       {:bundlex, "~> 1.5", override: true},
       {:bcrypt_elixir, "~> 3.0"},
@@ -56,9 +55,6 @@ defmodule ExNVR.MixProject do
       {:membrane_h265_ffmpeg_plugin, "~> 0.4.0"},
       {:membrane_ffmpeg_swscale_plugin, "~> 0.16.0"},
       {:membrane_realtimer_plugin, "~> 0.10.0"},
-      {:membrane_rtc_engine, "~> 0.22.0"},
-      {:membrane_rtc_engine_webrtc, "~> 0.8.0"},
-      {:membrane_fake_plugin, "~> 0.11.0"},
       {:ex_webrtc, "~> 0.6.0"},
       {:ex_libsrtp, "~> 0.7.0"},
       {:ex_m3u8, "~> 0.14.2"},

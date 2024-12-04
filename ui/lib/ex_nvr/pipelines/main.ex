@@ -121,6 +121,7 @@ defmodule ExNVR.Pipelines.Main do
     Pipeline.call(pipeline_pid(device), {:add_peer, stream_type, self()})
   end
 
+  @spec forward_peer_message(Device.t(), :low | :high, tuple()) :: :ok
   def forward_peer_message(device, stream_type, {message_type, data}) do
     Pipeline.call(
       pipeline_pid(device),
@@ -375,7 +376,7 @@ defmodule ExNVR.Pipelines.Main do
           get_child(:tee)
           |> via_out(:video_output)
           |> via_in(:video)
-          |> child(:webrtc, Output.WebRTC2)
+          |> child(:webrtc, Output.WebRTC)
         ]
     else
       spec
@@ -423,7 +424,7 @@ defmodule ExNVR.Pipelines.Main do
       get_child({:tee, :sub_stream})
       |> via_out(:video_output)
       |> via_in(:video)
-      |> child({:webrtc, :sub_stream}, Output.WebRTC2)
+      |> child({:webrtc, :sub_stream}, Output.WebRTC)
     ]
   end
 
