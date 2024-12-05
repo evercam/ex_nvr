@@ -49,6 +49,7 @@ defmodule ExNVR.Pipelines.Main do
 
   @event_prefix [:ex_nvr, :main_pipeline]
   @default_segment_duration Membrane.Time.seconds(60)
+  @default_ice_servers [%{urls: "stun:stun.l.google.com:19302"}]
 
   defmodule State do
     @moduledoc false
@@ -69,6 +70,8 @@ defmodule ExNVR.Pipelines.Main do
     `live_snapshot_waiting_pids` - List of pid waiting for live snapshot request to be completed
     `main_stream_video_track` - The main stream video track.
     `sub_stream_video_track` - The sub stream video track.
+    `record_main_stream?` - Whether to record the main stream or not.
+    `ice_servers` - The list of ICE or/and TURN servers to use for WebRTC.
     """
     @type t :: %__MODULE__{
             device: Device.t(),
@@ -77,7 +80,8 @@ defmodule ExNVR.Pipelines.Main do
             live_snapshot_waiting_pids: list(),
             main_stream_video_track: Track.t(),
             sub_stream_video_track: Track.t() | nil,
-            record_main_stream?: boolean()
+            record_main_stream?: boolean(),
+            ice_servers: list(map())
           }
 
     @enforce_keys [:device]
@@ -89,7 +93,8 @@ defmodule ExNVR.Pipelines.Main do
                   live_snapshot_waiting_pids: [],
                   main_stream_video_track: nil,
                   sub_stream_video_track: nil,
-                  record_main_stream?: true
+                  record_main_stream?: true,
+                  ice_servers: []
                 ]
   end
 
@@ -138,10 +143,17 @@ defmodule ExNVR.Pipelines.Main do
     Logger.metadata(device_id: device.id)
     Membrane.Logger.info("Starting main pipeline for device: #{device.id}")
 
+    ice_servers =
+      case Application.get_env(:ex_nvr, :ice_servers, []) do
+        [] -> @default_ice_servers
+        servers -> servers
+      end
+
     state = %State{
       device: device,
       segment_duration: options[:segment_duration] || @default_segment_duration,
-      record_main_stream?: device.type != :file
+      record_main_stream?: device.type != :file,
+      ice_servers: ice_servers
     }
 
     {[], state}
@@ -195,7 +207,7 @@ defmodule ExNVR.Pipelines.Main do
         %State{} = state
       ) do
     old_track = state.sub_stream_video_track
-    spec = if is_nil(old_track), do: build_sub_stream_spec(state.device, track.encoding), else: []
+    spec = if is_nil(old_track), do: build_sub_stream_spec(state, track.encoding), else: []
 
     spec =
       spec ++
@@ -376,14 +388,14 @@ defmodule ExNVR.Pipelines.Main do
           get_child(:tee)
           |> via_out(:video_output)
           |> via_in(:video)
-          |> child(:webrtc, Output.WebRTC)
+          |> child(:webrtc, %Output.WebRTC{ice_servers: state.ice_servers})
         ]
     else
       spec
     end
   end
 
-  defp build_sub_stream_spec(device, encoding) do
+  defp build_sub_stream_spec(%{device: device} = state, encoding) do
     [
       child({:tee, :sub_stream}, ExNVR.Elements.FunnelTee)
       |> via_out(:video_output)
@@ -397,7 +409,7 @@ defmodule ExNVR.Pipelines.Main do
       })
     ] ++
       build_sub_stream_storage_spec(device) ++
-      build_sub_stream_webrtc_spec(encoding) ++
+      build_sub_stream_webrtc_spec(state, encoding) ++
       build_sub_stream_bif_spec(device)
   end
 
@@ -419,16 +431,16 @@ defmodule ExNVR.Pipelines.Main do
     end
   end
 
-  defp build_sub_stream_webrtc_spec(:H264) do
+  defp build_sub_stream_webrtc_spec(state, :H264) do
     [
       get_child({:tee, :sub_stream})
       |> via_out(:video_output)
       |> via_in(:video)
-      |> child({:webrtc, :sub_stream}, Output.WebRTC)
+      |> child({:webrtc, :sub_stream}, %Output.WebRTC{ice_servers: state.ice_servers})
     ]
   end
 
-  defp build_sub_stream_webrtc_spec(_codec), do: []
+  defp build_sub_stream_webrtc_spec(_state, _codec), do: []
 
   defp build_sub_stream_bif_spec(device) do
     if device.settings.generate_bif do

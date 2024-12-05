@@ -109,6 +109,7 @@ If you want to configure some aspects of `ex_nvr`, you can set the following env
 
 | **Env variable** | **description** |
 |------------------|-----------------|
+| EXNVR_ICE_SERVERS | Ice and turn servers to use as a json object. Default to: `[{"urls":"stun:stun.l.google.com:19302"}]` |
 
 ### Page URL
 You can access the webrtc page using the following url:

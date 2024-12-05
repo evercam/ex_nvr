@@ -25,10 +25,7 @@ defmodule ExNVR.Pipeline.Output.WebRTC do
 
   def_input_pad :video, accepted_format: any_of(%H264{alignment: :au}, %H265{alignment: :au})
 
-  def_options ice_servers: [
-                spec: list(),
-                default: [%{urls: "stun:stun.l.google.com:19302"}]
-              ]
+  def_options ice_servers: [spec: list()]
 
   @impl true
   def handle_init(_ctx, options) do
@@ -50,13 +47,14 @@ defmodule ExNVR.Pipeline.Output.WebRTC do
   @impl true
   def handle_parent_notification({:add_peer, peer_id}, _ctx, state) do
     {:ok, pc} =
-      PeerConnection.start_link(
+      PeerConnection.start(
         ice_servers: state.ice_servers,
         video_codecs: @video_codecs,
         audio_codecs: []
       )
 
     Process.monitor(peer_id)
+    Process.monitor(pc)
 
     {:ok, _} = PeerConnection.add_track(pc, state.video_track)
     create_offer(pc, peer_id)
@@ -128,19 +126,23 @@ defmodule ExNVR.Pipeline.Output.WebRTC do
   end
 
   @impl true
-  def handle_info({:DOWN, _monitor, :process, peer_id, _reason}, _ctx, state) do
-    if pc = find_peer_pc(state.peers, peer_id) do
-      PeerConnection.close(pc)
+  def handle_info({:DOWN, _monitor, :process, peer_or_pc, _reason}, _ctx, state) do
+    pc =
+      case find_peer_pc(state.peers, peer_or_pc) do
+        nil ->
+          peer_or_pc
 
-      {[],
-       %{
-         state
-         | peers: Map.delete(state.peers, pc),
-           peers_state: Map.delete(state.peers_state, pc)
-       }}
-    else
-      {[], state}
-    end
+        pc ->
+          PeerConnection.close(pc)
+          pc
+      end
+
+    {[],
+     %{
+       state
+       | peers: Map.delete(state.peers, pc),
+         peers_state: Map.delete(state.peers_state, pc)
+     }}
   end
 
   @impl true
@@ -180,7 +182,7 @@ defmodule ExNVR.Pipeline.Output.WebRTC do
 
   defp find_peer_pc(peers, peer_id) do
     peers
-    |> Enum.find(&(elem(&1, 1) == peer_id))
+    |> Enum.find({nil, nil}, &(elem(&1, 1) == peer_id))
     |> elem(0)
   end
 end
