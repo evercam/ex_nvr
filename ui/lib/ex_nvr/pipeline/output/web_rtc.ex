@@ -20,7 +20,17 @@ defmodule ExNVR.Pipeline.Output.WebRTC do
 
   @clock_rate 90_000
   @video_codecs [
-    %RTPCodecParameters{payload_type: 96, mime_type: "video/H264", clock_rate: @clock_rate}
+    %RTPCodecParameters{
+      payload_type: 96,
+      mime_type: "video/H264",
+      clock_rate: @clock_rate,
+      sdp_fmtp_line: %ExSDP.Attribute.FMTP{
+        pt: 96,
+        level_asymmetry_allowed: 1,
+        packetization_mode: 0,
+        profile_level_id: 0x42E01F
+      }
+    }
   ]
 
   def_input_pad :video, accepted_format: any_of(%H264{alignment: :au}, %H265{alignment: :au})
