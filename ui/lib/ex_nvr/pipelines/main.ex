@@ -49,6 +49,7 @@ defmodule ExNVR.Pipelines.Main do
 
   @event_prefix [:ex_nvr, :main_pipeline]
   @default_segment_duration Membrane.Time.seconds(60)
+  @default_ice_servers [%{urls: "stun:stun.l.google.com:19302"}]
 
   defmodule State do
     @moduledoc false
@@ -69,6 +70,8 @@ defmodule ExNVR.Pipelines.Main do
     `live_snapshot_waiting_pids` - List of pid waiting for live snapshot request to be completed
     `main_stream_video_track` - The main stream video track.
     `sub_stream_video_track` - The sub stream video track.
+    `record_main_stream?` - Whether to record the main stream or not.
+    `ice_servers` - The list of ICE or/and TURN servers to use for WebRTC.
     """
     @type t :: %__MODULE__{
             device: Device.t(),
@@ -77,7 +80,8 @@ defmodule ExNVR.Pipelines.Main do
             live_snapshot_waiting_pids: list(),
             main_stream_video_track: Track.t(),
             sub_stream_video_track: Track.t() | nil,
-            record_main_stream?: boolean()
+            record_main_stream?: boolean(),
+            ice_servers: list(map())
           }
 
     @enforce_keys [:device]
@@ -89,7 +93,8 @@ defmodule ExNVR.Pipelines.Main do
                   live_snapshot_waiting_pids: [],
                   main_stream_video_track: nil,
                   sub_stream_video_track: nil,
-                  record_main_stream?: true
+                  record_main_stream?: true,
+                  ice_servers: []
                 ]
   end
 
@@ -116,12 +121,17 @@ defmodule ExNVR.Pipelines.Main do
     Pipeline.call(pipeline_pid(device), {:live_snapshot, image_format})
   end
 
-  def add_webrtc_peer(device, peer_id, channel_pid) do
-    Pipeline.call(pipeline_pid(device), {:add_peer, {peer_id, channel_pid}})
+  @spec add_webrtc_peer(Device.t(), :low | :high) :: :ok | {:error, any()}
+  def add_webrtc_peer(device, stream_type) do
+    Pipeline.call(pipeline_pid(device), {:add_peer, stream_type, self()})
   end
 
-  def add_webrtc_media_event(device, peer_id, media_event) do
-    Pipeline.call(pipeline_pid(device), {:media_event, peer_id, media_event})
+  @spec forward_peer_message(Device.t(), :low | :high, tuple()) :: :ok
+  def forward_peer_message(device, stream_type, {message_type, data}) do
+    Pipeline.call(
+      pipeline_pid(device),
+      {:peer_message, stream_type, {message_type, self(), data}}
+    )
   end
 
   # Pipeline callbacks
@@ -133,10 +143,17 @@ defmodule ExNVR.Pipelines.Main do
     Logger.metadata(device_id: device.id)
     Membrane.Logger.info("Starting main pipeline for device: #{device.id}")
 
+    ice_servers =
+      case Application.get_env(:ex_nvr, :ice_servers, []) do
+        [] -> @default_ice_servers
+        servers -> servers
+      end
+
     state = %State{
       device: device,
       segment_duration: options[:segment_duration] || @default_segment_duration,
-      record_main_stream?: device.type != :file
+      record_main_stream?: device.type != :file,
+      ice_servers: ice_servers
     }
 
     {[], state}
@@ -150,8 +167,7 @@ defmodule ExNVR.Pipelines.Main do
           location: Path.join(Utils.hls_dir(device.id), "live"),
           segment_name_prefix: "live"
         }),
-        child(:snapshooter, ExNVR.Elements.SnapshotBin),
-        child(:webrtc, %Output.WebRTC{stream_id: device.id})
+        child(:snapshooter, ExNVR.Elements.SnapshotBin)
       ] ++ build_device_spec(device)
 
     # Set device state and make last active run inactive
@@ -175,11 +191,7 @@ defmodule ExNVR.Pipelines.Main do
       get_child(child_name)
       |> via_out(Pad.ref(:main_stream_output, ssrc))
       |> via_in(Pad.ref(:video, make_ref()))
-      |> get_child(:tee),
-      get_child(:tee)
-      |> via_out(:video_output)
-      |> via_in(Pad.ref(:input, :main_stream), options: [encoding: track.encoding])
-      |> get_child(:webrtc)
+      |> get_child(:tee)
     ]
 
     main_spec = if is_nil(old_track), do: build_main_stream_spec(state, track.encoding), else: []
@@ -195,7 +207,7 @@ defmodule ExNVR.Pipelines.Main do
         %State{} = state
       ) do
     old_track = state.sub_stream_video_track
-    spec = if is_nil(old_track), do: build_sub_stream_spec(state.device, track.encoding), else: []
+    spec = if is_nil(old_track), do: build_sub_stream_spec(state, track.encoding), else: []
 
     spec =
       spec ++
@@ -211,12 +223,7 @@ defmodule ExNVR.Pipelines.Main do
 
   @impl true
   def handle_child_notification({:connection_lost, :main_stream}, :rtsp_source, _ctx, state) do
-    actions =
-      if state.device.state != :failed,
-        do: [remove_link: {:webrtc, Pad.ref(:input, :main_stream)}],
-        else: []
-
-    {actions, maybe_update_device_and_report(state, :failed)}
+    {[], maybe_update_device_and_report(state, :failed)}
   end
 
   @impl true
@@ -292,19 +299,34 @@ defmodule ExNVR.Pipelines.Main do
   end
 
   @impl true
-  def handle_call({:add_peer, _peer} = message, _ctx, state) do
-    case state.device.state do
-      :recording ->
-        {[reply: :ok, notify_child: {:webrtc, message}], state}
+  def handle_call({:add_peer, :high, peer}, _ctx, state) do
+    track = state.main_stream_video_track
 
-      _ ->
-        {[reply: {:error, :offline}], state}
+    case can_add_webrtc_peer(state.device, track) do
+      :ok -> {[reply: :ok, notify_child: {:webrtc, {:add_peer, peer}}], state}
+      error -> {[reply: error], state}
     end
   end
 
   @impl true
-  def handle_call({:media_event, _peer_id, _media_event} = message, ctx, state) do
-    {[reply: {ctx.from, :ok}, notify_child: {:webrtc, message}], state}
+  def handle_call({:add_peer, :low, peer}, _ctx, state) do
+    track = state.sub_stream_video_track
+
+    case can_add_webrtc_peer(state.device, track) do
+      :ok -> {[reply: :ok, notify_child: {{:webrtc, :sub_stream}, {:add_peer, peer}}], state}
+      error -> {[reply: error], state}
+    end
+  end
+
+  @impl true
+  def handle_call({:peer_message, stream_type, message}, ctx, state) do
+    child =
+      case stream_type do
+        :high -> :webrtc
+        :low -> {:webrtc, :sub_stream}
+      end
+
+    {[reply: {ctx.from, :ok}, notify_child: {child, message}], state}
   end
 
   @impl true
@@ -343,67 +365,94 @@ defmodule ExNVR.Pipelines.Main do
         spec
       end
 
-    spec ++
-      [
-        get_child(:tee)
-        |> via_out(:video_output)
-        |> via_in(Pad.ref(:video, :main_stream), options: [encoding: encoding])
-        |> get_child(:hls_sink),
-        get_child(:tee)
-        |> via_out(:video_output)
-        |> child({:cvs_bufferer, :main_stream}, ExNVR.Elements.CVSBufferer),
-        get_child(:tee)
-        |> via_out(:video_output)
-        |> child({:stats_reporter, :main_stream}, %VideoStreamStatReporter{
-          device_id: state.device.id
-        })
-      ]
-  end
-
-  defp build_sub_stream_spec(device, encoding) do
     spec =
-      [
-        child({:tee, :sub_stream}, ExNVR.Elements.FunnelTee)
-        |> via_out(:video_output)
-        |> via_in(Pad.ref(:video, :sub_stream), options: [encoding: encoding])
-        |> get_child(:hls_sink),
-        get_child({:tee, :sub_stream})
-        |> via_out(:video_output)
-        |> child({:stats_reporter, :sub_stream}, %VideoStreamStatReporter{
-          device_id: device.id,
-          stream: :low
-        })
-      ]
-
-    spec =
-      case device.storage_config.record_sub_stream do
-        :always ->
-          spec ++
-            [
-              get_child({:tee, :sub_stream})
-              |> via_out(:video_output)
-              |> child({:storage, :sub_stream}, %Output.Storage{
-                device: device,
-                stream: :low,
-                correct_timestamp: true
-              })
-            ]
-
-        _other ->
-          spec
-      end
-
-    if device.settings.generate_bif do
       spec ++
         [
-          get_child({:tee, :sub_stream})
+          get_child(:tee)
           |> via_out(:video_output)
-          |> child({:thumbnailer, :sub_stream}, %Output.Thumbnailer{
-            dest: Device.bif_thumbnails_dir(device)
+          |> via_in(Pad.ref(:video, :main_stream), options: [encoding: encoding])
+          |> get_child(:hls_sink),
+          get_child(:tee)
+          |> via_out(:video_output)
+          |> child({:cvs_bufferer, :main_stream}, ExNVR.Elements.CVSBufferer),
+          get_child(:tee)
+          |> via_out(:video_output)
+          |> child({:stats_reporter, :main_stream}, %VideoStreamStatReporter{
+            device_id: state.device.id
           })
+        ]
+
+    if encoding == :H264 do
+      spec ++
+        [
+          get_child(:tee)
+          |> via_out(:video_output)
+          |> via_in(:video)
+          |> child(:webrtc, %Output.WebRTC{ice_servers: state.ice_servers})
         ]
     else
       spec
+    end
+  end
+
+  defp build_sub_stream_spec(%{device: device} = state, encoding) do
+    [
+      child({:tee, :sub_stream}, ExNVR.Elements.FunnelTee)
+      |> via_out(:video_output)
+      |> via_in(Pad.ref(:video, :sub_stream), options: [encoding: encoding])
+      |> get_child(:hls_sink),
+      get_child({:tee, :sub_stream})
+      |> via_out(:video_output)
+      |> child({:stats_reporter, :sub_stream}, %VideoStreamStatReporter{
+        device_id: device.id,
+        stream: :low
+      })
+    ] ++
+      build_sub_stream_storage_spec(device) ++
+      build_sub_stream_webrtc_spec(state, encoding) ++
+      build_sub_stream_bif_spec(device)
+  end
+
+  defp build_sub_stream_storage_spec(device) do
+    case device.storage_config.record_sub_stream do
+      :always ->
+        [
+          get_child({:tee, :sub_stream})
+          |> via_out(:video_output)
+          |> child({:storage, :sub_stream}, %Output.Storage{
+            device: device,
+            stream: :low,
+            correct_timestamp: true
+          })
+        ]
+
+      _other ->
+        []
+    end
+  end
+
+  defp build_sub_stream_webrtc_spec(state, :H264) do
+    [
+      get_child({:tee, :sub_stream})
+      |> via_out(:video_output)
+      |> via_in(:video)
+      |> child({:webrtc, :sub_stream}, %Output.WebRTC{ice_servers: state.ice_servers})
+    ]
+  end
+
+  defp build_sub_stream_webrtc_spec(_state, _codec), do: []
+
+  defp build_sub_stream_bif_spec(device) do
+    if device.settings.generate_bif do
+      [
+        get_child({:tee, :sub_stream})
+        |> via_out(:video_output)
+        |> child({:thumbnailer, :sub_stream}, %Output.Thumbnailer{
+          dest: Device.bif_thumbnails_dir(device)
+        })
+      ]
+    else
+      []
     end
   end
 
@@ -433,6 +482,18 @@ defmodule ExNVR.Pipelines.Main do
     })
 
     %{state | device: updated_device}
+  end
+
+  defp can_add_webrtc_peer(device, track) do
+    with {:streaming, true} <- {:streaming, Device.streaming?(device)},
+         {:stream_supported, true} <- {:stream_supported, not is_nil(track)},
+         {:codec, :H264} <- {:codec, track.encoding} do
+      :ok
+    else
+      {:streaming, false} -> {:error, :offline}
+      {:stream_supported, false} -> {:error, :stream_unavailable}
+      {:codec, _codec} -> {:error, :unsupported_codec}
+    end
   end
 
   # Pipeline process details

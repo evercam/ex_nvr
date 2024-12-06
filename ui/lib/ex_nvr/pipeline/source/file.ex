@@ -85,7 +85,7 @@ defmodule ExNVR.Pipeline.Source.File do
   @impl true
   def handle_terminate_request(_ctx, state) do
     :ok = Reader.close(state.reader)
-    {[terminate: :ok], state}
+    {[terminate: :normal], state}
   end
 
   defp init_tracks(reader) do

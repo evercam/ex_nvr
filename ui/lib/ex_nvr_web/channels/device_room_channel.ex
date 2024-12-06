@@ -5,43 +5,54 @@ defmodule ExNVRWeb.DeviceRoomChannel do
 
   require Logger
 
-  alias ExNVR.Model.Device
+  alias ExNVR.Pipelines.Main, as: MainPipeline
 
   @impl true
-  def join("device:" <> device_id, _params, socket) do
+  def join("device:" <> device_id, params, socket) do
     device = ExNVR.Devices.get!(device_id)
-    peer_id = UUID.uuid4()
+    stream = parse_stream(params["stream"])
 
-    with true <- Device.recording?(device),
-         :ok <- ExNVR.Pipelines.Main.add_webrtc_peer(device, peer_id, self()) do
-      {:ok, assign(socket, device: device, peer_id: peer_id)}
-    else
-      _ ->
-        {:error, :offline}
+    case MainPipeline.add_webrtc_peer(device, stream) do
+      :ok ->
+        {:ok, assign(socket, device: device, stream: stream)}
+
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 
   @impl true
-  def handle_in("media_event", media_event, socket) do
-    %{device: device, peer_id: peer_id} = socket.assigns
-    ExNVR.Pipelines.Main.add_webrtc_media_event(device, peer_id, media_event)
+  def handle_in("answer", answer, socket) do
+    MainPipeline.forward_peer_message(
+      socket.assigns.device,
+      socket.assigns.stream,
+      {:answer, Jason.decode!(answer)}
+    )
 
     {:noreply, socket}
   end
 
   @impl true
-  def handle_info({:media_event, media_event}, socket) do
-    push(socket, "media_event", %{data: media_event})
+  def handle_in("ice_candidate", candidate, socket) do
+    MainPipeline.forward_peer_message(
+      socket.assigns.device,
+      socket.assigns.stream,
+      {:ice_candidate, Jason.decode!(candidate)}
+    )
+
     {:noreply, socket}
   end
 
   @impl true
-  def handle_info(:endpoint_crashed, socket) do
-    push(socket, "error", %{
-      message: "WebRTC Endpoint has crashed. Please refresh the page to reconnect"
-    })
+  def handle_info({:offer, offer}, socket) do
+    push(socket, "offer", %{data: Jason.encode!(offer)})
+    {:noreply, socket}
+  end
 
-    {:stop, :normal, socket}
+  @impl true
+  def handle_info({:ice_candidate, ice_candidate}, socket) do
+    push(socket, "ice_candidate", %{data: Jason.encode!(ice_candidate)})
+    {:noreply, socket}
   end
 
   @impl true
@@ -53,4 +64,7 @@ defmodule ExNVRWeb.DeviceRoomChannel do
 
     {:noreply, socket}
   end
+
+  defp parse_stream("low"), do: :low
+  defp parse_stream(_other), do: :high
 end

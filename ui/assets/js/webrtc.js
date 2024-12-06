@@ -1,14 +1,14 @@
 import { Socket } from "phoenix"
-import { WebRTCEndpoint } from "@jellyfish-dev/membrane-webrtc-js"
 
 window.onload = function (_event) {
     const player = document.getElementById("webRtcPlayer")
     const logsComponent = document.getElementById("webRtcLogs")
     const deviceId = player.dataset.device
-    const webrtc = new WebRTCEndpoint()
+    const stream = player.dataset.stream
+    const pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
     
     const socket = new Socket("/socket", {params: {token: window.token}})
-    const channel = socket.channel(`device:${deviceId}`)
+    const channel = socket.channel(`device:${deviceId}`, {stream: stream})
 
     function log(message) {
         if (!logsComponent) {
@@ -19,37 +19,60 @@ window.onload = function (_event) {
         logsComponent.scrollTop = logsComponent.scrollHeight
     }
 
-    channel.on("media_event", ({ data }) => {
-        log("Received event from channel: \n" + data + "\n")
-        webrtc.receiveMediaEvent(data)
+    channel.join()
+        .receive("ok", resp => {log("Joined channel successfully")})
+        .receive("error", reason => { 
+            log("Unable to join channel: " + format_join_error(reason))
+            alert("could not join channel: " + format_join_error(reason))
+            channel.leave()
+        })
+
+    channel.on("offer", ({ data }) => {
+        log("Received offer: " + data)
+
+        pc.setRemoteDescription(JSON.parse(data))
+        pc.createAnswer().then(answer => {
+            pc.setLocalDescription(answer)
+            channel.push("answer", JSON.stringify(answer))
+        })
+    })
+    
+    channel.on("ice_candidate", ({ data }) => {
+        log("received new ice candidate: " + data)
+        pc.addIceCandidate(JSON.parse(data))
     })
 
-    channel.join()
-        .receive("ok", resp => {
-            log("Joined device channel successfully ", resp)
+    pc.onicecandidate = (event) => {
+        log("new local ice candidate: " + JSON.stringify(event.candidate))
+        if (event.candidate) {
+            channel.push("ice_candidate", JSON.stringify(event.candidate))
+        }
+    }
+    
+    pc.ontrack = (track) => {
+        log("received new track: " + JSON.stringify(track))
+        player.srcObject = track.streams[0]
+    }
 
-            // WebRTC
-            webrtc.on("connected", (endpoint_id) => {
-                log("Peer connected successfully: " + endpoint_id)
-            })
-
-            webrtc.on("connectionError", (message) => {
-                log("Unable to connect peer: " + message)
-            })
-            
-            webrtc.on("sendMediaEvent", event => {
-                log("Peer will send media event: \n" + event)
-                channel.push("media_event", event)
-            })
-
-            webrtc.on("trackReady", (track_context) => {
-                log("Track is ready, playing...")
-                player.srcObject = track_context.stream
-            })
-
-            webrtc.connect({displayName: "webrtc"})
-        })
-        .receive("error", resp => {log("Unable to join: \n" + resp)})
+    pc.onconnectionstatechange = (event) => {
+        if (pc.connectionState == "disconnected") {
+            alert("connection closed, refresh browser to retry")
+            pc.close()
+        }
+    }
 
     socket.connect()
+}
+
+function format_join_error(error) {
+    switch (error) {
+        case "unsupported_codec":
+            return "Unsupported Codec"
+        case "offline":
+            return "Camera Offline"
+        case "stream_unavailable":
+            return "Unavailable Stream"
+        default:
+            return "Unknown Error"
+    }
 }

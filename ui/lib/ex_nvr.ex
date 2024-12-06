@@ -11,8 +11,6 @@ defmodule ExNVR do
   @first_name "Admin"
   @last_name "Admin"
 
-  @cert_file_path "priv/integrated_turn_cert.pem"
-
   @doc """
   Start the main pipeline
   """
@@ -22,9 +20,6 @@ defmodule ExNVR do
       create_admin_user()
       run_pipelines()
     end
-
-    config_common_dtls_key_cert()
-    create_integrated_turn_cert_file()
   end
 
   # create recording & HLS directories
@@ -61,35 +56,5 @@ defmodule ExNVR do
     Devices.list()
     |> Enum.filter(&Device.recording?/1)
     |> Enum.each(&ExNVR.DeviceSupervisor.start/1)
-  end
-
-  defp create_integrated_turn_cert_file() do
-    cert_path = Application.fetch_env!(:ex_nvr, :integrated_turn_cert)
-    pkey_path = Application.fetch_env!(:ex_nvr, :integrated_turn_pkey)
-
-    if cert_path != nil and pkey_path != nil do
-      cert = File.read!(cert_path)
-      pkey = File.read!(pkey_path)
-
-      File.touch!(@cert_file_path)
-      File.chmod!(@cert_file_path, 0o600)
-      File.write!(@cert_file_path, "#{cert}\n#{pkey}")
-
-      Application.put_env(:ex_nvr, :integrated_turn_cert_pkey, @cert_file_path)
-    else
-      Logger.warning("""
-      Integrated TURN certificate or private key path not specified.
-      Integrated TURN will not handle TLS connections.
-      """)
-    end
-  end
-
-  defp config_common_dtls_key_cert() do
-    {:ok, pid} = ExDTLS.start_link(client_mode: false, dtls_srtp: true)
-    {:ok, pkey} = ExDTLS.get_pkey(pid)
-    {:ok, cert} = ExDTLS.get_cert(pid)
-    :ok = ExDTLS.stop(pid)
-    Application.put_env(:ex_nvr, :dtls_pkey, pkey)
-    Application.put_env(:ex_nvr, :dtls_cert, cert)
   end
 end
