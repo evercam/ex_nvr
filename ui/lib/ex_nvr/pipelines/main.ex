@@ -152,7 +152,7 @@ defmodule ExNVR.Pipelines.Main do
           servers
 
         {:error, _error} ->
-          Membrane.Logger.warning("Invalid ice servers, use default")
+          Membrane.Logger.warning("Invalid ice servers, using defaults")
           @default_ice_servers
       end
 

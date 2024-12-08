@@ -53,14 +53,7 @@ config :os_mon,
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason
 
-config :bundlex, :disable_precompiled_os_deps,
-  apps: [
-    :ex_libsrtp,
-    :membrane_h264_ffmpeg_plugin,
-    :membrane_h265_ffmpeg_plugin,
-    :membrane_ffmpeg_swscale_plugin,
-    :ex_nvr
-  ]
+config :bundlex, disable_precompiled_os_deps: true
 
 config :membrane_core, enable_metrics: false
 
