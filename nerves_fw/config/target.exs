@@ -13,6 +13,8 @@ config :ex_nvr,
 
 config :ex_nvr, enable_reverse_proxy: true
 
+config :ex_nvr, ice_servers: System.get_env("EXNVR_ICE_SERVERS", "[]")
+
 url = URI.parse(System.get_env("EXNVR_URL", "http://localhost:4000"))
 
 check_origin =
@@ -52,10 +54,6 @@ if enable_ssl do
     ]
 end
 
-# Use Ringlogger as the logger backend and remove :console.
-# See https://hexdocs.pm/ring_logger/readme.html for more information on
-# configuring ring_logger.
-
 config :logger, backends: [RingLogger]
 
 config :logger, RingLogger, level: :info
@@ -73,11 +71,6 @@ config :shoehorn, init: [:nerves_runtime, :nerves_pack]
 # Advance the system clock on devices without real-time clocks.
 config :nerves, :erlinit, update_clock: true
 
-# Configure the device for SSH IEx prompt access and firmware updates
-#
-# * See https://hexdocs.pm/nerves_ssh/readme.html for general SSH configuration
-# * See https://hexdocs.pm/ssh_subsystem_fwup/readme.html for firmware updates
-
 keys =
   [
     Path.join([System.user_home!(), ".ssh", "id_rsa.pub"]),
@@ -85,20 +78,10 @@ keys =
     Path.join([System.user_home!(), ".ssh", "id_ed25519.pub"])
   ]
   |> Enum.filter(&File.exists?/1)
+  |> Kernel.++(["ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIH+CB6jKOH2BnJ2l6jLmNV6GjL/AAlWF6/IPjshV7jaS deployment"])
 
-config :nerves_ssh,
-  authorized_keys:
-    Enum.map(keys, &File.read!/1) ++
-      [
-        "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDhPsLGOiChQYeH1sqRH7/yCj+Dd4f0tv+01aszpO1FubTWcCYNFQCZsG+0sidi5i0LO+Bt9gPZvz0tl3qZYKcj4y231pFNwGHkxTo02h22AJ/aIZ+fbCejztxecCaPPz5Q4OH4ehsSL1TgoIlqw/5X55dVX6Z32o2O6MAmKcGl7zsWjFI+tkm9rNtQKLazGinNiVhEMgu9Uh+vWt+IKsispziPeCPKrl65sgzF2J74rQvD37DalkGKUoPyQnK9Yg7Sl3KfJqmHFqz9fLyqHTcAm8aOhjDVGzv4lEh/gs6Mh8/ZqywsArvbehigD9utNAmsxiXSWugGqdiqsL05xxdHLCcHUFYR/dsO5Lt4o0Sp1w3jNHrgUPha6hUptHF+t9MrPx48qL4kzT8JRY0TUsL14BA1ElxA/Tso+uXqbv24OCp46AzpNqHlJUmZkXIaLK9bwwukYaaFZ0lG7mf05GFosGBXQ7PP7lVtYbbAtkjCV8Lx5SskT7Ym1rklw7UGhts= imcha@DellTree",
-        "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIH+CB6jKOH2BnJ2l6jLmNV6GjL/AAlWF6/IPjshV7jaS deployment"
-      ]
+config :nerves_ssh, authorized_keys: keys
 
-# Configure the network using vintage_net
-#
-# Update regulatory_domain to your 2-letter country code E.g., "US"
-#
-# See https://github.com/nerves-networking/vintage_net for more information
 config :vintage_net,
   regulatory_domain: "00",
   config: [

@@ -30,9 +30,8 @@ defmodule NervesFw.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:ex_dtls, "~> 0.16.0", override: true},
-      {:tesla, "~> 1.13.2", override: true},
-      {:keen_loki_logger, "~> 0.5.1"},
+      # {:tesla, "~> 1.13.2", override: true},
+      # {:keen_loki_logger, "~> 0.5.1"},
 
       # Dependencies for all targets
       {:nerves, "~> 1.10", runtime: false},

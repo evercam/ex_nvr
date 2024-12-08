@@ -17,14 +17,6 @@ config :ex_nvr,
   hls_directory: Path.expand("../../ui/data/hls", Path.dirname(__ENV__.file)),
   run_pipelines: true
 
-config :ex_nvr,
-  integrated_turn_ip: {127, 0, 0, 1},
-  integrated_turn_domain: "localhost",
-  integrated_turn_port_range: {30_000, 30_100},
-  integrated_turn_tcp_port: 20_000,
-  integrated_turn_pkey: nil,
-  integrated_turn_cert: nil
-
 # Enable the Nerves integration with Mix
 Application.start(:nerves_bootstrap)
 

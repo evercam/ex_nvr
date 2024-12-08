@@ -17,13 +17,7 @@ if config_env() == :prod do
     admin_username: System.get_env("EXNVR_ADMIN_USERNAME", "admin@localhost"),
     admin_password: System.get_env("EXNVR_ADMIN_PASSWORD", "P@ssw0rd")
 
-  ice_servers =
-    case Jason.decode(System.get_env("EXNVR_ICE_SERVERS", "[]"), keys: :atoms) do
-      {:ok, servers} -> servers
-      {:error, _reason} -> []
-    end
-
-  config :ex_nvr, ice_servers: ice_servers
+  config :ex_nvr, ice_servers: System.get_env("EXNVR_ICE_SERVERS", "[]")
 
   # The secret key base is used to sign/encrypt cookies and other secrets.
   # A default value is used in config/dev.exs and config/test.exs but you
