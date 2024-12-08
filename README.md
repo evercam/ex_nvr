@@ -91,6 +91,7 @@ If you want to configure some aspects of `ex_nvr`, you can set the following env
 | EXNVR_HLS_DIRECTORY | The directory where hls playlists will be stored. Defaults to: `/tmp/hls`. <br/><br/>It is not necessary to expose this folder via volumes since the playlists are deleted each time the user stop streaming.
 | EXNVR_ADMIN_USERNAME | The username(email) of the admin user to create on first startup. Defaults to: `admin@localhost`. |
 | EXNVR_ADMIN_PASSWORD | The password of the admin user to create on first startup. Defaults to: `P@ssw0rd`. |
+| EXNVR_DOWNLOAD_DIR | The directory where to save temporary downloaded footages. Defaults to: `/tmp/ex_nvr_downloads` (`/data/ex_nvr/downloads` in nerves image) <br/><br/> Due to the underlying libraries, the created footages may accumulate over time, it's safe to clean this directory from time to time. |
 | SECRET_KEY_BASE  | A 64 byte key that's used by **Pheonix** to encrypt cookies |
 | EXNVR_URL | The `url` to use for generating URLs. The `host` is used as a default value for `check_origin` of the websocket. Defaults to: `http://localhost:4000` |
 | EXNVR_CHECK_ORIGIN | if the transport should check the origin of requests when the origin header is present. May be true, false or a list of hosts that are allowed. Defaults to `true`. |
@@ -135,7 +136,7 @@ The main feature of this project is to store video streams retrieved from `devic
    - [ ] USB / Webcams
    - [ ] Raspberry Pi Cameras
    - [x] Plain RTSP stream
-   - [x] File Upload (Helpful for debug, benchmarking & demos)
+   - [x] File Upload
 
 * **Camera Streams**: save and playback
    - [x] Main stream
@@ -150,7 +151,7 @@ The main feature of this project is to store video streams retrieved from `devic
 
 * **Streaming**: live view and playback
    - [x] HLS
-   - [x] WebRTC (only mainstream, [disabled for H265]([url](https://github.com/evercam/ex_nvr/wiki/h265-Support)))
+   - [x] WebRTC ([disabled for H265]([url](https://github.com/evercam/ex_nvr/wiki/h265-Support)))
    - [ ] Webm
    - [ ] RTSP
    - [ ] RTMP

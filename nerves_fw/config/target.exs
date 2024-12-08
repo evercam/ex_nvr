@@ -9,7 +9,8 @@ config :ex_nvr, ExNVR.Repo,
 config :ex_nvr,
   hls_directory: System.get_env("EXNVR_HLS_DIRECTORY", "/tmp/hls"),
   admin_username: System.get_env("EXNVR_ADMIN_USERNAME", "admin@localhost"),
-  admin_password: System.get_env("EXNVR_ADMIN_PASSWORD", "P@ssw0rd")
+  admin_password: System.get_env("EXNVR_ADMIN_PASSWORD", "P@ssw0rd"),
+  download_dir: System.get_env("EXNVR_DOWNLOAD_DIR", "/data/ex_nvr/downloads")
 
 config :ex_nvr, enable_reverse_proxy: true
 

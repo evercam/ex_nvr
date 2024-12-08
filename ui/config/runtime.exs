@@ -15,7 +15,8 @@ if config_env() == :prod do
   config :ex_nvr,
     hls_directory: System.get_env("EXNVR_HLS_DIRECTORY", "./hls"),
     admin_username: System.get_env("EXNVR_ADMIN_USERNAME", "admin@localhost"),
-    admin_password: System.get_env("EXNVR_ADMIN_PASSWORD", "P@ssw0rd")
+    admin_password: System.get_env("EXNVR_ADMIN_PASSWORD", "P@ssw0rd"),
+    download_dir: System.get_env("EXNVR_DOWNLOAD_DIR")
 
   config :ex_nvr, ice_servers: System.get_env("EXNVR_ICE_SERVERS", "[]")
 
