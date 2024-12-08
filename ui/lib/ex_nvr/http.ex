@@ -164,12 +164,23 @@ defmodule ExNVR.HTTP do
              req.headers
            ) do
         {:ok, resp} ->
-          headers = for {name, value} <- resp.headers, do: {String.downcase(name, :ascii), value}
-          {req, %Req.Response{status: resp.status_code, headers: headers, body: resp.body}}
+          {req,
+           %Req.Response{
+             status: resp.status_code,
+             headers: headers_to_map(resp.headers),
+             body: resp.body
+           }}
 
         {:error, reason} ->
           {req, reason}
       end
     end
+  end
+
+  defp headers_to_map(headers) do
+    Enum.reduce(headers, %{}, fn {key, value}, acc ->
+      key = String.downcase(key, :ascii)
+      Map.update(acc, key, [value], &(&1 ++ [value]))
+    end)
   end
 end

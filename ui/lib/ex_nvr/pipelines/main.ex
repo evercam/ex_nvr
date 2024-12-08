@@ -144,9 +144,16 @@ defmodule ExNVR.Pipelines.Main do
     Membrane.Logger.info("Starting main pipeline for device: #{device.id}")
 
     ice_servers =
-      case Application.get_env(:ex_nvr, :ice_servers, []) do
-        [] -> @default_ice_servers
-        servers -> servers
+      case ice_servers() do
+        {:ok, []} ->
+          @default_ice_servers
+
+        {:ok, servers} ->
+          servers
+
+        {:error, _error} ->
+          Membrane.Logger.warning("Invalid ice servers, using defaults")
+          @default_ice_servers
       end
 
     state = %State{
@@ -506,5 +513,9 @@ defmodule ExNVR.Pipelines.Main do
       restart: :transient,
       type: :supervisor
     }
+  end
+
+  defp ice_servers() do
+    Application.get_env(:ex_nvr, :ice_servers, "[]") |> Jason.decode()
   end
 end

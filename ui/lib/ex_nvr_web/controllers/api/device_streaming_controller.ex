@@ -112,7 +112,11 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
   @spec footage(Plug.Conn.t(), map()) :: return_t()
   def footage(conn, params) do
     device = conn.assigns.device
-    destination = Path.join(System.tmp_dir!(), UUID.uuid4() <> ".mp4")
+    download_dir = download_dir()
+
+    unless File.exists?(download_dir), do: File.mkdir!(download_dir)
+
+    destination = Path.join(download_dir, UUID.uuid4() <> ".mp4")
 
     with {:ok, params} <- validate_footage_req_params(params),
          {:ok, recordings} <- get_recordings(device, params) do
@@ -332,4 +336,9 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
     do: HLS.Processor.delete_stream(manifest_file, "live_main_stream")
 
   defp remove_unused_stream(manifest_file, _params), do: manifest_file
+
+  defp download_dir() do
+    default_dir = Path.join(System.tmp_dir!(), "ex_nvr_downloads")
+    Application.get_env(:ex_nvr, :download_dir, default_dir)
+  end
 end
