@@ -19,19 +19,26 @@ defmodule ExNVR.Pipeline.Output.WebRTC do
   @max_rtp_seq_no (1 <<< 16) - 1
 
   @clock_rate 90_000
-  @video_codecs [
-    %RTPCodecParameters{
-      payload_type: 96,
-      mime_type: "video/H264",
-      clock_rate: @clock_rate,
-      sdp_fmtp_line: %ExSDP.Attribute.FMTP{
-        pt: 96,
-        level_asymmetry_allowed: 1,
-        packetization_mode: 0,
-        profile_level_id: 0x42E01F
-      }
+  @h264_codec %RTPCodecParameters{
+    payload_type: 96,
+    mime_type: "video/H264",
+    clock_rate: @clock_rate,
+    sdp_fmtp_line: %ExSDP.Attribute.FMTP{
+      pt: 96,
+      level_asymmetry_allowed: 1,
+      packetization_mode: 0,
+      profile_level_id: 0x42E01F
     }
-  ]
+  }
+  @h265_codec %RTPCodecParameters{
+    payload_type: 96,
+    mime_type: "video/H265",
+    clock_rate: @clock_rate,
+    sdp_fmtp_line: %ExSDP.Attribute.FMTP{
+      pt: 96,
+      profile_id: 1
+    }
+  }
 
   def_input_pad :video, accepted_format: any_of(%H264{alignment: :au}, %H265{alignment: :au})
 
@@ -44,12 +51,38 @@ defmodule ExNVR.Pipeline.Output.WebRTC do
 
     state = %{
       ice_servers: options.ice_servers,
+      video_codecs: [],
       peers: %{},
       peers_state: %{},
       next_sequence_number: Enum.random(0..@max_rtp_seq_no),
-      payloader: Payloader.H264.new(@max_payload_size),
+      payloader: nil,
+      payloader_mod: nil,
       video_track: video_track
     }
+
+    {[], state}
+  end
+
+  @impl true
+  def handle_stream_format(:video, stream_format, _ctx, state) do
+    state =
+      case stream_format do
+        %H264{} ->
+          %{
+            state
+            | video_codecs: [@h264_codec],
+              payloader: Payloader.H264.new(@max_payload_size),
+              payloader_mod: Payloader.H264
+          }
+
+        %H265{} ->
+          %{
+            state
+            | video_codecs: [@h265_codec],
+              payloader: Payloader.H265.new(@max_payload_size),
+              payloader_mod: Payloader.H265
+          }
+      end
 
     {[], state}
   end
@@ -59,7 +92,7 @@ defmodule ExNVR.Pipeline.Output.WebRTC do
     {:ok, pc} =
       PeerConnection.start(
         ice_servers: state.ice_servers,
-        video_codecs: @video_codecs,
+        video_codecs: state.video_codecs,
         audio_codecs: []
       )
 
@@ -90,7 +123,7 @@ defmodule ExNVR.Pipeline.Output.WebRTC do
 
   @impl true
   def handle_buffer(:video, buffer, _ctx, state) do
-    {rtp_packets, payloader} = Payloader.H264.payload(state.payloader, buffer.payload)
+    {rtp_packets, payloader} = state.payloader_mod.payload(state.payloader, buffer.payload)
 
     timestamp =
       buffer.pts
