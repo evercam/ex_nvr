@@ -29,7 +29,7 @@ defmodule ExNVR.SystemStatus.Supervisor do
   defp maybe_start_victron_mppt(registry_name) do
     # VE.DIRECT to usb
     Circuits.UART.enumerate()
-    |> Enum.find(fn {port, details} ->
+    |> Enum.find(fn {_port, details} ->
       details[:manufacturer] == "VictronEnergy BV" and details[:vendor_id] == 1027
     end)
     |> case do
