@@ -16,6 +16,7 @@ NVR (Network Video Recorder) for Elixir using [Membrane Framework](https://githu
     - [WebRTC Configuration](#webrtc-configuration)
     - [Page URL](#page-url)
     - [Embedding](#embedding)
+  - [HEVC (H265) Support](#hevc-h265-support)
   - [Features](#features)
   - [Project Structure](#project-structure)
 
@@ -127,6 +128,12 @@ A webrtc player can be embedded in web page by using `iframe`
 
 > The `access_token` will eventually expire and must be updated to ensure the proper functioning of the embedded page. We plan to enhance this by introducing the capability to make the page public or generate non-expiring tokens with view privileges. 
 
+## HEVC (H265) Support
+
+H265 is a an efficient video encoding that promises 50% bitrate gain with the same quality as in H264. This makes it ideal for video storage. Many modern IP cameras support H265 by default. However due to licensing and patents, adoption by browsers is still minimal or not available at all.
+
+When using `ex_nvr` to record H265, no transcoding is done, so streaming from `ex_nvr` (e.g. `hls` or `webrtc`) will give h265 stream, so viewing it depends on the browser support (browser support for `hevc` in `hls` is lacking and it's more in the case of `webrtc`).
+
 ## Features
 
 The main feature of this project is to store video streams retrieved from `devices` to local file system and allow users to stream back those recorded videos.  
@@ -151,7 +158,7 @@ The main feature of this project is to store video streams retrieved from `devic
 
 * **Streaming**: live view and playback
    - [x] HLS
-   - [x] WebRTC ([disabled for H265]([url](https://github.com/evercam/ex_nvr/wiki/h265-Support)))
+   - [x] WebRTC
    - [ ] Webm
    - [ ] RTSP
    - [ ] RTMP
