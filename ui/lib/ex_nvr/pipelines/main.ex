@@ -333,7 +333,7 @@ defmodule ExNVR.Pipelines.Main do
         :low -> {:webrtc, :sub_stream}
       end
 
-    {[reply: {ctx.from, :ok}, notify_child: {child, message}], state}
+    {[reply: :ok, notify_child: {child, message}], state}
   end
 
   @impl true
@@ -470,7 +470,7 @@ defmodule ExNVR.Pipelines.Main do
       get_child({:cvs_bufferer, :main_stream})
       |> via_out(Pad.ref(:output, ref))
       |> via_in(Pad.ref(:input, ref),
-        options: [format: image_format, encoding: state.main_stream.video_track.encoding]
+        options: [format: image_format, encoding: state.main_stream_video_track.encoding]
       )
       |> get_child(:snapshooter)
     ]
