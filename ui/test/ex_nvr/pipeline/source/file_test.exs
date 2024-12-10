@@ -21,7 +21,7 @@ defmodule ExNVR.Pipeline.Source.FileTest do
              Source.File.handle_setup(@ctx, state)
 
     assert track_id == 1
-    assert %ExNVR.Media.Track{encoding: :H264, type: :video} = media_track
+    assert %ExNVR.Pipeline.Track{encoding: :H264, type: :video} = media_track
   end
 
   test "read sample", %{device: device} do

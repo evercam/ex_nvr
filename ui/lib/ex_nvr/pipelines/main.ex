@@ -41,9 +41,8 @@ defmodule ExNVR.Pipelines.Main do
 
   alias ExNVR.{Devices, Recordings, Utils}
   alias ExNVR.Elements.VideoStreamStatReporter
-  alias ExNVR.Media.Track
   alias ExNVR.Model.Device
-  alias ExNVR.Pipeline.{Output, Source}
+  alias ExNVR.Pipeline.{Output, Source, Track}
 
   @type encoding :: :H264 | :H265
 
@@ -56,7 +55,7 @@ defmodule ExNVR.Pipelines.Main do
 
     use Bunch.Access
 
-    alias ExNVR.Media.Track
+    alias ExNVR.Pipeline.Track
     alias ExNVR.Model.Device
 
     @default_segment_duration Membrane.Time.seconds(60)

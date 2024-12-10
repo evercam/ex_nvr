@@ -44,7 +44,7 @@ defmodule ExNVR.Pipeline.Source.File do
             :h265 -> :H265
           end
 
-        media_track = ExNVR.Media.Track.new(track.type, codec)
+        media_track = ExNVR.Pipeline.Track.new(track.type, codec)
         {:notify_parent, {:main_stream, track_id, media_track}}
       end)
 

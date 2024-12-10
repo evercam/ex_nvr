@@ -7,7 +7,7 @@ defmodule ExNVR.Pipelines.MainPipelineTest do
   import Membrane.Testing.Assertions
 
   alias ExNVR.{Devices, Utils}
-  alias ExNVR.Media.Track
+  alias ExNVR.Pipeline.Track
   alias ExNVR.Pipelines.Main, as: MainPipeline
   alias ExWebRTC.{ICECandidate, PeerConnection, SessionDescription}
   alias Membrane.Testing
