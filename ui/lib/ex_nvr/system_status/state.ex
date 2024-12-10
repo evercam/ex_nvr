@@ -7,9 +7,10 @@ defmodule ExNVR.SystemStatus.State do
 
   @type t :: %__MODULE__{
           memory: [{atom(), integer()}],
-          cpu_load: tuple(),
+          cpu: %{load_avg: {float(), float(), float()}, num_cores: integer()},
           solar_charger: VictronMPPT.t() | nil
         }
 
-  defstruct [:memory, :cpu_load, :solar_charger]
+  @derive Jason.Encoder
+  defstruct [:memory, :cpu, :solar_charger]
 end

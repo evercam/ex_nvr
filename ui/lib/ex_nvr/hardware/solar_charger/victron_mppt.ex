@@ -72,6 +72,7 @@ defmodule ExNVR.Hardware.SolarCharger.VictronMPPT do
           serial_number: binary()
         }
 
+  @derive Jason.Encoder
   defstruct [
     :v,
     :vpv,
