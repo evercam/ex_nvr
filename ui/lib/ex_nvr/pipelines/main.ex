@@ -371,34 +371,25 @@ defmodule ExNVR.Pipelines.Main do
         spec
       end
 
-    spec =
-      spec ++
-        [
-          get_child(:tee)
-          |> via_out(:video_output)
-          |> via_in(Pad.ref(:video, :main_stream), options: [encoding: encoding])
-          |> get_child(:hls_sink),
-          get_child(:tee)
-          |> via_out(:video_output)
-          |> child({:cvs_bufferer, :main_stream}, ExNVR.Elements.CVSBufferer),
-          get_child(:tee)
-          |> via_out(:video_output)
-          |> child({:stats_reporter, :main_stream}, %VideoStreamStatReporter{
-            device_id: state.device.id
-          })
-        ]
-
-    if encoding == :H264 do
-      spec ++
-        [
-          get_child(:tee)
-          |> via_out(:video_output)
-          |> via_in(:video)
-          |> child(:webrtc, %Output.WebRTC{ice_servers: state.ice_servers})
-        ]
-    else
-      spec
-    end
+    spec ++
+      [
+        get_child(:tee)
+        |> via_out(:video_output)
+        |> via_in(Pad.ref(:video, :main_stream), options: [encoding: encoding])
+        |> get_child(:hls_sink),
+        get_child(:tee)
+        |> via_out(:video_output)
+        |> child({:cvs_bufferer, :main_stream}, ExNVR.Elements.CVSBufferer),
+        get_child(:tee)
+        |> via_out(:video_output)
+        |> child({:stats_reporter, :main_stream}, %VideoStreamStatReporter{
+          device_id: state.device.id
+        }),
+        get_child(:tee)
+        |> via_out(:video_output)
+        |> via_in(:video)
+        |> child(:webrtc, %Output.WebRTC{ice_servers: state.ice_servers})
+      ]
   end
 
   defp build_sub_stream_spec(%{device: device} = state, encoding) do
@@ -415,7 +406,7 @@ defmodule ExNVR.Pipelines.Main do
       })
     ] ++
       build_sub_stream_storage_spec(device) ++
-      build_sub_stream_webrtc_spec(state, encoding) ++
+      build_sub_stream_webrtc_spec(state) ++
       build_sub_stream_bif_spec(device)
   end
 
@@ -437,7 +428,7 @@ defmodule ExNVR.Pipelines.Main do
     end
   end
 
-  defp build_sub_stream_webrtc_spec(state, :H264) do
+  defp build_sub_stream_webrtc_spec(state) do
     [
       get_child({:tee, :sub_stream})
       |> via_out(:video_output)
@@ -445,8 +436,6 @@ defmodule ExNVR.Pipelines.Main do
       |> child({:webrtc, :sub_stream}, %Output.WebRTC{ice_servers: state.ice_servers})
     ]
   end
-
-  defp build_sub_stream_webrtc_spec(_state, _codec), do: []
 
   defp build_sub_stream_bif_spec(device) do
     if device.settings.generate_bif do
@@ -492,13 +481,11 @@ defmodule ExNVR.Pipelines.Main do
 
   defp can_add_webrtc_peer(device, track) do
     with {:streaming, true} <- {:streaming, Device.streaming?(device)},
-         {:stream_supported, true} <- {:stream_supported, not is_nil(track)},
-         {:codec, :H264} <- {:codec, track.encoding} do
+         {:stream_supported, true} <- {:stream_supported, not is_nil(track)} do
       :ok
     else
       {:streaming, false} -> {:error, :offline}
       {:stream_supported, false} -> {:error, :stream_unavailable}
-      {:codec, _codec} -> {:error, :unsupported_codec}
     end
   end
 
