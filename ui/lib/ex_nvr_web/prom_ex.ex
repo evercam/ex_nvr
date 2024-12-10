@@ -12,7 +12,8 @@ defmodule ExNVRWeb.PromEx do
       Plugins.Beam,
       ExNVRWeb.PromEx.Device,
       ExNVRWeb.PromEx.Recording,
-      ExNVRWeb.PromEx.DeviceStream
+      ExNVRWeb.PromEx.DeviceStream,
+      ExNVRWeb.PromEx.SystemStatus
     ]
   end
 

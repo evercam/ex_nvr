@@ -13,6 +13,7 @@ defmodule ExNVRWeb.Application do
       {Phoenix.PubSub, name: ExNVR.PubSub},
       {Finch, name: ExNVR.Finch},
       {Task.Supervisor, name: ExNVR.TaskSupervisor},
+      {ExNVR.SystemStatus.Supervisor, []},
       {DynamicSupervisor, [name: ExNVR.PipelineSupervisor, strategy: :one_for_one]},
       Task.child_spec(fn -> ExNVR.start() end),
       ExNVRWeb.Telemetry,

@@ -88,6 +88,7 @@ defmodule ExNVR.MixProject do
       {:flop_phoenix, "~> 0.21.1"},
       {:prom_ex, "~> 1.9.0"},
       {:reverse_proxy_plug, "~> 3.0"},
+      {:circuits_uart, "~> 1.5"},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:mock, "~> 0.3", only: :test},
       {:faker, "~> 0.17", only: :test},
