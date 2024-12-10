@@ -13,14 +13,16 @@ defmodule ExNVR.SystemStatus.Registry do
     GenServer.start_link(__MODULE__, options, name: options[:name] || __MODULE__)
   end
 
-  @spec get_state() :: State.t()
-  def get_state() do
-    GenServer.call(__MODULE__, :get_state)
+  @spec get_state(pid() | atom() | nil) :: State.t()
+  def get_state(server \\ nil) do
+    GenServer.call(server || __MODULE__, :get_state)
   end
 
   @impl true
-  def init(_options) do
-    {:ok, timer_ref} = :timer.send_interval(:timer.seconds(15), :collect_metrics)
+  def init(options) do
+    {:ok, timer_ref} =
+      :timer.send_interval(options[:interval] || :timer.seconds(15), :collect_metrics)
+
     {:ok, %{data: %State{}, timer: timer_ref}}
   end
 
@@ -31,7 +33,7 @@ defmodule ExNVR.SystemStatus.Registry do
 
   @impl true
   def handle_info({:solar_charger, solar_charger_data}, state) do
-    {:noreply, %{state | data: %State{solar_charger: solar_charger_data}}}
+    {:noreply, %{state | data: %State{state.data | solar_charger: solar_charger_data}}}
   end
 
   @impl true
@@ -54,6 +56,7 @@ defmodule ExNVR.SystemStatus.Registry do
   @impl true
   def terminate(_reason, state) do
     :timer.cancel(state.timer)
+    :ok
   end
 
   defp cpu_load(value), do: Float.ceil(value / 256, 2)

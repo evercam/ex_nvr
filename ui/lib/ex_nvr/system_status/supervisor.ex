@@ -13,15 +13,13 @@ defmodule ExNVR.SystemStatus.Supervisor do
   end
 
   @spec get_system_status() :: State.t()
-  def get_system_status(), do: Registry.get_state()
+  def get_system_status(), do: Registry.get_state(registry_name())
 
   def init(_options) do
-    registry_name = Registry
-
     children =
       [
-        {Registry, [name: registry_name]}
-      ] ++ maybe_start_victron_mppt(registry_name)
+        {Registry, [name: registry_name()]}
+      ] ++ maybe_start_victron_mppt(registry_name())
 
     Supervisor.init(children, strategy: :one_for_one)
   end
@@ -37,4 +35,6 @@ defmodule ExNVR.SystemStatus.Supervisor do
       nil -> []
     end
   end
+
+  defp registry_name(), do: Registry
 end
