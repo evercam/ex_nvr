@@ -6,7 +6,7 @@ defmodule ExNVR.Pipeline.Source.RTSP do
   use Membrane.Bin
 
   alias ExNVR.Model.Device
-  alias ExNVR.Media.Track
+  alias ExNVR.Pipeline.Track
 
   @base_back_off_in_ms 10
   @max_back_off_in_ms :timer.minutes(2)

@@ -15,6 +15,10 @@ defmodule ExNVR.UnixSocketServer do
     GenServer.start_link(__MODULE__, opts)
   end
 
+  def start(opts) do
+    GenServer.start(__MODULE__, opts)
+  end
+
   @impl true
   def init(opts) do
     Process.send_after(self(), :connect, 0)
