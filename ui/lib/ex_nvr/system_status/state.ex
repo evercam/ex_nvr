@@ -6,11 +6,12 @@ defmodule ExNVR.SystemStatus.State do
   alias ExNVR.Hardware.SolarCharger.VictronMPPT
 
   @type t :: %__MODULE__{
+          version: binary(),
           memory: [{atom(), integer()}],
-          cpu: %{load_avg: {float(), float(), float()}, num_cores: integer()},
+          cpu: %{load: [float()], num_cores: integer()},
           solar_charger: VictronMPPT.t() | nil
         }
 
   @derive Jason.Encoder
-  defstruct [:memory, :cpu, :solar_charger]
+  defstruct [:version, :memory, :cpu, :solar_charger]
 end

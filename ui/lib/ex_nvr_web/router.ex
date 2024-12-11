@@ -73,6 +73,8 @@ defmodule ExNVRWeb.Router do
 
       get "/bif/:hour", API.DeviceStreamingController, :bif
     end
+
+    get "/system/status", API.SystemStatusController, :status
   end
 
   scope "/api", ExNVRWeb do
