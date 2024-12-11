@@ -23,7 +23,11 @@ defmodule ExNVR.SystemStatus.Registry do
     {:ok, timer_ref} =
       :timer.send_interval(options[:interval] || :timer.seconds(15), :collect_metrics)
 
-    {:ok, %{data: %State{}, timer: timer_ref}}
+    {:ok,
+     %{
+       data: do_collect_metrics(%State{version: Application.spec(:ex_nvr, :vsn) |> to_string()}),
+       timer: timer_ref
+     }}
   end
 
   @impl true
@@ -38,14 +42,7 @@ defmodule ExNVR.SystemStatus.Registry do
 
   @impl true
   def handle_info(:collect_metrics, %{data: data} = state) do
-    cpu_stats = %{
-      load_avg:
-        {cpu_load(:cpu_sup.avg1()), cpu_load(:cpu_sup.avg5()), cpu_load(:cpu_sup.avg15())},
-      num_cores: :cpu_sup.util([:detailed]) |> elem(0) |> length()
-    }
-
-    data = %State{data | memory: Map.new(:memsup.get_system_memory_data()), cpu: cpu_stats}
-    {:noreply, %{state | data: data}}
+    {:noreply, %{state | data: do_collect_metrics(data)}}
   end
 
   @impl true
@@ -57,6 +54,15 @@ defmodule ExNVR.SystemStatus.Registry do
   def terminate(_reason, state) do
     :timer.cancel(state.timer)
     :ok
+  end
+
+  defp do_collect_metrics(data) do
+    cpu_stats = %{
+      load: [:cpu_sup.avg1(), :cpu_sup.avg5(), :cpu_sup.avg15()] |> Enum.map(&cpu_load/1),
+      num_cores: :cpu_sup.util([:detailed]) |> elem(0) |> length()
+    }
+
+    %State{data | memory: Map.new(:memsup.get_system_memory_data()), cpu: cpu_stats}
   end
 
   defp cpu_load(value), do: Float.ceil(value / 256, 2)

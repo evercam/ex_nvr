@@ -989,6 +989,29 @@ paths:
           $ref: "#/components/responses/BadArg"
         '404':
           $ref: "#/components/responses/NotFound"
+  /api/system/status:
+    get:
+      summary: Get system status.
+      description: |
+        Get information about the system status. The current exposed information are:
+
+          * CPU stats
+          * Memory
+          * Solar Charger Controller (only `Victron MPPT` for now)
+
+        Check the response schema for the detailed fields.
+      operationId: getSystemStatus
+      tags:
+        - System
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemStatus'
+        '403':
+          $ref: "#/components/responses/Unauthorized"
   /api/events/lpr:
     get:
       summary: Get LPR events
@@ -1026,41 +1049,6 @@ components:
       scheme: bearer
       bearerFormat: opaque
   schemas:
-    User:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-          description: user ID
-        first_name:
-          type: string
-          description: User first name
-        last_name:
-          type: string
-          description: User last name
-        username:
-          type: string
-          description: User username
-        email:
-          type: string
-          description: User email
-        role:
-          type: string
-          enum: ["admin", "user"]
-          description: |
-            User's role.
-
-            * `admin` - Has access to all features (Default).
-            * `user` - Has only "read" access to devices, recordings as well as streaming features.
-              Does not have access to Onvif Discovery and users management.
-        language:
-          type: string
-          enum: ["en"]
-          description: |
-            User's application language.
-            Default to: en (English)
-            * Only english available for now.
     Credentials:
       type: object
       description: Streaming Device credentials (Only when Device type is ip)
@@ -1072,102 +1060,6 @@ components:
           type: string
           format: password
           description: Password to authenticate
-    LPREvent:
-      type: object
-      properties:
-        device_id:
-          type: string
-          format: uuid
-          description: The device id where the event belongs.
-        capture_time:
-          type: string
-          format: date-time
-          description: Capture time of the LPR event
-        plate_number:
-          type: string
-          description: Plate number of the LPR event
-        direction:
-          type: string
-          enum: [in, away]
-          description: Direction of the LPR Event
-        list_type:
-          type: string
-          enum: [white, black, other]
-        plate_image:
-          type: string
-          format: binary
-          description: The plate image
-        metadata:
-          type: object
-          properties:
-            confidence:
-              type: number
-              description: The confidence level of the recognized plate
-              minimum: 0.0
-              maximum: 1.0
-            bounding_box:
-              type: array
-              items:
-                type: number
-                minimum: 0.0
-                maximum: 1.0
-              minItems: 4
-              maxItems: 4
-              description: The normalized coordinates of the plate.
-            plate_color:
-              type: string
-              description: The color of the vehicle plate.
-            vehicle_type:
-              type: string
-              description: The type of the vehicle
-            vehicle_color:
-              type: string
-              description: The vehicle color.
-    RemoteStorage:
-      type: object
-      properties:
-        id:
-          type: integer
-          description: Remote storage id
-        name:
-          type: string
-          description: Remote storage name
-        url:
-          type: string
-          description: Remote storage url
-        type:
-          type: string
-          enum: ["s3", "http"]
-          description: The type of the remote storage..
-    S3Config:
-      type: object
-      properties:
-        bucket:
-          type: string
-          description: S3 bucket name.
-        region:
-          type: string
-          description: Remote Storage region
-          default: "us-east-1"
-        access_key_id:
-          type: string
-          description: Remote Storage access_key_id.
-        secret_access_key:
-          type: string
-          description: Remote Storage secret_access_key.
-    HttpConfig:
-      type: object
-      properties:
-        username:
-          type: string
-          description: Remote Storage username
-        password:
-          type: string
-          description: Remote Storage password
-        token:
-          type: string
-          description: Remote Storage token
-
     Device:
       type: object
       properties:
@@ -1278,6 +1170,69 @@ components:
         details:
           type: object
           description: Other details related to the error.
+    HttpConfig:
+      type: object
+      properties:
+        username:
+          type: string
+          description: Remote Storage username
+        password:
+          type: string
+          description: Remote Storage password
+        token:
+          type: string
+          description: Remote Storage token
+    LPREvent:
+      type: object
+      properties:
+        device_id:
+          type: string
+          format: uuid
+          description: The device id where the event belongs.
+        capture_time:
+          type: string
+          format: date-time
+          description: Capture time of the LPR event
+        plate_number:
+          type: string
+          description: Plate number of the LPR event
+        direction:
+          type: string
+          enum: [in, away]
+          description: Direction of the LPR Event
+        list_type:
+          type: string
+          enum: [white, black, other]
+        plate_image:
+          type: string
+          format: binary
+          description: The plate image
+        metadata:
+          type: object
+          properties:
+            confidence:
+              type: number
+              description: The confidence level of the recognized plate
+              minimum: 0.0
+              maximum: 1.0
+            bounding_box:
+              type: array
+              items:
+                type: number
+                minimum: 0.0
+                maximum: 1.0
+              minItems: 4
+              maxItems: 4
+              description: The normalized coordinates of the plate.
+            plate_color:
+              type: string
+              description: The color of the vehicle plate.
+            vehicle_type:
+              type: string
+              description: The type of the vehicle
+            vehicle_color:
+              type: string
+              description: The vehicle color.
     Recording:
       type: object
       properties:
@@ -1299,6 +1254,22 @@ components:
           type: string
           format: uuid
           description: The device id where this recording belongs
+    RemoteStorage:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Remote storage id
+        name:
+          type: string
+          description: Remote storage name
+        url:
+          type: string
+          description: Remote storage url
+        type:
+          type: string
+          enum: ["s3", "http"]
+          description: The type of the remote storage..
     ResultMeta:
       type: object
       properties:
@@ -1310,6 +1281,22 @@ components:
           type: integer
         total_pages:
           type: integer
+    S3Config:
+      type: object
+      properties:
+        bucket:
+          type: string
+          description: S3 bucket name.
+        region:
+          type: string
+          description: Remote Storage region
+          default: "us-east-1"
+        access_key_id:
+          type: string
+          description: Remote Storage access_key_id.
+        secret_access_key:
+          type: string
+          description: Remote Storage secret_access_key.
     StreamConfig:
       type: object
       description: Device stream configuration
@@ -1326,6 +1313,159 @@ components:
           type: string
           format: path
           description: The Path of the file location to be used as a streaming source (Only when Device type is file)
+    SystemStatus:
+      type: object
+      description: System status information
+      properties:
+        version:
+          type: string
+          description: "`ex_nvr` version."
+          example: 0.16.2
+        cpu:
+          type: object
+          description: cpu stats.
+          properties:
+            load:
+              type: array
+              description: |
+                CPU load information. It's a 3 items array that represents 1, 5 and 15 minutes load respectively.
+
+                To caluclate the average over all cores, just divide the value by the `num_cores` field.
+
+                The system is loaded if the average over all cores `> 1` for some time. 
+              items:
+                type: number
+                minimum: 0.0
+              minItems: 3
+              maxitems: 3
+            num_cores:
+              type: integer
+              description: The total number of cpu cores in the system.
+              minimum: 1
+        memory:
+          type: object
+          description: | 
+            System memory stats.
+
+            For more details about the memory types reported here, see [erlang docs](https://www.erlang.org/doc/apps/os_mon/memsup.html#get_system_memory_data/0).
+          properties:
+            system_total_memory:
+              type: integer
+            free_memory:
+              type: integer
+            total_memory:
+              type: integer
+            buffered_memory:
+              type: integer
+            cached_memory:
+              type: integer
+            total_swap:
+              type: integer
+            free_swap:
+              type: integer
+            available_memory:
+              type: integer
+        solar_charger:
+          $ref: "#/components/schemas/VictronMPPT"
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: user ID
+        first_name:
+          type: string
+          description: User first name
+        last_name:
+          type: string
+          description: User last name
+        username:
+          type: string
+          description: User username
+        email:
+          type: string
+          description: User email
+        role:
+          type: string
+          enum: ["admin", "user"]
+          description: |
+            User's role.
+
+            * `admin` - Has access to all features (Default).
+            * `user` - Has only "read" access to devices, recordings as well as streaming features.
+              Does not have access to Onvif Discovery and users management.
+        language:
+          type: string
+          enum: ["en"]
+          description: |
+            User's application language.
+            Default to: en (English)
+            * Only english available for now.
+    VictronMPPT:
+      type: object
+      description: Data received from Victron MPPT (BlueSolar and SmartSolar) via VE.DIRECT to USB.
+      nullable: true
+      properties:
+        v:
+          type: integer
+          description: Main channel (or battery) voltage in mV.
+        vpv:
+          type: integer
+          description: Panel voltage in mV 
+        ppv:
+          type: integer
+          description: Panel power in W 
+        i:
+          type: integer
+          description: |
+            Main or channel 1 battery current in mA.
+
+            Positive value means the battery is charging, a negative one means battery
+            is discharging.
+        il:
+          type: integer
+          description: Load current in mA.
+        load:
+          type: string
+          description: Load output status.
+        relay_state:
+          type: string
+          description: The relay state.
+        off_reason:
+          type: integer
+          description: The off reason.
+        h19:
+          type: integer
+          description: Yield total in 0.01 kWh.
+        h20:
+          type: integer
+          description: Yield today in 0.01 kWh.
+        h21:
+          type: integer
+          description: Maximum power today in W.
+        h22:
+          type: integer
+          description: Yield yesterday in 0.01 kWh.
+        h23:
+          type: integer
+          description: Maximum power yesterday in W.
+        err:
+          type: integer
+          description: The error code.
+        cs:
+          type: string
+          enum: [off, fault, bulk, absorption, float, equalize, starting_up, auto_equalize, external_control, unknown]
+          description: The state of operation.
+        fw:
+          type: string
+          description: The firmware version.
+        pid:
+          type: string
+          description: The product id.
+        serial_number:
+          type: string
+          description: The serial number.
   parameters:
     remote_storage_id:
       name: remote_storage_id
