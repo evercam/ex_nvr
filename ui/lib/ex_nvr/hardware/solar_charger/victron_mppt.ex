@@ -82,16 +82,16 @@ defmodule ExNVR.Hardware.SolarCharger.VictronMPPT do
     :load,
     :relay_state,
     :off_reason,
-    :h19,
-    :h20,
-    :h21,
-    :h22,
-    :h23,
     :err,
     :cs,
     :fw,
     :pid,
-    :serial_number
+    :serial_number,
+    h19: 0,
+    h20: 0,
+    h21: 0,
+    h22: 0,
+    h23: 0
   ]
 
   @speed 19_200
@@ -125,7 +125,8 @@ defmodule ExNVR.Hardware.SolarCharger.VictronMPPT do
 
   @impl true
   def handle_info(:report, state) do
-    send(state.registry, {:solar_charger, state.data})
+    data = if is_nil(state.data.v), do: nil, else: state.data
+    send(state.registry, {:solar_charger, data})
     {:noreply, state}
   end
 
