@@ -8,7 +8,7 @@ defmodule ExNVR.Model.Device do
   alias Ecto.Changeset
   alias ExNVR.Model.Device.{SnapshotConfig, StorageConfig}
 
-  @states [:stopped, :recording, :failed]
+  @states [:stopped, :streaming, :recording, :failed]
   @camera_vendors ["HIKVISION", "Milesight Technology Co.,Ltd.", "AXIS"]
 
   @type state :: :stopped | :recording | :failed
@@ -195,12 +195,17 @@ defmodule ExNVR.Model.Device do
   def has_sub_stream(%__MODULE__{stream_config: %StreamConfig{sub_stream_uri: nil}}), do: false
   def has_sub_stream(_), do: true
 
+  @doc """
+  Check if the device main pipeline is running.
+  """
   @spec recording?(t()) :: boolean()
   def recording?(%__MODULE__{state: state}), do: state != :stopped
 
+  @doc """
+  Check if the device is streaming media
+  """
   @spec streaming?(t()) :: boolean()
-  def streaming?(%__MODULE__{state: :recording}), do: true
-  def streaming?(%__MODULE__{}), do: false
+  def streaming?(%__MODULE__{state: state}), do: state in [:recording, :streaming]
 
   # directories path
 

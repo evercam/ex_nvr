@@ -28,6 +28,7 @@ defmodule ExNVRWeb.DeviceListLive do
               ["h-2.5 w-2.5 rounded-full mr-2"] ++
                 case device.state do
                   :recording -> ["bg-green-500"]
+                  :streaming -> ["bg-green-500"]
                   :failed -> ["bg-red-500"]
                   :stopped -> ["bg-yellow-500"]
                 end

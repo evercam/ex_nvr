@@ -1,4 +1,4 @@
-defmodule ExNVRWeb.API.DeviceControllerTest do
+defmodule ExNVRWeb.API.SystemStatusControllerTest do
   @moduledoc false
 
   use ExNVRWeb.ConnCase

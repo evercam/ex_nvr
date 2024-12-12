@@ -35,7 +35,7 @@ defmodule ExNVR.Pipelines.MainPipelineTest do
       {:main_stream, 1, %Track{type: :video, encoding: :H264}}
     )
 
-    assert Devices.get!(device.id).state == :recording
+    assert Devices.get!(device.id).state == :streaming
 
     # allow some time for the buffers to propagate to the different
     # elements in the main pipeline
