@@ -22,12 +22,12 @@ defmodule ExNVR.SystemStatus.RegistryTest do
 
     assert %State{
              memory: memory,
-             cpu: %{load_avg: load, num_cores: num_cores},
+             cpu: %{load: load, num_cores: num_cores},
              solar_charger: ^victron_mppt
            } = data
 
     assert is_map(memory)
-    assert {load1, load5, load15} = load
+    assert [load1, load5, load15] = load
     assert is_number(load1)
     assert is_number(load5)
     assert is_number(load15)

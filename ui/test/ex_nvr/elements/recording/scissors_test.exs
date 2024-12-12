@@ -21,17 +21,17 @@ defmodule ExNVR.Elements.Recording.ScissorsTest do
   describe "Start stream" do
     test "from exact timestamp" do
       state = init_scissors(~U(2023-09-06 10:00:02Z), :exact)
-      perform_test(state, 2..-1)
+      perform_test(state, 2..-1//1)
     end
 
     test "from closest keyframe before start date" do
       state = init_scissors(~U(2023-09-06 10:00:06Z), :keyframe_before)
-      perform_test(state, 4..-1)
+      perform_test(state, 4..-1//1)
     end
 
     test "from closest keyframe after start date" do
       state = init_scissors(~U(2023-09-06 10:00:06Z), :keyframe_after)
-      perform_test(state, 8..-1)
+      perform_test(state, 8..-1//1)
     end
   end
 
