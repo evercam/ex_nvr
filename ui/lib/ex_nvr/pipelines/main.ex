@@ -42,60 +42,14 @@ defmodule ExNVR.Pipelines.Main do
   alias ExNVR.{Devices, Recordings, Utils}
   alias ExNVR.Elements.VideoStreamStatReporter
   alias ExNVR.Model.Device
-  alias ExNVR.Pipeline.{Output, Source, Track}
+  alias ExNVR.Pipeline.{Output, Source}
+  alias __MODULE__.State
 
   @type encoding :: :H264 | :H265
 
   @event_prefix [:ex_nvr, :main_pipeline]
   @default_segment_duration Membrane.Time.seconds(60)
   @default_ice_servers [%{urls: "stun:stun.l.google.com:19302"}]
-
-  defmodule State do
-    @moduledoc false
-
-    use Bunch.Access
-
-    alias ExNVR.Pipeline.Track
-    alias ExNVR.Model.Device
-
-    @default_segment_duration Membrane.Time.seconds(60)
-
-    @typedoc """
-    Pipeline state
-
-    `device` - The device from where to pull the media streams
-    `segment_duration` - The duration of each video chunk saved by the storage bin.
-    `supervisor_pid` - The supervisor pid of this pipeline (needed to stop a pipeline)
-    `live_snapshot_waiting_pids` - List of pid waiting for live snapshot request to be completed
-    `main_stream_video_track` - The main stream video track.
-    `sub_stream_video_track` - The sub stream video track.
-    `record_main_stream?` - Whether to record the main stream or not.
-    `ice_servers` - The list of ICE or/and TURN servers to use for WebRTC.
-    """
-    @type t :: %__MODULE__{
-            device: Device.t(),
-            segment_duration: Membrane.Time.t(),
-            supervisor_pid: pid(),
-            live_snapshot_waiting_pids: list(),
-            main_stream_video_track: Track.t(),
-            sub_stream_video_track: Track.t() | nil,
-            record_main_stream?: boolean(),
-            ice_servers: list(map())
-          }
-
-    @enforce_keys [:device]
-
-    defstruct @enforce_keys ++
-                [
-                  segment_duration: @default_segment_duration,
-                  supervisor_pid: nil,
-                  live_snapshot_waiting_pids: [],
-                  main_stream_video_track: nil,
-                  sub_stream_video_track: nil,
-                  record_main_stream?: true,
-                  ice_servers: []
-                ]
-  end
 
   def start_link(options \\ []) do
     with {:ok, sup_pid, pid} = res <-
@@ -178,7 +132,7 @@ defmodule ExNVR.Pipelines.Main do
 
     # Set device state and make last active run inactive
     # may happens on application crash
-    device_state = if state.device.type == :file, do: :recording, else: :failed
+    device_state = if state.device.type == :file, do: :streaming, else: :failed
     Recordings.deactivate_runs(state.device)
     {[spec: spec], maybe_update_device_and_report(state, device_state)}
   end
@@ -190,7 +144,7 @@ defmodule ExNVR.Pipelines.Main do
         _ctx,
         %State{} = state
       ) do
-    state = maybe_update_device_and_report(state, :recording)
+    state = maybe_update_device_and_report(state, :streaming)
     old_track = state.main_stream_video_track
 
     spec = [
@@ -243,6 +197,11 @@ defmodule ExNVR.Pipelines.Main do
   def handle_child_notification(:no_sockets, :unix_socket, _ctx, state) do
     Membrane.Logger.info("All unix sockets are disconnected, remove unix socket bin element")
     {[remove_children: [:unix_socket]], state}
+  end
+
+  @impl true
+  def handle_child_notification(:new_segment, {:storage, :main_stream}, _ctx, state) do
+    {[], maybe_update_device_and_report(state, :recording)}
   end
 
   @impl true
@@ -325,7 +284,7 @@ defmodule ExNVR.Pipelines.Main do
   end
 
   @impl true
-  def handle_call({:peer_message, stream_type, message}, ctx, state) do
+  def handle_call({:peer_message, stream_type, message}, _ctx, state) do
     child =
       case stream_type do
         :high -> :webrtc
@@ -361,7 +320,7 @@ defmodule ExNVR.Pipelines.Main do
           [
             get_child(:tee)
             |> via_out(:video_output)
-            |> child({:storage_bin, :main_stream}, %Output.Storage{
+            |> child({:storage, :main_stream}, %Output.Storage{
               device: state.device,
               target_segment_duration: state.segment_duration,
               correct_timestamp: true

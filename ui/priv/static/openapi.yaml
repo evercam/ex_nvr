@@ -1078,8 +1078,14 @@ components:
           type: string
         state:
           type: string
-          enum: [recording, failed, stopped]
-          description: Device state
+          enum: [recording, streaming, failed, stopped]
+          description: |
+            A device may be in one of the following states:
+
+              * `streaming` - The device is streaming media but not recording.
+              * `recording` - The device is streaming and also recording on hard drive.
+              * `failed` - The device cannot stream media for some reason.
+              * `stopped` - The device is stopped and not does nothing. 
         stream_config:
           $ref: "#/components/schemas/StreamConfig"
         credentials:

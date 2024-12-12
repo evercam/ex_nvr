@@ -145,39 +145,39 @@ defmodule ExNVR.Pipeline.Output.Storage do
       |> update_track_priv_data(buffer)
       |> open_file()
 
-    {[], state}
+    {[notify_parent: :new_segment], state}
   end
 
   @impl true
   def handle_buffer(:input, buffer, _ctx, %{current_segment: segment} = state) do
     state = write_data(state, buffer)
 
-    state =
-      cond do
-        Utils.keyframe(buffer) and Segment.duration(segment) >= state.target_duration ->
-          {state, discontinuity} =
-            finalize_segment(
-              state,
-              buffer.metadata.timestamp,
-              state.correct_timestamp
-            )
+    cond do
+      Utils.keyframe(buffer) and Segment.duration(segment) >= state.target_duration ->
+        {state, discontinuity} =
+          finalize_segment(
+            state,
+            buffer.metadata.timestamp,
+            state.correct_timestamp
+          )
 
-          state = close_file(state, discontinuity)
+        state = close_file(state, discontinuity)
 
-          # first segment has its start date adjusted
-          # because of camera buffering
-          if state.first_segment? do
-            File.rename!(
-              recording_path(state, Segment.start_date(segment)),
-              recording_path(state, Segment.start_date(state.current_segment))
-            )
-          end
+        # first segment has its start date adjusted
+        # because of camera buffering
+        if state.first_segment? do
+          File.rename!(
+            recording_path(state, Segment.start_date(segment)),
+            recording_path(state, Segment.start_date(state.current_segment))
+          )
+        end
 
-          start_time =
-            if discontinuity,
-              do: state.current_segment.wallclock_end_date,
-              else: Segment.end_date(state.current_segment)
+        start_time =
+          if discontinuity,
+            do: state.current_segment.wallclock_end_date,
+            else: Segment.end_date(state.current_segment)
 
+        state =
           %{
             state
             | current_segment: Segment.new(start_time),
@@ -186,14 +186,14 @@ defmodule ExNVR.Pipeline.Output.Storage do
           }
           |> open_file()
 
-        Utils.keyframe(buffer) ->
-          state |> update_track_priv_data(buffer)
+        {[notify_parent: :new_segment], state}
 
-        true ->
-          state
-      end
+      Utils.keyframe(buffer) ->
+        {[], state |> update_track_priv_data(buffer)}
 
-    {[], state}
+      true ->
+        {[], state}
+    end
   end
 
   @impl true
