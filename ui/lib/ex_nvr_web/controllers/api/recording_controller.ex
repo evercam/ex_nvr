@@ -59,7 +59,7 @@ defmodule ExNVRWeb.API.RecordingController do
   defp validate_index_req_params(params) do
     types = %{
       start_date: :utc_datetime_usec,
-      stream: {:parameterized, Ecto.Enum, Ecto.Enum.init(values: ~w(high low)a)}
+      stream: {:parameterized, {Ecto.Enum, Ecto.Enum.init(values: ~w(high low)a)}}
     }
 
     {%{stream: :high}, types}
@@ -68,7 +68,7 @@ defmodule ExNVRWeb.API.RecordingController do
   end
 
   defp validate_chunks_req_params(params) do
-    types = %{stream: {:parameterized, Ecto.Enum, Ecto.Enum.init(values: ~w(high low)a)}}
+    types = %{stream: {:parameterized, {Ecto.Enum, Ecto.Enum.init(values: ~w(high low)a)}}}
 
     {%{stream: :high}, types}
     |> Changeset.cast(params, Map.keys(types))
@@ -76,7 +76,7 @@ defmodule ExNVRWeb.API.RecordingController do
   end
 
   defp validate_blob_req_params(params) do
-    types = %{stream: {:parameterized, Ecto.Enum, Ecto.Enum.init(values: ~w(high low)a)}}
+    types = %{stream: {:parameterized, {Ecto.Enum, Ecto.Enum.init(values: ~w(high low)a)}}}
 
     {%{stream: :high}, types}
     |> Changeset.cast(params, Map.keys(types))

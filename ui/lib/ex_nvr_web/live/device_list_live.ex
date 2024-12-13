@@ -18,10 +18,10 @@ defmodule ExNVRWeb.DeviceListLive do
       </div>
 
       <.table id="devices" rows={@devices}>
-        <:col :let={device} label="Id"><%= device.id %></:col>
-        <:col :let={device} label="Type"><%= get_type_label(device.type) %></:col>
-        <:col :let={device} label="Name"><%= device.name %></:col>
-        <:col :let={device} label="Timezone"><%= device.timezone %></:col>
+        <:col :let={device} label="Id">{device.id}</:col>
+        <:col :let={device} label="Type">{get_type_label(device.type)}</:col>
+        <:col :let={device} label="Name">{device.name}</:col>
+        <:col :let={device} label="Timezone">{device.timezone}</:col>
         <:col :let={device} label="State">
           <div class="flex items-center">
             <div class={
@@ -34,7 +34,7 @@ defmodule ExNVRWeb.DeviceListLive do
                 end
             }>
             </div>
-            <%= String.upcase(to_string(device.state)) %>
+            {String.upcase(to_string(device.state))}
           </div>
         </:col>
         <:action :let={device}>
@@ -113,7 +113,7 @@ defmodule ExNVRWeb.DeviceListLive do
                 If you want to delete them delete the following folders: <br />
                 <div class="bg-white dark:bg-gray-400 rounded-md p-4 mt-2">
                   <code class="text-gray-800 font-bold">
-                    <%= Device.base_dir(device) %>
+                    {Device.base_dir(device)}
                   </code>
                 </div>
               </h3>

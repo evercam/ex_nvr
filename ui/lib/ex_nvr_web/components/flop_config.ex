@@ -1,5 +1,7 @@
 defmodule ExNVRWeb.FlopConfig do
-  import Phoenix.HTML.Tag
+  @moduledoc false
+
+  use PhoenixHTMLHelpers
 
   def table_opts do
     [

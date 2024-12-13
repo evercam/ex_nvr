@@ -4,8 +4,8 @@ defmodule ExNvrRtsp.MixProject do
   def project do
     [
       app: :ex_nvr_rtsp,
-      version: "0.16.2",
-      elixir: "~> 1.15",
+      version: "0.17.0",
+      elixir: "~> 1.17",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       deps: deps()

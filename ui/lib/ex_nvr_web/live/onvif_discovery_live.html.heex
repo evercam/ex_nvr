@@ -39,10 +39,10 @@
           phx-click="device-details"
           phx-value-url={new_device.url}
         >
-          <span class="text-xl font-bold"><%= new_device.name %></span>
+          <span class="text-xl font-bold">{new_device.name}</span>
           <br />
-          <span class="text-sm"><%= new_device.hardware %></span>
-          - <span class="text-sm"><%= new_device.url %></span>
+          <span class="text-sm">{new_device.hardware}</span>
+          - <span class="text-sm">{new_device.url}</span>
         </li>
       </ul>
     </.card>
@@ -58,8 +58,8 @@
         <div :if={@device_details[:device_information]} class="mb-4 dark:text-gray-400">
           <table class="w-full table-auto">
             <tr :for={{key, value} <- @device_details[:device_information]}>
-              <td class="font-bold"><%= display_key(key) %></td>
-              <td class="break-anywhere"><%= value %></td>
+              <td class="font-bold">{display_key(key)}</td>
+              <td class="break-anywhere">{value}</td>
             </tr>
           </table>
         </div>
@@ -71,8 +71,8 @@
         <div :if={@device_details[:date_time_settings]} class="dark:text-gray-400 mb-4">
           <table class="w-full table-auto">
             <tr :for={{key, value} <- @device_details[:date_time_settings]}>
-              <td class="font-bold"><%= display_key(key) %></td>
-              <td class="break-anywhere"><%= value %></td>
+              <td class="font-bold">{display_key(key)}</td>
+              <td class="break-anywhere">{value}</td>
             </tr>
           </table>
         </div>
@@ -84,8 +84,8 @@
         <div :if={@device_details[:network_interface]} class="dark:text-gray-400 mb-4">
           <table class="w-full table-auto">
             <tr :for={{key, value} <- @device_details[:network_interface]}>
-              <td class="font-bold"><%= display_key(key) %></td>
-              <td class="break-anywhere"><%= value %></td>
+              <td class="font-bold">{display_key(key)}</td>
+              <td class="break-anywhere">{value}</td>
             </tr>
           </table>
         </div>
@@ -98,24 +98,24 @@
         :for={profile <- @device_details[:media_profiles] || []}
         class="w-full flex flex-wrap justify-between mb-5 p-5 card-shadow"
       >
-        <h3 class="w-full font-bold text-xl"><%= profile.name %></h3>
+        <h3 class="w-full font-bold text-xl">{profile.name}</h3>
         <div class="md:w-2/5 p-5 dark:text-gray-400">
           <table class="w-full table-auto">
             <tr>
               <td class="font-bold">Codec</td>
-              <td><%= get_in(profile, [:configurations, :video_encoder, :encoding]) %></td>
+              <td>{get_in(profile, [:configurations, :video_encoder, :encoding])}</td>
             </tr>
             <tr>
               <td class="font-bold">Profile</td>
-              <td><%= get_in(profile, [:configurations, :video_encoder, :profile]) %></td>
+              <td>{get_in(profile, [:configurations, :video_encoder, :profile])}</td>
             </tr>
             <tr>
               <td class="font-bold">Group of Pictures</td>
-              <td><%= get_in(profile, [:configurations, :video_encoder, :gov_length]) %></td>
+              <td>{get_in(profile, [:configurations, :video_encoder, :gov_length])}</td>
             </tr>
             <tr>
               <td class="font-bold">Image Quality</td>
-              <td><%= get_in(profile, [:configurations, :video_encoder, :quality]) %></td>
+              <td>{get_in(profile, [:configurations, :video_encoder, :quality])}</td>
             </tr>
           </table>
         </div>
@@ -124,40 +124,40 @@
             <tr>
               <td class="font-bold">Resolution</td>
               <td>
-                <%= get_in(profile, [:configurations, :video_encoder, :resolution, :width]) %> x <%= get_in(
+                {get_in(profile, [:configurations, :video_encoder, :resolution, :width])} x {get_in(
                   profile,
                   [:configurations, :video_encoder, :resolution, :height]
-                ) %>
+                )}
               </td>
             </tr>
             <tr>
               <td class="font-bold">Constant Bitrate</td>
               <td>
-                <%= String.upcase(
+                {String.upcase(
                   "#{get_in(profile, [:configurations, :video_encoder, :rate_control, :constant_bit_rate])}"
-                ) %>
+                )}
               </td>
             </tr>
             <tr>
               <td class="font-bold">Frame rate</td>
               <td>
-                <%= get_in(profile, [
+                {get_in(profile, [
                   :configurations,
                   :video_encoder,
                   :rate_control,
                   :frame_rate_limit
-                ]) %> fps
+                ])} fps
               </td>
             </tr>
             <tr>
               <td class="font-bold">Max Bitrate</td>
               <td>
-                <%= get_in(profile, [
+                {get_in(profile, [
                   :configurations,
                   :video_encoder,
                   :rate_control,
                   :bitrate_limit
-                ]) %> kbps
+                ])} kbps
               </td>
             </tr>
           </table>
@@ -166,11 +166,11 @@
           <table class="w-full table-auto">
             <tr>
               <td class="font-bold">Stream URI</td>
-              <td><%= profile.stream_uri %></td>
+              <td>{profile.stream_uri}</td>
             </tr>
             <tr>
               <td class="font-bold">Snapshot URI</td>
-              <td><%= profile.snapshot_uri %></td>
+              <td>{profile.snapshot_uri}</td>
             </tr>
           </table>
         </div>

@@ -15,19 +15,19 @@ defmodule ExNVRWeb.UserListLive do
       </div>
 
       <.table id="users" rows={@users}>
-        <:col :let={user} label="Id"><%= user.id %></:col>
-        <:col :let={user} label="First Name"><%= user.first_name %></:col>
-        <:col :let={user} label="Last Name"><%= user.last_name %></:col>
-        <:col :let={user} label="Username"><%= user.username %></:col>
-        <:col :let={user} label="Email"><%= user.email %></:col>
+        <:col :let={user} label="Id">{user.id}</:col>
+        <:col :let={user} label="First Name">{user.first_name}</:col>
+        <:col :let={user} label="Last Name">{user.last_name}</:col>
+        <:col :let={user} label="Username">{user.username}</:col>
+        <:col :let={user} label="Email">{user.email}</:col>
         <:col :let={user} label="Role">
           <div class="flex items-center">
-            <%= String.upcase(to_string(user.role)) %>
+            {String.upcase(to_string(user.role))}
           </div>
         </:col>
         <:col :let={user} label="Language">
           <div class="flex items-center">
-            <%= String.upcase(to_string(user.language)) %>
+            {String.upcase(to_string(user.language))}
           </div>
         </:col>
         <:action :let={user}>
@@ -78,7 +78,7 @@ defmodule ExNVRWeb.UserListLive do
           <.modal id="delete-modal">
             <div class="bg-blue-300 p-4 rounded-lg text-center dark:bg-gray-800 dark:border-gray-700">
               <p class="text-l text-black dark:text-white font-bold mb-4">
-                <%= "Are you sure you want to delete the User: '#{user.email}'" %>
+                {"Are you sure you want to delete the User: '#{user.email}'"}
               </p>
               <.button
                 phx-disable-with="Deleting..."

@@ -165,7 +165,7 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
   defp validate_hls_stream_params(params) do
     types = %{
       pos: :utc_datetime,
-      stream: {:parameterized, Ecto.Enum, Ecto.Enum.init(values: ~w(high low auto)a)},
+      stream: {:parameterized, {Ecto.Enum, Ecto.Enum.init(values: ~w(high low auto)a)}},
       resolution: :integer,
       duration: :integer
     }
@@ -180,9 +180,9 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
   defp validate_snapshot_req_params(params) do
     types = %{
       time: :utc_datetime_usec,
-      method: {:parameterized, Ecto.Enum, Ecto.Enum.init(values: ~w(before precise)a)},
-      format: {:parameterized, Ecto.Enum, Ecto.Enum.init(values: ~w(jpeg)a)},
-      stream: {:parameterized, Ecto.Enum, Ecto.Enum.init(values: ~w(high low)a)}
+      method: {:parameterized, {Ecto.Enum, Ecto.Enum.init(values: ~w(before precise)a)}},
+      format: {:parameterized, {Ecto.Enum, Ecto.Enum.init(values: ~w(jpeg)a)}},
+      stream: {:parameterized, {Ecto.Enum, Ecto.Enum.init(values: ~w(high low)a)}}
     }
 
     {%{method: :before, format: :jpeg, time: nil, stream: :high}, types}
@@ -195,7 +195,7 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
       start_date: :utc_datetime_usec,
       end_date: :utc_datetime_usec,
       duration: :integer,
-      stream: {:parameterized, Ecto.Enum, Ecto.Enum.init(values: ~w(high low)a)}
+      stream: {:parameterized, {Ecto.Enum, Ecto.Enum.init(values: ~w(high low)a)}}
     }
 
     {%{duration: nil, end_date: nil, stream: :high}, types}

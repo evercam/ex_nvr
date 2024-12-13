@@ -96,14 +96,14 @@
             >
               <div class="px-4 py-3" role="none">
                 <p class="text-sm text-gray-900 dark:text-white" role="none">
-                  <%= if @current_user,
-                    do: "#{@current_user.first_name} #{@current_user.last_name}" %>
+                  {if @current_user,
+                    do: "#{@current_user.first_name} #{@current_user.last_name}"}
                 </p>
                 <p
                   class="text-sm font-medium text-gray-900 truncate dark:text-gray-300 mr-4"
                   role="none"
                 >
-                  <%= if @current_user, do: @current_user.email %>
+                  {if @current_user, do: @current_user.email}
                 </p>
               </div>
               <ul class="py-1" role="none">
@@ -272,7 +272,7 @@
       </div>
       <ul class="pt-4 mt-4 space-y-2 font-medium border-t border-white dark:border-gray-700">
         <li class="font-medium text-center text-white dark:text-white">
-          Version <%= Application.spec(:ex_nvr, :vsn) %>
+          Version {Application.spec(:ex_nvr, :vsn)}
         </li>
       </ul>
     </div>
@@ -281,6 +281,6 @@
 <main class="px-4 py-20 sm:px-6 lg:px-8 bg-gray-300 dark:bg-gray-800">
   <div class="flex justify-center mx-auto sm:ml-64 bg-gray-300 dark:bg-gray-800">
     <.flash_group flash={@flash} />
-    <%= @inner_content %>
+    {@inner_content}
   </div>
 </main>
