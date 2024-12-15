@@ -9,7 +9,6 @@ defmodule ExNVR.MixProject do
       app: @app,
       version: @version,
       elixir: "~> 1.15",
-      compilers: [:unifex, :bundlex] ++ Mix.compilers(),
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
@@ -39,7 +38,6 @@ defmodule ExNVR.MixProject do
     [
       {:ex_nvr_rtsp, path: "../rtsp"},
       {:ex_sdp, "~> 1.0"},
-      {:unifex, "~> 1.1"},
       {:bundlex, "~> 1.5", override: true},
       {:bcrypt_elixir, "~> 3.0"},
       {:phoenix_pubsub, "~> 2.1"},
