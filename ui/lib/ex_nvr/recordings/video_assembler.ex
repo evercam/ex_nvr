@@ -10,14 +10,20 @@ defmodule ExNVR.Recordings.VideoAssembler do
   @spec assemble([{Path.t(), DateTime.t()}], DateTime.t(), DateTime.t(), pos_integer(), Path.t()) ::
           DateTime.t()
   def assemble(files, start_date, end_date, duration, dest) do
-    File.rm(dest)
+    first_file_start_date =
+      files
+      |> List.first({nil, start_date})
+      |> elem(1)
+      |> DateTime.to_unix(:millisecond)
+
+    start_date = DateTime.to_unix(start_date, :millisecond) |> max(first_file_start_date)
 
     state = %{
       writer: Writer.new!(dest),
       reader: nil,
       out_track: nil,
       in_track: nil,
-      start_date: DateTime.to_unix(start_date, :millisecond),
+      start_date: start_date,
       end_date: DateTime.to_unix(end_date, :millisecond),
       target_duration: duration
     }
@@ -101,10 +107,18 @@ defmodule ExNVR.Recordings.VideoAssembler do
     %{in_track: in_track, out_track: out_track} = state
     duration = ExMP4.Track.duration(in_track, out_track.timescale)
 
-    if file_start_date < state.start_date do
-      diff = state.start_date - file_start_date
-      offset = min(diff, duration) |> timescalify(out_track.timescale, in_track.timescale)
-      seek_keyframe(state.reader, offset)
+    cond do
+      file_start_date <= state.start_date and state.start_date - file_start_date > duration ->
+        # ignore whole file
+        timescalify(duration, out_track.timescale, in_track.timescale)
+
+      file_start_date <= state.start_date ->
+        diff = state.start_date - file_start_date
+        offset = timescalify(diff, out_track.timescale, in_track.timescale)
+        seek_keyframe(state.reader, offset)
+
+      true ->
+        nil
     end
   end
 
@@ -140,8 +154,8 @@ defmodule ExNVR.Recordings.VideoAssembler do
     |> Reader.stream()
     |> Enum.reduce_while(0, fn metadata, acc ->
       cond do
-        metadata.dts >= offset -> {:halt, acc}
         metadata.sync? -> {:cont, metadata.dts}
+        metadata.dts >= offset -> {:halt, acc}
         true -> {:cont, acc}
       end
     end)
@@ -157,10 +171,10 @@ defmodule ExNVR.Recordings.VideoAssembler do
   defp get_duration(writer, track_id) do
     Writer.tracks(writer)
     |> Enum.find(&(&1.id == track_id))
-    |> ExMP4.Track.duration()
+    |> Map.get(:duration)
   end
 
-  defp maybe_update_start_date(state, nil, _file_start_date), do: state
+  defp maybe_update_start_date(state, nil, file_start_date), do: state
 
   defp maybe_update_start_date(state, min_dts, file_start_date) do
     min_dts = timescalify(min_dts, state.in_track.timescale, state.out_track.timescale)

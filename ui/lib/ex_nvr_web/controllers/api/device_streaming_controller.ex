@@ -9,7 +9,7 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
 
   alias Ecto.Changeset
   alias ExNVR.Pipelines.{HlsPlayback, Main}
-  alias ExNVR.{Devices, HLS, Recordings, Utils, VideoAssembler}
+  alias ExNVR.{Devices, HLS, Recordings, Utils}
 
   @type return_t :: Plug.Conn.t() | {:error, Changeset.t()}
 
