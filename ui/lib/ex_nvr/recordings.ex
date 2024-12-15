@@ -8,8 +8,11 @@ defmodule ExNVR.Recordings do
   alias ExNVR.Model.{Device, Recording, Run}
   alias ExNVR.Repo
   alias Phoenix.PubSub
+  alias __MODULE__.VideoAssembler
 
   @recordings_topic "recordings"
+  @default_end_date ~U(2099-01-01 00:00:00Z)
+  @year_in_seconds 3_600 * 24 * 365
 
   @type stream_type :: :low | :high
   @type error :: {:error, Ecto.Changeset.t() | File.posix()}
@@ -131,6 +134,34 @@ defmodule ExNVR.Recordings do
 
         {:ok, datetime, snapshot}
       end)
+    end
+  end
+
+  @spec download_footage(
+          Device.t(),
+          stream_type(),
+          DateTime.t(),
+          DateTime.t(),
+          pos_integer(),
+          Path.t()
+        ) :: {:ok, DateTime.t()} | {:error, any()}
+  def download_footage(device, stream, start_date, end_date, duration, dest) do
+    end_date = end_date || @default_end_date
+    duration = duration || @year_in_seconds
+
+    # TODO: Better limit handling.
+    # Each recording is check is greater than 1 minute, we have a limit of roughly 2 hours.
+    case get_recordings_between(device.id, stream, start_date, end_date, limit: 120) do
+      [] ->
+        {:error, :not_found}
+
+      recs ->
+        footage_start_date =
+          recs
+          |> Enum.map(&{recording_path(device, stream, &1), &1.start_date})
+          |> VideoAssembler.assemble(start_date, end_date, duration, dest)
+
+        {:ok, footage_start_date}
     end
   end
 

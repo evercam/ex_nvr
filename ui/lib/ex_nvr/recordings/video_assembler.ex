@@ -10,7 +10,7 @@ defmodule ExNVR.Recordings.VideoAssembler do
   @spec assemble([{Path.t(), DateTime.t()}], DateTime.t(), DateTime.t(), pos_integer(), Path.t()) ::
           DateTime.t()
   def assemble(files, start_date, end_date, duration, dest) do
-    File.rm!(dest)
+    File.rm(dest)
 
     state = %{
       writer: Writer.new!(dest),
@@ -28,6 +28,7 @@ defmodule ExNVR.Recordings.VideoAssembler do
         |> Map.put(:reader, Reader.new!(path))
         |> maybe_init_tracks()
         |> do_handle_file(DateTime.to_unix(start_date, :millisecond))
+        |> tap(fn {_, state} -> Reader.close(state.reader) end)
       end)
 
     :ok = Writer.write_trailer(state.writer)
@@ -65,7 +66,10 @@ defmodule ExNVR.Recordings.VideoAssembler do
   defp do_handle_file(state, file_start_date) do
     %{in_track: in_track, out_track: out_track, reader: reader} = state
     file_start_date = timescalify(file_start_date, :millisecond, out_track.timescale)
-    {min_dts, max_dts} = min_max_dts(state, file_start_date)
+
+    min_dts = check_start_date(state, file_start_date)
+    state = maybe_update_start_date(state, min_dts, file_start_date)
+    max_dts = min(check_end_date(state, file_start_date), check_duration(state, min_dts))
 
     state =
       Reader.stream(reader, tracks: [in_track.id])
@@ -74,9 +78,6 @@ defmodule ExNVR.Recordings.VideoAssembler do
       |> Stream.map(&update_sample(&1, in_track, out_track))
       |> Enum.into(state.writer)
       |> then(&%{state | writer: &1})
-      |> maybe_update_start_date(min_dts, file_start_date)
-
-    Reader.close(reader)
 
     case max_dts do
       nil -> {:cont, state}
@@ -96,42 +97,42 @@ defmodule ExNVR.Recordings.VideoAssembler do
     }
   end
 
-  defp min_max_dts(state, file_start_date) do
+  defp check_start_date(state, file_start_date) do
     %{in_track: in_track, out_track: out_track} = state
+    duration = ExMP4.Track.duration(in_track, out_track.timescale)
 
-    in_track_duration = ExMP4.Track.duration(in_track, out_track.timescale)
+    if file_start_date < state.start_date do
+      diff = state.start_date - file_start_date
+      offset = min(diff, duration) |> timescalify(out_track.timescale, in_track.timescale)
+      seek_keyframe(state.reader, offset)
+    end
+  end
 
-    # first file: start at the provided date
-    min_dts =
-      if file_start_date < state.start_date do
-        diff = state.start_date - file_start_date
-        offset = timescalify(diff, out_track.timescale, in_track.timescale)
-        seek_keyframe(state.reader, offset)
-      end
+  defp check_end_date(state, file_start_date) do
+    %{in_track: in_track, out_track: out_track} = state
+    duration = ExMP4.Track.duration(in_track, out_track.timescale)
 
-    # check if we hit the end date
-    max_dts1 =
-      if file_start_date + in_track_duration >= state.end_date do
-        timescalify(state.end_date - file_start_date, out_track.timescale, in_track.timescale)
-      end
+    if file_start_date + duration >= state.end_date do
+      timescalify(state.end_date - file_start_date, out_track.timescale, in_track.timescale)
+    end
+  end
 
-    # check if we hit the provided duration
-    duration = get_duration(state.writer, state.out_track.id)
+  defp check_duration(state, min_dts) do
+    %{in_track: in_track, out_track: out_track} = state
+    min_dts = timescalify(min_dts || 0, in_track.timescale, out_track.timescale)
 
-    max_dts2 =
-      if duration + in_track_duration >= state.target_duration do
-        timescalify(state.target_duration - duration, out_track.timescale, in_track.timescale)
-      end
+    in_track_duration =
+      timescalify(in_track.duration, in_track.timescale, out_track.timescale) - min_dts
 
-    max_dts =
-      cond do
-        is_nil(max_dts1) and is_nil(max_dts2) -> nil
-        is_nil(max_dts1) -> max_dts2
-        is_nil(max_dts2) -> max_dts1
-        true -> min(max_dts1, max_dts2)
-      end
+    out_track_duration = get_duration(state.writer, out_track.id)
 
-    {min_dts, max_dts}
+    if out_track_duration + in_track_duration >= state.target_duration do
+      timescalify(
+        state.target_duration - out_track_duration + min_dts,
+        out_track.timescale,
+        in_track.timescale
+      )
+    end
   end
 
   defp seek_keyframe(reader, offset) do
