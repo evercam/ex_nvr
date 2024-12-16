@@ -5,6 +5,7 @@ defmodule ExNVR.Recordings do
   import Ecto.Query
 
   alias Ecto.Multi
+  alias ExMP4.{BitStreamFilter, Reader}
   alias ExNVR.Model.{Device, Recording, Run}
   alias ExNVR.Repo
   alias Phoenix.PubSub
@@ -87,14 +88,14 @@ defmodule ExNVR.Recordings do
     path = recording_path(device, recording.stream, recording)
 
     with {:ok, stat} <- File.stat(path),
-         {:ok, reader} <- ExMP4.Reader.new(path) do
+         {:ok, reader} <- Reader.new(path) do
       details = %{
         size: stat.size,
-        duration: ExMP4.Reader.duration(reader, :millisecond),
-        track_details: ExMP4.Reader.tracks(reader)
+        duration: Reader.duration(reader, :millisecond),
+        track_details: Reader.tracks(reader)
       }
 
-      ExMP4.Reader.close(reader)
+      Reader.close(reader)
 
       {:ok, details}
     end
@@ -318,26 +319,27 @@ defmodule ExNVR.Recordings do
 
   # get snapshot private functions
   defp read_samples(reader, track, offset, method) do
-    bit_stream_filter = ExNVR.MP4.MP4ToAnnexb.init(track)
+    {:ok, bit_stream_filter} = BitStreamFilter.MP4ToAnnexb.init(track, [])
 
-    ExMP4.Reader.stream(reader, tracks: [track.id])
+    Reader.stream(reader, tracks: [track.id])
     |> Enum.reduce_while([], fn sample_metadata, samples ->
       cond do
         sample_metadata.dts > offset and method == :precise ->
           {:halt, [sample_metadata | samples]}
 
-        sample_metadata.dts > offset ->
-          {:halt, [List.last(samples)]}
-
         sample_metadata.sync? ->
           {:cont, [sample_metadata]}
+
+        sample_metadata.dts > offset ->
+          {:halt, [List.last(samples)]}
 
         true ->
           {:cont, [sample_metadata | samples]}
       end
     end)
     |> Enum.reverse()
-    |> ExMP4.Reader.samples(reader)
-    |> Enum.map(&ExNVR.MP4.MP4ToAnnexb.filter(bit_stream_filter, &1))
+    |> Enum.map(&Reader.read_sample(reader, &1))
+    |> Enum.map_reduce(bit_stream_filter, &BitStreamFilter.MP4ToAnnexb.filter(&2, &1))
+    |> elem(0)
   end
 end

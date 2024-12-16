@@ -67,7 +67,7 @@ defmodule ExNVRWeb.UserListLive do
                     id={"delete_user-#{user.id}"}
                     href="#"
                     class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-red"
-                    phx-click={show_modal("delete-modal")}
+                    phx-click={show_modal("delete-modal-#{user.id}")}
                   >
                     Delete
                   </.link>
@@ -75,7 +75,7 @@ defmodule ExNVRWeb.UserListLive do
               </ul>
             </div>
           </.button>
-          <.modal id="delete-modal">
+          <.modal id={"delete-modal-#{user.id}"}>
             <div class="bg-blue-300 p-4 rounded-lg text-center dark:bg-gray-800 dark:border-gray-700">
               <p class="text-l text-black dark:text-white font-bold mb-4">
                 {"Are you sure you want to delete the User: '#{user.email}'"}
@@ -88,7 +88,7 @@ defmodule ExNVRWeb.UserListLive do
                 Yes
               </.button>
               <.button
-                phx-click={hide_modal("delete-modal")}
+                phx-click={hide_modal("delete-modal-#{user.id}")}
                 class="text-black bg-gray-300 hover:bg-gray-200 px-4 py-2 mx-2 rounded hover:bg-red-600 dark:text-white"
               >
                 Cancel

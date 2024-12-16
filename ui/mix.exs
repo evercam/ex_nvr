@@ -66,7 +66,7 @@ defmodule ExNVR.MixProject do
       {:soap, github: "gBillal/soap", branch: "parse-attributes"},
       {:req, "~> 0.5.0"},
       {:multipart, "~> 0.4.0"},
-      {:ex_mp4, "~> 0.7.0"},
+      {:ex_mp4, "~> 0.8.0"},
       {:floki, "~> 0.37.0"},
       {:phoenix, "~> 1.7.2"},
       {:phoenix_ecto, "~> 4.4"},

@@ -80,7 +80,7 @@ defmodule ExNVR.Recordings.VideoAssembler do
     state =
       Reader.stream(reader, tracks: [in_track.id])
       |> filter_by_dts(min_dts, max_dts)
-      |> Reader.samples(reader)
+      |> Stream.map(&Reader.read_sample(reader, &1))
       |> Stream.map(&update_sample(&1, in_track, out_track))
       |> Enum.into(state.writer)
       |> then(&%{state | writer: &1})
@@ -174,7 +174,7 @@ defmodule ExNVR.Recordings.VideoAssembler do
     |> Map.get(:duration)
   end
 
-  defp maybe_update_start_date(state, nil, file_start_date), do: state
+  defp maybe_update_start_date(state, nil, _file_start_date), do: state
 
   defp maybe_update_start_date(state, min_dts, file_start_date) do
     min_dts = timescalify(min_dts, state.in_track.timescale, state.out_track.timescale)

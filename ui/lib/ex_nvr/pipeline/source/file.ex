@@ -5,9 +5,9 @@ defmodule ExNVR.Pipeline.Source.File do
 
   require Membrane.Logger
 
+  alias ExMP4.BitStreamFilter.MP4ToAnnexb
   alias ExMP4.{Helper, Reader}
   alias ExNVR.Model.Device
-  alias ExNVR.MP4.MP4ToAnnexb
   alias Membrane.{Buffer, H264, H265}
 
   def_options device: [
@@ -96,7 +96,7 @@ defmodule ExNVR.Pipeline.Source.File do
       {:suspended, sample_metadata, reducer} =
         Enumerable.reduce(track, {:cont, nil}, fn elem, _acc -> {:suspend, elem} end)
 
-      bit_stream_filter = MP4ToAnnexb.init(track)
+      {:ok, bit_stream_filter} = MP4ToAnnexb.init(track, [])
 
       track_details = %{
         track: track,
@@ -136,11 +136,10 @@ defmodule ExNVR.Pipeline.Source.File do
   end
 
   defp get_sample(reader, bit_stream_filter, sample_metadata) do
-    [sample_metadata]
-    |> Reader.samples(reader)
-    |> Enum.to_list()
-    |> List.first()
+    reader
+    |> Reader.read_sample(sample_metadata)
     |> then(&MP4ToAnnexb.filter(bit_stream_filter, &1))
+    |> elem(0)
   end
 
   defp map_sample_to_buffer(sample, track, offset) do
