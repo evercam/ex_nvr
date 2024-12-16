@@ -80,8 +80,6 @@ config :os_mon,
 
 config :bundlex, :disable_precompiled_os_deps, apps: [:ex_libsrtp]
 
-config :reverse_proxy_plugin, :http_client, ReverseProxyPlug.HTTPClient.Adapters.HTTPoison
-
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
 import_config "#{config_env()}.exs"

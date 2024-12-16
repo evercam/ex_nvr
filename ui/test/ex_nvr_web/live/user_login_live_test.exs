@@ -73,4 +73,21 @@ defmodule ExNVRWeb.UserLoginLiveTest do
       assert conn.resp_body =~ "Forgot your password?"
     end
   end
+
+  describe "logout" do
+    test "when user logged in", %{conn: conn} do
+      conn = conn |> log_in_user(user_fixture())
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard")
+
+      assert {:error, {:redirect, %{to: "/users/logout"}}} =
+               lv |> element("a", "Sign out") |> render_click()
+    end
+
+    test "when user not logged in", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/users/login")
+
+      refute lv |> element("a", "Sign out") |> has_element?()
+    end
+  end
 end
