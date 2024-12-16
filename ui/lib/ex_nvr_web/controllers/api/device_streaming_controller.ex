@@ -9,11 +9,10 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
 
   alias Ecto.Changeset
   alias ExNVR.Pipelines.{HlsPlayback, Main}
-  alias ExNVR.{Devices, HLS, Recordings, Utils, VideoAssembler}
+  alias ExNVR.{Devices, HLS, Recordings, Utils}
 
   @type return_t :: Plug.Conn.t() | {:error, Changeset.t()}
 
-  @default_end_date ~U(2099-01-01 00:00:00Z)
   @seconds_in_year 3_600 * 24 * 365
 
   @spec hls_stream(Plug.Conn.t(), map()) :: return_t()
@@ -119,7 +118,15 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
     destination = Path.join(download_dir, UUID.uuid4() <> ".mp4")
 
     with {:ok, params} <- validate_footage_req_params(params),
-         {:ok, recordings} <- get_recordings(device, params) do
+         {:ok, footage_start_date} <-
+           Recordings.download_footage(
+             device,
+             params.stream,
+             params.start_date,
+             params.end_date,
+             params.duration,
+             destination
+           ) do
       {_adapter, adapter_data} = conn.adapter
 
       # delete created file
@@ -131,49 +138,11 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
         end
       end)
 
-      {:ok, start_date} =
-        VideoAssembler.Native.assemble_recordings(
-          recordings,
-          DateTime.to_unix(params.start_date, :millisecond),
-          DateTime.to_unix(params.end_date || @default_end_date, :millisecond),
-          params.duration || 0,
-          destination
-        )
-
-      filename =
-        start_date
-        |> DateTime.from_unix!(:millisecond)
-        |> Calendar.strftime("%Y%m%d%H%M%S.mp4")
+      filename = Calendar.strftime(footage_start_date, "%Y%m%d%H%M%S.mp4")
 
       conn
-      |> put_resp_header("x-start-date", "#{start_date}")
+      |> put_resp_header("x-start-date", "#{DateTime.to_unix(footage_start_date, :millisecond)}")
       |> send_download({:file, destination}, content_type: "video/mp4", filename: filename)
-    end
-  end
-
-  defp get_recordings(device, params) do
-    case Recordings.get_recordings_between(
-           device.id,
-           params.stream,
-           params.start_date,
-           params.end_date || @default_end_date,
-           limit: 120
-         ) do
-      [] ->
-        {:error, :not_found}
-
-      recordings ->
-        recordings =
-          Enum.map(
-            recordings,
-            &VideoAssembler.Download.new(
-              &1.start_date,
-              &1.end_date,
-              Recordings.recording_path(device, params.stream, &1)
-            )
-          )
-
-        {:ok, recordings}
     end
   end
 
@@ -229,7 +198,7 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
       stream: {:parameterized, Ecto.Enum, Ecto.Enum.init(values: ~w(high low)a)}
     }
 
-    {%{duration: 0, end_date: ~U(2099-01-01 00:00:00Z), stream: :high}, types}
+    {%{duration: nil, end_date: nil, stream: :high}, types}
     |> Changeset.cast(params, Map.keys(types))
     |> Changeset.validate_required([:start_date])
     |> Changeset.validate_number(:duration, greater_than: 5, less_than_or_equal_to: 7200)
@@ -339,6 +308,6 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
 
   defp download_dir() do
     default_dir = Path.join(System.tmp_dir!(), "ex_nvr_downloads")
-    Application.get_env(:ex_nvr, :download_dir, default_dir)
+    Application.get_env(:ex_nvr, :download_dir) || default_dir
   end
 end
