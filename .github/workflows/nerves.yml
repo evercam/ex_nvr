@@ -29,12 +29,13 @@ jobs:
       NERVES_HUB_ORG: ${{ vars.NERVES_HUB_ORG }}
       NERVES_HUB_PRODUCT: ${{ vars.NERVES_HUB_PRODUCT }}
       NERVES_HUB_NON_INTERACTIVE: true
+      NERVES_FIRMWARE_SIGNING_KEY: ${{ secrets.NERVES_FIRMWARE_SIGNING_KEY }}
     steps:
       - uses: actions/checkout@v3
 
-      - uses: erlef/setup-beam@v1.16
+      - uses: erlef/setup-beam@v1.18
         with:
-          otp-version: 27.1
+          otp-version: 27.2
           elixir-version: 1.17.3
 
       - name: Install dependencies
@@ -63,15 +64,12 @@ jobs:
       - name: Download firmware dependencies
         run: mix do deps.get, firmware.deps
 
-      - name: Delete bundlex precompiled deps
-        run: rm -rf ../ui/priv/bundlex/nif/https*
-
       - name: Create firmware
         run: mix firmware
 
       - name: Sign firmware
         run: |
-          fwup -S --private-key ${{ secrets.NERVES_FIRMWARE_SIGNING_KEY }} -i _build/${{ env.MIX_TARGET }}_${{ env.MIX_ENV}}/nerves/images/ex_nvr_fw.fw -o ex_nvr_fw.fw
+          fwup -S --private-key ${{ env.NERVES_FIRMWARE_SIGNING_KEY }} -i _build/${{ env.MIX_TARGET }}_${{ env.MIX_ENV}}/nerves/images/ex_nvr_fw.fw -o ex_nvr_fw.fw
 
       - name: Upload to Nerves hub
         run: mix nerves_hub.firmware publish --product ${{ env.NERVES_HUB_PRODUCT }} ex_nvr_fw.fw
