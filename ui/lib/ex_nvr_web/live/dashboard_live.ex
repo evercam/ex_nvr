@@ -363,8 +363,7 @@ defmodule ExNVRWeb.DashboardLive do
         is_nil(device) -> false
         not is_nil(start_date) -> true
         not ExNVR.Utils.run_main_pipeline?() -> false
-        device.state == :recording -> true
-        true -> false
+        true -> Device.streaming?(device)
       end
 
     assign(socket, live_view_enabled?: enabled?)

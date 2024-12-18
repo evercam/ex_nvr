@@ -97,8 +97,8 @@ defmodule ExNVR.Hardware.SolarCharger.VictronMPPT do
   @speed 19_200
   @reporting_interval :timer.seconds(15)
 
-  def start_link(optios) do
-    GenServer.start_link(__MODULE__, optios)
+  def start_link(options) do
+    GenServer.start_link(__MODULE__, options)
   end
 
   @impl true

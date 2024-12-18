@@ -1,8 +1,82 @@
-FROM elixir:1.15.7-otp-25-slim
+FROM debian:bullseye
+
+ENV OTP_VERSION="27.1.2" \
+    REBAR3_VERSION="3.24.0" \
+    PKG_CONFIG_PATH=""
+
+LABEL org.opencontainers.image.version=$OTP_VERSION
+
+RUN set -xe \
+        && OTP_DOWNLOAD_URL="https://github.com/erlang/otp/archive/OTP-${OTP_VERSION}.tar.gz" \
+        && OTP_DOWNLOAD_SHA256="365208d47f9590f27c0814ccd7ee7aec0e1b6ba2fe9d875e356edb5d9b054541" \
+        && fetchDeps=' \
+                curl \
+                ca-certificates' \
+        && apt-get update \
+        && apt-get install -y --no-install-recommends $fetchDeps \
+        && curl -fSL -o otp-src.tar.gz "$OTP_DOWNLOAD_URL" \
+        && echo "$OTP_DOWNLOAD_SHA256  otp-src.tar.gz" | sha256sum -c - \
+        && runtimeDeps=' \
+                libodbc1 \
+                libssl1.1 \
+                libsctp1 \
+        ' \
+        && buildDeps=' \
+                autoconf \
+                dpkg-dev \
+                gcc \
+                g++ \
+                make \
+                libncurses-dev \
+                unixodbc-dev \
+                libssl-dev \
+                libsctp-dev \
+        ' \
+        && apt-get install -y --no-install-recommends $runtimeDeps \
+        && apt-get install -y --no-install-recommends $buildDeps \
+        && export ERL_TOP="/usr/src/otp_src_${OTP_VERSION%%@*}" \
+        && mkdir -vp $ERL_TOP \
+        && tar -xzf otp-src.tar.gz -C $ERL_TOP --strip-components=1 \
+        && rm otp-src.tar.gz \
+        && ( cd $ERL_TOP \
+          && ./otp_build autoconf \
+          && gnuArch="$(dpkg-architecture --query DEB_HOST_GNU_TYPE)" \
+          && ./configure --build="$gnuArch" --disable-year2038 \
+          && make -j$(nproc) \
+          && make install ) \
+        && find /usr/local -name examples | xargs rm -rf \
+        && REBAR3_DOWNLOAD_URL="https://github.com/erlang/rebar3/archive/${REBAR3_VERSION}.tar.gz" \
+        && REBAR3_DOWNLOAD_SHA256="391b0eaa2825bb427fef1e55a0d166493059175f57a33b00346b84a20398216c" \
+        && mkdir -p /usr/src/rebar3-src \
+        && curl -fSL -o rebar3-src.tar.gz "$REBAR3_DOWNLOAD_URL" \
+        && echo "$REBAR3_DOWNLOAD_SHA256 rebar3-src.tar.gz" | sha256sum -c - \
+        && tar -xzf rebar3-src.tar.gz -C /usr/src/rebar3-src --strip-components=1 \
+        && rm rebar3-src.tar.gz \
+        && cd /usr/src/rebar3-src \
+        && HOME=$PWD ./bootstrap \
+        && install -v ./rebar3 /usr/local/bin/ \
+        && rm -rf /usr/src/rebar3-src \
+        && rm -rf $ERL_TOP
+
+# elixir expects utf8.
+ENV ELIXIR_VERSION="v1.17.3" \
+        LANG=C.UTF-8
+
+RUN set -xe \
+        && ELIXIR_DOWNLOAD_URL="https://github.com/elixir-lang/elixir/archive/${ELIXIR_VERSION}.tar.gz" \
+        && ELIXIR_DOWNLOAD_SHA256="6116c14d5e61ec301240cebeacbf9e97125a4d45cd9071e65e0b958d5ebf3890" \
+        && curl -fSL -o elixir-src.tar.gz $ELIXIR_DOWNLOAD_URL \
+        && echo "$ELIXIR_DOWNLOAD_SHA256  elixir-src.tar.gz" | sha256sum -c - \
+        && mkdir -p /usr/local/src/elixir \
+        && tar -xzC /usr/local/src/elixir --strip-components=1 -f elixir-src.tar.gz \
+        && rm elixir-src.tar.gz \
+        && cd /usr/local/src/elixir \
+        && make install clean \
+        && find /usr/local/src/elixir/ -type f -not -regex "/usr/local/src/elixir/lib/[^\/]*/lib.*" -exec rm -rf {} + \
+        && find /usr/local/src/elixir/ -type d -depth -empty -delete
 
 # install build dependencies
-RUN \
-  apt-get update && apt-get install -y \
+RUN apt-get install -y \
   wget \
   xz-utils \
   npm \

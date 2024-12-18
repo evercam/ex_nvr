@@ -1,4 +1,4 @@
-FROM hexpm/elixir:1.15.7-erlang-26.1.2-alpine-3.18.4 AS build
+FROM hexpm/elixir:1.17.3-erlang-27.2-alpine-3.18.9 AS build
 
 # install build dependencies
 RUN \
@@ -12,7 +12,8 @@ RUN \
   ffmpeg-dev \
   clang-dev \
   libsrtp-dev \
-  libjpeg-turbo-dev
+  libjpeg-turbo-dev \
+  linux-headers
 
 ARG VERSION
 ENV VERSION=${VERSION}
@@ -44,7 +45,7 @@ RUN mix deps.compile
 RUN mix do compile, release
 
 # prepare release image
-FROM alpine:3.18.5 AS app
+FROM alpine:3.18.9 AS app
 
 # install runtime dependencies
 RUN \

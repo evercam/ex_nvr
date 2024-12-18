@@ -147,7 +147,7 @@
                   :for={err <- upload_errors(@uploads.file_to_upload, entry)}
                   style="color: #E11D48;"
                 >
-                  <%= error_to_string(err) %>
+                  {error_to_string(err)}
                 </div>
               </div>
             </div>
@@ -182,10 +182,10 @@
                 <div class="w-full px-2 font-normal text-xs">
                   <div class="flex justify-between mb-1">
                     <span class="text-black dark:text-white">
-                      <%= elem(option, 0) %>
+                      {elem(option, 0)}
                     </span>
                     <span class="text-black dark:text-white">
-                      <%= humanize_capacity(elem(option, 1)) %>
+                      {humanize_capacity(elem(option, 1))}
                     </span>
                   </div>
                   <div class="w-full bg-gray-200 rounded-full dark:bg-gray-700">
@@ -193,7 +193,7 @@
                       class="bg-blue-800 text-xs font-medium text-blue-100 text-center leading-none rounded-full"
                       style={"width: #{elem(option, 1) |> elem(1)}%"}
                     >
-                      <%= elem(option, 1) |> elem(1) %>%
+                      {elem(option, 1) |> elem(1)}%
                     </div>
                   </div>
                 </div>

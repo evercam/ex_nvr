@@ -14,10 +14,10 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - uses: erlef/setup-beam@v1.16
+      - uses: erlef/setup-beam@v1.18
         with:
-          otp-version: 26.1
-          elixir-version: 1.15.7
+          otp-version: 27.2
+          elixir-version: 1.17.3
 
       - name: Install dependencies
         run: sudo apt-get update && sudo apt-get -y install npm libsrtp2-dev libturbojpeg-dev

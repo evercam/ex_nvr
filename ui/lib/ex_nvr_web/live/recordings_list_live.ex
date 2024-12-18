@@ -22,13 +22,13 @@ defmodule ExNVRWeb.RecordingListLive do
         meta={@meta}
         path={~p"/recordings"}
       >
-        <:col :let={recording} label="Id" field={:id}><%= recording.id %></:col>
-        <:col :let={recording} label="Device" field={:device_name}><%= recording.device_name %></:col>
+        <:col :let={recording} label="Id" field={:id}>{recording.id}</:col>
+        <:col :let={recording} label="Device" field={:device_name}>{recording.device_name}</:col>
         <:col :let={recording} label="Start-date" field={:start_date}>
-          <%= format_date(recording.start_date, recording.timezone) %>
+          {format_date(recording.start_date, recording.timezone)}
         </:col>
         <:col :let={recording} label="End-date" field={:end_date}>
-          <%= format_date(recording.end_date, recording.timezone) %>
+          {format_date(recording.end_date, recording.timezone)}
         </:col>
         <:action :let={recording}>
           <div class="flex justify-end">
@@ -152,30 +152,30 @@ defmodule ExNVRWeb.RecordingListLive do
         <table class="ml-3 mb-3 text-left text-xs">
           <tr>
             <td class="font-semibold">Size:</td>
-            <td><%= humanize_size(@rec_details.size) %></td>
+            <td>{humanize_size(@rec_details.size)}</td>
           </tr>
           <tr>
             <td class="font-semibold">Duration:</td>
-            <td><%= humanize_duration(@rec_details.duration) %></td>
+            <td>{humanize_duration(@rec_details.duration)}</td>
           </tr>
         </table>
         <p :if={@video_track} class="text-left text-sm font-bold dark:text-white">Video</p>
         <table :if={@video_track} class="ml-3 text-left text-xs">
           <tr>
             <td class="font-semibold">Codec:</td>
-            <td><%= @video_track.media %> (<%= @video_track.media_tag %>)</td>
+            <td>{@video_track.media} ({@video_track.media_tag})</td>
           </tr>
           <tr>
             <td class="font-semibold">Resolution:</td>
-            <td><%= @video_track.width %> x <%= @video_track.height %></td>
+            <td>{@video_track.width} x {@video_track.height}</td>
           </tr>
           <tr>
             <td class="font-semibold">Bitrate:</td>
-            <td><%= humanize_bitrate(ExMP4.Track.bitrate(@video_track)) %></td>
+            <td>{humanize_bitrate(ExMP4.Track.bitrate(@video_track))}</td>
           </tr>
           <tr>
             <td class="font-semibold">fps:</td>
-            <td><%= Float.round(ExMP4.Track.fps(@video_track), 2) %></td>
+            <td>{Float.round(ExMP4.Track.fps(@video_track), 2)}</td>
           </tr>
         </table>
       </div>

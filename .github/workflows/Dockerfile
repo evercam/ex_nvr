@@ -1,4 +1,4 @@
-FROM hexpm/elixir:1.15.7-erlang-26.1.2-debian-bullseye-20231009-slim
+FROM hexpm/elixir:1.17.3-erlang-27.2-debian-bullseye-20241202-slim
 
 # install build dependencies
 RUN \
@@ -10,7 +10,7 @@ RUN \
   make \
   cmake \
   libsrtp2-dev \
-  libturbojpeg-dev \ 
+  libturbojpeg-dev \
   && rm -rf /var/lib/apt/lists/*
 
 ARG ERL_FLAGS

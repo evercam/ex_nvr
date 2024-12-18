@@ -26,15 +26,15 @@ defmodule ExNVRWeb.LPREventsListLive do
             class="mx-auto w-[80%] h-auto max-w-[80%] max-h-[80%]"
           />
         </:col>
-        <:col :let={lpr_event} label="Device" field={:device_name}><%= lpr_event.device.name %></:col>
+        <:col :let={lpr_event} label="Device" field={:device_name}>{lpr_event.device.name}</:col>
         <:col :let={lpr_event} label="Capture time" field={:capture_time}>
-          <%= format_date(lpr_event.capture_time, lpr_event.device.timezone) %>
+          {format_date(lpr_event.capture_time, lpr_event.device.timezone)}
         </:col>
         <:col :let={lpr_event} label="Plate number" field={:plate_number}>
-          <%= lpr_event.plate_number %>
+          {lpr_event.plate_number}
         </:col>
         <:col :let={lpr_event} label="Diection" field={:direction}>
-          <%= uppercase_direction(lpr_event.direction) %>
+          {uppercase_direction(lpr_event.direction)}
         </:col>
 
         <:action :let={lpr_event}>
