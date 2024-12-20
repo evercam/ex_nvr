@@ -19,10 +19,13 @@
 import "phoenix_html"
 import { Socket } from "phoenix"
 import { LiveSocket } from "phoenix_live_view"
-import topbar from "../vendor/topbar"
+import {getHooks} from "live_vue"
+import liveVueApp from "../vue"
+import topbar from "topbar"
 import createTimeline, { updateTimelineSegments } from "./timeline"
 import "flowbite/dist/flowbite.phoenix"
 import Hls from "hls.js"
+import "../css/app.css"
 
 const MANIFEST_LOAD_TIMEOUT = 60_000
 
@@ -77,6 +80,7 @@ let Hooks = {
             updateTimelineSegments(this.el)
         },
     },
+    ...getHooks(liveVueApp)
 }
 
 let csrfToken = document

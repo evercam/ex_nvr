@@ -24,6 +24,12 @@ defmodule ExNVRWeb.DashboardLive do
       <div :if={@devices == []} class="grid tracking-wide text-lg text-center dark:text-gray-200">
         You have no devices, you can create one
         <span><.link href={~p"/devices"} class="ml-2 dark:text-blue-600">here</.link></span>
+        <.vue
+          count={@count}
+          v-component="Counter"
+          v-socket={@socket}
+          v-on:inc={JS.push("inc")}
+        />
       </div>
       <div :if={@devices != []}>
         <div class="flex items-center justify-between invisible sm:visible">
@@ -200,6 +206,7 @@ defmodule ExNVRWeb.DashboardLive do
     stream = Map.get(params, "stream", socket.assigns[:stream]) || "sub_stream"
 
     socket
+    |> assign(count: 0)
     |> assign(current_device: device)
     |> assign(stream: stream, start_date: nil)
     |> assign_streams()
@@ -210,6 +217,10 @@ defmodule ExNVRWeb.DashboardLive do
     |> assign_timezone()
     |> maybe_push_stream_event(socket.assigns.start_date)
     |> then(&{:noreply, &1})
+  end
+
+  def handle_event("inc", %{"value" => diff}, socket) do
+    {:noreply, update(socket, :count, &(&1 + diff))}
   end
 
   def handle_event("switch_device", %{"device" => device_id}, socket) do
