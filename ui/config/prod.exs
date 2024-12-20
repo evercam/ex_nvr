@@ -24,5 +24,9 @@ config :logger, :console,
 config :membrane_core,
   enable_metrics: false
 
+config :live_vue,
+  ssr_module: LiveVue.SSR.NodeJS,
+  ssr: true
+
 # Runtime production configuration, including reading
 # of environment variables, is done on config/runtime.exs.

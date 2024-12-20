@@ -1,6 +1,8 @@
 @import "tailwindcss/base";
 @import "tailwindcss/components";
 @import "tailwindcss/utilities";
+@import "@evercam/ui/style.css";
+@import "@evercam/ui/styles.css";
 
 /* This file is for your main application CSS */
 #timeline .x-axis g {
