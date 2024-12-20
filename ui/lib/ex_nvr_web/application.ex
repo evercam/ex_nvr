@@ -19,7 +19,8 @@ defmodule ExNVRWeb.Application do
       ExNVRWeb.Telemetry,
       ExNVRWeb.Endpoint,
       ExNVRWeb.PromEx,
-      {ExNVRWeb.HlsStreamingMonitor, []}
+      {ExNVRWeb.HlsStreamingMonitor, []},
+      {NodeJS.Supervisor, [path: LiveVue.SSR.NodeJS.server_path(), pool_size: 4]}
     ]
 
     opts = [strategy: :one_for_one, name: ExNVRWeb.Supervisor]
