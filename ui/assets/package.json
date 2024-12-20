@@ -13,24 +13,28 @@
     "build-server": "vue-tsc && vite build --ssr js/server.js --out-dir ../priv/vue --minify esbuild --ssrManifest && echo '{\"type\": \"module\" } ' > ../priv/vue/package.json"
   },
   "devDependencies": {
+    "@tailwindcss/forms": "^0.5.7",
     "@vitejs/plugin-vue": "^5.2.1",
-    "tailwindcss": "^3.4.3",
     "autoprefixer": "^10.4.19",
     "postcss": "^8.4.38",
-    "@tailwindcss/forms": "^0.5.7",
+    "tailwindcss": "^3.4.3",
     "typescript": "~5.6.3",
     "vue-tsc": "^2.1.10"
   },
   "dependencies": {
+    "@evercam/ui": "0.0.63-vue-demi.0.1",
+    "d3": "^7.8.5",
+    "flowbite": "^2.5.1",
+    "heroicons": "^2.2.0",
+    "hls.js": "^1.5.15",
     "live_vue": "file:../deps/live_vue",
     "phoenix": "file:../deps/phoenix",
     "phoenix_html": "file:../deps/phoenix_html",
     "phoenix_live_view": "file:../deps/phoenix_live_view",
-    "@evercam/ui": "0.0.63-vue-demi.0.1",
-    "vue": "^3.5.13",
     "topbar": "^2.0.2",
     "d3": "^7.8.5",
     "flowbite": "^3.1.1",
-    "hls.js": "^1.5.15"
+    "hls.js": "^1.5.15",
+    "vue": "^3.5.13"
   }
 }

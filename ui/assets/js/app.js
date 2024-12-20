@@ -105,19 +105,7 @@ liveSocket.connect()
 // >> liveSocket.disableLatencySim()
 window.liveSocket = liveSocket
 
-function initDarkMode() {
-    const lightSwitch = document.getElementById("light-switch")
-    if (localStorage.getItem('dark-mode') === 'true' || (!('dark-mode' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-        document.querySelector('html').classList.add('dark');
-        lightSwitch.checked = true;
-    } else {
-        document.querySelector('html').classList.remove('dark');
-        lightSwitch.checked = false;
-    }
-
-}
-
-startStreaming = (elem_id, src, poster_url) => {
+const startStreaming = (elem_id, src, poster_url) => {
     var video = document.getElementById(elem_id)
     if (video != null && Hls.isSupported()) {
         if (window.hls) {
@@ -174,4 +162,11 @@ function downloadFile(url) {
     document.body.removeChild(anchor);
 }
 
-initDarkMode();
+(function() {
+    const lightSwitch = document.getElementById("light-switch")
+    if (localStorage.getItem('dark-mode') === 'true' || (!('dark-mode' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        lightSwitch.checked = true;
+    } else {
+        lightSwitch.checked = false;
+    }
+})()
