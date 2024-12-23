@@ -96,6 +96,7 @@ defmodule ExNVR.Hardware.SolarCharger.VictronMPPT do
 
   @speed 19_200
   @reporting_interval :timer.seconds(15)
+  @last_data_update_in_seconds 30
 
   def start_link(options) do
     GenServer.start_link(__MODULE__, options)
@@ -114,18 +115,31 @@ defmodule ExNVR.Hardware.SolarCharger.VictronMPPT do
 
     {:ok, timer_ref} = :timer.send_interval(@reporting_interval, :report)
 
-    {:ok, %{pid: pid, data: %__MODULE__{}, registry: options[:registry], timer: timer_ref}}
+    {:ok,
+     %{
+       pid: pid,
+       data: %__MODULE__{},
+       registry: options[:registry],
+       timer: timer_ref,
+       datetime: DateTime.utc_now()
+     }}
   end
 
   @impl true
   def handle_info({:circuits_uart, _port, message}, state) do
-    state = %{state | data: do_handle_message(state.data, message)}
+    state = %{state | data: do_handle_message(state.data, message), datetime: DateTime.utc_now()}
     {:noreply, state}
   end
 
   @impl true
   def handle_info(:report, state) do
-    data = if is_nil(state.data.v), do: nil, else: state.data
+    time_diff = DateTime.diff(DateTime.utc_now(), state.datetime)
+
+    data =
+      if is_nil(state.data.v) or time_diff >= @last_data_update_in_seconds,
+        do: nil,
+        else: state.data
+
     send(state.registry, {:solar_charger, data})
     {:noreply, state}
   end
