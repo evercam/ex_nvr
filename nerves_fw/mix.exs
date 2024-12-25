@@ -48,6 +48,7 @@ defmodule NervesFw.MixProject do
       {:nerves_hub_link, "~> 2.5"},
       {:nerves_hub_cli, "~> 2.0"},
       {:ex_nvr, path: "../ui"},
+      {:modbux, "~> 0.3.13"},
 
       # Dependencies for specific targets
       # NOTE: It's generally low risk and recommended to follow minor version

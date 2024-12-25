@@ -41,6 +41,11 @@ defmodule ExNVR.SystemStatus.Registry do
   end
 
   @impl true
+  def handle_info({:router, router_data}, state) do
+    {:noreply, %{state | data: %State{state.data | router: router_data}}}
+  end
+
+  @impl true
   def handle_info(:collect_metrics, %{data: data} = state) do
     {:noreply, %{state | data: do_collect_metrics(data)}}
   end

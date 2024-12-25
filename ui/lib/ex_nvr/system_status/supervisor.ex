@@ -15,6 +15,9 @@ defmodule ExNVR.SystemStatus.Supervisor do
   @spec get_system_status() :: State.t()
   def get_system_status(), do: Registry.get_state(registry_name())
 
+  @spec registry_name() :: atom()
+  def registry_name(), do: Registry
+
   def init(_options) do
     children =
       [
@@ -35,6 +38,4 @@ defmodule ExNVR.SystemStatus.Supervisor do
       nil -> []
     end
   end
-
-  defp registry_name(), do: Registry
 end
