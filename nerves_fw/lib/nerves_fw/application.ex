@@ -20,7 +20,6 @@ defmodule ExNVR.Nerves.Application do
 
   # List all child processes to be supervised
   def children(:host) do
-    []
   end
 
   def children(_target) do
@@ -28,7 +27,8 @@ defmodule ExNVR.Nerves.Application do
       {ExNVR.Nerves.Netbird, []},
       {ExNVR.Nerves.DiskMounter, []},
       {ExNVR.Nerves.GrafanaAgent, grafana_agent_config()},
-      {ExNVR.Nerves.RemoteConfigurer, Application.get_env(:ex_nvr_fw, :remote_configurer)}
+      {ExNVR.Nerves.RemoteConfigurer, Application.get_env(:ex_nvr_fw, :remote_configurer)},
+      {ExNVR.Nerves.Monitoring.RUT, rut_config()}
     ]
   end
 
@@ -44,4 +44,6 @@ defmodule ExNVR.Nerves.Application do
       kit_id: Runtime.KV.get("nerves_evercam_id")
     ]
   end
+
+  defp rut_config(), do: ExNVR.SystemStatus.Supervisor.registry_name()
 end
