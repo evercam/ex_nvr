@@ -26,8 +26,8 @@ defmodule ExNVR.Nerves.Monitoring.RUT do
     name: {:rhr, 0x1, 71, 16}
   }
 
-  def start_link(opts) do
-    GenServer.start_link(__MODULE__, opts, name: __MODULE__)
+  def start_link(registry) do
+    GenServer.start_link(__MODULE__, [registry: registry], name: __MODULE__)
   end
 
   @spec state() :: map()
@@ -37,8 +37,7 @@ defmodule ExNVR.Nerves.Monitoring.RUT do
 
   @impl true
   def init(opts) do
-    modbux_opts = Keyword.take(opts, [:ip, :port, :timeout]) |> Keyword.put(:active, false)
-    {:ok, modbus_pid} = Client.start_link(modbux_opts)
+    {:ok, modbus_pid} = Client.start_link(active: false, timeout: :timer.seconds(5))
 
     state = %{
       modbus_pid: modbus_pid,
@@ -58,8 +57,11 @@ defmodule ExNVR.Nerves.Monitoring.RUT do
 
   @impl true
   def handle_info(:connect, state) do
-    case Client.connect(state.modbus_pid) do
-      :ok -> Process.send_after(self(), :send_requests, 0)
+    with {:ok, gateway} <- get_default_gateway(),
+         :ok <- Client.configure(state.modbus_pid, ip: gateway),
+         :ok <- Client.connect(state.modbus_pid) do
+      Process.send_after(self(), :send_requests, 0)
+    else
       _error -> Process.send_after(self(), :connect, @connect_interval)
     end
 
@@ -73,12 +75,7 @@ defmodule ExNVR.Nerves.Monitoring.RUT do
         :ok = Client.request(state.modbus_pid, req)
         {:ok, values} = Client.confirmation(state.modbus_pid)
 
-        value =
-          Enum.reject(values, &(&1 == 0))
-          |> Enum.flat_map(&[&1 >>> 8, &1 &&& 0xFF])
-          |> List.to_string()
-
-        {name, value}
+        {name, map_values(name, values)}
       end)
 
     send(state.registry, {:router, data})
@@ -90,5 +87,33 @@ defmodule ExNVR.Nerves.Monitoring.RUT do
   @impl true
   def handle_info(_message, state) do
     {:noreply, state}
+  end
+
+  defp get_default_gateway() do
+    case System.cmd("ip", ["route"], stderr_to_stdout: true) do
+      {output, 0} ->
+        String.split(output, "\n")
+        |> Enum.find("", &String.starts_with?(&1, "default"))
+        |> String.split(" ")
+        |> case do
+          ["default", "via", gateway | _rest] -> :inet.parse_address(to_charlist(gateway))
+          _other -> {:error, :no_gateway}
+        end
+
+      {error, _exit_status} ->
+        {:error, error}
+    end
+  end
+
+  defp map_values(:mac_address, values) do
+    Enum.take(values, 6)
+    |> Enum.map(&[&1 >>> 8, &1 &&& 0xFF])
+    |> List.to_string()
+  end
+
+  defp map_values(_field, values) do
+    Enum.reject(values, &(&1 == 0))
+    |> Enum.map(&[&1 >>> 8, &1 &&& 0xFF])
+    |> List.to_string()
   end
 end
