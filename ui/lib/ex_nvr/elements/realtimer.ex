@@ -31,7 +31,7 @@ defmodule ExNVR.Elements.Realtimer do
     if Buffer.get_dts_or_pts(buffer) - timestamp >= state.duration do
       Realtimer.handle_buffer(:input, buffer, ctx, state)
     else
-      {[buffer: {:output, buffer}, demand: {:input, 1}],
+      {[buffer: {:output, buffer}, demand: {:input, 10}],
        %{state | first_buffer_timestamp: timestamp}}
     end
   end

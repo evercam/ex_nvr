@@ -22,4 +22,15 @@ defmodule ExNVR.Pipeline.Track do
     encoding = if is_binary(encoding), do: String.to_existing_atom(encoding), else: encoding
     %__MODULE__{type: type, encoding: encoding}
   end
+
+  @spec new(ExMP4.Track.t()) :: t()
+  def new(%ExMP4.Track{} = track) do
+    codec =
+      case track.media do
+        :h264 -> :H264
+        :h265 -> :H265
+      end
+
+    %__MODULE__{type: track.type, encoding: codec}
+  end
 end
