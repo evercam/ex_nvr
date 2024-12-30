@@ -152,6 +152,11 @@ defmodule ExNVR.Pipeline.Output.WebRTC do
   end
 
   @impl true
+  def handle_event(:video, _event, _ctx, state) do
+    {[], state}
+  end
+
+  @impl true
   def handle_info({:ex_webrtc, pc, {:ice_candidate, candidate}}, _ctx, state) do
     send(state.peers[pc], {:ice_candidate, ExWebRTC.ICECandidate.to_json(candidate)})
     {[], state}
