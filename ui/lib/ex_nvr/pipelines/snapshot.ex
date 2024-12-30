@@ -8,8 +8,7 @@ defmodule ExNVR.Pipelines.Snapshot do
   require Membrane.Logger
 
   alias ExNVR.Elements
-  alias ExNVR.Elements.RecordingBin
-  alias Membrane.{H264, H265}
+  alias ExNVR.Elements.Recording
 
   def start(options) do
     Pipeline.start(__MODULE__, Keyword.put(options, :caller, self()))
@@ -23,11 +22,10 @@ defmodule ExNVR.Pipelines.Snapshot do
     rank = if options[:method] == :precise, do: :last, else: :first
 
     spec = [
-      child(:source, %RecordingBin{
+      child(:source, %Recording{
         device: options[:device],
         start_date: options[:date],
-        end_date: options[:date],
-        strategy: :keyframe_before
+        end_date: options[:date]
       })
     ]
 
@@ -35,18 +33,12 @@ defmodule ExNVR.Pipelines.Snapshot do
   end
 
   @impl true
-  def handle_child_notification({:track, track}, :source, _ctx, state) do
-    encoding =
-      case track do
-        %H264{} -> :H264
-        %H265{} -> :H265
-      end
-
+  def handle_child_notification({:new_track, track_id, track}, :source, _ctx, state) do
     spec = [
       get_child(:source)
-      |> via_out(:video)
+      |> via_out(Pad.ref(:video, track_id))
       |> via_in(Pad.ref(:input, make_ref()),
-        options: [format: state.format, rank: state.rank, encoding: encoding]
+        options: [format: state.format, rank: state.rank, encoding: track.encoding]
       )
       |> child(:sink, Elements.SnapshotBin)
     ]

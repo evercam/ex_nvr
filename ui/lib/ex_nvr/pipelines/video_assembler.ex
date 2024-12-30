@@ -19,17 +19,17 @@ defmodule ExNVR.Pipelines.VideoAssembler do
     Membrane.Logger.info("Initialize VideoAssembler pipeline with: #{inspect(options)}")
 
     spec = [
-      child(:source, struct(Elements.RecordingBin, options))
+      child(:source, struct(Elements.Recording, options))
     ]
 
     {[spec: spec], %{device: options[:device], destination: options[:destination]}}
   end
 
   @impl true
-  def handle_child_notification({:track, track}, :source, _ctx, state) do
+  def handle_child_notification({:new_track, track_id, track}, :source, _ctx, state) do
     spec = [
       get_child(:source)
-      |> via_out(:video)
+      |> via_out(Pad.ref(:video, track_id))
       |> child(:paylaoder, get_parser(track))
       |> via_in(Pad.ref(:input, :video_track))
       |> child(:muxer, Membrane.MP4.Muxer.ISOM)
@@ -52,6 +52,6 @@ defmodule ExNVR.Pipelines.VideoAssembler do
     {[], state}
   end
 
-  defp get_parser(%H264{}), do: %H264.Parser{output_stream_structure: :avc1}
-  defp get_parser(%H265{}), do: %H265.Parser{output_stream_structure: :hvc1}
+  defp get_parser(%{encoding: :H264}), do: %H264.Parser{output_stream_structure: :avc1}
+  defp get_parser(%{encoding: :H265}), do: %H265.Parser{output_stream_structure: :hvc1}
 end
