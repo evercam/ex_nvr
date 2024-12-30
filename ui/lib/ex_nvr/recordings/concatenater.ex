@@ -34,6 +34,7 @@ defmodule ExNVR.Recordings.Concatenater do
     |> open_next_file()
     |> case do
       :end_of_stream -> {:error, :end_of_stream}
+      :codec_changed -> {:error, :codec_changed}
       {offset, state} -> {:ok, offset, state}
     end
   end
@@ -76,6 +77,7 @@ defmodule ExNVR.Recordings.Concatenater do
         # all tracks are finished before opening a new file
         case open_next_file(state) do
           :end_of_stream -> {:error, :end_of_stream}
+          :codec_changed -> {:error, :codec_changed}
           {_offset, state} -> next_sample(state, track_id)
         end
     end
@@ -121,9 +123,13 @@ defmodule ExNVR.Recordings.Concatenater do
       |> Enum.min_by(& &1.offset_from_start_date)
       |> then(&Helper.timescalify(&1.offset_from_start_date, &1.track.timescale, :millisecond))
 
-    # TODO: compare with current track for potential codec changes
+    old_tracks = Map.values(state.tracks) |> Enum.map(& &1.track)
+    new_tracks = Map.values(tracks) |> Enum.map(& &1.track)
 
-    {offset, %__MODULE__{state | tracks: tracks}}
+    case compare_tracks(old_tracks, new_tracks) do
+      {:error, :codec_changed} -> :codec_changed
+      :ok -> {offset, %__MODULE__{state | tracks: tracks}}
+    end
   end
 
   defp build_track_details(%__MODULE__{} = state, track) do
@@ -194,6 +200,19 @@ defmodule ExNVR.Recordings.Concatenater do
       reducer
     else
       read_until(new_reducer, dts)
+    end
+  end
+
+  defp compare_tracks([], _new_tracks), do: :ok
+
+  defp compare_tracks(old_tracks, new_tracks) do
+    old_video_track = Enum.find(old_tracks, &(&1.type == :video))
+    new_video_track = Enum.find(new_tracks, &(&1.type == :video))
+
+    if old_video_track.media != new_video_track.media do
+      {:error, :codec_changed}
+    else
+      :ok
     end
   end
 end

@@ -85,13 +85,18 @@ defmodule ExNVR.Elements.Recording do
   @impl true
   def handle_playing(_ctx, state) do
     case Concatenater.new(state.device, state.stream, state.start_date) do
-      {:ok, _offset, cat} ->
+      {:ok, offset, cat} ->
         actions =
           Enum.map(Concatenater.tracks(cat), fn track ->
             {:notify_parent, {:new_track, track.id, Pipeline.Track.new(track)}}
           end)
 
-        {actions, %{state | cat: cat}}
+        duration =
+          if state.duration != 0,
+            do: state.duration + Membrane.Time.milliseconds(offset),
+            else: 0
+
+        {actions, %{state | cat: cat, duration: duration}}
 
       {:error, :end_of_stream} ->
         {[], state}
@@ -123,7 +128,7 @@ defmodule ExNVR.Elements.Recording do
              :ok <- check_duration_and_end_date(state, buffer, timestamp) do
           {:cont, {[buffer | buffers], cat}}
         else
-          {:error, :end_of_stream} -> {:halt, {buffers, cat}}
+          {:error, _error} -> {:halt, {buffers, cat}}
         end
       end)
 
