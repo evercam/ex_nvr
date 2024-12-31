@@ -13,7 +13,7 @@ defmodule ExNVR.Elements.Realtimer do
 
   def_options duration: [
                 spec: Membrane.Time.t(),
-                default: Membrane.Time.seconds(20),
+                default: Membrane.Time.seconds(10),
                 description:
                   "The duration of the video to allow before transitioning to realtime streaming"
               ]
@@ -31,7 +31,7 @@ defmodule ExNVR.Elements.Realtimer do
     if Buffer.get_dts_or_pts(buffer) - timestamp >= state.duration do
       Realtimer.handle_buffer(:input, buffer, ctx, state)
     else
-      {[buffer: {:output, buffer}, demand: {:input, 10}],
+      {[buffer: {:output, buffer}, demand: {:input, 1}],
        %{state | first_buffer_timestamp: timestamp}}
     end
   end

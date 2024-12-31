@@ -1,13 +1,16 @@
 defmodule ExNVR.Recordings.Concatenater do
   @moduledoc """
-  Concatenate recordings chunks into one big file.
+  Read samples from all the recordings chunks as if it is one big file.
   """
 
-  alias ExMP4.{Helper, Reader, Track}
+  import ExMP4.Helper, only: [timescalify: 3]
+
+  alias ExMP4.{Reader, Track}
   alias ExNVR.Model.Device
   alias ExNVR.Recordings
 
   @default_end_date ~U(2999-01-01 00:00:00Z)
+  @video_timescale 90_000
 
   @opaque t :: %__MODULE__{
             device: Device.t(),
@@ -25,12 +28,18 @@ defmodule ExNVR.Recordings.Concatenater do
             recordings: [],
             current_recording: nil,
             reader: nil,
-            tracks: %{}
+            tracks: %{},
+            annexb?: true
 
-  @spec new(Device.t(), Recordings.stream_type(), DateTime.t()) ::
+  @spec new(Device.t(), Recordings.stream_type(), DateTime.t(), annexb: boolean()) ::
           {:ok, non_neg_integer(), t()} | {:error, :end_of_stream}
-  def new(device, stream, start_date) do
-    %__MODULE__{device: device, stream: stream, start_date: start_date}
+  def new(device, stream, start_date, opts \\ []) do
+    %__MODULE__{
+      device: device,
+      stream: stream,
+      start_date: start_date,
+      annexb?: Keyword.get(opts, :annexb, true)
+    }
     |> open_next_file()
     |> case do
       :end_of_stream -> {:error, :end_of_stream}
@@ -47,23 +56,22 @@ defmodule ExNVR.Recordings.Concatenater do
           {:ok, {ExMP4.Sample.t(), DateTime.t()}, t()} | {:error, :end_of_stream}
   def next_sample(%__MODULE__{} = state, track_id) do
     track_details = Map.fetch!(state.tracks, track_id)
-    %{reducer: reducer, bit_stream_filter: filter} = track_details
+    %{reducer: reducer, bit_stream_filter: filter, track: track} = track_details
     %{reader: reader, current_recording: recording} = state
+    timescale = track.timescale
 
     case reducer.({:cont, nil}) do
       {:suspended, sample_metadata, new_reducer} ->
-        {sample, _bit_stream_filter} =
-          reader
-          |> Reader.read_sample(sample_metadata)
-          |> then(&ExMP4.BitStreamFilter.MP4ToAnnexb.filter(filter, &1))
+        sample = read_sample(reader, sample_metadata, filter)
 
-        dts_in_ms = Helper.timescalify(sample.dts, track_details.track.timescale, :millisecond)
+        dts_in_ms = timescalify(sample.dts, timescale, :millisecond)
         sample_timestamp = DateTime.add(recording.start_date, dts_in_ms, :millisecond)
 
         sample = %{
           sample
-          | dts: sample.dts + track_details.offset,
-            pts: sample.pts + track_details.offset
+          | dts: timescalify(sample.dts, timescale, @video_timescale) + track_details.offset,
+            pts: timescalify(sample.pts, timescale, @video_timescale) + track_details.offset,
+            duration: timescalify(sample.duration, timescale, @video_timescale)
         }
 
         track_details = %{track_details | reducer: new_reducer}
@@ -83,6 +91,10 @@ defmodule ExNVR.Recordings.Concatenater do
     end
   end
 
+  @spec close(t()) :: :ok
+  def close(%__MODULE__{reader: nil}), do: :ok
+  def close(%__MODULE__{reader: reader}), do: Reader.close(reader)
+
   defp open_next_file(%__MODULE__{recordings: []} = state) do
     start_date =
       if state.current_recording,
@@ -99,11 +111,12 @@ defmodule ExNVR.Recordings.Concatenater do
 
     case recordings do
       [] -> :end_of_stream
-      _ -> %{state | recordings: recordings} |> open_next_file()
+      _ -> %{state | recordings: recordings} |> maybe_update_start_date() |> open_next_file()
     end
   end
 
   defp open_next_file(%__MODULE__{recordings: [recording | recordings]} = state) do
+    if state.reader, do: Reader.close(state.reader)
     reader = Recordings.recording_path(state.device, state.stream, recording) |> Reader.new!()
 
     state = %__MODULE__{
@@ -121,7 +134,7 @@ defmodule ExNVR.Recordings.Concatenater do
     offset =
       Map.values(tracks)
       |> Enum.min_by(& &1.offset_from_start_date)
-      |> then(&Helper.timescalify(&1.offset_from_start_date, &1.track.timescale, :millisecond))
+      |> then(&timescalify(&1.offset_from_start_date, &1.track.timescale, :millisecond))
 
     old_tracks = Map.values(state.tracks) |> Enum.map(& &1.track)
     new_tracks = Map.values(tracks) |> Enum.map(& &1.track)
@@ -133,7 +146,15 @@ defmodule ExNVR.Recordings.Concatenater do
   end
 
   defp build_track_details(%__MODULE__{} = state, track) do
-    {:ok, bit_stream_filter} = ExMP4.BitStreamFilter.MP4ToAnnexb.init(track, [])
+    bit_stream_filter =
+      case state.annexb? do
+        true ->
+          {:ok, bit_stream_filter} = ExMP4.BitStreamFilter.MP4ToAnnexb.init(track, [])
+          bit_stream_filter
+
+        false ->
+          nil
+      end
 
     track_details =
       %{track: track, bit_stream_filter: bit_stream_filter}
@@ -154,7 +175,7 @@ defmodule ExNVR.Recordings.Concatenater do
         offset =
           start_date
           |> DateTime.diff(recording.start_date, :millisecond)
-          |> Helper.timescalify(:millisecond, track.timescale)
+          |> timescalify(:millisecond, track.timescale)
 
         keyframe_dts =
           state.reader
@@ -169,8 +190,8 @@ defmodule ExNVR.Recordings.Concatenater do
 
         track_details
         |> Map.put(:reducer, read_until(reducer, keyframe_dts))
-        |> Map.put(:offset, keyframe_dts)
         |> Map.put(:offset_from_start_date, offset - keyframe_dts)
+        |> Map.put(:offset, timescalify(keyframe_dts, track.timescale, @video_timescale))
 
       _other ->
         Map.merge(track_details, %{reducer: reducer, offset: 0, offset_from_start_date: 0})
@@ -179,13 +200,13 @@ defmodule ExNVR.Recordings.Concatenater do
 
   defp set_track_duration(track_details, %{current_recording: recording}) do
     DateTime.diff(recording.end_date, recording.start_date, :microsecond)
-    |> Helper.timescalify(:microsecond, track_details.track.timescale)
+    |> timescalify(:microsecond, @video_timescale)
     |> then(&Map.put(track_details, :track_duration, &1))
   end
 
   defp update_offset(%{track: track} = track_details, state) do
     {old_duration, old_offset} =
-      case state.tracks[track.type] do
+      case state.tracks[track.id] do
         nil -> {0, -track_details.offset}
         old_track -> {old_track.track_duration, old_track.offset}
       end
@@ -203,6 +224,19 @@ defmodule ExNVR.Recordings.Concatenater do
     end
   end
 
+  defp read_sample(reader, sample_metadata, nil) do
+    Reader.read_sample(reader, sample_metadata)
+  end
+
+  defp read_sample(reader, sample_metadata, filter) do
+    {sample, _bit_stream_filter} =
+      reader
+      |> Reader.read_sample(sample_metadata)
+      |> then(&ExMP4.BitStreamFilter.MP4ToAnnexb.filter(filter, &1))
+
+    sample
+  end
+
   defp compare_tracks([], _new_tracks), do: :ok
 
   defp compare_tracks(old_tracks, new_tracks) do
@@ -215,4 +249,15 @@ defmodule ExNVR.Recordings.Concatenater do
       :ok
     end
   end
+
+  defp maybe_update_start_date(%{current_recording: nil} = state) do
+    first_recording_start_date = hd(state.recordings).start_date
+
+    case DateTime.compare(state.start_date, first_recording_start_date) do
+      :lt -> %{state | start_date: first_recording_start_date}
+      _other -> state
+    end
+  end
+
+  defp maybe_update_start_date(state), do: state
 end
