@@ -154,7 +154,7 @@ defmodule ExNVR.Recordings do
       [] ->
         {:error, :not_found}
 
-      recs ->
+      _recs ->
         footage_start_date =
           VideoAssembler.assemble(device, stream, start_date, end_date, duration, dest)
 

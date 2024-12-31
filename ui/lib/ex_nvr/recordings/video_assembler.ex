@@ -19,7 +19,7 @@ defmodule ExNVR.Recordings.VideoAssembler do
   def assemble(device, stream, start_date, end_date, duration, dest) do
     {:ok, offset, cat} = Concatenater.new(device, stream, start_date, annexb: false)
     [track] = Concatenater.tracks(cat)
-    duration = ExMP4.Helper.timescalify(duration, :second, @video_timescale)
+    duration = ExMP4.Helper.timescalify(duration * 1000 + offset, :millisecond, @video_timescale)
 
     writer =
       Writer.new!(dest)
