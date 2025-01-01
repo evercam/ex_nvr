@@ -13,7 +13,7 @@ defmodule ExNVR.Elements.Realtimer do
 
   def_options duration: [
                 spec: Membrane.Time.t(),
-                default: Membrane.Time.seconds(20),
+                default: Membrane.Time.seconds(10),
                 description:
                   "The duration of the video to allow before transitioning to realtime streaming"
               ]

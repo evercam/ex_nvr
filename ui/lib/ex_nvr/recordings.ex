@@ -150,17 +150,13 @@ defmodule ExNVR.Recordings do
     end_date = end_date || @default_end_date
     duration = duration || @year_in_seconds
 
-    # TODO: Better limit handling.
-    # Each recording is check is greater than 1 minute, we have a limit of roughly 2 hours.
-    case get_recordings_between(device.id, stream, start_date, end_date, limit: 120) do
+    case get_recordings_between(device.id, stream, start_date, end_date, limit: 1) do
       [] ->
         {:error, :not_found}
 
-      recs ->
+      _recs ->
         footage_start_date =
-          recs
-          |> Enum.map(&{recording_path(device, stream, &1), &1.start_date})
-          |> VideoAssembler.assemble(start_date, end_date, duration, dest)
+          VideoAssembler.assemble(device, stream, start_date, end_date, duration, dest)
 
         {:ok, footage_start_date}
     end

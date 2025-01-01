@@ -23,6 +23,7 @@ defmodule ExNVR.Pipeline.Output.Storage do
   @time_error Time.milliseconds(30)
   @time_drift_threshold Time.seconds(30)
   @check_interval Time.seconds(5)
+  @timescale 90_000
 
   @recordings_event [:ex_nvr, :recordings, :stop]
 
@@ -261,7 +262,8 @@ defmodule ExNVR.Pipeline.Output.Storage do
       type: :video,
       media: media,
       width: stream_format.width,
-      height: stream_format.height
+      height: stream_format.height,
+      timescale: @timescale
     }
   end
 
