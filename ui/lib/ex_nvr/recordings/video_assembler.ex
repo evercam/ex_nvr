@@ -6,8 +6,6 @@ defmodule ExNVR.Recordings.VideoAssembler do
   alias ExMP4.Writer
   alias ExNVR.Recordings.Concatenater
 
-  @video_timescale 90_000
-
   @spec assemble(
           ExNVR.Model.Device.t(),
           ExNVR.Recordings.stream_type(),
@@ -19,11 +17,11 @@ defmodule ExNVR.Recordings.VideoAssembler do
   def assemble(device, stream, start_date, end_date, duration, dest) do
     {:ok, offset, cat} = Concatenater.new(device, stream, start_date, annexb: false)
     [track] = Concatenater.tracks(cat)
-    duration = ExMP4.Helper.timescalify(duration * 1000 + offset, :millisecond, @video_timescale)
+    duration = ExMP4.Helper.timescalify(duration * 1000 + offset, :millisecond, track.timescale)
 
     writer =
       Writer.new!(dest)
-      |> Writer.add_track(%{track | timescale: @video_timescale})
+      |> Writer.add_track(track)
       |> Writer.write_header()
 
     acc = %{
@@ -39,7 +37,6 @@ defmodule ExNVR.Recordings.VideoAssembler do
         &next_sample/1,
         &Concatenater.close(&1.cat)
       )
-      |> Enum.to_list()
       |> Enum.into(writer)
       |> Writer.write_trailer()
 

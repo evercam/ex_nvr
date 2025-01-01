@@ -49,8 +49,9 @@ defmodule ExNVR.Recordings.Concatenater do
   end
 
   @spec tracks(t()) :: [Track.t()]
-  def tracks(%__MODULE__{tracks: tracks_details}),
-    do: Map.values(tracks_details) |> Enum.map(& &1.track)
+  def tracks(%__MODULE__{tracks: tracks_details}) do
+    Map.values(tracks_details) |> Enum.map(&%{&1.track | timescale: @video_timescale})
+  end
 
   @spec next_sample(t(), Track.id()) ::
           {:ok, {ExMP4.Sample.t(), DateTime.t()}, t()} | {:error, :end_of_stream}
