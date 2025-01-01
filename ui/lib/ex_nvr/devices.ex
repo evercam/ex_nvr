@@ -147,9 +147,9 @@ defmodule ExNVR.Devices do
     end
   end
 
-  @spec discover(non_neg_integer()) :: {:ok, map()} | {:error, any()}
-  def discover(timeout) do
-    ExNVR.Onvif.discover(timeout: timeout)
+  @spec discover(Keyword.t()) :: [Onvif.Discovery.Probe.t()]
+  def discover(options) do
+    Onvif.Discovery.probe(options)
   end
 
   # fetch IP camera details using ONVIF
