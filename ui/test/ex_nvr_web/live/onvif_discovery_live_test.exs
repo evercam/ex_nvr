@@ -3,11 +3,41 @@ defmodule ExNVRWeb.OnvifDiscoveryLiveTest do
 
   use ExNVRWeb.ConnCase
 
-  import ExNVR.{AccountsFixtures, Onvif.TestUtils}
-  import Mock
+  import ExNVR.AccountsFixtures
+  import Mimic
   import Phoenix.LiveViewTest
 
-  alias ExNVR.Onvif
+  alias Onvif.Discovery.Probe
+
+  @probes [
+    %Probe{
+      types: ["dn:NetworkVideoTransmitter", "tds:Device"],
+      scopes: [
+        "onvif://www.onvif.org/Profile/Streaming",
+        "onvif://www.onvif.org/name/Camera 1",
+        "onvif://www.onvif.org/hardware/HW1"
+      ],
+      request_guid: "uuid:00000000-0000-0000-0000-000000000000",
+      address: ["http://192.168.1.100/onvif/device_service"]
+    },
+    %Probe{
+      types: ["dn:NetworkVideoTransmitter", "tds:Device"],
+      scopes: [
+        "onvif://www.onvif.org/Profile/Streaming",
+        "onvif://www.onvif.org/name/Camera 2",
+        "onvif://www.onvif.org/hardware/HW2"
+      ],
+      request_guid: "uuid:00000000-0000-0000-0000-000000000001",
+      address: ["http://192.168.1.200/onvif/device_service"]
+    }
+  ]
+
+  setup_all do
+    Mimic.copy(Onvif.Devices.GetNetworkInterfaces)
+    Mimic.copy(Onvif.Media.Ver20.GetProfiles)
+    Mimic.copy(Onvif.Media.Ver20.GetStreamUri)
+    Mimic.copy(Onvif.Media.Ver10.GetSnapshotUri)
+  end
 
   setup %{conn: conn} do
     {:ok, conn: log_in_user(conn, user_fixture())}
@@ -30,34 +60,9 @@ defmodule ExNVRWeb.OnvifDiscoveryLiveTest do
   end
 
   describe "Discover devices" do
-    setup_with_mocks([
-      {ExNVR.Onvif, [],
-       [
-         discover: fn
-           [timeout: 1000] ->
-             {:ok,
-              [
-                %{
-                  name: "Camera 1",
-                  hardware: "HW1",
-                  url: "http://192.168.1.100/onvif/device_service"
-                },
-                %{
-                  name: "Camera 2",
-                  hardware: "HW2",
-                  url: "http://192.168.1.200/onvif/device_service"
-                }
-              ]}
-
-           [timeout: 2000] ->
-             {:error, "something is wrong"}
-         end
-       ]}
-    ]) do
-      :ok
-    end
-
     test "render found devices", %{conn: conn} do
+      expect(Onvif.Discovery, :probe, fn _params -> @probes end)
+
       {:ok, lv, _html} = live(conn, ~p"/onvif-discovery")
 
       html =
@@ -85,80 +90,126 @@ defmodule ExNVRWeb.OnvifDiscoveryLiveTest do
       refute html =~ "Camera 1"
       assert html =~ "is invalid"
     end
-
-    test "render discovery errors as flash", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, ~p"/onvif-discovery")
-
-      html =
-        lv
-        |> form("#discover_form")
-        |> render_submit(%{"discover_settings" => %{"timeout" => "2"}})
-
-      refute html =~ "Camera 1"
-      refute html =~ "Camera 2"
-
-      assert html =~ "Error occurred while discovering devices"
-    end
   end
 
   describe "Render details" do
-    @device_url "http://192.168.1.100/onvif/device_service"
-    @media_url "http://192.168.1.100/onvif/Media"
+    setup do
+      expect(Onvif.Discovery, :probe, fn _params -> Enum.take(@probes, 1) end)
 
-    setup_with_mocks([
-      {ExNVR.Onvif, [],
-       [
-         discover: fn _ ->
-           {:ok,
-            [
-              %{
-                name: "Camera 1",
-                hardware: "HW1",
-                url: "http://192.168.1.100/onvif/device_service"
-              }
-            ]}
-         end,
-         get_system_date_and_time: fn @device_url -> date_time_response_mock() end,
-         get_device_information: fn @device_url, _opts -> device_information_response_mock() end,
-         get_network_interfaces: fn @device_url, _opts -> network_interfaces_response_mock() end,
-         get_capabilities: fn @device_url, _opts -> capabilities_response_mock() end,
-         get_media_profiles: fn @media_url, _opts -> profiles_response_mock() end,
-         get_media_stream_uri!: fn @media_url, _profile, _opts -> stream_uri_response() end,
-         get_media_snapshot_uri!: fn @media_url, _profile, _opts ->
-           snapshot_uri_response_mock()
-         end
-       ]}
-    ]) do
+      expect(Onvif.Device, :init, fn probe, "admin", "pass" ->
+        {:ok,
+         %Onvif.Device{
+           manufacturer: "Evercam",
+           model: "B11",
+           serial_number: "B11-DZ10",
+           address: List.first(probe.address),
+           scopes: probe.scopes,
+           username: "admin",
+           password: "pass",
+           media_ver10_service_path: "/onvif/Media",
+           media_ver20_service_path: "/onvif/Media2",
+           system_date_time: %Onvif.Devices.SystemDateAndTime{
+             date_time_type: "Manual",
+             daylight_savings: "true",
+             time_zone: %Onvif.Devices.SystemDateAndTime.TimeZone{tz: "CST-01:00"}
+           }
+         }}
+      end)
+
+      expect(Onvif.Devices.GetNetworkInterfaces, :request, fn _device ->
+        {:ok,
+         [
+           %Onvif.Device.NetworkInterface{
+             info: %Onvif.Device.NetworkInterface.Info{name: "eth0"},
+             ipv4: %Onvif.Device.NetworkInterface.IPv4{
+               config: %Onvif.Device.NetworkInterface.IPv4.Config{
+                 manual: %{address: "192.168.1.100"}
+               }
+             }
+           }
+         ]}
+      end)
+
+      expect(Onvif.Media.Ver20.GetProfiles, :request, fn _device ->
+        {:ok,
+         [
+           %Onvif.Media.Ver20.Profile{
+             reference_token: "Profile_1",
+             name: "mainStream",
+             video_encoder_configuration: %Onvif.Media.Ver20.Profile.VideoEncoder{
+               encoding: :h265,
+               resolution: %Onvif.Media.Ver20.Profile.VideoEncoder.Resolution{
+                 width: 3840,
+                 height: 2160
+               },
+               rate_control: %Onvif.Media.Ver20.Profile.VideoEncoder.RateControl{
+                 constant_bitrate: true,
+                 bitrate_limit: 4096
+               }
+             }
+           },
+           %Onvif.Media.Ver20.Profile{
+             reference_token: "Profile_2",
+             name: "subStream",
+             video_encoder_configuration: %Onvif.Media.Ver20.Profile.VideoEncoder{
+               encoding: :h264,
+               resolution: %Onvif.Media.Ver20.Profile.VideoEncoder.Resolution{
+                 width: 640,
+                 height: 480
+               },
+               rate_control: %Onvif.Media.Ver20.Profile.VideoEncoder.RateControl{
+                 constant_bitrate: false,
+                 bitrate_limit: 600
+               }
+             }
+           }
+         ]}
+      end)
+
+      expect(Onvif.Media.Ver20.GetStreamUri, :request, fn _device, ["Profile_1"] ->
+        {:ok, "rtsp://192.168.1.100:554/main"}
+      end)
+      |> expect(:request, fn _device, ["Profile_2"] ->
+        {:ok, "rtsp://192.168.1.100:554/sub"}
+      end)
+
+      expect(Onvif.Media.Ver10.GetSnapshotUri, :request, fn _device, ["Profile_1"] ->
+        {:ok, "http://192.168.1.100:8101/snapshot"}
+      end)
+      |> expect(:request, fn _device, ["Profile_2"] ->
+        {:ok, "http://192.168.1.100:8101/sub"}
+      end)
+
       :ok
     end
 
     test "render device details", %{conn: conn} do
       {:ok, lv, _html} = live(conn, ~p"/onvif-discovery")
 
-      lv |> form("#discover_form") |> render_submit()
+      lv
+      |> form("#discover_form", %{discover_settings: %{username: "admin", password: "pass"}})
+      |> render_submit()
+
       html = lv |> element("li[phx-click='device-details']") |> render_click()
 
       for term <- [
             "Evercam",
             "B11",
             "B11-DZ10",
-            "Manual",
             "CST-01:00",
             "mainStream",
             "subStream",
             "192.168.1.100",
-            "rtsp://192.168.1.100:554/main"
+            "rtsp://192.168.1.100:554/main",
+            "rtsp://192.168.1.100:554/sub",
+            "http://192.168.1.100:8101/snapshot",
+            "h265",
+            "h264",
+            "3840 x 2160",
+            "640 x 480"
           ] do
         assert html =~ term
       end
-
-      assert_called_exactly(Onvif.get_system_date_and_time(:_), 1)
-      assert_called_exactly(Onvif.get_device_information(:_, :_), 1)
-      assert_called_exactly(Onvif.get_network_interfaces(:_, :_), 1)
-      assert_called_exactly(Onvif.get_capabilities(:_, :_), 1)
-      assert_called_exactly(Onvif.get_media_profiles(:_, :_), 1)
-      assert_called_exactly(Onvif.get_media_stream_uri!(:_, :_, :_), 2)
-      assert_called_exactly(Onvif.get_media_snapshot_uri!(:_, :_, :_), 2)
     end
 
     test "render cached device details", %{conn: conn} do
@@ -167,20 +218,15 @@ defmodule ExNVRWeb.OnvifDiscoveryLiveTest do
       lv |> form("#discover_form") |> render_submit()
       lv |> element("li[phx-click='device-details']") |> render_click()
       lv |> element("li[phx-click='device-details']") |> render_click()
-
-      assert_called_exactly(Onvif.get_system_date_and_time(:_), 1)
-      assert_called_exactly(Onvif.get_device_information(:_, :_), 1)
-      assert_called_exactly(Onvif.get_network_interfaces(:_, :_), 1)
-      assert_called_exactly(Onvif.get_capabilities(:_, :_), 1)
-      assert_called_exactly(Onvif.get_media_profiles(:_, :_), 1)
-      assert_called_exactly(Onvif.get_media_stream_uri!(:_, :_, :_), 2)
-      assert_called_exactly(Onvif.get_media_snapshot_uri!(:_, :_, :_), 2)
     end
 
     test "redirect to add device form with discovred device details", %{conn: conn} do
       {:ok, lv, _html} = live(conn, ~p"/onvif-discovery")
 
-      lv |> form("#discover_form") |> render_submit()
+      lv
+      |> form("#discover_form", %{discover_settings: %{username: "admin", password: "pass"}})
+      |> render_submit()
+
       lv |> element("li[phx-click='device-details']") |> render_click()
 
       {:ok, conn} =
@@ -193,7 +239,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLiveTest do
       assert device_params.name == "Camera 1"
       assert device_params.type == :ip
       assert device_params.stream_config.stream_uri == "rtsp://192.168.1.100:554/main"
-      assert device_params.stream_config.snapshot_uri == "http://192.168.1.100:80/snapshot"
+      assert device_params.stream_config.snapshot_uri == "http://192.168.1.100:8101/snapshot"
       assert device_params.vendor == "Evercam"
     end
   end

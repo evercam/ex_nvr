@@ -41,14 +41,6 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
     else
       {:error, %Changeset{} = changeset} ->
         {:noreply, assign_discovery_form(socket, changeset)}
-
-      {:error, error} ->
-        Logger.error("""
-        OnvifDiscovery: error occurred while discovering devices
-        #{inspect(error)}
-        """)
-
-        {:noreply, put_flash(socket, :error, "Error occurred while discovering devices")}
     end
   end
 

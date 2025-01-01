@@ -39,10 +39,12 @@ defmodule ExNVR.Devices do
           {:ok, Device.t()} | {:error, Ecto.Changeset.t()}
   def update_state(%Device{} = device, state), do: __MODULE__.update(device, %{state: state})
 
+  @spec list() :: [Device.t()]
   @spec list(map()) :: [Device.t()]
   def list(params \\ %{}), do: Repo.all(Device.filter(params) |> order_by([d], d.inserted_at))
 
-  def ip_cameras(), do: list(type: :ip)
+  @spec ip_cameras() :: [Device.t()]
+  def ip_cameras(), do: list(%{type: :ip})
 
   @spec get(binary()) :: Device.t() | nil
   def get(device_id), do: Repo.get(Device, device_id)
@@ -152,94 +154,11 @@ defmodule ExNVR.Devices do
     Onvif.Discovery.probe(options)
   end
 
-  # fetch IP camera details using ONVIF
-  @spec fetch_camera_details(binary()) :: map()
-  @spec fetch_camera_details(binary(), Keyword.t()) :: map()
-  def fetch_camera_details(url, opts \\ []) do
-    %{url: url}
-    |> get_date_time_settings()
-    |> get_device_information(opts)
-    |> get_network_interfaces(opts)
-    |> get_media_profiles(opts)
-  end
-
   defp copy_device_file(%Device{type: :file, stream_config: stream_config} = device) do
     File.cp!(stream_config.temporary_path, Device.file_location(device))
   end
 
   defp copy_device_file(_device), do: :ok
-
-  defp get_date_time_settings(camera) do
-    settings =
-      case ExNVR.Onvif.get_system_date_and_time(camera.url) do
-        {:ok, settings} ->
-          settings
-
-        {:error, reason} ->
-          Logger.error("""
-          Onvif: could not get date and time from '#{camera.url}'
-          due to: #{inspect(reason)}
-          """)
-
-          nil
-      end
-
-    Map.put(camera, :date_time_settings, settings)
-  end
-
-  defp get_device_information(camera, opts) do
-    settings =
-      case ExNVR.Onvif.get_device_information(camera.url, opts) do
-        {:ok, infos} ->
-          infos
-
-        {:error, reason} ->
-          Logger.error("""
-          Onvif: could not get date and time from '#{camera.url}'
-          due to: #{inspect(reason)}
-          """)
-
-          nil
-      end
-
-    Map.put(camera, :device_information, settings)
-  end
-
-  defp get_network_interfaces(camera, opts) do
-    settings =
-      case ExNVR.Onvif.get_network_interfaces(camera.url, opts) do
-        {:ok, interfaces} ->
-          interfaces
-
-        {:error, reason} ->
-          Logger.error("""
-          Onvif: could not get date and time from '#{camera.url}'
-          due to: #{inspect(reason)}
-          """)
-
-          nil
-      end
-
-    Map.put(camera, :network_interfaces, settings)
-  end
-
-  defp get_media_profiles(camera, opts) do
-    with {:ok, %{media: media}} <- ExNVR.Onvif.get_capabilities(camera.url, opts),
-         {:ok, media_profiles} <- ExNVR.Onvif.get_media_profiles(media.x_addr, opts) do
-      media_profiles
-      |> Enum.map(fn profile ->
-        uri = ExNVR.Onvif.get_media_stream_uri!(media.x_addr, profile.token, opts)
-        Map.put(profile, :stream_uri, uri)
-      end)
-      |> Enum.map(fn profile ->
-        uri = ExNVR.Onvif.get_media_snapshot_uri!(media.x_addr, profile.token, opts)
-        Map.put(profile, :snapshot_uri, uri)
-      end)
-      |> then(&Map.put(camera, :media_profiles, &1))
-    else
-      _other -> Map.put(camera, :media_profiles, [])
-    end
-  end
 
   defp url_and_opts(%{url: nil}), do: {:error, :url_not_configured}
 

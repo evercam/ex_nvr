@@ -13,34 +13,9 @@ defmodule ExNVR.HTTP do
     call(:post, url, body, opts)
   end
 
-  @spec build_digest_auth(map(), Keyword.t()) :: {:ok, binary()} | {:error, binary()}
-  def build_digest_auth(resp, opts) do
-    with digest_opts when is_map(digest_opts) <- digest_auth_opts(resp, opts) do
-      digest_auth = encode_digest(digest_opts)
-      {:ok, digest_auth}
-    end
-  end
-
   defp call(method, url, body, opts) do
     opts = Keyword.merge(opts, method: method, url: url)
     do_call(method, body, opts)
-  end
-
-  defp digest_auth_opts(%{headers: headers}, opts) do
-    headers
-    |> Enum.map(fn {key, value} -> {String.downcase(key), value} end)
-    |> Map.new()
-    |> Map.fetch("www-authenticate")
-    |> case do
-      {:ok, ["Digest " <> digest]} ->
-        build_digest_auth_opts(digest, opts)
-
-      {:ok, "Digest " <> digest} ->
-        build_digest_auth_opts(digest, opts)
-
-      _other ->
-        nil
-    end
   end
 
   defp do_call(method, body, opts) when is_map(body) do
@@ -77,7 +52,7 @@ defmodule ExNVR.HTTP do
         |> encode_digest()
 
       request
-      |> Req.Request.put_header("authorization", digest)
+      |> Req.Request.put_header("Authorization", digest)
       |> Req.Request.run_request()
     else
       _other -> {request, response}
@@ -85,16 +60,6 @@ defmodule ExNVR.HTTP do
   end
 
   defp digest_auth({request, response}, _credentials), do: {request, response}
-
-  defp build_digest_auth_opts(digest, opts) do
-    build_digest_auth_opts(
-      digest,
-      opts[:method],
-      URI.parse(opts[:url]),
-      opts[:username],
-      opts[:password]
-    )
-  end
 
   defp build_digest_auth_opts(digest, method, url, username, password) do
     %{
