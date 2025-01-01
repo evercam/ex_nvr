@@ -72,8 +72,6 @@ config :logger, :console,
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason
 
-config :soap, :globals, version: "1.2"
-
 config :os_mon,
   disk_space_check_interval: {:second, 30},
   disk_almost_full_threshold: 0.9

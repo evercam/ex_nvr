@@ -3,25 +3,24 @@ defmodule ExNVRWeb.API.OnvifControllerTest do
   use ExNVRWeb.ConnCase
 
   import ExNVR.AccountsFixtures
-  import ExNVR.Onvif.TestUtils
-  import Mock
+  import Mimic
 
-  alias ExNVR.Onvif
+  alias Onvif.Discovery.Probe
 
   @discovered_devices [
-    %{
-      name: "Camera 1",
-      hardware: "HW1",
-      url: "http://192.168.1.100/onvif/device_service"
+    %Probe{
+      types: ["dn:NetworkVideoTransmitter", "tds:Device"],
+      scopes: ["onvif://www.onvif.org/Profile/Streaming"],
+      request_guid: "uuid:00000000-0000-0000-0000-000000000000",
+      address: ["http://192.168.1.100/onvif/device_service"]
     },
-    %{
-      name: "Camera 2",
-      hardware: "HW2",
-      url: "http://192.168.1.101/onvif/device_service"
+    %Probe{
+      types: ["dn:NetworkVideoTransmitter", "tds:Device"],
+      scopes: ["onvif://www.onvif.org/Profile/Streaming"],
+      request_guid: "uuid:00000000-0000-0000-0000-000000000001",
+      address: ["http://192.168.1.101/onvif/device_service"]
     }
   ]
-
-  @media_url "http://192.168.1.100/onvif/Media"
 
   setup do
     conn = build_conn() |> log_in_user_with_access_token(user_fixture())
@@ -29,45 +28,35 @@ defmodule ExNVRWeb.API.OnvifControllerTest do
   end
 
   describe "GET/POST /api/onvif/discover" do
-    setup_with_mocks([
-      {ExNVR.Onvif, [],
-       [
-         discover: fn _opts -> {:ok, @discovered_devices} end,
-         get_system_date_and_time: fn _url -> date_time_response_mock() end,
-         get_device_information: fn _url, _opts -> device_information_response_mock() end,
-         get_network_interfaces: fn _url, _opts -> network_interfaces_response_mock() end,
-         get_capabilities: fn _url, _opts -> capabilities_response_mock() end,
-         get_media_profiles: fn @media_url, _opts -> profiles_response_mock() end,
-         get_media_stream_uri!: fn @media_url, _profile, _opts -> stream_uri_response() end,
-         get_media_snapshot_uri!: fn @media_url, _profile, _opts ->
-           snapshot_uri_response_mock()
-         end
-       ]}
-    ]) do
-      :ok
-    end
-
     test "discover devices", %{conn: conn} do
+      expect(Onvif.Discovery, :probe, fn [probe_timeout: 2_000] -> @discovered_devices end)
+
+      expect(Onvif.Device, :init, fn probe, "admin", "pass" ->
+        assert ["http://192.168.1.100/onvif/device_service"] = probe.address
+
+        {:ok,
+         %Onvif.Device{
+           manufacturer: "Hikvision",
+           address: List.first(probe.address),
+           scopes: probe.scopes
+         }}
+      end)
+      |> expect(:init, fn probe, "admin", "pass" ->
+        assert ["http://192.168.1.101/onvif/device_service"] = probe.address
+        {:error, "Invalid Credentials"}
+      end)
+
       response =
         conn
         |> post("/api/onvif/discover", %{timeout: 2, username: "admin", password: "pass"})
         |> json_response(200)
 
-      assert Enum.map(response, & &1["name"]) == ["Camera 1", "Camera 2"]
-
-      assert Enum.map(response, & &1["url"]) == [
+      assert Enum.map(response, & &1["address"]) == [
                "http://192.168.1.100/onvif/device_service",
                "http://192.168.1.101/onvif/device_service"
              ]
 
-      assert_called_exactly(Onvif.discover(timeout: 2_000), 1)
-      assert_called_exactly(Onvif.get_system_date_and_time(:_), 2)
-      assert_called_exactly(Onvif.get_device_information(:_, :_), 2)
-      assert_called_exactly(Onvif.get_network_interfaces(:_, :_), 2)
-      assert_called_exactly(Onvif.get_capabilities(:_, :_), 2)
-      assert_called_exactly(Onvif.get_media_profiles(:_, :_), 2)
-      assert_called_exactly(Onvif.get_media_stream_uri!(:_, :_, :_), 4)
-      assert_called_exactly(Onvif.get_media_snapshot_uri!(:_, :_, :_), 4)
+      assert Enum.map(response, & &1["manufacturer"]) == ["Hikvision", nil]
     end
 
     test "discover devices not allowed for non admin users" do
@@ -75,8 +64,6 @@ defmodule ExNVRWeb.API.OnvifControllerTest do
       |> log_in_user_with_access_token(user_fixture(role: :user))
       |> post("/api/onvif/discover", %{timeout: 2, username: "admin", password: "pass"})
       |> json_response(403)
-
-      assert_not_called(Onvif.discover(:_))
     end
   end
 end

@@ -9,28 +9,40 @@ defmodule ExNVRWeb.API.OnvifController do
 
   action_fallback ExNVRWeb.API.FallbackController
 
-  @default_timeout 5
+  @default_timeout 2
 
   def discover(conn, params) do
     with :ok <- authorize(conn.assigns.current_user, :onvif, :discover),
          {:ok, params} <- validate_discover_query_params(params),
-         {:ok, devices} <- ExNVR.Devices.discover(:timer.seconds(params.timeout)) do
-      result =
-        Enum.map(
-          devices,
-          &Map.merge(&1, ExNVR.Devices.fetch_camera_details(&1.url, Keyword.new(params)))
-        )
-
+         discover_params <- Keyword.new(Map.take(params, [:ip_address, :probe_timeout])),
+         devices <- ExNVR.Devices.discover(discover_params) do
+      result = Enum.map(devices, &init_device(&1, params))
       json(conn, result)
     end
   end
 
-  defp validate_discover_query_params(params) do
-    types = %{timeout: :integer, username: :string, password: :string}
+  defp init_device(probe, params) do
+    case Onvif.Device.init(probe, params[:username], params[:password]) do
+      {:ok, device} ->
+        device
 
-    {%{timeout: @default_timeout}, types}
+      {:error, _error} ->
+        address = List.first(probe.address)
+        device = Onvif.Device.new(address, params[:username], params[:password])
+        %{device | scopes: probe.scopes}
+    end
+  end
+
+  defp validate_discover_query_params(params) do
+    types = %{probe_timeout: :integer, ip_address: :string, username: :string, password: :string}
+
+    {%{probe_timeout: @default_timeout, username: "", password: ""}, types}
     |> Changeset.cast(params, Map.keys(types))
-    |> Changeset.validate_number(:timeout, less_than_or_equal_to: 60, greater_than: 0)
+    |> Changeset.validate_number(:probe_timeout, less_than_or_equal_to: 60, greater_than: 0)
     |> Changeset.apply_action(:insert)
+    |> case do
+      {:ok, params} -> {:ok, Map.update!(params, :probe_timeout, &:timer.seconds/1)}
+      error -> error
+    end
   end
 end
