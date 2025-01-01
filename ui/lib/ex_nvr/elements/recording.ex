@@ -160,7 +160,7 @@ defmodule ExNVR.Elements.Recording do
       payload: sample.payload,
       dts: Helper.timescalify(sample.dts, track.timescale, @timescale),
       pts: Helper.timescalify(sample.pts, track.timescale, @timescale),
-      metadata: %{track.media => %{keyframe?: sample.sync?}}
+      metadata: %{track.media => %{key_frame?: sample.sync?}}
     }
   end
 
