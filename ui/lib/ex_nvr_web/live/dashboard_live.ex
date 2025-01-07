@@ -24,12 +24,6 @@ defmodule ExNVRWeb.DashboardLive do
       <div :if={@devices == []} class="grid tracking-wide text-lg text-center dark:text-gray-200">
         You have no devices, you can create one
         <span><.link href={~p"/devices"} class="ml-2 dark:text-blue-600">here</.link></span>
-        <.vue
-          count={@count}
-          v-component="Counter"
-          v-socket={@socket}
-          v-on:inc={JS.push("inc")}
-        />
       </div>
       <div :if={@devices != []}>
         <div class="flex items-center justify-between invisible sm:visible">
@@ -111,8 +105,14 @@ defmodule ExNVRWeb.DashboardLive do
           <.live_component
             module={TimelineComponent}
             id="tl"
-            segments={@segments}
+            segments={Jason.encode!(@segments)}
             timezone={@timezone}
+          />
+          <.vue
+            segments={@segments}
+            v-component="Counter"
+            v-socket={@socket}
+            v-on:inc={JS.push("inc")}
           />
         </div>
       </div>
@@ -314,7 +314,6 @@ defmodule ExNVRWeb.DashboardLive do
       Recordings.list_runs(%{device_id: device.id})
       |> Enum.map(&Map.take(&1, [:start_date, :end_date]))
       |> shift_timezones(device.timezone)
-      |> Jason.encode!()
 
     assign(socket, segments: segments)
   end

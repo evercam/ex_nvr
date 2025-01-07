@@ -1,154 +1,179 @@
 <script lang="ts">
 import {defineComponent} from 'vue'
-import {ETimeline} from '@evercam/ui/vue3'
+
+const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
 
 export default defineComponent({
   name: 'TimelineWrapper',
-  components: {
-    ETimeline
+  props: {
+    segments: Array,
   },
-  setup() {
-    const eventsGroups = {
-      Group1: {
-        label: "Group 1",
-        color: "#eee",
-        events: [
-          {
-            startDate: new Date("2022-12-10T00:00:00").getTime(),
-            endDate: new Date("2022-12-15T01:00:00").getTime(),
-            color: "#5f6b43",
-            text: "Holiday",
-          },
-          {
-            startDate: new Date("2023-01-01T00:00:00").getTime(),
-            endDate: new Date("2023-03-01T00:00:00").getTime(),
-            color: "#5f6b43",
-            text: "Q1 2023: Lorem Ipsum.",
-          },
-          {
-            startDate: new Date("2023-04-01T00:00:00").getTime(),
-            endDate: new Date("2023-06-10T00:00:00").getTime(),
-            color: "rgb(144,103,229)",
-            text: "Q2-Q3 2023: April to mid June.",
-          },
-          {
-            startDate: new Date("2023-07-10T00:00:00").getTime(),
-            endDate: new Date("2023-08-01T00:00:00").getTime(),
-            color: "rgb(62,129,112)",
-            text: "Q3",
-          },
-          {
-            startDate: new Date("2023-09-01T00:00:00").getTime(),
-            endDate: new Date("2023-10-10T00:00:00").getTime(),
-            color: "#d35d30",
-            text: "Q4 2023",
-          },
-          {
-            startDate: new Date("2023-10-20T00:00:00").getTime(),
-            endDate: new Date("2023-11-05T00:00:00").getTime(),
-            color: "#d35d30",
-            text: "Holiday",
-          },
-        ],
-      },
-      Group2: {
-        label: "Group 2",
-        color: "#eee",
-        events: [
-          {
-            startDate: new Date("2023-02-01T00:00:00").getTime(),
-            endDate: new Date("2023-04-01T00:00:00").getTime(),
-            color: "#5f6b43",
-            text: "Q1-Q2 2023: Lorem ipsum dolor.",
-          },
-          {
-            startDate: new Date("2023-04-15T00:00:00").getTime(),
-            endDate: new Date("2023-06-01T00:00:00").getTime(),
-            color: "rgb(144,103,229)",
-            text: "Q2 2023.",
-          },
-          {
-            startDate: new Date("2023-07-01T00:00:00").getTime(),
-            endDate: new Date("2023-08-20T00:00:00").getTime(),
-            color: "rgb(62,129,112)",
-            text: "Q3 2023.",
-          },
-          {
-            startDate: new Date("2023-09-10T00:00:00").getTime(),
-            endDate: new Date("2023-10-05T00:00:00").getTime(),
-            color: "#d35d30",
-            text: "Q4 2023",
-          },
-        ],
-      },
-      Milestones: {
-        label: "",
-        color: "#d35d30",
-        chartType: "milestones",
-        height: 80,
-        events: [
-          {
-            milestoneType: "drone",
-            timestamp: new Date("2023-01-01T00:00:00").getTime(),
-            text: "Test",
-            size: 32,
-          },
-          {
-            milestoneType: "test",
-            timestamp: new Date("2023-02-14T00:00:00").getTime(),
-            text: "Sample text",
-          },
-          {
-            milestoneType: "test",
-            timestamp: new Date("2023-03-08T00:00:00").getTime(),
-            text: "Longer sample text",
-          },
-        ],
-      },
-      Milestones2: {
-        label: "",
-        color: "rgba(2,122,205,0.6)",
-        chartType: "milestones",
-        height: 60,
-        dots: true,
-        events: [
-          {
-            milestoneType: "drone",
-            timestamp: new Date("2023-02-01T00:00:00").getTime(),
-            text: "Test",
-            size: 32,
-          },
-          {
-            milestoneType: "test",
-            timestamp: new Date("2023-04-14T00:00:00").getTime(),
-            text: "Sample text",
-          },
-          {
-            milestoneType: "test",
-            timestamp: new Date("2023-06-08T00:00:00").getTime(),
-            text: "Longer sample text",
-          },
-        ],
-      },
-    }
-
+  data() {
     return {
-      eventsGroups
+      minDate: 0,
+      endDate: Infinity,
+      weekIndex: -1,
+      totalWeeks: 0,
+      ranges: [],
+      eventGroups: {}
+    }
+  },
+  mounted() {
+    this.formatSegments()
+  },
+  watch: {
+    segments: "formatSegments",
+    weekIndex: "setEventGroups",
+  },
+  computed: {
+    weekStart() {
+      console.log(new Date(this.minDate + (604800000 * this.weekIndex)))
+      return this.minDate + (604800000 * this.weekIndex)
+    },
+    weekEnd() {
+      return this.minDate + (604800000 * (this.weekIndex + 1))
+    }
+  },
+  methods: {
+    setEventGroups() {      
+      this.eventGroups = days.reduce((acc: any, day, index)=> {
+        acc[day] = {
+          label: day,
+          color: "#eee",
+          events: this.ranges.filter((range: any) => {
+            return (new Date(range.startDate)).getDay() === index && 
+              (this.weekStart <= range.startDate ||
+              this.weekEnd >= range.endDate)
+          }).map((range: any) => {
+            return {
+              ...range, 
+              startDate: this.updateDatePreserveTime(new Date(this.weekStart), range.startDate),
+              endDate: this.updateDatePreserveTime(new Date(this.weekStart), range.endDate),
+            }
+          })
+        }
+        return acc
+      }, {})
+
+      console.log(this.eventGroups)
+    },
+    formatSegments() {
+      let maxDate = -Infinity 
+      let minDate = Infinity
+
+      const ranges = this.segments.reduce((acc, range) => {
+        let startDate = (new Date(range.start_date)).getTime()
+        let endDate = (new Date(range.end_date)).getTime()
+        if (startDate > endDate) {
+          const temp = startDate
+          startDate = endDate
+          endDate = temp
+        }
+        acc.push({
+          startDate: startDate,
+          endDate: endDate,
+          color: "#5f6b43",
+          text: "",
+        })
+
+        maxDate = Math.max(maxDate, endDate)
+        minDate = Math.min(minDate, startDate)
+
+        return acc
+      }, [])
+
+      this.minDate = this.getStartOfWeek(new Date(minDate))
+      this.endDate = this.getEndOfWeek(new Date(maxDate)) 
+      this.ranges = ranges
+
+      this.totalWeeks = Math.round((this.endDate - this.minDate) / 604800000) // total milliseconds in a week
+
+      if (this.weekIndex === -1) {
+        this.weekIndex = this.totalWeeks - 1
+      }
+
+      return {ranges, maxDate: this.getEndOfWeek(new Date(maxDate)), minDate: this.getStartOfWeek(new Date(minDate))}
+    },
+    getStartOfWeek(date = new Date(), weekStart = 0) {
+      const day = date.getDay()
+      const diff = (day < weekStart ? 7 : 0) + day - weekStart
+      const startOfWeek = new Date(date.getFullYear(), date.getMonth(), date.getDate() - diff);
+      startOfWeek.setHours(0, 0, 0, 0)
+      return startOfWeek.getTime()
+    },
+    getEndOfWeek(date = new Date(), weekStart = 0) {
+      const startOfWeek = this.getStartOfWeek(date, weekStart)
+      const endOfWeek = new Date(startOfWeek + 7 * 24 * 60 * 60 * 1000 - 1)
+      return endOfWeek.getTime()
+    },
+    timestampToIsoString(timestamp: number) {
+      console.log(this.formatDateToISO(new Date(timestamp)))
+      return this.formatDateToISO(new Date(timestamp))
+    },
+    nextDay(timestamp: number) {
+      return timestamp + 86400000 - 1
+    },
+    updateDatePreserveTime(sourceDate: Date, targetDate: Date): Date {
+      const updatedDate = new Date(targetDate)
+      updatedDate.setFullYear(sourceDate.getFullYear())
+      updatedDate.setMonth(sourceDate.getMonth())
+      updatedDate.setDate(sourceDate.getDate())
+      return updatedDate;
+    },
+    formatDateToISO(date: Date): string {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      const seconds = String(date.getSeconds()).padStart(2, '0');
+
+      return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+    },
+    formatToHHMM(date: Date): string {
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      return `${hours}:${minutes}`;
+    },
+    displayRange(range: any) {
+      const start = new Date(range.startDate)
+      const end = new Date(range.endDate)
+
+      return `${this.formatToHHMM(start)} - ${this.formatToHHMM(end)}`
     }
   }
 })
 </script>
 
 <template>
-  <div class="timeline-container" style="width: 1000px;">
+  <div v-if="weekIndex !== -1" class="timeline-container" style="width: 100%">
     <ETimeline
-        :events-groups="eventsGroups"
+        :events-groups="eventGroups"
         :bar-height="35"
-        :bar-y-padding="5"
-        min-date="2021-01-15"
-        max-date="2025-10-15"
+        :bar-y-padding="15"
+        :only-hourly="true"
+        :min-date="timestampToIsoString(weekStart)"
+        :max-date="timestampToIsoString(nextDay(weekStart))"
         dark
-    />
+    >
+      <template #eventTooltip="{event, active}">
+        <div 
+          v-if="active" 
+          class="e-timeline__event-tooltip e-border e-rounded e-px-2 -e-left-2/4 e-relative e-bg-gray-900 e-text-white e-border-gray-700"
+        >
+          {{ displayRange(event) }}
+        </div>
+      </template>
+
+      <template #tooltip="{timestamp, hoveredGroupId, active}">
+        <div 
+          v-if="active" 
+          class="e-timeline__tooltip e-border e-rounded e-px-2 -e-left-2/4 e-relative e-bg-gray-900 e-text-white e-border-gray-700"
+        >
+          hello {{ hoveredGroupId }}
+        </div>
+      </template>
+    </ETimeline>
   </div>
 </template>
 

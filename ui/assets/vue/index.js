@@ -3,6 +3,7 @@ import "vite/modulepreload-polyfill"
 import { h } from "vue"
 import { createLiveVue, findComponent } from "live_vue"
 import { install } from "vue-demi"
+import evercamUi from '@evercam/ui/vue3'
 
 export default createLiveVue({
   // name will be passed as-is in v-component of the .vue HEEX component
@@ -25,6 +26,7 @@ export default createLiveVue({
     install()
     const app = createApp({ render: () => h(component, props, slots) })
     app.use(plugin)
+    app.use(evercamUi)
     // add your own plugins here
     // app.use(pinia)
     app.mount(el)
