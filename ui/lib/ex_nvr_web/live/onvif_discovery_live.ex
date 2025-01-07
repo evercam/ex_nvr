@@ -27,7 +27,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
 
   def handle_event("discover", %{"discover_settings" => params}, socket) do
     with {:ok, %{timeout: timeout} = validated_params} <- validate_discover_params(params),
-         discovered_devices <- Discovery.probe(probe_timeout: :timer.seconds(timeout)) do
+         discovered_devices <- ExNVR.Devices.discover(probe_timeout: :timer.seconds(timeout)) do
       onvif_devices =
         Enum.map(
           discovered_devices,

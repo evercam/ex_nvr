@@ -151,7 +151,7 @@ defmodule ExNVR.Devices do
 
   @spec discover(Keyword.t()) :: [Onvif.Discovery.Probe.t()]
   def discover(options) do
-    Onvif.Discovery.probe(options)
+    Onvif.Discovery.probe(options) |> Enum.uniq()
   end
 
   defp copy_device_file(%Device{type: :file, stream_config: stream_config} = device) do
