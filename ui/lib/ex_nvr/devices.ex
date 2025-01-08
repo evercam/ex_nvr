@@ -151,7 +151,13 @@ defmodule ExNVR.Devices do
 
   @spec discover(Keyword.t()) :: [Onvif.Discovery.Probe.t()]
   def discover(options) do
-    Onvif.Discovery.probe(options) |> Enum.uniq()
+    Onvif.Discovery.probe(options)
+    |> Enum.uniq()
+    |> Enum.map(fn probe ->
+      # Ignore link local addresses
+      address = Enum.reject(probe.address, &String.starts_with?(&1, "http://169.254"))
+      %{probe | address: address}
+    end)
   end
 
   defp copy_device_file(%Device{type: :file, stream_config: stream_config} = device) do

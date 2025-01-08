@@ -7,7 +7,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
   require Membrane.Logger
 
   alias Ecto.Changeset
-  alias Onvif.{Devices, Discovery, Media}
+  alias Onvif.{Devices, Media}
 
   @scope_regex ~r[^onvif://www.onvif.org/(name|hardware)/(.*)]
 
@@ -135,7 +135,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
   defp get_onvif_device(probe, _username, _password) do
     probe.address
     |> List.first()
-    |> Onvif.Device.new(nil, nil)
+    |> Onvif.Device.new("", "")
     |> Map.put(:scopes, probe.scopes)
   end
 
