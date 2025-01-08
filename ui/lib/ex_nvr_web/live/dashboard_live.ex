@@ -6,7 +6,6 @@ defmodule ExNVRWeb.DashboardLive do
   alias ExNVR.Recordings
   alias ExNVR.Model.Device
   alias ExNVRWeb.Router.Helpers, as: Routes
-  alias ExNVRWeb.TimelineComponent
 
   @durations [
     {"2 Minutes", "120"},
@@ -181,6 +180,8 @@ defmodule ExNVRWeb.DashboardLive do
   end
 
   def mount(_params, _session, socket) do
+    Recordings.subscribe_to_recording_events()
+
     socket
     |> assign_devices()
     |> assign(
@@ -199,7 +200,6 @@ defmodule ExNVRWeb.DashboardLive do
     stream = Map.get(params, "stream", socket.assigns[:stream]) || "sub_stream"
 
     socket
-    |> assign(count: 0)
     |> assign(current_device: device)
     |> assign(stream: stream, start_date: nil)
     |> assign_streams()
@@ -212,8 +212,12 @@ defmodule ExNVRWeb.DashboardLive do
     |> then(&{:noreply, &1})
   end
 
-  def handle_event("inc", %{"value" => diff}, socket) do
-    {:noreply, update(socket, :count, &(&1 + diff))}
+  def handle_info(_msg, socket) do
+    socket =
+      socket
+      |> assign_runs()
+
+    {:noreply, socket}
   end
 
   def handle_event("switch_device", %{"device" => device_id}, socket) do
