@@ -155,8 +155,9 @@ defmodule ExNVR.Devices do
     |> Enum.uniq()
     |> Enum.map(fn probe ->
       # Ignore link local addresses
-      address = Enum.reject(probe.address, &String.starts_with?(&1, "http://169.254"))
-      %{probe | address: address}
+      probe.address
+      |> Enum.reject(&String.starts_with?(&1, ["http://169.254", "https://169.254"]))
+      |> then(&Map.put(probe, :address, &1))
     end)
   end
 
