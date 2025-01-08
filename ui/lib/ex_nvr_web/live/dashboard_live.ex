@@ -102,17 +102,10 @@ defmodule ExNVRWeb.DashboardLive do
           >
             Device is not recording, live view is not available
           </div>
-          <.live_component
-            module={TimelineComponent}
-            id="tl"
-            segments={Jason.encode!(@segments)}
-            timezone={@timezone}
-          />
           <.vue
             segments={@segments}
-            v-component="Counter"
+            v-component="Timeline"
             v-socket={@socket}
-            v-on:inc={JS.push("inc")}
           />
         </div>
       </div>
