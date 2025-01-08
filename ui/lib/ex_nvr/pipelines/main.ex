@@ -461,6 +461,6 @@ defmodule ExNVR.Pipelines.Main do
   end
 
   defp ice_servers() do
-    Application.get_env(:ex_nvr, :ice_servers, "[]") |> Jason.decode()
+    Application.get_env(:ex_nvr, :ice_servers, "[]") |> Jason.decode(keys: :atoms)
   end
 end

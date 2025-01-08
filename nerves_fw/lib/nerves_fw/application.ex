@@ -20,6 +20,7 @@ defmodule ExNVR.Nerves.Application do
 
   # List all child processes to be supervised
   def children(:host) do
+    []
   end
 
   def children(_target) do
