@@ -1,4 +1,4 @@
-defmodule ExNVR.Pipeline.Output.Storage.MediaUtils do
+defmodule ExNVR.MediaUtils do
   @moduledoc false
 
   alias Membrane.Buffer
@@ -38,6 +38,16 @@ defmodule ExNVR.Pipeline.Output.Storage.MediaUtils do
     |> Stream.reject(&(&1 == "" or pss?(codec, &1)))
     |> Stream.map(&<<byte_size(&1)::32, &1::binary>>)
     |> Enum.join()
+  end
+
+  @spec decode_last(Enumerable.t(Buffer.t()), ExNVR.Decoder.t()) :: Buffer.t()
+  def decode_last(buffers, decoder) do
+    buffers
+    |> Stream.map(&ExNVR.Decoder.decode!(decoder, &1))
+    |> Enum.to_list()
+    |> Kernel.++(ExNVR.Decoder.flush!(decoder))
+    |> List.flatten()
+    |> List.last()
   end
 
   defp pss?(:h264, <<_prefix::3, type::5, _rest::binary>>) when type == 7 or type == 8, do: true

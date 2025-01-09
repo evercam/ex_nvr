@@ -59,7 +59,7 @@ defmodule ExNVR.Pipeline.Output.Thumbnailer do
     out_height = div(state.thumbnail_width * format.height, format.width)
     out_height = out_height - rem(out_height, 2)
 
-    {decoder, decoder_state} = Decoder.new!(codec)
+    decoder = Decoder.new!(codec)
     scaler = Image.Scaler.new!(format.width, format.height, state.thumbnail_width, out_height)
 
     {[],
@@ -67,7 +67,6 @@ defmodule ExNVR.Pipeline.Output.Thumbnailer do
        state
        | thumbnail_height: out_height,
          decoder: decoder,
-         decoder_state: decoder_state,
          scaler: scaler
      }}
   end
@@ -99,7 +98,7 @@ defmodule ExNVR.Pipeline.Output.Thumbnailer do
   end
 
   defp decode(state, buffer) do
-    with {:ok, []} <- state.decoder.decode(state.decoder_state, buffer) do
+    with {:ok, []} <- Decoder.decode(state.decoder, buffer) do
       state.decoder.flush(state.decoder_state)
     end
   end
