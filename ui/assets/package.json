@@ -22,7 +22,7 @@
     "vue-tsc": "^2.1.10"
   },
   "dependencies": {
-    "@evercam/ui": "0.0.63-vue-demi.0.2",
+    "@evercam/ui": "0.0.63-vue-demi.0.3",
     "d3": "^7.8.5",
     "heroicons": "^2.2.0",
     "live_vue": "file:../deps/live_vue",

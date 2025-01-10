@@ -105,6 +105,7 @@ defmodule ExNVRWeb.DashboardLive do
             segments={@segments}
             v-component="Timeline"
             v-socket={@socket}
+            v-on:run-clicked={JS.push("run-clicked")}
           />
         </div>
       </div>
@@ -237,10 +238,10 @@ defmodule ExNVRWeb.DashboardLive do
     {:noreply, push_patch(socket, to: route, replace: true)}
   end
 
-  def handle_event("datetime", %{"value" => value}, socket) do
+  def handle_event("run-clicked", %{"timestamp" => timestamp}, socket) do
     current_datetime = socket.assigns.start_date
     timezone = socket.assigns.current_device.timezone
-    new_datetime = parse_datetime(value, timezone)
+    new_datetime = parse_datetime(timestamp, timezone)
 
     socket =
       if current_datetime != new_datetime do
