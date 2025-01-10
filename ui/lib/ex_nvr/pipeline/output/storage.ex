@@ -6,7 +6,7 @@ defmodule ExNVR.Pipeline.Output.Storage do
   require ExNVR.Utils
   require Membrane.Logger
 
-  import __MODULE__.MediaUtils
+  import ExNVR.MediaUtils
 
   alias ExMP4.Writer
   alias ExNVR.Model.Device

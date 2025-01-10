@@ -3,10 +3,7 @@ defmodule ExNVR.Elements.CVSBuffererTest do
 
   use ExUnit.Case
 
-  require Membrane.Pad
-
   alias ExNVR.Elements.CVSBufferer
-  alias Membrane.Pad
 
   @ctx %{}
   @stream_format %Membrane.H264{width: 1080, height: 720}
@@ -14,30 +11,22 @@ defmodule ExNVR.Elements.CVSBuffererTest do
   test "Buffer CVS (coded video sequence)" do
     assert {[], state} = CVSBufferer.handle_init(@ctx, nil)
 
-    assert {[], %{stream_format: @stream_format} = state} =
+    assert {[], %{decoder: decoder, width: 1080, height: 720} = state} =
              CVSBufferer.handle_stream_format(:input, @stream_format, @ctx, state)
 
-    {state, buffers} =
-      Enum.reduce(1..10, {state, []}, fn idx, {state, buffers} ->
-        key_frame? = rem(idx, 4) == 0
-        buffer = generate_buffer(key_frame?)
+    assert is_struct(decoder, ExNVR.Decoder)
 
-        buffers = if key_frame?, do: [buffer], else: [buffer | buffers]
+    Enum.reduce(1..10, {state, []}, fn idx, {state, buffers} ->
+      key_frame? = rem(idx, 4) == 0
+      buffer = generate_buffer(key_frame?)
 
-        assert {[], %{cvs: ^buffers} = state} =
-                 CVSBufferer.handle_buffer(:input, buffer, @ctx, state)
+      buffers = if key_frame?, do: [buffer], else: [buffer | buffers]
 
-        {state, buffers}
-      end)
+      assert {[], %{cvs: ^buffers} = state} =
+               CVSBufferer.handle_buffer(:input, buffer, @ctx, state)
 
-    buffers = Enum.reverse(buffers)
-    pad = Pad.ref(:output, make_ref())
-
-    actions =
-      [stream_format: {pad, @stream_format}] ++
-        Enum.map(buffers, &{:buffer, {pad, &1}}) ++ [end_of_stream: pad]
-
-    assert {^actions, ^state} = CVSBufferer.handle_pad_added(pad, @ctx, state)
+      {state, buffers}
+    end)
   end
 
   defp generate_buffer(key_frame?) do

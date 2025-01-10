@@ -8,7 +8,7 @@ defmodule ExNVR.Elements.CVSBufferer do
   decode it to get the latest snapshot
   """
 
-  use Membrane.Filter
+  use Membrane.Sink
 
   require ExNVR.Utils
 
@@ -24,23 +24,26 @@ defmodule ExNVR.Elements.CVSBufferer do
       ),
     availability: :always
 
-  def_output_pad :output,
-    flow_control: :auto,
-    accepted_format:
-      any_of(
-        %H264{alignment: :au},
-        %H265{alignment: :au}
-      ),
-    availability: :on_request
-
   @impl true
   def handle_init(_ctx, _options) do
-    {[], %{cvs: [], stream_format: nil}}
+    {[], %{cvs: [], decoder: nil, width: 0, height: 0}}
   end
 
   @impl true
   def handle_stream_format(:input, stream_format, _ctx, state) do
-    {[], %{state | stream_format: stream_format}}
+    codec =
+      case stream_format do
+        %H264{} -> :h264
+        %H265{} -> :h265
+      end
+
+    {[],
+     %{
+       state
+       | decoder: ExNVR.Decoder.new!(codec),
+         width: stream_format.width,
+         height: stream_format.height
+     }}
   end
 
   @impl true
@@ -54,12 +57,14 @@ defmodule ExNVR.Elements.CVSBufferer do
   end
 
   @impl true
-  def handle_pad_added(Pad.ref(:output, _ref) = pad, _ctx, state) do
-    actions =
+  def handle_parent_notification(:snapshot, _ctx, state) do
+    {:ok, snapshot} =
       state.cvs
       |> Enum.reverse()
-      |> Enum.map(&{:buffer, {pad, &1}})
+      |> ExNVR.MediaUtils.decode_last(state.decoder)
+      |> Map.get(:payload)
+      |> Turbojpeg.yuv_to_jpeg(state.width, state.height, 75, :I420)
 
-    {[stream_format: {pad, state.stream_format}] ++ actions ++ [end_of_stream: pad], state}
+    {[notify_parent: {:snapshot, snapshot}], state}
   end
 end

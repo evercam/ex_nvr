@@ -109,19 +109,13 @@ defmodule ExNVR.Recordings do
     method = Keyword.get(opts, :method, :before)
 
     with {:ok, reader} <- ExMP4.Reader.new(path) do
-      track = ExMP4.Reader.tracks(reader) |> Enum.find(&(&1.type == :video))
+      track = ExMP4.Reader.track(reader, :video)
       offset = ExMP4.Helper.timescalify(offset, :microsecond, track.timescale)
-      samples = read_samples(reader, track, offset, method)
 
-      {decoder, decoder_state} = ExNVR.Decoder.new!(track.media)
-
-      samples
+      reader
+      |> read_samples(track, offset, method)
       |> Stream.map(&%Membrane.Buffer{payload: &1.payload, dts: &1.dts, pts: &1.pts})
-      |> Stream.map(&decoder.decode!(decoder_state, &1))
-      |> Enum.to_list()
-      |> Kernel.++(decoder.flush!(decoder_state))
-      |> List.flatten()
-      |> List.last()
+      |> ExNVR.MediaUtils.decode_last(ExNVR.Decoder.new!(track.media))
       |> then(fn buffer ->
         datetime =
           DateTime.add(

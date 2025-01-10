@@ -126,8 +126,7 @@ defmodule ExNVR.Pipelines.Main do
         child(:hls_sink, %Output.HLS{
           location: Path.join(Utils.hls_dir(device.id), "live"),
           segment_name_prefix: "live"
-        }),
-        child(:snapshooter, ExNVR.Elements.SnapshotBin)
+        })
       ] ++ build_device_spec(device)
 
     # Set device state and make last active run inactive
@@ -252,10 +251,10 @@ defmodule ExNVR.Pipelines.Main do
   end
 
   @impl true
-  def handle_call({:live_snapshot, image_format}, ctx, state) do
+  def handle_call({:live_snapshot, _image_format}, ctx, state) do
     case state.live_snapshot_waiting_pids do
       [] ->
-        {[spec: link_live_snapshot_elements(state, image_format)],
+        {[notify_child: {{:snapshooter, :main_stream}, :snapshot}],
          %{state | live_snapshot_waiting_pids: [ctx.from]}}
 
       pids ->
@@ -338,7 +337,7 @@ defmodule ExNVR.Pipelines.Main do
         |> get_child(:hls_sink),
         get_child(:tee)
         |> via_out(:video_output)
-        |> child({:cvs_bufferer, :main_stream}, ExNVR.Elements.CVSBufferer),
+        |> child({:snapshooter, :main_stream}, ExNVR.Elements.CVSBufferer),
         get_child(:tee)
         |> via_out(:video_output)
         |> child({:stats_reporter, :main_stream}, %VideoStreamStatReporter{
@@ -408,19 +407,6 @@ defmodule ExNVR.Pipelines.Main do
     else
       []
     end
-  end
-
-  defp link_live_snapshot_elements(state, image_format) do
-    ref = make_ref()
-
-    [
-      get_child({:cvs_bufferer, :main_stream})
-      |> via_out(Pad.ref(:output, ref))
-      |> via_in(Pad.ref(:input, ref),
-        options: [format: image_format, encoding: state.main_stream_video_track.encoding]
-      )
-      |> get_child(:snapshooter)
-    ]
   end
 
   defp maybe_update_device_and_report(%{device: %{state: device_state}} = state, device_state),

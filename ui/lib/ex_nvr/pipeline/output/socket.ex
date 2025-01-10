@@ -29,7 +29,7 @@ defmodule ExNVR.Pipeline.Output.Socket do
   alias Membrane.{H264, H265}
 
   def_options encoding: [
-                spec: ExNVR.Pipelines.encoding(),
+                spec: ExNVR.Pipelines.Main.encoding(),
                 description: "The video encoding"
               ]
 

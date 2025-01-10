@@ -53,6 +53,9 @@ defmodule ExNVR.Decoder do
     end
   end
 
+  @type t :: %__MODULE__{mod: module(), state: any()}
+  defstruct [:mod, :state]
+
   @spec new(atom()) :: {:ok, {module(), decoder()}} | error()
   def new(:h264) do
     case H264.init() do
@@ -68,7 +71,16 @@ defmodule ExNVR.Decoder do
     end
   end
 
-  @spec new!(atom()) :: {module(), decoder()}
-  def new!(:h264), do: {H264, H264.init!()}
-  def new!(:h265), do: {H265, H265.init!()}
+  @spec new!(atom()) :: t()
+  def new!(:h264), do: %__MODULE__{mod: H264, state: H264.init!()}
+  def new!(:h265), do: %__MODULE__{mod: H265, state: H265.init!()}
+
+  @spec decode(t(), Buffer.t()) :: {:ok, [Buffer.t()]} | error()
+  def decode(%__MODULE__{mod: mod, state: state}, buffer), do: mod.decode(state, buffer)
+
+  @spec decode!(t(), Buffer.t()) :: [Buffer.t()]
+  def decode!(%__MODULE__{mod: mod, state: state}, buffer), do: mod.decode!(state, buffer)
+
+  @spec flush!(t()) :: [Buffer.t()]
+  def flush!(%__MODULE__{mod: mod, state: state}), do: mod.flush!(state)
 end
