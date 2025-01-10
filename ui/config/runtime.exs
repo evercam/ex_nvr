@@ -70,12 +70,9 @@ if config_env() == :prod do
   log_json? = System.get_env("EXNVR_JSON_LOGGER", "true") == "true"
 
   if log_json? do
-    config :logger_json, :backend,
-      metadata: :all,
-      formatter: LoggerJSON.Formatters.BasicLogger,
-      on_init: :disabled
-
-    config :logger, level: :info, backends: [LoggerJSON]
+    config :logger, :default_handler,
+      level: :info,
+      formatter: {LoggerJSON.Formatters.Basic, []}
   end
 
   config :ex_nvr,
