@@ -8,8 +8,10 @@ export default defineComponent({
   },
   data() {
     return {
-      minDate: "",
+      startDate: "",
       endDate: "",
+      minDate: "2023",
+      maxDate: "2025",
       eventGroups: {Runs: {}},
       barColor: "#4dc007"
     }
@@ -55,8 +57,10 @@ export default defineComponent({
         return acc
       }, [])
 
-      this.minDate = this.formatDateToISO(this.addDay(new Date(minDate), 7))
-      this.endDate = this.formatDateToISO(this.addDay(new Date(maxDate), -7))
+      this.startDate = this.formatDateToISO(new Date(minDate))
+      this.endDate = this.formatDateToISO(new Date(maxDate))
+      this.minDate = this.formatDateToISO(this.addYear(new Date(minDate), -2))
+      this.maxDate = this.formatDateToISO(this.addYear(new Date(maxDate), 2))
 
       return formatedRanges
     },
@@ -70,11 +74,12 @@ export default defineComponent({
 
       return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
     },
-    addDay(date, days) {
-      date.setDate(date.getDate() + 1)
+    addYear(initialDate, years) {
+      const date = new Date(initialDate)
+      date.setFullYear(date.getFullYear() + years)
 
       return date
-    }
+    },
   },
 })
 </script>
@@ -85,8 +90,11 @@ export default defineComponent({
       :events-groups="eventGroups"
       :bar-height="35"
       :bar-y-padding="15"
+      :start-date="startDate"
+      :end-date="endDate"
       :min-date="minDate"
-      :max-date="endDate"
+      :max-date="maxDate"
+      @event-clicked="$emit('run-clicked', $event)"
       dark
     />
   </div>
