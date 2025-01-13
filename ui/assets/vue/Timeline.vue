@@ -90,6 +90,7 @@ export default defineComponent({
       :events-groups="eventGroups"
       :bar-height="35"
       :bar-y-padding="15"
+      :show-labels="false"
       :start-date="startDate"
       :end-date="endDate"
       :min-date="minDate"
