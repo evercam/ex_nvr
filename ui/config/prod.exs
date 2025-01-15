@@ -26,7 +26,7 @@ config :membrane_core,
 
 config :live_vue,
   ssr_module: LiveVue.SSR.NodeJS,
-  ssr: true
+  ssr: false
 
 # Runtime production configuration, including reading
 # of environment variables, is done on config/runtime.exs.

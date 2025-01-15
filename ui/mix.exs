@@ -88,11 +88,11 @@ defmodule ExNVR.MixProject do
       {:circuits_uart, "~> 1.5"},
       {:onvif, github: "hammeraj/onvif", ref: "1b47735"},
       {:slipstream, "~> 1.1.3"},
+      {:live_vue, "~> 0.5.7"},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:mimic, "~> 1.11.0", only: :test},
       {:faker, "~> 0.17", only: :test},
-      {:bypass, "~> 2.1", only: :test},
-      {:live_vue, "~> 0.5.7"}
+      {:bypass, "~> 2.1", only: :test}
     ]
   end
 

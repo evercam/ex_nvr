@@ -213,13 +213,11 @@ defmodule ExNVRWeb.DashboardLive do
     |> then(&{:noreply, &1})
   end
 
-  def handle_info(_msg, socket) do
-    socket =
-      socket
-      |> assign_runs()
-
-    {:noreply, socket}
+  def handle_info({event, nil}, socket) when event in [:delete, :new] do
+    {:noreply, assign_runs(socket)}
   end
+
+  def handle_info(_, socket), do: socket
 
   def handle_event("switch_device", %{"device" => device_id}, socket) do
     route =
