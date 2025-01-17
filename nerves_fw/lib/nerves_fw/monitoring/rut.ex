@@ -15,10 +15,11 @@ defmodule ExNVR.Nerves.Monitoring.RUT do
 
   import Bitwise
 
+  require Logger
   alias Modbux.Tcp.Client
 
-  @connect_interval :timer.seconds(30)
-  @request_interval :timer.minutes(1)
+  @connect_interval to_timeout(second: 30)
+  @request_interval to_timeout(minute: 1)
 
   @requests %{
     serial_number: {:rhr, 0x1, 39, 16},
@@ -45,7 +46,7 @@ defmodule ExNVR.Nerves.Monitoring.RUT do
       data: Map.new(@requests, fn {key, _value} -> {key, nil} end)
     }
 
-    Process.send_after(self(), :connect, 0)
+    Process.send_after(self(), :connect, to_timeout(second: 5))
 
     {:ok, state}
   end

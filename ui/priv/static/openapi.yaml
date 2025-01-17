@@ -1347,6 +1347,9 @@ components:
               type: integer
             available_memory:
               type: integer
+        block_storage:
+          type: object
+          description: Block storage information
         solar_charger:
           $ref: "#/components/schemas/VictronMPPT"
     User:
