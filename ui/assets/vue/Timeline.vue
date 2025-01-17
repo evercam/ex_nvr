@@ -8,8 +8,8 @@ export default defineComponent({
   },
   data() {
     return {
-      startDate: "",
-      endDate: "",
+      startDate: null,
+      endDate: null,
       minDate: "2023",
       maxDate: "2025",
       eventGroups: {Runs: {}},
@@ -57,11 +57,19 @@ export default defineComponent({
         return acc
       }, [])
 
-      this.startDate = this.formatDateToISO(new Date(minDate))
-      this.endDate = this.formatDateToISO(new Date(maxDate))
-      this.minDate = this.formatDateToISO(this.addYear(new Date(minDate), -2))
-      this.maxDate = this.formatDateToISO(this.addYear(new Date(maxDate), 2))
-
+      if (!this.startDate) {
+        if (formatedRanges?.length > 0) {
+          this.startDate = this.formatDateToISO(new Date(minDate))
+          this.endDate = this.formatDateToISO(new Date(maxDate))
+          this.minDate = this.formatDateToISO(this.addYear(new Date(minDate), -2))
+          this.maxDate = this.formatDateToISO(this.addYear(new Date(maxDate), 2))
+        } else {
+          this.startDate = this.formatDateToISO(new Date())
+          this.endDate = this.formatDateToISO(this.addYear(new Date(), 1))
+          this.minDate = this.formatDateToISO(this.addYear(new Date(), -1))
+          this.maxDate = this.formatDateToISO(this.addYear(new Date(), 2))
+        }
+      }
       return formatedRanges
     },
     formatDateToISO(date, spacing = "T") {
@@ -85,7 +93,7 @@ export default defineComponent({
 </script>
 
 <template>
-  <div v-if="eventGroups" class="mt-3" style="width: 100%">
+  <div v-if="eventGroups" class="mt-1" style="width: 100%">
     <ETimeline
       :events-groups="eventGroups"
       :bar-height="35"
@@ -104,9 +112,13 @@ export default defineComponent({
         </div>
       </template>
 
-      <template #eventTooltip="{event, active}">
+      <template #eventTooltip="{event, active, timestamp}">
         <div v-if="active" class="e-border e-rounded e-px-2 -e-left-2/4 e-relative e-bg-gray-900 e-text-white e-border-gray-700 e-p-3">
-          {{ formatDateToISO(new Date(event.startDate), " ") }} > {{ formatDateToISO(new Date(event.endDate), " ") }}
+          <div class="text-center">{{ formatDateToISO(new Date(timestamp), " ") }}</div>
+          <hr
+            class="e-divider e-border-white/[.12]"
+          />
+          {{ formatDateToISO(new Date(event.startDate), " ") }} <> {{ formatDateToISO(new Date(event.endDate), " ") }}
         </div>
       </template>
     </ETimeline>
