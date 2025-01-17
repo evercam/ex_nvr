@@ -15,7 +15,6 @@ defmodule ExNVR.Nerves.Monitoring.RUT do
 
   import Bitwise
 
-  require Logger
   alias Modbux.Tcp.Client
 
   @connect_interval to_timeout(second: 30)
