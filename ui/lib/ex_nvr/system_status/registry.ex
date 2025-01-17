@@ -67,8 +67,21 @@ defmodule ExNVR.SystemStatus.Registry do
       num_cores: :cpu_sup.util([:detailed]) |> elem(0) |> length()
     }
 
-    %State{data | memory: Map.new(:memsup.get_system_memory_data()), cpu: cpu_stats}
+    %State{
+      data
+      | memory: Map.new(:memsup.get_system_memory_data()),
+        cpu: cpu_stats,
+        block_storage: list_block_storages()
+    }
   end
 
   defp cpu_load(value), do: Float.ceil(value / 256, 2)
+
+  defp list_block_storages() do
+    # include MMC, SATA, USB and NVMe drives
+    case ExNVR.Disk.list_drives(major_number: [8, 179, 259]) do
+      {:ok, blocks} -> blocks
+      _ -> []
+    end
+  end
 end

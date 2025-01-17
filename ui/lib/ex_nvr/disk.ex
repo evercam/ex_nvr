@@ -61,23 +61,28 @@ defmodule ExNVR.Disk do
 
   @type t :: %__MODULE__{}
 
+  @type list_opts :: [major_number: [integer()]]
+
   @derive Jason.Encoder
   defstruct [:name, :vendor, :model, :serial, :path, :size, :fs, :hotplug, :tran, :parts]
 
   @doc """
-  List available hard drives
+  List available hard drives.
+
+  The following options may be provided:
+    * `major_number` - Get only drives with this major number. Default is `[8, 259]`.
   """
-  @spec list_drives() :: {:ok, [t()]} | {:error, any()}
-  def list_drives() do
+  @spec list_drives(list_opts()) :: {:ok, [t()]} | {:error, any()}
+  def list_drives(opts \\ []) do
     case :os.type() do
-      {:unix, _} -> list_unix_drives()
+      {:unix, _} -> list_unix_drives(opts)
       _other -> {:error, :not_supported}
     end
   end
 
-  @spec list_drives!() :: [t()]
-  def list_drives!() do
-    case list_drives() do
+  @spec list_drives!(list_opts()) :: [t()]
+  def list_drives!(opts \\ []) do
+    case list_drives(opts) do
       {:ok, drives} -> drives
       {:error, reason} -> raise "cannot list hard drives due to: #{inspect(reason)}"
     end
@@ -90,14 +95,16 @@ defmodule ExNVR.Disk do
 
   def has_filesystem?(%Part{} = part), do: not is_nil(part.fs)
 
-  defp list_unix_drives() do
-    # include only disks with major version of 8 and 259
+  defp list_unix_drives(opts) do
+    # By default retrieve disks with major version of 8 and 259
+    major_numbers = Keyword.get(opts, :major_number, [8, 259])
+
     cmd =
       System.cmd(
         "lsblk",
         [
           "-I",
-          "8,259",
+          Enum.join(major_numbers, ","),
           "-Jbo",
           "NAME,PATH,VENDOR,MODEL,SERIAL,SIZE,HOTPLUG,TRAN,FSTYPE,FSSIZE,FSAVAIL,UUID,RO,MOUNTPOINT"
         ],
@@ -143,8 +150,8 @@ defmodule ExNVR.Disk do
   defp map_fs(device_or_part) do
     %FS{
       type: device_or_part["fstype"],
-      size: device_or_part["fssize"],
-      avail: device_or_part["fsavail"],
+      size: device_or_part["fssize"] |> to_integer(),
+      avail: device_or_part["fsavail"] |> to_integer(),
       uuid: device_or_part["uuid"],
       read_only: device_or_part["ro"],
       mountpoint: device_or_part["mountpoint"]
@@ -159,4 +166,8 @@ defmodule ExNVR.Disk do
       if String.match?(model, pattern), do: manufacturer
     end)
   end
+
+  defp to_integer(nil), do: nil
+  defp to_integer(value) when is_integer(value), do: value
+  defp to_integer(value), do: String.to_integer(value)
 end

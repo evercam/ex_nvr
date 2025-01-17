@@ -9,10 +9,11 @@ defmodule ExNVR.SystemStatus.State do
           version: binary(),
           memory: [{atom(), integer()}],
           cpu: %{load: [float()], num_cores: integer()},
+          block_storage: [ExNVR.Disk.t()],
           solar_charger: VictronMPPT.t() | nil,
           router: map() | nil
         }
 
   @derive Jason.Encoder
-  defstruct [:version, :memory, :cpu, :solar_charger, :router]
+  defstruct [:version, :memory, :cpu, :block_storage, :solar_charger, :router]
 end
