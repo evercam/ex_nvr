@@ -50,7 +50,7 @@
   <!-- Device details -->
   <.card class="p-4 bg-gray-300">
     <h2 class="text-2xl font-bold mb-4 gap-2 dark:text-white">Device Details</h2>
-    <div class="flex flex-wrap items-stretch justify-between content-between p-4 dark:text-white">
+    <div class="flex flex-wrap items-stretch justify-between content-between p-4 text-sm md:text-l dark:text-white">
       <!-- Device Information -->
       <div class="md:w-1/3 p-5 border border-gray-400 card-shadow">
         <h2 class="text-xl font-bold mb-4">Device Information</h2>
@@ -107,31 +107,34 @@
       <!-- Network Interface -->
       <div class="md:w-1/4 p-5 border border-gray-400 card-shadow">
         <h2 class="text-xl font-bold mb-4">Network Interface</h2>
-        <p :if={!@device_details[:network_interface]}>N/A</p>
-        <div :if={@device_details[:network_interface]} class="dark:text-gray-400 mb-4">
+        <p :if={!(@device_details && @device_details.network_interface)}>N/A</p>
+        <div
+          :if={@device_details && @device_details.network_interface}
+          class="dark:text-gray-400 mb-4"
+        >
           <table class="w-full table-auto">
             <tr>
               <td class="font-bold">Name</td>
-              <td class="break-anywhere">{@device_details[:network_interface].info.name}</td>
+              <td class="break-anywhere">{@device_details.network_interface.info.name}</td>
             </tr>
             <tr>
               <td class="font-bold">IP Address</td>
-              <td class="break-anywhere">{ip_address(@device_details[:network_interface])}</td>
+              <td class="break-anywhere">{ip_address(@device_details.network_interface)}</td>
             </tr>
             <tr>
               <td class="font-bold">MTU</td>
-              <td class="break-anywhere">{@device_details[:network_interface].info.mtu}</td>
+              <td class="break-anywhere">{@device_details.network_interface.info.mtu}</td>
             </tr>
             <tr>
               <td class="font-bold">MAC</td>
               <td class="break-anywhere">
-                {@device_details[:network_interface].info.hw_address}
+                {@device_details.network_interface.info.hw_address}
               </td>
             </tr>
             <tr>
               <td class="font-bold">DHCP</td>
               <td class="break-anywhere">
-                {@device_details[:network_interface].ipv4.config.dhcp}
+                {@device_details.network_interface.ipv4.config.dhcp}
               </td>
             </tr>
           </table>
@@ -140,65 +143,184 @@
     </div>
     <!-- Media Profiles -->
     <h2 class="text-2xl font-bold mb-4 dark:text-white">Media Profiles</h2>
-    <div class="flex flex-wrap p-4 dark:text-white">
+    <div :if={@device_details} class="w-full flex flex-wrap items-stretch p-4 dark:text-white">
       <div
-        :for={{profile, stream_uri, snapshot_uri} <- @device_details[:media_profiles] || []}
-        class="w-full flex flex-wrap justify-between mb-5 p-5 card-shadow"
+        :for={
+          %{
+            profile: profile,
+            stream_uri: stream_uri,
+            snapshot_uri: snapshot_uri,
+            update_form: update_form,
+            video_encoder_view_options: encoder_options
+          } = media_profile <-
+            @device_details.media_profiles
+        }
+        class="w-full mb-5 p-5 card-shadow"
       >
-        <h3 class="w-full font-bold text-xl">{profile.name}</h3>
-        <div class="md:w-2/5 p-5 dark:text-gray-400">
-          <table class="w-full table-auto">
-            <tr>
-              <td class="font-bold">Codec</td>
-              <td>{profile.video_encoder_configuration.encoding}</td>
-            </tr>
-            <tr>
-              <td class="font-bold">Profile</td>
-              <td>{profile.video_encoder_configuration.profile}</td>
-            </tr>
-            <tr>
-              <td class="font-bold">Group of Pictures</td>
-              <td>{profile.video_encoder_configuration.gov_length}</td>
-            </tr>
-            <tr>
-              <td class="font-bold">Image Quality</td>
-              <td>{profile.video_encoder_configuration.quality}</td>
-            </tr>
-          </table>
-        </div>
-        <div class="md:w-2/5 p-5 dark:text-gray-400">
-          <table class="w-full table-auto">
-            <tr>
-              <td class="font-bold">Resolution</td>
-              <td>
-                {profile.video_encoder_configuration.resolution.width} x {profile.video_encoder_configuration.resolution.height}
-              </td>
-            </tr>
-            <tr>
-              <td class="font-bold">Constant Bitrate</td>
-              <td>{profile.video_encoder_configuration.rate_control.constant_bitrate}</td>
-            </tr>
-            <tr>
-              <td class="font-bold">Frame rate</td>
-              <td>{profile.video_encoder_configuration.rate_control.frame_rate_limit} fps</td>
-            </tr>
-            <tr>
-              <td class="font-bold">Max Bitrate</td>
-              <td>{profile.video_encoder_configuration.rate_control.bitrate_limit} kbps</td>
-            </tr>
-          </table>
-        </div>
-        <div class="w-full p-5 dark:text-gray-400">
-          <table class="w-full table-auto">
-            <tr>
-              <td class="font-bold">Stream URI</td>
-              <td>{stream_uri}</td>
-            </tr>
-            <tr>
-              <td class="font-bold">Snapshot URI</td>
-              <td>{snapshot_uri}</td>
-            </tr>
-          </table>
+        <.simple_form
+          :if={media_profile.edit_mode}
+          for={update_form}
+          id={"update_profile_#{profile.reference_token}"}
+          phx-submit="update-profile"
+          class="w-full"
+          actions_class="float-right"
+        >
+          <.input field={update_form[:reference_token]} type="hidden" />
+          <div class="w-full flex flex-wrap">
+            <div class="w-full md:w-1/3 pr-5">
+              <.input
+                field={update_form[:encoding]}
+                id={"encoder_config_codec_#{profile.reference_token}"}
+                type="select"
+                label="Encoding"
+                options={codecs(media_profile)}
+                phx-change="encoding-change"
+                required
+              />
+
+              <.input
+                field={update_form[:profile]}
+                id={"encoder_config_profile_#{profile.reference_token}"}
+                type="select"
+                label="Profile"
+                options={encoder_options.profiles}
+              />
+
+              <.input
+                field={update_form[:gov_length]}
+                id={"encoder_config_gov_#{profile.reference_token}"}
+                type="number"
+                label="Gov Length"
+                min={encoder_options.gov_length_min}
+                max={encoder_options.gov_length_max}
+              />
+            </div>
+
+            <div class="w-full md:w-1/3 pr-5">
+              <.input
+                field={update_form[:quality]}
+                id={"encoder_config_quality_#{profile.reference_token}"}
+                type="number"
+                label="Image Quality"
+                min={encoder_options.quality_min}
+                max={encoder_options.quality_max}
+              />
+
+              <.input
+                field={update_form[:resolution]}
+                id={"encoder_config_resolution_#{profile.reference_token}"}
+                type="select"
+                label="Resolution"
+                options={encoder_options.resolutions}
+              />
+            </div>
+
+            <div class="w-full md:w-1/3">
+              <.inputs_for
+                :let={rate_control}
+                field={update_form[:rate_control]}
+                id={"encoder_config_resolution_#{profile.reference_token}"}
+              >
+                <.input
+                  field={rate_control[:bitrate_limit]}
+                  id={"encoder_config_bit_rate_limit_#{profile.reference_token}"}
+                  type="number"
+                  label="Max Bitrate"
+                  min={encoder_options.bitrate_min}
+                  max={encoder_options.bitrate_max}
+                />
+
+                <.input
+                  field={rate_control[:frame_rate_limit]}
+                  id={"encoder_config_frame_rate_#{profile.reference_token}"}
+                  type="select"
+                  label="Frame Rate"
+                  options={encoder_options.frame_rates}
+                />
+              </.inputs_for>
+            </div>
+          </div>
+
+          <:actions>
+            <.button phx-disable-with="Updating...">Update</.button>
+            <.button
+              type="button"
+              phx-click="switch-profile-edit-mode"
+              phx-value-token={profile.reference_token}
+              phx-value-edit="false"
+            >
+              Cancel
+            </.button>
+          </:actions>
+        </.simple_form>
+        <div
+          :if={not media_profile.edit_mode}
+          class="text-sm md:text-l w-full flex flex-wrap justify-between"
+        >
+          <div class="w-full flex justify-between">
+            <h3 class="w-full font-bold text-xl">{profile.name}</h3>
+            <button
+              phx-click="switch-profile-edit-mode"
+              phx-value-token={profile.reference_token}
+              phx-value-edit="true"
+            >
+              <.icon name="hero-pencil-solid" class="w-4 h-4" />
+            </button>
+          </div>
+          <div class="md:w-2/5 p-5 dark:text-gray-400">
+            <table class="w-full table-auto">
+              <tr>
+                <td class="font-bold">Codec</td>
+                <td>{profile.video_encoder_configuration.encoding}</td>
+              </tr>
+              <tr>
+                <td class="font-bold">Profile</td>
+                <td>{profile.video_encoder_configuration.profile}</td>
+              </tr>
+              <tr>
+                <td class="font-bold">Group of Pictures</td>
+                <td>{profile.video_encoder_configuration.gov_length}</td>
+              </tr>
+              <tr>
+                <td class="font-bold">Image Quality</td>
+                <td>{profile.video_encoder_configuration.quality}</td>
+              </tr>
+            </table>
+          </div>
+          <div class="md:w-2/5 p-5 dark:text-gray-400">
+            <table class="w-full table-auto">
+              <tr>
+                <td class="font-bold">Resolution</td>
+                <td>
+                  {profile.video_encoder_configuration.resolution.width} x {profile.video_encoder_configuration.resolution.height}
+                </td>
+              </tr>
+              <tr>
+                <td class="font-bold">Constant Bitrate</td>
+                <td>{profile.video_encoder_configuration.rate_control.constant_bitrate}</td>
+              </tr>
+              <tr>
+                <td class="font-bold">Frame rate</td>
+                <td>{profile.video_encoder_configuration.rate_control.frame_rate_limit} fps</td>
+              </tr>
+              <tr>
+                <td class="font-bold">Max Bitrate</td>
+                <td>{profile.video_encoder_configuration.rate_control.bitrate_limit} kbps</td>
+              </tr>
+            </table>
+          </div>
+          <div class="w-full p-5 dark:text-gray-400">
+            <table class="w-full table-auto">
+              <tr>
+                <td class="font-bold">Stream URI</td>
+                <td class="break-all">{stream_uri}</td>
+              </tr>
+              <tr>
+                <td class="font-bold">Snapshot URI</td>
+                <td class="break-all">{snapshot_uri}</td>
+              </tr>
+            </table>
+          </div>
         </div>
       </div>
     </div>
