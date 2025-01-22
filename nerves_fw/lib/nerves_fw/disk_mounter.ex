@@ -14,6 +14,14 @@ defmodule ExNVR.Nerves.DiskMounter do
     GenServer.call(__MODULE__, {:add_fstab_entry, {uuid, mountpoint, fstype}})
   end
 
+  def list_fstab_entries do
+    GenServer.call(__MODULE__, :list_fstab_entries)
+  end
+
+  def delete_fstab_entries(options) do
+    GenServer.call(__MODULE__, {:delete_fstab_entries, options})
+  end
+
   @impl true
   def init(opts) do
     NervesUEvent.subscribe([])
@@ -37,6 +45,27 @@ defmodule ExNVR.Nerves.DiskMounter do
     mount_all(state)
 
     {:reply, res, state}
+  end
+
+  @impl true
+  def handle_call(:list_fstab_entries, _from, state) do
+    {:reply, File.read!(state.fstab), state}
+  end
+
+  def handle_call({:delete_fstab_entries, options}, _from, state) do
+    uuid = options[:uuid] || ""
+    mountpoint = options[:mountpoint] || ""
+
+    File.read!(state.fstab)
+    |> String.split("\n")
+    |> Enum.reject(fn line ->
+      (uuid != "" and String.starts_with?(line, "UUID=\"#{uuid}\"")) or
+        (mountpoint != "" and String.contains?(line, mountpoint))
+    end)
+    |> Enum.join("\n")
+    |> then(&File.write!(state.fstab, &1))
+
+    {:reply, :ok, state}
   end
 
   @impl true
