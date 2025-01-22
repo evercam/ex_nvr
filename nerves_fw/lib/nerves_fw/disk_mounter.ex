@@ -14,7 +14,7 @@ defmodule ExNVR.Nerves.DiskMounter do
     GenServer.call(__MODULE__, {:add_fstab_entry, {uuid, mountpoint, fstype}})
   end
 
-  def list_fstab_entries do
+  def list_fstab_entries() do
     GenServer.call(__MODULE__, :list_fstab_entries)
   end
 
@@ -52,6 +52,7 @@ defmodule ExNVR.Nerves.DiskMounter do
     {:reply, File.read!(state.fstab), state}
   end
 
+  @impl true
   def handle_call({:delete_fstab_entries, options}, _from, state) do
     uuid = options[:uuid] || ""
     mountpoint = options[:mountpoint] || ""
