@@ -184,13 +184,14 @@ defmodule ExNVRWeb.CoreComponents do
 
   slot :inner_block, required: true
   slot :actions, doc: "the slot for form actions, such as a submit button"
+  attr :actions_class, :string, default: ""
 
   def simple_form(assigns) do
     ~H"""
     <.form :let={f} for={@for} as={@as} {@rest}>
       <div class="mt-10 space-y-8 border-gray-500 bg-gray-300 dark:bg-gray-800">
         {render_slot(@inner_block, f)}
-        <div :for={action <- @actions} class="mt-2 flex items-center justify-between gap-6">
+        <div :for={action <- @actions} class={"mt-2 flex items-center gap-6 " <> @actions_class}>
           {render_slot(action, f)}
         </div>
       </div>
