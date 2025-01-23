@@ -7,7 +7,9 @@ defmodule ExNVRWeb.OnvifDiscoveryLiveTest do
   import Mimic
   import Phoenix.LiveViewTest
 
+  alias Onvif.Devices.Schemas.{NetworkInterface, SystemDateAndTime}
   alias Onvif.Discovery.Probe
+  alias Onvif.Media.Ver20.Schemas.Profile
 
   @probes [
     %Probe{
@@ -37,6 +39,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLiveTest do
     Mimic.copy(Onvif.Media.Ver20.GetProfiles)
     Mimic.copy(Onvif.Media.Ver20.GetStreamUri)
     Mimic.copy(Onvif.Media.Ver10.GetSnapshotUri)
+    Mimic.copy(Onvif.Media.Ver20.GetVideoEncoderConfigurationOptions)
   end
 
   setup %{conn: conn} do
@@ -108,10 +111,10 @@ defmodule ExNVRWeb.OnvifDiscoveryLiveTest do
            password: "pass",
            media_ver10_service_path: "/onvif/Media",
            media_ver20_service_path: "/onvif/Media2",
-           system_date_time: %Onvif.Devices.SystemDateAndTime{
+           system_date_time: %SystemDateAndTime{
              date_time_type: "Manual",
              daylight_savings: "true",
-             time_zone: %Onvif.Devices.SystemDateAndTime.TimeZone{tz: "CST-01:00"}
+             time_zone: %SystemDateAndTime.TimeZone{tz: "CST-01:00"}
            }
          }}
       end)
@@ -119,10 +122,10 @@ defmodule ExNVRWeb.OnvifDiscoveryLiveTest do
       expect(Onvif.Devices.GetNetworkInterfaces, :request, fn _device ->
         {:ok,
          [
-           %Onvif.Device.NetworkInterface{
-             info: %Onvif.Device.NetworkInterface.Info{name: "eth0"},
-             ipv4: %Onvif.Device.NetworkInterface.IPv4{
-               config: %Onvif.Device.NetworkInterface.IPv4.Config{
+           %NetworkInterface{
+             info: %NetworkInterface.Info{name: "eth0"},
+             ipv4: %NetworkInterface.IPv4{
+               config: %NetworkInterface.IPv4.Config{
                  manual: %{address: "192.168.1.100"}
                }
              }
@@ -133,33 +136,33 @@ defmodule ExNVRWeb.OnvifDiscoveryLiveTest do
       expect(Onvif.Media.Ver20.GetProfiles, :request, fn _device ->
         {:ok,
          [
-           %Onvif.Media.Ver20.Profile{
-             reference_token: "Profile_1",
-             name: "mainStream",
-             video_encoder_configuration: %Onvif.Media.Ver20.Profile.VideoEncoder{
-               encoding: :h265,
-               resolution: %Onvif.Media.Ver20.Profile.VideoEncoder.Resolution{
-                 width: 3840,
-                 height: 2160
-               },
-               rate_control: %Onvif.Media.Ver20.Profile.VideoEncoder.RateControl{
-                 constant_bitrate: true,
-                 bitrate_limit: 4096
-               }
-             }
-           },
-           %Onvif.Media.Ver20.Profile{
+           %Profile{
              reference_token: "Profile_2",
              name: "subStream",
-             video_encoder_configuration: %Onvif.Media.Ver20.Profile.VideoEncoder{
+             video_encoder_configuration: %Profile.VideoEncoder{
                encoding: :h264,
-               resolution: %Onvif.Media.Ver20.Profile.VideoEncoder.Resolution{
+               resolution: %Profile.VideoEncoder.Resolution{
                  width: 640,
                  height: 480
                },
-               rate_control: %Onvif.Media.Ver20.Profile.VideoEncoder.RateControl{
+               rate_control: %Profile.VideoEncoder.RateControl{
                  constant_bitrate: false,
                  bitrate_limit: 600
+               }
+             }
+           },
+           %Profile{
+             reference_token: "Profile_1",
+             name: "mainStream",
+             video_encoder_configuration: %Profile.VideoEncoder{
+               encoding: :h265,
+               resolution: %Profile.VideoEncoder.Resolution{
+                 width: 3840,
+                 height: 2160
+               },
+               rate_control: %Profile.VideoEncoder.RateControl{
+                 constant_bitrate: true,
+                 bitrate_limit: 4096
                }
              }
            }
@@ -178,6 +181,47 @@ defmodule ExNVRWeb.OnvifDiscoveryLiveTest do
       end)
       |> expect(:request, fn _device, ["Profile_2"] ->
         {:ok, "http://192.168.1.100:8101/sub"}
+      end)
+
+      expect(Onvif.Media.Ver20.GetVideoEncoderConfigurationOptions, :request, fn _device,
+                                                                                 [
+                                                                                   nil,
+                                                                                   "Profile_1"
+                                                                                 ] ->
+        {:ok,
+         [
+           %Profile.VideoEncoderConfigurationOption{
+             resolutions_available: [],
+             encoding: :h265,
+             gov_length_range: [1, 50],
+             bitrate_range: %Profile.VideoEncoderConfigurationOption.BitrateRange{
+               min: 10,
+               max: 1000
+             },
+             quality_range: %Profile.VideoEncoderConfigurationOption.QualityRange{
+               min: 1,
+               max: 10
+             }
+           }
+         ]}
+      end)
+      |> expect(:request, fn _device, [nil, "Profile_2"] ->
+        {:ok,
+         [
+           %Profile.VideoEncoderConfigurationOption{
+             resolutions_available: [],
+             encoding: :h264,
+             gov_length_range: [1, 25],
+             bitrate_range: %Profile.VideoEncoderConfigurationOption.BitrateRange{
+               min: 10,
+               max: 100
+             },
+             quality_range: %Profile.VideoEncoderConfigurationOption.QualityRange{
+               min: 1,
+               max: 10
+             }
+           }
+         ]}
       end)
 
       :ok

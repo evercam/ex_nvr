@@ -23,13 +23,8 @@ defmodule ExNVRWeb.API.OnvifController do
 
   defp init_device(probe, params) do
     case Onvif.Device.init(probe, params[:username], params[:password]) do
-      {:ok, device} ->
-        device
-
-      {:error, _error} ->
-        address = List.first(probe.address)
-        device = Onvif.Device.new(address, params[:username], params[:password])
-        %{device | scopes: probe.scopes}
+      {:ok, device} -> device
+      {:error, _error} -> probe
     end
   end
 

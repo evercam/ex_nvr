@@ -13,6 +13,13 @@
           max="30"
           label="Timeout (seconds)"
         />
+        <.input
+          field={@discover_form[:ip_addr]}
+          type="select"
+          label="IP Address"
+          prompt="Choose IP address to use"
+          options={ip_addresses()}
+        />
 
         <:actions>
           <.button phx-disable-with="Scanning...">Scan Network</.button>
@@ -228,6 +235,14 @@
                   label="Max Bitrate"
                   min={encoder_options.bitrate_min}
                   max={encoder_options.bitrate_max}
+                />
+
+                <.input
+                  field={rate_control[:constant_bitrate]}
+                  id={"encoder_config_constant_bitrate_#{profile.reference_token}"}
+                  type="select"
+                  label="Constant Bitrate"
+                  options={[{"True", true}, {"False", false}]}
                 />
 
                 <.input

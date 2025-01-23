@@ -53,7 +53,7 @@ defmodule ExNVRWeb.API.OnvifControllerTest do
 
       assert Enum.map(response, & &1["address"]) == [
                "http://192.168.1.100/onvif/device_service",
-               "http://192.168.1.101/onvif/device_service"
+               ["http://192.168.1.101/onvif/device_service"]
              ]
 
       assert Enum.map(response, & &1["manufacturer"]) == ["Hikvision", nil]

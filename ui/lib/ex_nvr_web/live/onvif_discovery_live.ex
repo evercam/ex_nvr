@@ -7,14 +7,16 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
 
   alias Ecto.Changeset
   alias Onvif.{Devices, Media}
-  alias Onvif.Media.Ver20.Profile.VideoEncoder
+  alias Onvif.Devices.Schemas.NetworkInterface
+  alias Onvif.Media.Ver20.Schemas.Profile.VideoEncoder
 
   @scope_regex ~r[^onvif://www.onvif.org/(name|hardware)/(.*)]
 
   @default_discovery_settings %{
     "username" => nil,
     "password" => nil,
-    "timeout" => 5
+    "timeout" => 2,
+    "ip_addr" => nil
   }
 
   defmodule MediaProfile do
@@ -39,8 +41,12 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
   end
 
   def handle_event("discover", %{"discover_settings" => params}, socket) do
-    with {:ok, %{timeout: timeout} = validated_params} <- validate_discover_params(params),
-         discovered_devices <- ExNVR.Devices.discover(probe_timeout: to_timeout(second: timeout)) do
+    with {:ok, validated_params} <- validate_discover_params(params),
+         discovered_devices <-
+           ExNVR.Devices.discover(
+             probe_timeout: to_timeout(second: validated_params[:timeout]),
+             ip_address: validated_params[:ip_addr]
+           ) do
       onvif_devices =
         Enum.map(
           discovered_devices,
@@ -84,17 +90,14 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
     stream_config =
       case device_details.media_profiles do
         [main_stream, sub_stream | _rest] ->
-          {_profile, main_stream_uri, main_snapshot_uri} = main_stream
-          {_profile, sub_stream_uri, _sub_snapshot_uri} = sub_stream
-
           %{
-            stream_uri: main_stream_uri,
-            snapshot_uri: main_snapshot_uri,
-            sub_stream_uri: sub_stream_uri
+            stream_uri: main_stream.stream_uri,
+            snapshot_uri: main_stream.snapshot_uri,
+            sub_stream_uri: sub_stream.stream_uri
           }
 
-        [{_profile, stream_uri, snapshot_uri}] ->
-          %{stream_uri: stream_uri, snapshot_uri: snapshot_uri}
+        [main_stream] ->
+          %{stream_uri: main_stream.stream_uri, snapshot_uri: main_stream.snapshot_uri}
 
         _other ->
           %{}
@@ -202,7 +205,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
   end
 
   defp validate_discover_params(params) do
-    types = %{username: :string, password: :string, timeout: :integer}
+    types = %{username: :string, password: :string, timeout: :integer, ip_addr: :string}
 
     {%{username: "", password: ""}, types}
     |> Changeset.cast(params, Map.keys(types))
@@ -220,10 +223,14 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
   end
 
   defp get_onvif_device(probe, _username, _password) do
-    probe.address
-    |> List.first()
-    |> Onvif.Device.new("", "")
-    |> Map.put(:scopes, probe.scopes)
+    %Onvif.Device{
+      address: List.first(probe.address),
+      manufacturer: scope_value(probe.scopes, "hardware"),
+      model: scope_value(probe.scopes, "name"),
+      username: "",
+      password: "",
+      scopes: probe.scopes
+    }
   end
 
   defp fetch_onvif_details(onvif_device) do
@@ -338,7 +345,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
     end
   end
 
-  defp ip_address(%Onvif.Device.NetworkInterface{ipv4: ipv4}) do
+  defp ip_address(%NetworkInterface{ipv4: ipv4}) do
     if ipv4.config.dhcp, do: ipv4.config.from_dhcp.address, else: ipv4.config.manual.address
   end
 
@@ -349,8 +356,23 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
     )
     |> Enum.reverse()
   end
+
+  defp ip_addresses() do
+    case :inet.getifaddrs() do
+      {:ok, if_addrs} ->
+        if_addrs
+        |> Enum.reject(fn {_name, options} -> is_nil(options[:addr]) end)
+        |> Enum.map(fn {name, options} ->
+          addr = :inet.ntoa(options[:addr]) |> List.to_string()
+          {"#{name} - #{addr}", addr}
+        end)
+
+      _error ->
+        []
+    end
+  end
 end
 
-defimpl Phoenix.HTML.Safe, for: Onvif.Media.Ver20.Profile.VideoEncoder.Resolution do
+defimpl Phoenix.HTML.Safe, for: Onvif.Media.Ver20.Schemas.Profile.VideoEncoder.Resolution do
   def to_iodata(%{width: width, height: height}), do: "#{width}|#{height}"
 end
