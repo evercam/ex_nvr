@@ -224,14 +224,14 @@ defmodule ExNVRWeb.OnvifDiscoveryLiveTest do
          ]}
       end)
 
-      :ok
+      %{discover_params: %{discover_settings: %{username: "admin", password: "pass"}}}
     end
 
-    test "render device details", %{conn: conn} do
+    test "render device details", %{conn: conn, discover_params: params} do
       {:ok, lv, _html} = live(conn, ~p"/onvif-discovery")
 
       lv
-      |> form("#discover_form", %{discover_settings: %{username: "admin", password: "pass"}})
+      |> form("#discover_form", params)
       |> render_submit()
 
       html = lv |> element("li[phx-click='device-details']") |> render_click()
@@ -256,19 +256,22 @@ defmodule ExNVRWeb.OnvifDiscoveryLiveTest do
       end
     end
 
-    test "render cached device details", %{conn: conn} do
+    test "render cached device details", %{conn: conn, discover_params: params} do
       {:ok, lv, _html} = live(conn, ~p"/onvif-discovery")
 
-      lv |> form("#discover_form") |> render_submit()
+      lv |> form("#discover_form") |> render_submit(params)
       lv |> element("li[phx-click='device-details']") |> render_click()
       lv |> element("li[phx-click='device-details']") |> render_click()
     end
 
-    test "redirect to add device form with discovred device details", %{conn: conn} do
+    test "redirect to add device form with discovred device details", %{
+      conn: conn,
+      discover_params: params
+    } do
       {:ok, lv, _html} = live(conn, ~p"/onvif-discovery")
 
       lv
-      |> form("#discover_form", %{discover_settings: %{username: "admin", password: "pass"}})
+      |> form("#discover_form", params)
       |> render_submit()
 
       lv |> element("li[phx-click='device-details']") |> render_click()

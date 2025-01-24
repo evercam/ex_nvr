@@ -274,13 +274,33 @@
         >
           <div class="w-full flex justify-between">
             <h3 class="w-full font-bold text-xl">{profile.name}</h3>
-            <button
-              phx-click="switch-profile-edit-mode"
-              phx-value-token={profile.reference_token}
-              phx-value-edit="true"
-            >
-              <.icon name="hero-pencil-solid" class="w-4 h-4" />
-            </button>
+            <div class="flex">
+              <button
+                class="mr-3"
+                phx-click="reorder-profiles"
+                ,
+                phx-value-token={profile.reference_token}
+                phx-value-direction="up"
+              >
+                <.icon name="hero-chevron-double-up-solid" class="w-4 h-4" />
+              </button>
+              <button
+                class="mr-3"
+                phx-click="reorder-profiles"
+                ,
+                phx-value-token={profile.reference_token}
+                phx-value-direction="down"
+              >
+                <.icon name="hero-chevron-double-down-solid" class="w-4 h-4" />
+              </button>
+              <button
+                phx-click="switch-profile-edit-mode"
+                phx-value-token={profile.reference_token}
+                phx-value-edit="true"
+              >
+                <.icon name="hero-pencil-solid" class="w-4 h-4" />
+              </button>
+            </div>
           </div>
           <div class="md:w-2/5 p-5 dark:text-gray-400">
             <table class="w-full table-auto">
