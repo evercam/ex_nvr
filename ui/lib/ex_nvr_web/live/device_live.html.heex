@@ -56,8 +56,8 @@
               field={@device_form[:url]}
               id="device_url"
               type="text"
-              label="Onvif URL (Base URL)"
-              placeholder="http://192.168.1.100/onvif/device_service"
+              label="HTTP url"
+              placeholder="http://192.168.1.100"
             />
           </div>
           <.input
@@ -116,6 +116,12 @@
               label="Snapshot Uri"
               placeholder="http://camera1:80/snapshot"
             />
+            <.input
+              :if={@device_type == "ip"}
+              field={config[:profile_token]}
+              id="config_profile_token"
+              type="hidden"
+            />
             <div :if={@device_type == "ip"} class="relative flex py-5 items-center">
               <span class="flex-shrink mr-4 text-black dark:text-white">Sub Stream</span>
               <div class="flex-grow border-t border-gray-400"></div>
@@ -127,6 +133,20 @@
               type="text"
               label="RTSP Uri"
               placeholder="rtsp://camera1:554/video/stream2"
+            />
+            <.input
+              :if={@device_type == "ip"}
+              field={config[:sub_snapshot_uri]}
+              id="config_sub_snapshot_uri"
+              type="text"
+              label="Snapshot Uri"
+              placeholder="http://camera1:80/snapshot"
+            />
+            <.input
+              :if={@device_type == "ip"}
+              field={config[:sub_profile_token]}
+              id="config_sub_profile_token"
+              type="hidden"
             />
             <label
               :if={@device_type == "file" && is_nil(@device.id)}

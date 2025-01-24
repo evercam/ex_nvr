@@ -93,11 +93,18 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
           %{
             stream_uri: main_stream.stream_uri,
             snapshot_uri: main_stream.snapshot_uri,
-            sub_stream_uri: sub_stream.stream_uri
+            profile_token: main_stream.profile.reference_token,
+            sub_stream_uri: sub_stream.stream_uri,
+            sub_snapshot_uri: sub_stream.snapshot_uri,
+            sub_profile_token: sub_stream.profile.reference_token
           }
 
         [main_stream] ->
-          %{stream_uri: main_stream.stream_uri, snapshot_uri: main_stream.snapshot_uri}
+          %{
+            stream_uri: main_stream.stream_uri,
+            snapshot_uri: main_stream.snapshot_uri,
+            profile_token: main_stream.profile.reference_token
+          }
 
         _other ->
           %{}
@@ -185,6 +192,12 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
 
         {:noreply, put_flash(socket, :error, "could not update video encoder configuration")}
     end
+  end
+
+  def handle_event("reorder-profiles", %{"token" => token, "direction" => direction}, socket) do
+    socket.assigns.device_details
+    |> Map.update!(:media_profiles, &do_reorder_profiles(&1, token, direction))
+    |> then(&{:noreply, assign(socket, device_details: &1)})
   end
 
   defp assign_discovery_form(socket, params \\ nil) do
@@ -332,6 +345,28 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
     profile.video_encoder_configuration
     |> VideoEncoder.changeset(params)
     |> Ecto.Changeset.apply_action(:update)
+  end
+
+  defp do_reorder_profiles([], _token, _direction), do: []
+
+  defp do_reorder_profiles([head | tail], token, direction) do
+    tail
+    |> Enum.reduce([head], fn media_profile1, [media_profile2 | rest] ->
+      %{profile: p1} = media_profile1
+      %{profile: p2} = media_profile2
+
+      cond do
+        direction == "down" and p2.reference_token == token ->
+          [media_profile2, media_profile1 | rest]
+
+        direction == "up" and p1.reference_token == token ->
+          [media_profile2, media_profile1 | rest]
+
+        true ->
+          [media_profile1, media_profile2 | rest]
+      end
+    end)
+    |> Enum.reverse()
   end
 
   # View functions
