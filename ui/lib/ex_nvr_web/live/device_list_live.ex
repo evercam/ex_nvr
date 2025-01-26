@@ -5,8 +5,8 @@ defmodule ExNVRWeb.DeviceListLive do
 
   import ExNVR.Authorization
 
+  alias ExNVR.Devices
   alias ExNVR.Model.Device
-  alias ExNVR.{Devices, DeviceSupervisor}
 
   def render(assigns) do
     ~H"""
@@ -188,11 +188,7 @@ defmodule ExNVRWeb.DeviceListLive do
     devices = socket.assigns.devices
 
     with %Device{} = device <- Enum.find(devices, &(&1.id == device_id)),
-         {:ok, device} <- Devices.update_state(device, new_state) do
-      if new_state == :recording,
-        do: DeviceSupervisor.start(device),
-        else: DeviceSupervisor.stop(device)
-
+         {:ok, _device} <- Devices.update_state(device, new_state) do
       {:noreply, assign(socket, devices: Devices.list())}
     else
       _other -> {:noreply, put_flash(socket, :error, "could not update device state")}

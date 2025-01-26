@@ -9,8 +9,7 @@ defmodule ExNVRWeb.API.DeviceController do
 
   import ExNVR.Authorization
 
-  alias ExNVR.{Devices, DeviceSupervisor}
-  alias ExNVR.Model.Device
+  alias ExNVR.Devices
   alias Plug.Conn
 
   @spec create(Conn.t(), map()) :: Conn.t() | {:error, Ecto.Changeset.t()}
@@ -19,8 +18,6 @@ defmodule ExNVRWeb.API.DeviceController do
 
     with :ok <- authorize(user, :device, :create),
          {:ok, device} <- Devices.create(params) do
-      if Device.recording?(device), do: DeviceSupervisor.start(device)
-
       conn
       |> put_status(201)
       |> render(:show, device: device, user: conn.assigns.current_user)
@@ -33,21 +30,7 @@ defmodule ExNVRWeb.API.DeviceController do
     user = conn.assigns.current_user
 
     with :ok <- authorize(user, :device, :update),
-         {:ok, updated_device} <- Devices.update(device, params) do
-      cond do
-        device.state != updated_device.state and not Device.recording?(updated_device) ->
-          DeviceSupervisor.stop(updated_device)
-
-        device.state != updated_device.state and Device.recording?(updated_device) ->
-          DeviceSupervisor.start(updated_device)
-
-        Device.config_updated(device, updated_device) and Device.recording?(updated_device) ->
-          DeviceSupervisor.restart(updated_device)
-
-        true ->
-          :ok
-      end
-
+         {:ok, device} <- Devices.update(device, params) do
       render(conn, :show, device: device, user: conn.assigns.current_user)
     end
   end

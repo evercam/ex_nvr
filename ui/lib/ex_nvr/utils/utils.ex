@@ -63,12 +63,16 @@ defmodule ExNVR.Utils do
   """
   @spec system_architecture() :: {binary(), binary(), binary()}
   def system_architecture() do
-    [architecture, _vendor, os, abi] =
-      :erlang.system_info(:system_architecture)
-      |> List.to_string()
-      |> String.split("-")
+    :erlang.system_info(:system_architecture)
+    |> List.to_string()
+    |> String.split("-")
+    |> case do
+      [architecture, _vendor, os, abi] ->
+        {architecture, os, abi}
 
-    {architecture, os, abi}
+      [architecture, _vendor, os] ->
+        {architecture, os, nil}
+    end
   end
 
   # Streaming & Codecs utilities

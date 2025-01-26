@@ -5,8 +5,7 @@ defmodule ExNVR do
 
   import ExNVR.Utils
 
-  alias ExNVR.{Accounts, Devices}
-  alias ExNVR.Model.Device
+  alias ExNVR.Accounts
 
   @first_name "Admin"
   @last_name "Admin"
@@ -15,10 +14,10 @@ defmodule ExNVR do
   Start the main pipeline
   """
   def start() do
-    if run_main_pipeline?() do
+    if Application.get_env(:ex_nvr, :env) != :test do
       create_directories()
       create_admin_user()
-      run_pipelines()
+      ExNVR.Devices.start_all()
     end
   end
 
@@ -50,11 +49,5 @@ defmodule ExNVR do
         System.halt(:abort)
       end
     end
-  end
-
-  defp run_pipelines() do
-    Devices.list()
-    |> Enum.filter(&Device.recording?/1)
-    |> Enum.each(&ExNVR.DeviceSupervisor.start/1)
   end
 end

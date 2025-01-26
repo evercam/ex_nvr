@@ -75,6 +75,7 @@ defmodule ExNVR.Disk do
   @spec list_drives(list_opts()) :: {:ok, [t()]} | {:error, any()}
   def list_drives(opts \\ []) do
     case :os.type() do
+      {:unix, :darwin} -> {:error, :not_supported}
       {:unix, _} -> list_unix_drives(opts)
       _other -> {:error, :not_supported}
     end

@@ -296,12 +296,16 @@ defmodule ExNVR.MixProject do
   end
 
   defp get_target() do
-    [architecture, _vendor, os, abi] =
-      :erlang.system_info(:system_architecture)
-      |> List.to_string()
-      |> String.split("-")
+    :erlang.system_info(:system_architecture)
+    |> List.to_string()
+    |> String.split("-")
+    |> case do
+      [architecture, _vendor, os, abi] ->
+        {architecture, os, abi}
 
-    {architecture, os, abi}
+      [architecture, _vendor, os] ->
+        {architecture, os, nil}
+    end
   end
 
   defp get_debian_arch("x86_64"), do: "amd64"

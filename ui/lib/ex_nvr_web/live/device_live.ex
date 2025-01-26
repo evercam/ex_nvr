@@ -4,7 +4,7 @@ defmodule ExNVRWeb.DeviceLive do
   use ExNVRWeb, :live_view
 
   alias ExMP4.Reader
-  alias ExNVR.{Devices, DeviceSupervisor, RemoteStorages}
+  alias ExNVR.{Devices, RemoteStorages}
   alias ExNVR.Model.Device
 
   def mount(%{"id" => "new"}, _session, socket) do
@@ -130,9 +130,8 @@ defmodule ExNVRWeb.DeviceLive do
     |> handle_uploaded_file(device_params)
     |> Devices.create()
     |> case do
-      {:ok, device} ->
+      {:ok, _device} ->
         info = "Device created successfully"
-        DeviceSupervisor.start(device)
 
         socket
         |> put_flash(:info, info)
@@ -167,11 +166,8 @@ defmodule ExNVRWeb.DeviceLive do
 
   defp do_update_device(socket, device, device_params) do
     case Devices.update(device, device_params) do
-      {:ok, updated_device} ->
+      {:ok, _updated_device} ->
         info = "Device updated successfully"
-
-        if Device.recording?(device) and Device.config_updated(device, updated_device),
-          do: DeviceSupervisor.restart(updated_device)
 
         socket
         |> put_flash(:info, info)

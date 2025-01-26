@@ -11,7 +11,7 @@ defmodule ExNVR.Model.Device do
   @states [:stopped, :streaming, :recording, :failed]
   @camera_vendors ["HIKVISION", "Milesight Technology Co.,Ltd.", "AXIS"]
 
-  @type state :: :stopped | :recording | :failed
+  @type state :: :stopped | :recording | :streaming | :failed
   @type id :: binary()
 
   @type t :: %__MODULE__{}
@@ -46,20 +46,34 @@ defmodule ExNVR.Model.Device do
 
     import Ecto.Changeset
 
+    @type url :: String.t()
+
     @type t :: %__MODULE__{
-            filename: binary(),
+            stream_uri: url(),
+            snapshot_uri: url(),
+            profile_token: String.t(),
+            sub_stream_uri: url(),
+            sub_snapshot_uri: url(),
+            sub_profile_token: String.t(),
+            third_stream_uri: url(),
+            third_profile_token: url(),
+            filename: String.t(),
             temporary_path: Path.t(),
-            duration: Membrane.Time.t(),
-            stream_uri: binary(),
-            sub_stream_uri: binary(),
-            snapshot_uri: binary()
+            duration: Membrane.Time.t()
           }
 
     @primary_key false
     embedded_schema do
+      # I guess we need better names
       field :stream_uri, :string
-      field :sub_stream_uri, :string
       field :snapshot_uri, :string
+      field :profile_token, :string
+      field :sub_stream_uri, :string
+      field :sub_snapshot_uri, :string
+      field :sub_profile_token, :string
+      field :third_stream_uri, :string
+      field :third_profile_token, :string
+      # File settings
       field :filename, :string
       field :temporary_path, :string, virtual: true
       field :duration, :integer
@@ -69,8 +83,11 @@ defmodule ExNVR.Model.Device do
       struct
       |> cast(params, [
         :stream_uri,
-        :sub_stream_uri,
         :snapshot_uri,
+        :profile_token,
+        :sub_stream_uri,
+        :sub_snapshot_uri,
+        :sub_profile_token,
         :filename,
         :temporary_path,
         :duration
@@ -84,6 +101,9 @@ defmodule ExNVR.Model.Device do
       |> Changeset.validate_change(:sub_stream_uri, &validate_uri/2)
       |> Changeset.validate_change(:snapshot_uri, fn :snapshot_uri, snapshot_uri ->
         validate_uri(:snapshot_uri, snapshot_uri, "http")
+      end)
+      |> Changeset.validate_change(:sub_snapshot_uri, fn :sub_snapshot_uri, snapshot_uri ->
+        validate_uri(:sub_snapshot_uri, snapshot_uri, "http")
       end)
     end
 
