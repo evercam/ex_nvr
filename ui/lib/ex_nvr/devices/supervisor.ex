@@ -1,4 +1,4 @@
-defmodule ExNVR.DeviceSupervisor do
+defmodule ExNVR.Devices.Supervisor do
   @moduledoc false
 
   use Supervisor
@@ -6,19 +6,15 @@ defmodule ExNVR.DeviceSupervisor do
   alias ExNVR.Model.Device
   alias ExNVR.Pipelines.Main
 
-  @spec start(Device.t()) :: :ok
+  @spec start(Device.t()) :: DynamicSupervisor.on_start_child()
   def start(device) do
-    if ExNVR.Utils.run_main_pipeline?() do
-      spec = %{
-        id: __MODULE__,
-        start: {Supervisor, :start_link, [__MODULE__, device, [name: supervisor_name(device)]]},
-        restart: :transient
-      }
+    spec = %{
+      id: __MODULE__,
+      start: {Supervisor, :start_link, [__MODULE__, device, [name: supervisor_name(device)]]},
+      restart: :transient
+    }
 
-      DynamicSupervisor.start_child(ExNVR.PipelineSupervisor, spec)
-    end
-
-    :ok
+    DynamicSupervisor.start_child(ExNVR.PipelineSupervisor, spec)
   end
 
   @impl true
@@ -65,7 +61,7 @@ defmodule ExNVR.DeviceSupervisor do
     end
   end
 
-  @spec restart(Device.t()) :: :ok
+  @spec restart(Device.t()) :: DynamicSupervisor.on_start_child()
   def restart(device) do
     stop(device)
     start(device)

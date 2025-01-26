@@ -5,9 +5,10 @@ defmodule ExNVR.Devices do
 
   require Logger
 
+  alias __MODULE__.Supervisor
   alias Ecto.Multi
   alias ExNVR.Model.{Device, Recording, Run}
-  alias ExNVR.{HTTP, Repo, DeviceSupervisor}
+  alias ExNVR.{HTTP, Repo}
   alias ExNVR.Devices.Cameras.HttpClient.{Axis, Hik, Milesight}
 
   import Ecto.Query
@@ -23,8 +24,12 @@ defmodule ExNVR.Devices do
     end)
     |> Repo.transaction()
     |> case do
-      {:ok, %{device: device}} -> {:ok, device}
-      {:error, :device, changeset, _} -> {:error, changeset}
+      {:ok, %{device: device}} ->
+        start_or_stop_supervisor(device, nil)
+        {:ok, device}
+
+      {:error, :device, changeset, _} ->
+        {:error, changeset}
     end
   end
 
@@ -33,6 +38,14 @@ defmodule ExNVR.Devices do
     device
     |> Device.update_changeset(params)
     |> Repo.update()
+    |> case do
+      {:ok, updated_device} ->
+        start_or_stop_supervisor(device, updated_device)
+        {:ok, updated_device}
+
+      error ->
+        error
+    end
   end
 
   @spec update_state(Device.t(), Device.state()) ::
@@ -65,7 +78,7 @@ defmodule ExNVR.Devices do
     |> Multi.delete_all(:runs, Run.with_device(device.id))
     |> Multi.delete(:device, device)
     |> Multi.run(:stop_pipeline, fn _repo, _param ->
-      DeviceSupervisor.stop(device)
+      start_or_stop_supervisor(nil, device)
       {:ok, nil}
     end)
     |> Repo.transaction()
@@ -161,6 +174,42 @@ defmodule ExNVR.Devices do
     end)
   end
 
+  # Supervisor functions
+  def start_all() do
+    if run_pipeline?() do
+      list()
+      |> Enum.filter(&Device.recording?/1)
+      |> Enum.each(&Supervisor.start/1)
+    end
+  end
+
+  defp start_or_stop_supervisor(%Device{} = device, nil) do
+    if device.state != :stopped and run_pipeline?(), do: Supervisor.start(device)
+  end
+
+  defp start_or_stop_supervisor(nil, %Device{} = device) do
+    Supervisor.stop(device)
+  end
+
+  defp start_or_stop_supervisor(%Device{} = device, %Device{} = updated_device) do
+    cond do
+      run_pipeline?() ->
+        :ok
+
+      device.state != updated_device.state and not Device.recording?(updated_device) ->
+        Supervisor.stop(updated_device)
+
+      device.state != updated_device.state and Device.recording?(updated_device) ->
+        Supervisor.start(updated_device)
+
+      Device.config_updated(device, updated_device) and Device.recording?(updated_device) ->
+        Supervisor.restart(updated_device)
+
+      true ->
+        :ok
+    end
+  end
+
   defp copy_device_file(%Device{type: :file, stream_config: stream_config} = device) do
     File.cp!(stream_config.temporary_path, Device.file_location(device))
   end
@@ -198,4 +247,6 @@ defmodule ExNVR.Devices do
         raise "Not implementation module is found for #{inspect(vendor)}"
     end
   end
+
+  def run_pipeline?(), do: ExNVR.Utils.run_main_pipeline?()
 end
