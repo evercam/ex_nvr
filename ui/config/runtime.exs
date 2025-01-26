@@ -1,12 +1,13 @@
 import Config
 
 config :ex_nvr,
-  hls_directory: System.get_env("EXNVR_HLS_DIRECTORY", "./hls"),
   admin_username: System.get_env("EXNVR_ADMIN_USERNAME", "admin@localhost"),
   admin_password: System.get_env("EXNVR_ADMIN_PASSWORD", "P@ssw0rd"),
   download_dir: System.get_env("EXNVR_DOWNLOAD_DIR")
 
 if config_env() == :prod do
+  config :ex_nvr, hls_directory: System.get_env("EXNVR_HLS_DIRECTORY", "./hls")
+
   database_path =
     System.get_env("DATABASE_PATH") ||
       raise """

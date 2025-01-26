@@ -73,14 +73,12 @@ defmodule ExNVR.Devices do
   @spec delete(Device.t()) ::
           :ok | {:error, Ecto.Changeset.t()}
   def delete(device) do
+    start_or_stop_supervisor(nil, device)
+
     Multi.new()
     |> Multi.delete_all(:recordings, Recording.with_device(device.id))
     |> Multi.delete_all(:runs, Run.with_device(device.id))
     |> Multi.delete(:device, device)
-    |> Multi.run(:stop_pipeline, fn _repo, _param ->
-      start_or_stop_supervisor(nil, device)
-      {:ok, nil}
-    end)
     |> Repo.transaction()
     |> case do
       {:ok, _} -> :ok
@@ -193,7 +191,7 @@ defmodule ExNVR.Devices do
 
   defp start_or_stop_supervisor(%Device{} = device, %Device{} = updated_device) do
     cond do
-      run_pipeline?() ->
+      not run_pipeline?() ->
         :ok
 
       device.state != updated_device.state and not Device.recording?(updated_device) ->
