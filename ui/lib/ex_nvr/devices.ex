@@ -127,6 +127,7 @@ defmodule ExNVR.Devices do
     end
   end
 
+  @spec create_device_directories(ExNVR.Model.Device.t()) :: :ok
   def create_device_directories(device) do
     File.mkdir_p!(Device.base_dir(device))
     File.mkdir_p!(Device.recording_dir(device))
@@ -134,6 +135,15 @@ defmodule ExNVR.Devices do
     File.mkdir_p!(Device.bif_dir(device))
     File.mkdir_p!(Device.bif_thumbnails_dir(device))
     File.mkdir_p!(Device.lpr_thumbnails_dir(device))
+  end
+
+  @spec summary() :: list()
+  def summary() do
+    Enum.map(list(), fn device ->
+      Map.take(device, [:id, :name, :state, :type])
+      |> Map.put(:onvif_profiles, onvif_stream_profiles(device))
+      |> Map.put(:stream_stats, stream_stats(device))
+    end)
   end
 
   # IP cameras calls
@@ -173,12 +183,15 @@ defmodule ExNVR.Devices do
   end
 
   # Supervisor functions
+  @spec start_all() :: :ok
   def start_all() do
     if run_pipeline?() do
       list()
       |> Enum.filter(&Device.recording?/1)
       |> Enum.each(&Supervisor.start/1)
     end
+
+    :ok
   end
 
   defp start_or_stop_supervisor(%Device{} = device, nil) do
@@ -246,5 +259,38 @@ defmodule ExNVR.Devices do
     end
   end
 
-  def run_pipeline?(), do: ExNVR.Utils.run_main_pipeline?()
+  defp onvif_stream_profiles(%Device{} = device) do
+    case Device.onvif_device(device) do
+      {:ok, onvif_device} ->
+        config = device.stream_config
+
+        [
+          {:main_stream, do_get_onvif_stream_profile(onvif_device, config.profile_token)},
+          {:sub_stream, do_get_onvif_stream_profile(onvif_device, config.sub_profile_token)}
+        ]
+        |> Enum.reject(&is_nil(elem(&1, 1)))
+        |> Map.new()
+
+      _error ->
+        %{}
+    end
+  end
+
+  defp do_get_onvif_stream_profile(_onvif_device, nil), do: nil
+  defp do_get_onvif_stream_profile(_onvif_device, ""), do: nil
+
+  defp do_get_onvif_stream_profile(onvif_device, profile_token) do
+    case Onvif.Media.Ver20.GetProfiles.request(onvif_device, [profile_token]) do
+      {:ok, [profile]} -> profile
+      _other -> nil
+    end
+  end
+
+  defp stream_stats(device) do
+    if Device.streaming?(device) do
+      ExNVR.Pipelines.Main.get_tracks(device)
+    end
+  end
+
+  defp run_pipeline?(), do: ExNVR.Utils.run_main_pipeline?()
 end

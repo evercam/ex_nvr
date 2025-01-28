@@ -3,24 +3,25 @@ defmodule ExNVRWeb.Application do
 
   use Application
 
-  @cert_file_path "priv/integrated_turn_cert.pem"
+  alias ExNVR.Hardware.SolarCharger.VictronMPPT
 
   @impl true
   def start(_type, _args) do
-    children = [
-      ExNVR.Repo,
-      ExNVR.TokenPruner,
-      {Phoenix.PubSub, name: ExNVR.PubSub},
-      {Finch, name: ExNVR.Finch},
-      {Task.Supervisor, name: ExNVR.TaskSupervisor},
-      {ExNVR.SystemStatus.Supervisor, []},
-      {DynamicSupervisor, [name: ExNVR.PipelineSupervisor, strategy: :one_for_one]},
-      Task.child_spec(fn -> ExNVR.start() end),
-      ExNVRWeb.Telemetry,
-      ExNVRWeb.Endpoint,
-      ExNVRWeb.PromEx,
-      {ExNVRWeb.HlsStreamingMonitor, []}
-    ]
+    children =
+      [
+        ExNVR.Repo,
+        ExNVR.TokenPruner,
+        {Phoenix.PubSub, name: ExNVR.PubSub},
+        {Finch, name: ExNVR.Finch},
+        {Task.Supervisor, name: ExNVR.TaskSupervisor},
+        {ExNVR.SystemStatus, []},
+        {DynamicSupervisor, [name: ExNVR.PipelineSupervisor, strategy: :one_for_one]},
+        Task.child_spec(fn -> ExNVR.start() end),
+        ExNVRWeb.Telemetry,
+        ExNVRWeb.Endpoint,
+        ExNVRWeb.PromEx,
+        {ExNVRWeb.HlsStreamingMonitor, []}
+      ] ++ solar_charger()
 
     opts = [strategy: :one_for_one, name: ExNVRWeb.Supervisor]
     Supervisor.start_link(children, opts)
@@ -32,11 +33,15 @@ defmodule ExNVRWeb.Application do
     :ok
   end
 
-  @impl true
-  def stop(_state) do
-    delete_cert_file()
-    :ok
+  defp solar_charger() do
+    # VE.DIRECT to usb
+    Circuits.UART.enumerate()
+    |> Enum.find(fn {_port, details} ->
+      details[:manufacturer] == "VictronEnergy BV" and details[:vendor_id] == 1027
+    end)
+    |> case do
+      {port, _details} -> [{VictronMPPT, [port: port]}]
+      nil -> []
+    end
   end
-
-  defp delete_cert_file(), do: File.rm(@cert_file_path)
 end

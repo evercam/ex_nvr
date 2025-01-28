@@ -115,11 +115,12 @@ defmodule ExNVR.Hardware.SolarCharger.VictronMPPT do
 
     {:ok, timer_ref} = :timer.send_interval(@reporting_interval, :report)
 
+    ExNVR.SystemStatus.register(:solar_charger)
+
     {:ok,
      %{
        pid: pid,
        data: %__MODULE__{},
-       registry: options[:registry],
        timer: timer_ref,
        datetime: DateTime.utc_now()
      }}
@@ -140,7 +141,8 @@ defmodule ExNVR.Hardware.SolarCharger.VictronMPPT do
         do: nil,
         else: state.data
 
-    send(state.registry, {:solar_charger, data})
+    :telemetry.execute([:system, :status, :solar_charger], %{value: data})
+
     {:noreply, state}
   end
 

@@ -26,8 +26,8 @@ defmodule ExNVR.Nerves.Monitoring.RUT do
     name: {:rhr, 0x1, 71, 16}
   }
 
-  def start_link(registry) do
-    GenServer.start_link(__MODULE__, [registry: registry], name: __MODULE__)
+  def start_link() do
+    GenServer.start_link(__MODULE__, nil, name: __MODULE__)
   end
 
   @spec state() :: map()
@@ -46,6 +46,7 @@ defmodule ExNVR.Nerves.Monitoring.RUT do
     }
 
     Process.send_after(self(), :connect, to_timeout(second: 5))
+    ExNVR.SystemStatus.register(:router)
 
     {:ok, state}
   end
@@ -78,7 +79,7 @@ defmodule ExNVR.Nerves.Monitoring.RUT do
         {name, map_values(name, values)}
       end)
 
-    send(state.registry, {:router, data})
+    :telemetry.execute([:system, :status, :router], %{value: data})
     Process.send_after(self(), :send_requests, @request_interval)
 
     {:noreply, %{state | data: data}}

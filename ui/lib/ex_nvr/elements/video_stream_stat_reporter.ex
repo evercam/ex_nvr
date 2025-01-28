@@ -29,6 +29,11 @@ defmodule ExNVR.Elements.VideoStreamStatReporter do
   end
 
   @impl true
+  def handle_playing(_ctx, state) do
+    {[start_timer: {:report_stats, Time.seconds(10)}], state}
+  end
+
+  @impl true
   def handle_event(:input, %Membrane.Event.Discontinuity{}, _ctx, state) do
     {[], Map.merge(state, init_state())}
   end
@@ -107,6 +112,20 @@ defmodule ExNVR.Elements.VideoStreamStatReporter do
     )
 
     {[], state}
+  end
+
+  @impl true
+  def handle_tick(:report_stats, _ctx, state) do
+    stats = %ExNVR.Pipeline.Track.Stat{
+      width: elem(state.resolution, 0),
+      height: elem(state.resolution, 1),
+      profile: state.profile,
+      recv_bytes: state.total_bytes,
+      total_frames: state.total_frames,
+      gop_size: state.gop_size
+    }
+
+    {[notify_parent: {:stats, stats}], state}
   end
 
   defp init_state() do
