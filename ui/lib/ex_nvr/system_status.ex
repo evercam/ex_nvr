@@ -16,7 +16,7 @@ defmodule ExNVR.SystemStatus do
 
   @spec set(atom(), any()) :: :ok
   def set(pid \\ __MODULE__, key, value) when is_atom(key) do
-    GenServer.call(pid, {:set, key, value})
+    GenServer.cast(pid, {:set, key, value})
   end
 
   @doc """
@@ -48,14 +48,14 @@ defmodule ExNVR.SystemStatus do
   end
 
   @impl true
-  def handle_call({:set, key, value}, _from, state) do
-    {:reply, :ok, put_in(state, [:data, key], value)}
-  end
-
-  @impl true
   def handle_call({:register, key}, _from, state) do
     :telemetry.attach("system-status-#{key}", [:system, :status, key], &__MODULE__.handle_event/4, self())
     {:reply, :ok, state}
+  end
+
+  @impl true
+  def handle_cast({:set, key, value}, state) do
+    {:noreply, put_in(state, [:data, key], value)}
   end
 
   @impl true
