@@ -87,8 +87,12 @@ defmodule ExNVR.Pipelines.Main do
     )
   end
 
-  # Pipeline callbacks
+  @spec get_tracks(Device.t()) :: %{atom() => [ExNVR.Pipeline.Track]}
+  def get_tracks(device) do
+    Pipeline.call(pipeline_pid(device), :tracks)
+  end
 
+  # Pipeline callbacks
   @impl true
   def handle_init(_ctx, options) do
     device = options[:device]
@@ -204,6 +208,18 @@ defmodule ExNVR.Pipelines.Main do
   end
 
   @impl true
+  def handle_child_notification({:stats, stats}, {:stats_reporter, :main_stream}, _ctx, state) do
+    track = state.main_stream_video_track
+    {[], %State{state | main_stream_video_track: %{track | stats: stats}}}
+  end
+
+  @impl true
+  def handle_child_notification({:stats, stats}, {:stats_reporter, :sub_stream}, _ctx, state) do
+    track = state.sub_stream_video_track
+    {[], %State{state | sub_stream_video_track: %{track | stats: stats}}}
+  end
+
+  @impl true
   def handle_child_notification(_notification, _element, _ctx, state) do
     {[], state}
   end
@@ -291,6 +307,16 @@ defmodule ExNVR.Pipelines.Main do
       end
 
     {[reply: :ok, notify_child: {child, message}], state}
+  end
+
+  @impl true
+  def handle_call(:tracks, _ctx, state) do
+    tracks =
+      [{:main_stream, state.main_stream_video_track}, {:sub_stream, state.sub_stream_video_track}]
+      |> Enum.reject(&is_nil(elem(&1, 1)))
+      |> Map.new()
+
+    {[reply: tracks], state}
   end
 
   @impl true

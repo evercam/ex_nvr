@@ -5,7 +5,7 @@ defmodule ExNVRWeb.API.SystemStatusController do
 
   import ExNVR.Authorization
 
-  alias ExNVR.SystemStatus.Supervisor
+  alias ExNVR.SystemStatus
 
   action_fallback ExNVRWeb.API.FallbackController
 
@@ -13,7 +13,7 @@ defmodule ExNVRWeb.API.SystemStatusController do
     user = conn.assigns.current_user
 
     with :ok <- authorize(user, :system, :read) do
-      json(conn, Supervisor.get_system_status())
+      json(conn, SystemStatus.get())
     end
   end
 end

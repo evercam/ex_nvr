@@ -1,29 +1,22 @@
 defmodule ExNVR.SystemStatus.RegistryTest do
   @moduledoc false
 
-  use ExUnit.Case
+  use ExNVR.DataCase
 
   alias ExNVR.Hardware.SolarCharger.VictronMPPT
-  alias ExNVR.SystemStatus.{Registry, State}
+  alias ExNVR.SystemStatus
 
-  test "test registry" do
-    assert {:ok, %{timer: timer_ref, data: %State{}} = state} = Registry.init(interval: 100)
-    assert {:interval, ref} = timer_ref
-    assert is_reference(ref)
+  test "test system status" do
+    assert {:ok, %{data: %{}} = state} = SystemStatus.init(nil)
 
-    assert_receive :collect_metrics, 500
+    assert_receive :collect_system_metrics, 500
 
-    victron_mppt = %VictronMPPT{v: 25_000, i: 1_600}
+    assert {:reply, :ok, state} = SystemStatus.handle_call({:register, :solar_charger}, nil, state)
+    assert {:noreply, %{data: data}} = SystemStatus.handle_info(:collect_system_metrics, state)
 
-    assert {:noreply, %{data: %State{solar_charger: ^victron_mppt}} = state} =
-             Registry.handle_info({:solar_charger, victron_mppt}, state)
-
-    assert {:noreply, %{data: data}} = Registry.handle_info(:collect_metrics, state)
-
-    assert %State{
+    assert %{
              memory: memory,
-             cpu: %{load: load, num_cores: num_cores},
-             solar_charger: ^victron_mppt
+             cpu: %{load: load, num_cores: num_cores}
            } = data
 
     assert is_map(memory)
@@ -33,12 +26,23 @@ defmodule ExNVR.SystemStatus.RegistryTest do
     assert is_number(load15)
     assert is_number(num_cores)
 
-    assert :ok = Registry.terminate(:normal, state)
+    assert :ok = SystemStatus.terminate(:normal, state)
   end
 
-  test "registry gen_server" do
-    assert {:ok, pid} = Registry.start_link(name: __MODULE__)
-    assert %State{} = Registry.get_state(pid)
+  test "System status gen_server" do
+    assert {:ok, pid} = SystemStatus.start_link(name: __MODULE__)
+    assert %{} = SystemStatus.get(__MODULE__)
+
+    SystemStatus.register(__MODULE__, :solar_charger)
+
+    victron_mppt = %VictronMPPT{v: 25_000, i: 1_600}
+    :telemetry.execute([:system, :status, :solar_charger], %{value: victron_mppt})
+
+    assert %{solar_charger: ^victron_mppt} = SystemStatus.get(__MODULE__)
+
+    assert :ok = SystemStatus.set(__MODULE__, :key, :value)
+    assert %{key: :value} = SystemStatus.get(__MODULE__)
+
     assert :ok = GenServer.stop(pid)
     refute Process.alive?(pid)
   end

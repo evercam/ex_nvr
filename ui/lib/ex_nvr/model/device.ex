@@ -288,6 +288,19 @@ defmodule ExNVR.Model.Device do
   @spec states() :: [state()]
   def states(), do: @states
 
+  @spec onvif_device(t()) :: {:ok, Onvif.Device.t()} | {:error, any()}
+  def onvif_device(%__MODULE__{type: :ip} = device) do
+    case http_url(device) do
+      nil ->
+        {:error, :no_url}
+
+      url ->
+        Onvif.Device.new(url, device.credentials.username, device.credentials.password)
+    end
+  end
+
+  def onvif_device(_device), do: {:error, :not_camera}
+
   # Changesets
   def create_changeset(device \\ %__MODULE__{}, params) do
     device
