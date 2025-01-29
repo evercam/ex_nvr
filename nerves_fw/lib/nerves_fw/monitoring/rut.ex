@@ -46,7 +46,6 @@ defmodule ExNVR.Nerves.Monitoring.RUT do
     }
 
     Process.send_after(self(), :connect, to_timeout(second: 5))
-    ExNVR.SystemStatus.register(:router)
 
     {:ok, state}
   end
@@ -79,7 +78,7 @@ defmodule ExNVR.Nerves.Monitoring.RUT do
         {name, map_values(name, values)}
       end)
 
-    :telemetry.execute([:system, :status, :router], %{value: data})
+    ExNVR.SystemStatus.set(:router, data)
     Process.send_after(self(), :send_requests, @request_interval)
 
     {:noreply, %{state | data: data}}

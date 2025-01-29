@@ -19,14 +19,6 @@ defmodule ExNVR.SystemStatus do
     GenServer.cast(pid, {:set, key, value})
   end
 
-  @doc """
-  Handle telemetry events: `[:system, :status, key]`.
-  """
-  @spec register(atom()) :: :ok
-  def register(pid \\ __MODULE__, key) do
-    GenServer.call(pid, {:register, key})
-  end
-
   @impl true
   def init(_options) do
     Process.send_after(self(), :collect_system_metrics, 0)
@@ -48,12 +40,6 @@ defmodule ExNVR.SystemStatus do
   end
 
   @impl true
-  def handle_call({:register, key}, _from, state) do
-    :telemetry.attach("system-status-#{key}", [:system, :status, key], &__MODULE__.handle_event/4, self())
-    {:reply, :ok, state}
-  end
-
-  @impl true
   def handle_cast({:set, key, value}, state) do
     {:noreply, put_in(state, [:data, key], value)}
   end
@@ -67,10 +53,6 @@ defmodule ExNVR.SystemStatus do
   @impl true
   def handle_info(_message, state) do
     {:noreply, state}
-  end
-
-  def handle_event([:system, :status, key], %{value: data}, _metadata, pid) do
-    __MODULE__.set(pid, key, data)
   end
 
   defp do_collect_metrics(data) do
