@@ -10,8 +10,8 @@ defmodule ExNVR.SystemStatus do
   end
 
   @spec get(pid() | atom()) :: map()
-  def get(pid \\ __MODULE__) do
-    GenServer.call(pid, :get)
+  def get(pid \\ __MODULE__, timeout \\ to_timeout(second: 20)) do
+    GenServer.call(pid, :get, timeout)
   end
 
   @spec set(atom(), any()) :: :ok
