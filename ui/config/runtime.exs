@@ -77,7 +77,11 @@ if config_env() == :prod do
   end
 
   config :ex_nvr,
-    enable_reverse_proxy: System.get_env("ENABLE_REVERSE_PROXY", "false") == "true"
+    enable_reverse_proxy: System.get_env("ENABLE_REVERSE_PROXY", "false") == "true",
+    remote_connection: [
+      uri: System.get_env("REMOTE_CONNECTOR_URI"),
+      token: System.get_env("REMOTE_CONNECTOR_TOKEN")
+    ]
 
   # ## Configuring the mailer
   #

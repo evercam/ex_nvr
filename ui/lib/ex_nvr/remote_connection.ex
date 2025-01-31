@@ -51,7 +51,7 @@ defmodule ExNVR.RemoteConnection do
 
   @impl Slipstream
   def handle_info(:send_system_status, socket) do
-    push(socket, @topic, "health", ExNVR.SystemStatus.get())
+    push(socket, @topic, "health", ExNVR.SystemStatus.get_all())
     {:noreply, socket}
   end
 
@@ -62,7 +62,7 @@ defmodule ExNVR.RemoteConnection do
 
   @impl Slipstream
   def handle_disconnect(_reason, socket) do
-    :timer.cancel(socket.assigns.timer_ref)
+    :timer.cancel(socket.assigns[:timer_ref])
     reconnect(socket)
   end
 

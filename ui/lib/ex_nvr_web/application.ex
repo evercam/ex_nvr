@@ -21,7 +21,7 @@ defmodule ExNVRWeb.Application do
         ExNVRWeb.Endpoint,
         ExNVRWeb.PromEx,
         {ExNVRWeb.HlsStreamingMonitor, []}
-      ] ++ solar_charger()
+      ] ++ solar_charger() ++ remote_connector()
 
     opts = [strategy: :one_for_one, name: ExNVRWeb.Supervisor]
     Supervisor.start_link(children, opts)
@@ -42,6 +42,19 @@ defmodule ExNVRWeb.Application do
     |> case do
       {port, _details} -> [{VictronMPPT, [port: port]}]
       nil -> []
+    end
+  end
+
+  defp remote_connector() do
+    options = Application.get_env(:ex_nvr, :remote_connection, [])
+
+    if uri = Keyword.get(options, :uri) do
+      token = options[:token]
+      uri = if token, do: "#{uri}?token=#{token}", else: uri
+
+      [{ExNVR.RemoteConnection, [uri: uri]}]
+    else
+      []
     end
   end
 end

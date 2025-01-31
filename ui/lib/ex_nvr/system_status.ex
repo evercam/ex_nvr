@@ -9,9 +9,14 @@ defmodule ExNVR.SystemStatus do
     GenServer.start_link(__MODULE__, options, name: options[:name] || __MODULE__)
   end
 
-  @spec get(pid() | atom()) :: map()
-  def get(pid \\ __MODULE__, timeout \\ to_timeout(second: 20)) do
+  @spec get_all(pid() | atom()) :: map()
+  def get_all(pid \\ __MODULE__, timeout \\ to_timeout(second: 20)) do
     GenServer.call(pid, :get, timeout)
+  end
+
+  @spec get(atom(), pid() | atom(), timeout()) :: term()
+  def get(key, pid \\ __MODULE__, timeout \\ to_timeout(second: 20)) do
+    GenServer.call(pid, {:get, key}, timeout)
   end
 
   @spec set(atom(), any()) :: :ok
@@ -36,6 +41,18 @@ defmodule ExNVR.SystemStatus do
   @impl true
   def handle_call(:get, _from, state) do
     data = Map.put(state.data, :devices, ExNVR.Devices.summary())
+    {:reply, data, state}
+  end
+
+  @impl true
+  def handle_call({:get, key}, _from, state) do
+    data =
+      if key == :devices do
+        Map.put(state.data, :devices, ExNVR.Devices.summary())
+      else
+        Map.get(state.data, key)
+      end
+
     {:reply, data, state}
   end
 

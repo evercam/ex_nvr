@@ -64,7 +64,7 @@ defmodule ExNVRWeb.PromEx.SystemStatus do
   end
 
   def solar_charger() do
-    if solar_charger = Map.get(SystemStatus.get(), :solar_charger) do
+    if solar_charger = SystemStatus.get(:solar_charger) do
       execute_solar_charger_info_event(solar_charger)
       execute_solar_charger_voltage_event(solar_charger)
       execute_solar_charger_current_event(solar_charger)

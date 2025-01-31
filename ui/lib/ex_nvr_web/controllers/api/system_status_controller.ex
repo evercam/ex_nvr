@@ -13,7 +13,7 @@ defmodule ExNVRWeb.API.SystemStatusController do
     user = conn.assigns.current_user
 
     with :ok <- authorize(user, :system, :read) do
-      json(conn, SystemStatus.get())
+      json(conn, SystemStatus.get_all())
     end
   end
 end

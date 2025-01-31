@@ -30,15 +30,17 @@ defmodule ExNVR.SystemStatus.RegistryTest do
 
   test "System status gen_server" do
     assert {:ok, pid} = SystemStatus.start_link(name: __MODULE__)
-    assert %{} = SystemStatus.get(__MODULE__)
+    assert %{} = SystemStatus.get_all(__MODULE__)
 
     victron_mppt = %VictronMPPT{v: 25_000, i: 1_600}
     SystemStatus.set(__MODULE__, :solar_charger, victron_mppt)
 
-    assert %{solar_charger: ^victron_mppt} = SystemStatus.get(__MODULE__)
+    assert %{solar_charger: ^victron_mppt} = SystemStatus.get_all(__MODULE__)
 
     assert :ok = SystemStatus.set(__MODULE__, :key, :value)
-    assert %{key: :value} = SystemStatus.get(__MODULE__)
+    assert %{key: :value} = SystemStatus.get_all(__MODULE__)
+
+    assert %{num_cores: _num_cores, load: _load} = SystemStatus.get(:cpu, __MODULE__)
 
     assert :ok = GenServer.stop(pid)
     refute Process.alive?(pid)
