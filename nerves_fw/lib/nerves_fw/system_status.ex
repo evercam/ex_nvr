@@ -44,4 +44,9 @@ defmodule ExNVR.Nerves.SystemStatus do
     Process.send_after(self(), :collect_system_metrics, to_timeout(second: 30))
     {:noreply, state}
   end
+
+  @impl true
+  def handle_info(_msg, state) do
+    {:noreply, state}
+  end
 end
