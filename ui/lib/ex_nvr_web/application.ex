@@ -46,7 +46,7 @@ defmodule ExNVRWeb.Application do
   end
 
   defp remote_connector() do
-    options = Application.get_env(:ex_nvr, :remote_connection, [])
+    options = Application.get_env(:ex_nvr, :remote_server, [])
 
     if uri = Keyword.get(options, :uri) do
       token = options[:token]

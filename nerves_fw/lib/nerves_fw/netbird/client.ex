@@ -56,13 +56,13 @@ defmodule ExNVR.Nerves.Netbird.Client do
 
     case run_cmd(args) do
       {:ok, output} ->
-        output =
+        result =
           case Jason.decode(output) do
-            {:ok, json} -> json
-            {:error, _error} -> output
+            {:ok, json} -> {:ok, json}
+            {:error, _error} -> {:error, :needs_login}
           end
 
-        {:reply, {:ok, output}, state}
+        {:reply, result, state}
 
       error ->
         {:reply, error, state}

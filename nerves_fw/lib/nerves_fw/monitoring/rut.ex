@@ -78,7 +78,6 @@ defmodule ExNVR.Nerves.Monitoring.RUT do
         {name, map_values(name, values)}
       end)
 
-    ExNVR.SystemStatus.set(:router, data)
     Process.send_after(self(), :send_requests, @request_interval)
 
     {:noreply, %{state | data: data}}

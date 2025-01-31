@@ -5,6 +5,8 @@ defmodule ExNVR.SystemStatus do
 
   use GenServer
 
+  @serial_number_file "/sys/firmware/devicetree/base/serial-number"
+
   def start_link(options) do
     GenServer.start_link(__MODULE__, options, name: options[:name] || __MODULE__)
   end
@@ -32,7 +34,8 @@ defmodule ExNVR.SystemStatus do
 
     data = %{
       version: Application.spec(:ex_nvr, :vsn) |> to_string(),
-      hostname: List.to_string(hostname)
+      hostname: List.to_string(hostname),
+      serial_number: serial_number()
     }
 
     {:ok, %{data: data}}
@@ -92,6 +95,14 @@ defmodule ExNVR.SystemStatus do
     case ExNVR.Disk.list_drives(major_number: [8, 179, 259]) do
       {:ok, blocks} -> blocks
       _ -> []
+    end
+  end
+
+  defp serial_number() do
+    if File.exists?(@serial_number_file) do
+      @serial_number_file
+      |> File.read!()
+      |> String.replace(<<0>>, "")
     end
   end
 end

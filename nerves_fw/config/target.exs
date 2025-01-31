@@ -16,6 +16,13 @@ config :ex_nvr, enable_reverse_proxy: true
 
 config :ex_nvr, ice_servers: System.get_env("EXNVR_ICE_SERVERS", "[]")
 
+# Remote connection via websocket
+config :ex_nvr,
+  remote_server: [
+    uri: System.get_env("EXNVR_REMOTE_SERVER_URI"),
+    token: System.get_env("EXNVR_REMOTE_SERVER_TOKEN")
+  ]
+
 url = URI.parse(System.get_env("EXNVR_URL", "http://localhost:4000"))
 
 check_origin =
@@ -151,6 +158,17 @@ config :ex_nvr_fw, :remote_configurer,
   url: System.get_env("REMOTE_CONFIGURER_URL", "http://localhost:4000"),
   token: System.get_env("REMOTE_CONFIGURER_TOKEN"),
   api_version: System.get_env("REMOTE_CONFIGURER_VERSION")
+
+config :logger, :keen_loki_logger,
+  level: :info,
+  format: "$metadata level=$level $message",
+  metadata: [:request_id, :file, :module, :function],
+  max_buffer: 10,
+  loki_host: "http://127.0.0.1:3100",
+  # basic_auth_user: "lokiuser",
+  # basic_auth_password: "lokipassword",
+  # finch_protocols: [:http2],
+  mint_conn_opts: []
 
 # Import target specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.

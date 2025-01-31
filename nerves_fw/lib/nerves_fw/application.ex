@@ -29,7 +29,8 @@ defmodule ExNVR.Nerves.Application do
       {ExNVR.Nerves.DiskMounter, []},
       {ExNVR.Nerves.GrafanaAgent, grafana_agent_config()},
       {ExNVR.Nerves.RemoteConfigurer, Application.get_env(:ex_nvr_fw, :remote_configurer)},
-      {ExNVR.Nerves.Monitoring.RUT, []}
+      {ExNVR.Nerves.Monitoring.RUT, []},
+      {ExNVR.Nerves.SystemStatus, []}
     ]
   end
 
