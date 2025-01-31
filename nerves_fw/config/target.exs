@@ -159,17 +159,6 @@ config :ex_nvr_fw, :remote_configurer,
   token: System.get_env("REMOTE_CONFIGURER_TOKEN"),
   api_version: System.get_env("REMOTE_CONFIGURER_VERSION")
 
-config :logger, :keen_loki_logger,
-  level: :info,
-  format: "$metadata level=$level $message",
-  metadata: [:request_id, :file, :module, :function],
-  max_buffer: 10,
-  loki_host: "http://127.0.0.1:3100",
-  # basic_auth_user: "lokiuser",
-  # basic_auth_password: "lokipassword",
-  # finch_protocols: [:http2],
-  mint_conn_opts: []
-
 # Import target specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
 # Uncomment to use target specific configurations
