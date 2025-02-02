@@ -20,8 +20,9 @@ defmodule ExNVRWeb.Application do
         ExNVRWeb.Telemetry,
         ExNVRWeb.Endpoint,
         ExNVRWeb.PromEx,
-        {ExNVRWeb.HlsStreamingMonitor, []}
-      ] ++ solar_charger() ++ remote_connector()
+        {ExNVRWeb.HlsStreamingMonitor, []},
+        {VictronMPPT, []}
+      ] ++ remote_connector()
 
     opts = [strategy: :one_for_one, name: ExNVRWeb.Supervisor]
     Supervisor.start_link(children, opts)
@@ -31,18 +32,6 @@ defmodule ExNVRWeb.Application do
   def config_change(changed, _new, removed) do
     ExNVRWeb.Endpoint.config_change(changed, removed)
     :ok
-  end
-
-  defp solar_charger() do
-    # VE.DIRECT to usb
-    Circuits.UART.enumerate()
-    |> Enum.find(fn {_port, details} ->
-      details[:manufacturer] == "VictronEnergy BV" and details[:vendor_id] == 1027
-    end)
-    |> case do
-      {port, _details} -> [{VictronMPPT, [port: port]}]
-      nil -> []
-    end
   end
 
   defp remote_connector() do

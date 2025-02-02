@@ -27,7 +27,7 @@ defmodule ExNVR.Nerves.Monitoring.RUT do
     gsm_operator_name: {:rhr, 0x1, 23, 16},
   }
 
-  def start_link() do
+  def start_link(_options) do
     GenServer.start_link(__MODULE__, nil, name: __MODULE__)
   end
 

@@ -14,6 +14,7 @@ defmodule ExNVR.Hardware.SolarCharger.VictronMPPT do
     * Phoenix Charger
     * Smart BuckBoost
   """
+  require Logger
 
   use GenServer
 
@@ -99,29 +100,40 @@ defmodule ExNVR.Hardware.SolarCharger.VictronMPPT do
   @last_data_update_in_seconds 30
 
   def start_link(options) do
-    GenServer.start_link(__MODULE__, options)
+    GenServer.start_link(__MODULE__, options, name: options[:name])
   end
 
   @impl true
-  def init(options) do
+  def init(_options) do
     {:ok, pid} = Circuits.UART.start_link()
 
-    :ok =
-      Circuits.UART.open(pid, options[:port],
-        speed: @speed,
-        active: true,
-        framing: {Circuits.UART.Framing.Line, separator: "\r\n"}
-      )
-
-    {:ok, timer_ref} = :timer.send_interval(@reporting_interval, :report)
+    Process.send_after(self(), :try_connect, 0)
 
     {:ok,
      %{
        pid: pid,
        data: %__MODULE__{},
-       timer: timer_ref,
+       timer: nil,
        datetime: DateTime.utc_now()
      }}
+  end
+
+  @impl true
+  def handle_info(:try_connect, state) do
+    Circuits.UART.enumerate()
+    |> Enum.find(fn {_port, details} ->
+      details[:manufacturer] == "VictronEnergy BV" and details[:vendor_id] == 1027
+    end)
+    |> case do
+      {port, _details} ->
+        Logger.info("Found MPPT controller at port: #{port}")
+        {:noreply, do_connect(port, state)}
+
+      nil ->
+        Logger.info("No victron MPPT is connected, probing again in 1 minute...")
+        Process.send_after(self(), :try_connect, to_timeout(minute: 1))
+        {:noreply, state}
+    end
   end
 
   @impl true
@@ -153,6 +165,18 @@ defmodule ExNVR.Hardware.SolarCharger.VictronMPPT do
   def terminate(_reason, state) do
     Circuits.UART.close(state.pid)
     :timer.cancel(state.timer)
+  end
+
+  defp do_connect(port, state) do
+    :ok =
+      Circuits.UART.open(state.pid, port,
+        speed: @speed,
+        active: true,
+        framing: {Circuits.UART.Framing.Line, separator: "\r\n"}
+      )
+
+    {:ok, timer_ref} = :timer.send_interval(@reporting_interval, :report)
+    %{state | timer: timer_ref}
   end
 
   defp do_handle_message(%__MODULE__{} = data, message) do
