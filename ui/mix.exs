@@ -84,7 +84,7 @@ defmodule ExNVR.MixProject do
       {:plug_cowboy, "~> 2.5"},
       {:corsica, "~> 2.1"},
       {:logger_json, "~> 6.1"},
-      {:flop_phoenix, "~> 0.23.0"},
+      {:flop_phoenix, "~> 0.24.0"},
       {:prom_ex, "~> 1.11.0"},
       {:reverse_proxy_plug, "~> 3.0"},
       {:circuits_uart, "~> 1.5"},
