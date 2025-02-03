@@ -57,7 +57,7 @@ defmodule ExNVR.MixProject do
       {:membrane_funnel_plugin, "~> 0.9.1"},
       {:ex_webrtc, "~> 0.7.0"},
       {:ex_libsrtp, "~> 0.7.0"},
-      {:ex_m3u8, "~> 0.14.2"},
+      {:ex_m3u8, "~> 0.15.1"},
       {:connection, "~> 1.1.0"},
       {:tzdata, "~> 1.1"},
       {:turbojpeg, "~> 0.4.0"},
