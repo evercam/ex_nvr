@@ -16,6 +16,13 @@ config :ex_nvr, enable_reverse_proxy: true
 
 config :ex_nvr, ice_servers: System.get_env("EXNVR_ICE_SERVERS", "[]")
 
+# Remote connection via websocket
+config :ex_nvr,
+  remote_server: [
+    uri: System.get_env("EXNVR_REMOTE_SERVER_URI"),
+    token: System.get_env("EXNVR_REMOTE_SERVER_TOKEN")
+  ]
+
 url = URI.parse(System.get_env("EXNVR_URL", "http://localhost:4000"))
 
 check_origin =

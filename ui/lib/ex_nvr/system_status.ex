@@ -5,26 +5,26 @@ defmodule ExNVR.SystemStatus do
 
   use GenServer
 
+  @serial_number_file "/sys/firmware/devicetree/base/serial-number"
+  @model_file "/sys/firmware/devicetree/base/model"
+
   def start_link(options) do
     GenServer.start_link(__MODULE__, options, name: options[:name] || __MODULE__)
   end
 
-  @spec get(pid() | atom()) :: map()
-  def get(pid \\ __MODULE__) do
-    GenServer.call(pid, :get)
+  @spec get_all(pid() | atom()) :: map()
+  def get_all(pid \\ __MODULE__, timeout \\ to_timeout(second: 20)) do
+    GenServer.call(pid, :get, timeout)
+  end
+
+  @spec get(atom(), pid() | atom(), timeout()) :: term()
+  def get(key, pid \\ __MODULE__, timeout \\ to_timeout(second: 20)) do
+    GenServer.call(pid, {:get, key}, timeout)
   end
 
   @spec set(atom(), any()) :: :ok
   def set(pid \\ __MODULE__, key, value) when is_atom(key) do
     GenServer.cast(pid, {:set, key, value})
-  end
-
-  @doc """
-  Handle telemetry events: `[:system, :status, key]`.
-  """
-  @spec register(atom()) :: :ok
-  def register(pid \\ __MODULE__, key) do
-    GenServer.call(pid, {:register, key})
   end
 
   @impl true
@@ -33,10 +33,12 @@ defmodule ExNVR.SystemStatus do
 
     {:ok, hostname} = :inet.gethostname()
 
-    data = %{
-      version: Application.spec(:ex_nvr, :vsn) |> to_string(),
-      hostname: List.to_string(hostname)
-    }
+    data =
+      %{
+        version: Application.spec(:ex_nvr, :vsn) |> to_string(),
+        hostname: List.to_string(hostname)
+      }
+      |> Map.merge(device_info())
 
     {:ok, %{data: data}}
   end
@@ -48,9 +50,15 @@ defmodule ExNVR.SystemStatus do
   end
 
   @impl true
-  def handle_call({:register, key}, _from, state) do
-    :telemetry.attach("system-status-#{key}", [:system, :status, key], &__MODULE__.handle_event/4, self())
-    {:reply, :ok, state}
+  def handle_call({:get, key}, _from, state) do
+    data =
+      if key == :devices do
+        Map.put(state.data, :devices, ExNVR.Devices.summary())
+      else
+        Map.get(state.data, key)
+      end
+
+    {:reply, data, state}
   end
 
   @impl true
@@ -67,10 +75,6 @@ defmodule ExNVR.SystemStatus do
   @impl true
   def handle_info(_message, state) do
     {:noreply, state}
-  end
-
-  def handle_event([:system, :status, key], %{value: data}, _metadata, pid) do
-    __MODULE__.set(pid, key, data)
   end
 
   defp do_collect_metrics(data) do
@@ -93,6 +97,25 @@ defmodule ExNVR.SystemStatus do
     case ExNVR.Disk.list_drives(major_number: [8, 179, 259]) do
       {:ok, blocks} -> blocks
       _ -> []
+    end
+  end
+
+  defp device_info() do
+    [
+      {:serial_number, read_from_file(@serial_number_file)},
+      {:device_model, read_from_file(@model_file)}
+    ]
+    |> Enum.reject(&is_nil(elem(&1, 1)))
+    |> Enum.map(fn {key, value} -> {key, String.replace(value, <<0>>, "")} end)
+    |> Map.new()
+  end
+
+  defp read_from_file(filename) do
+    with true <- File.exists?(filename),
+         {:ok, data} <- File.read(filename) do
+      data
+    else
+      _error -> nil
     end
   end
 end

@@ -23,10 +23,11 @@ defmodule ExNVR.Nerves.Monitoring.RUT do
   @requests %{
     serial_number: {:rhr, 0x1, 39, 16},
     mac_address: {:rhr, 0x1, 55, 16},
-    name: {:rhr, 0x1, 71, 16}
+    name: {:rhr, 0x1, 71, 16},
+    gsm_operator_name: {:rhr, 0x1, 23, 16},
   }
 
-  def start_link() do
+  def start_link(_options) do
     GenServer.start_link(__MODULE__, nil, name: __MODULE__)
   end
 
@@ -46,7 +47,6 @@ defmodule ExNVR.Nerves.Monitoring.RUT do
     }
 
     Process.send_after(self(), :connect, to_timeout(second: 5))
-    ExNVR.SystemStatus.register(:router)
 
     {:ok, state}
   end
@@ -79,7 +79,6 @@ defmodule ExNVR.Nerves.Monitoring.RUT do
         {name, map_values(name, values)}
       end)
 
-    :telemetry.execute([:system, :status, :router], %{value: data})
     Process.send_after(self(), :send_requests, @request_interval)
 
     {:noreply, %{state | data: data}}
