@@ -6,6 +6,7 @@ defmodule ExNVR.SystemStatus do
   use GenServer
 
   @serial_number_file "/sys/firmware/devicetree/base/serial-number"
+  @model_file "/sys/firmware/devicetree/base/model"
 
   def start_link(options) do
     GenServer.start_link(__MODULE__, options, name: options[:name] || __MODULE__)
@@ -32,11 +33,12 @@ defmodule ExNVR.SystemStatus do
 
     {:ok, hostname} = :inet.gethostname()
 
-    data = %{
-      version: Application.spec(:ex_nvr, :vsn) |> to_string(),
-      hostname: List.to_string(hostname),
-      serial_number: serial_number()
-    }
+    data =
+      %{
+        version: Application.spec(:ex_nvr, :vsn) |> to_string(),
+        hostname: List.to_string(hostname)
+      }
+      |> Map.merge(device_info())
 
     {:ok, %{data: data}}
   end
@@ -98,11 +100,22 @@ defmodule ExNVR.SystemStatus do
     end
   end
 
-  defp serial_number() do
-    if File.exists?(@serial_number_file) do
-      @serial_number_file
-      |> File.read!()
-      |> String.replace(<<0>>, "")
+  defp device_info() do
+    [
+      {:serial_number, read_from_file(@serial_number_file)},
+      {:device_model, read_from_file(@model_file)}
+    ]
+    |> Enum.reject(&is_nil(elem(&1, 1)))
+    |> Enum.map(fn {key, value} -> {key, String.replace(value, <<0>>, "")} end)
+    |> Map.new()
+  end
+
+  defp read_from_file(filename) do
+    with true <- File.exists?(filename),
+         {:ok, data} <- File.read(filename) do
+      data
+    else
+      _error -> nil
     end
   end
 end

@@ -10,6 +10,7 @@ defmodule ExNVR.RemoteConnection do
   use Slipstream
 
   @topic "ex_nvr"
+  @send_timeout to_timeout(second: 20)
 
   def start_link(options) do
     Slipstream.start_link(__MODULE__, options, name: __MODULE__)
@@ -22,11 +23,13 @@ defmodule ExNVR.RemoteConnection do
 
   @impl Slipstream
   def handle_connect(socket) do
+    Logger.info("Connected to remote server")
     {:ok, join(socket, @topic)}
   end
 
   @impl Slipstream
   def handle_join(@topic, _response, socket) do
+    Logger.info("Joined topic: #{@topic}")
     {:ok, ref} = :timer.send_interval(to_timeout(minute: 1), :send_system_status)
     {:ok, assign(socket, timer_ref: ref)}
   end
@@ -51,7 +54,8 @@ defmodule ExNVR.RemoteConnection do
 
   @impl Slipstream
   def handle_info(:send_system_status, socket) do
-    push(socket, @topic, "health", ExNVR.SystemStatus.get_all())
+    Logger.info("Sending system status")
+    push(socket, @topic, "health", ExNVR.SystemStatus.get_all(), @send_timeout)
     {:noreply, socket}
   end
 
