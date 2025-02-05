@@ -62,6 +62,11 @@ if enable_ssl do
     ]
 end
 
+config :ex_nvr_fw, :remote_configurer,
+  url: System.get_env("REMOTE_CONFIGURER_URL", "http://localhost:4000"),
+  token: System.get_env("REMOTE_CONFIGURER_TOKEN"),
+  api_version: System.get_env("REMOTE_CONFIGURER_VERSION")
+
 config :logger, backends: [RingLogger]
 
 config :logger, RingLogger, level: :info
@@ -154,10 +159,14 @@ config :nerves_hub_link,
     }
   ]
 
-config :ex_nvr_fw, :remote_configurer,
-  url: System.get_env("REMOTE_CONFIGURER_URL", "http://localhost:4000"),
-  token: System.get_env("REMOTE_CONFIGURER_TOKEN"),
-  api_version: System.get_env("REMOTE_CONFIGURER_VERSION")
+config :nerves_time, :servers, [
+  "time1.google.com",
+  "time2.google.com",
+  "0.pool.ntp.org",
+  "1.pool.ntp.org",
+  "2.pool.ntp.org",
+  "3.pool.ntp.org"
+]
 
 # Import target specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
