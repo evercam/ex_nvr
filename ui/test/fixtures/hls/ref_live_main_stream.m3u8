@@ -7,11 +7,11 @@
 #EXTINF:5.039,
 live_main_stream_7.m4s?stream_id=my_stream_%2B_id&device_id=first-device
 #EXT-X-PROGRAM-DATE-TIME:2023-08-11T10:40:03.028Z
-#EXTINF:11.039,
+#EXTINF:11.038,
 live_main_stream_8.m4s?stream_id=my_stream_%2B_id&device_id=first-device
 #EXT-X-PROGRAM-DATE-TIME:2023-08-11T10:40:10.472Z
 #EXTINF:7.518,
 live_main_stream_9.m4s?stream_id=my_stream_%2B_id&device_id=first-device
 #EXT-X-PROGRAM-DATE-TIME:2023-08-11T10:40:21.549Z
-#EXTINF:11.039,
+#EXTINF:11.038,
 live_main_stream_10.m4s?stream_id=my_stream_%2B_id&device_id=first-device
