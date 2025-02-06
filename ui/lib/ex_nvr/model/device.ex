@@ -281,6 +281,7 @@ defmodule ExNVR.Model.Device do
       {:state, value}, q when is_atom(value) -> where(q, [d], d.state == ^value)
       {:state, values}, q when is_list(values) -> where(q, [d], d.state in ^values)
       {:type, value}, q -> where(q, [d], d.type == ^value)
+      {:mac, mac_addr}, q -> where(q, [d], d.mac == ^mac_addr)
       _, q -> q
     end)
   end

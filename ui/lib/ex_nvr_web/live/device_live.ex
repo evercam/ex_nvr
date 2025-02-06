@@ -30,12 +30,13 @@ defmodule ExNVRWeb.DeviceLive do
 
   def mount(%{"id" => device_id}, _session, socket) do
     device = Devices.get!(device_id)
+    device_params = get_device_params(socket.assigns.flash) |> Map.delete(:name)
 
     {:ok,
      assign(socket,
        device: device,
        disks_data: get_disks_data(),
-       device_form: to_form(Devices.change_device_update(device)),
+       device_form: to_form(Devices.change_device_update(device, device_params)),
        device_type: Atom.to_string(device.type),
        remote_storages: list_remote_storages()
      )}

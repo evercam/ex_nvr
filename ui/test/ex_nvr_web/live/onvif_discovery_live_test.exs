@@ -3,7 +3,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLiveTest do
 
   use ExNVRWeb.ConnCase
 
-  import ExNVR.AccountsFixtures
+  import ExNVR.{AccountsFixtures, DevicesFixtures}
   import Mimic
   import Phoenix.LiveViewTest
 
@@ -123,7 +123,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLiveTest do
         {:ok,
          [
            %NetworkInterface{
-             info: %NetworkInterface.Info{name: "eth0"},
+             info: %NetworkInterface.Info{name: "eth0", hw_address: "aa:bb:cc:00:11:22"},
              ipv4: %NetworkInterface.IPv4{
                config: %NetworkInterface.IPv4.Config{
                  manual: %{address: "192.168.1.100"}
@@ -254,6 +254,8 @@ defmodule ExNVRWeb.OnvifDiscoveryLiveTest do
           ] do
         assert html =~ term
       end
+
+      assert has_element?(lv, "button.hidden", "Update device")
     end
 
     test "render cached device details", %{conn: conn, discover_params: params} do
@@ -288,6 +290,33 @@ defmodule ExNVRWeb.OnvifDiscoveryLiveTest do
       assert device_params.stream_config.stream_uri == "rtsp://192.168.1.100:554/main"
       assert device_params.stream_config.snapshot_uri == "http://192.168.1.100:8101/snapshot"
       assert device_params.vendor == "Evercam"
+    end
+
+    test "redirect to update device", %{conn: conn, discover_params: params} do
+      camera_device_fixture("/tmp", %{name: "Camera 1", mac: "aa:bb:cc:00:11:22"})
+      camera_device_fixture("/tmp", %{name: "Camera 2"})
+      device = camera_device_fixture("/tmp", %{name: "Camera 3", mac: "aa:bb:cc:00:11:22"})
+
+      {:ok, lv, _html} = live(conn, ~p"/onvif-discovery")
+
+      lv
+      |> form("#discover_form", params)
+      |> render_submit()
+
+      html = lv |> element("li[phx-click='device-details']") |> render_click()
+
+      assert html =~ "Camera 1"
+      refute html =~ "Camera 2"
+      assert html =~ "Camera 3"
+
+      refute has_element?(lv, "button.hidden", "Update device")
+      assert has_element?(lv, "button", "Update device")
+
+      assert {:ok, _conn} =
+               lv
+               |> element("a", "Camera 3")
+               |> render_click()
+               |> follow_redirect(conn, ~p"/devices/#{device.id}")
     end
   end
 end

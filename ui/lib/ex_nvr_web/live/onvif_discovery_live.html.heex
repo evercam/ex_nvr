@@ -163,10 +163,43 @@
         />
       </div>
     </div>
-    <div class="w-full pr-5 pb-5 mb-5">
-      <.button :if={@selected_device} phx-click="add-device" class="float-right">
+    <div class="flex flex-row-reverse pr-5">
+      <.button :if={@selected_device} phx-click="add-device">
         Add device
       </.button>
+
+      <.button
+        data-dropdown-toggle="update-device-dropdown"
+        class={
+          ["inline-flex items-center mr-3"] ++
+            if @selected_device && @device_details.devices != [], do: [], else: ["hidden"]
+        }
+        type="button"
+      >
+        Update device <.icon name="hero-chevron-down-solid" class="w-4 h-4 ms-3" />
+      </.button>
+
+      <div
+        id="update-device-dropdown"
+        class="z-10 hidden bg-white divide-y divide-gray-100 rounded-lg shadow-sm w-44 dark:bg-gray-700"
+      >
+        <ul
+          :if={@selected_device}
+          class="py-2 text-sm text-gray-700 dark:text-gray-200"
+          aria-labelledby="dropdownDefaultButton"
+        >
+          <li :for={device <- @device_details.devices}>
+            <a
+              href="#"
+              class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white"
+              phx-click="add-device"
+              phx-value-id={device.id}
+            >
+              {device.name}
+            </a>
+          </li>
+        </ul>
+      </div>
     </div>
   </.card>
 </div>
