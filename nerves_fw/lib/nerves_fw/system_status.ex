@@ -40,6 +40,7 @@ defmodule ExNVR.Nerves.SystemStatus do
     :ok = ExNVR.SystemStatus.set(:hostname, hostname)
     :ok = ExNVR.SystemStatus.set(:router, rut_data)
     :ok = ExNVR.SystemStatus.set(:netbird, netbird_data)
+    :ok = ExNVR.SystemStatus.set(:nerves, true)
 
     Process.send_after(self(), :collect_system_metrics, to_timeout(second: 30))
     {:noreply, state}

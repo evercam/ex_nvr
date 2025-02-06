@@ -35,14 +35,8 @@ defmodule ExNVR.RemoteConnection do
   end
 
   @impl Slipstream
-  def handle_message(@topic, "command", %{"command" => cmd, "args" => args}, socket) do
-    payload =
-      case run_command(cmd, args) do
-        {:ok, output} -> %{status: :ok, payload: output}
-        {:error, output} -> %{status: :error, payload: output}
-      end
-
-    push(socket, @topic, "command-result", payload)
+  def handle_message(@topic, "command", %{"command" => cmd, "args" => args} = params, socket) do
+    run_command(cmd, args, params["ref"])
     {:noreply, socket}
   end
 
@@ -59,9 +53,26 @@ defmodule ExNVR.RemoteConnection do
     {:noreply, socket}
   end
 
+  def handle_info({:command, ref, {status, payload}}, socket) do
+    Logger.info("Sending command result: #{ref}")
+    message = %{ref: ref, status: status, payload: payload}
+
+    with {:error, error} <- push(socket, @topic, "command-result", message) do
+      Logger.error("Error while pushing command result message: #{inspect(error)}")
+    end
+
+    {:noreply, socket}
+  end
+
   @impl Slipstream
   def handle_info(_message, socket) do
     {:noreply, socket}
+  end
+
+  @impl Slipstream
+  def handle_topic_close(topic, _reason, socket) do
+    :timer.cancel(socket.assigns[:timer_ref])
+    rejoin(assign(socket, timer_ref: nil), topic)
   end
 
   @impl Slipstream
@@ -70,18 +81,27 @@ defmodule ExNVR.RemoteConnection do
     reconnect(socket)
   end
 
-  defp run_command(cmd, args) do
-    case System.cmd(cmd, args) do
-      {output, 0} -> {:ok, output}
-      {output, _status} -> {:error, output}
-    end
-  rescue
-    exception ->
-      Logger.error("""
-      Error running command: #{cmd}
-      #{inspect(exception)}
-      """)
+  defp run_command(cmd, args, ref) do
+    pid = self()
 
-      {:error, Exception.message(exception)}
+    spawn(fn ->
+      result =
+        try do
+          case System.cmd(cmd, args) do
+            {output, 0} -> {:ok, output}
+            {output, _status} -> {:error, output}
+          end
+        rescue
+          exception ->
+            Logger.error("""
+            Error running command: #{cmd}
+            #{inspect(exception)}
+            """)
+
+            {:error, Exception.message(exception)}
+        end
+
+      send(pid, {:command, ref, result})
+    end)
   end
 end
