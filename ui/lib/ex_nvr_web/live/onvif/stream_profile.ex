@@ -337,3 +337,7 @@ defmodule ExNVRWeb.Onvif.StreamProfile do
     |> Enum.reverse()
   end
 end
+
+defimpl Phoenix.HTML.Safe, for: Onvif.Media.Ver20.Schemas.Profile.VideoEncoder.Resolution do
+  def to_iodata(%{width: width, height: height}), do: "#{width}|#{height}"
+end

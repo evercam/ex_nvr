@@ -53,7 +53,7 @@ defmodule ExNVR.Devices do
   def update_state(%Device{} = device, state), do: __MODULE__.update(device, %{state: state})
 
   @spec list() :: [Device.t()]
-  @spec list(map()) :: [Device.t()]
+  @spec list(map() | Keyword.t()) :: [Device.t()]
   def list(params \\ %{}), do: Repo.all(Device.filter(params) |> order_by([d], d.inserted_at))
 
   @spec ip_cameras() :: [Device.t()]

@@ -25,7 +25,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
   end
 
   defmodule CameraDetails do
-    defstruct onvif_device: nil, network_interface: nil, media_profiles: []
+    defstruct onvif_device: nil, network_interface: nil, media_profiles: [], devices: []
   end
 
   def mount(_params, _session, socket) do
@@ -78,7 +78,9 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
     end
   end
 
-  def handle_event("add-device", _params, socket) do
+  def handle_event("add-device", params, socket) do
+    device_id = params["id"] || "new"
+
     selected_device = socket.assigns.selected_device
     device_details = socket.assigns.device_details
 
@@ -116,7 +118,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
       stream_config: stream_config,
       credentials: %{username: selected_device.username, password: selected_device.password}
     })
-    |> redirect(to: ~p"/devices/new")
+    |> redirect(to: ~p"/devices/#{device_id}")
     |> then(&{:noreply, &1})
   end
 
@@ -205,6 +207,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
     %CameraDetails{onvif_device: onvif_device}
     |> get_network_interface()
     |> get_profiles()
+    |> get_devices()
   end
 
   defp get_network_interface(%CameraDetails{} = details) do
@@ -225,6 +228,13 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
       _error ->
         details
     end
+  end
+
+  defp get_devices(%{network_interface: nil} = details), do: details
+
+  defp get_devices(%{network_interface: net_interface} = details) do
+    mac_addr = net_interface.info.hw_address
+    %{details | devices: ExNVR.Devices.list(mac: mac_addr)}
   end
 
   defp do_reorder_profiles([], _token, _direction), do: []
@@ -288,8 +298,4 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
         []
     end
   end
-end
-
-defimpl Phoenix.HTML.Safe, for: Onvif.Media.Ver20.Schemas.Profile.VideoEncoder.Resolution do
-  def to_iodata(%{width: width, height: height}), do: "#{width}|#{height}"
 end
