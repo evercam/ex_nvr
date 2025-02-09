@@ -25,8 +25,8 @@ defmodule ExNVR.Pipeline.Output.WebRTC do
     clock_rate: @clock_rate,
     sdp_fmtp_line: %ExSDP.Attribute.FMTP{
       pt: 96,
-      level_asymmetry_allowed: 1,
-      packetization_mode: 0,
+      level_asymmetry_allowed: true,
+      packetization_mode: 1,
       profile_level_id: 0x42E01F
     }
   }
@@ -117,7 +117,7 @@ defmodule ExNVR.Pipeline.Output.WebRTC do
   end
 
   @impl true
-  def handle_buffer(:video, _buffer, _ctx, %{peers: []} = state) do
+  def handle_buffer(:video, _buffer, _ctx, %{peers: peers} = state) when map_size(peers) == 0 do
     {[], state}
   end
 
