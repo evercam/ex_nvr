@@ -1,0 +1,16 @@
+{
+  "name": "ex_nvr",
+  "version": "0.18.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "d3": "^7.8.5",
+    "flowbite": "^3.1.1",
+    "hls.js": "^1.5.15"
+  }
+}
