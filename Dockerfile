@@ -57,7 +57,8 @@ RUN \
   curl \
   libsrtp \
   libjpeg-turbo \
-  coreutils
+  coreutils \
+  util-linux
 
 WORKDIR /app
 

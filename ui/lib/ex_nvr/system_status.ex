@@ -99,6 +99,8 @@ defmodule ExNVR.SystemStatus do
       {:ok, blocks} -> blocks
       _ -> []
     end
+  rescue
+    _error -> []
   end
 
   defp device_info() do
