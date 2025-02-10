@@ -13,7 +13,7 @@ defmodule ExNVRWeb.DeviceListLive do
     <div class="grow">
       <div :if={@current_user.role == :admin} class="ml-4 sm:ml-0">
         <.link href={~p"/devices/new"}>
-          <.button>Add device</.button>
+          <.button class="pl-3 pr-3"><.icon name="hero-plus-solid" class="mr-1" />Add device</.button>
         </.link>
       </div>
 
@@ -38,69 +38,58 @@ defmodule ExNVRWeb.DeviceListLive do
           </div>
         </:col>
         <:action :let={device}>
-          <.button
+          <.three_dot
             :if={@current_user.role == :admin}
             id={"dropdownMenuIconButton_#{device.id}"}
-            data-dropdown-toggle={"dropdownDots_#{device.id}"}
-            class="text-sm ml-3 bg-gray-200 hover:bg-gray-200 text-zinc-900 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-400"
+            dropdown_id={"dropdownDots_#{device.id}"}
+          />
+          <div
+            id={"dropdownDots_#{device.id}"}
+            class="z-10 hidden text-left bg-white divide-y divide-gray-100 rounded-lg shadow w-44 dark:bg-gray-700 dark:divide-gray-600"
           >
-            <svg
-              class="w-5 h-5"
-              aria-hidden="true"
-              fill="currentColor"
-              viewBox="0 0 20 20"
-              xmlns="http://www.w3.org/2000/svg"
+            <ul
+              class="py-2 text-sm text-gray-700 dark:text-gray-200"
+              aria-labelledby={"dropdownMenuIconButton_#{device.id}"}
             >
-              <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
-            </svg>
-            <div
-              id={"dropdownDots_#{device.id}"}
-              class="z-10 hidden text-left bg-white divide-y divide-gray-100 rounded-lg shadow w-44 dark:bg-gray-700 dark:divide-gray-600"
-            >
-              <ul
-                class="py-2 text-sm text-gray-700 dark:text-gray-200"
-                aria-labelledby={"dropdownMenuIconButton_#{device.id}"}
-              >
-                <li>
-                  <.link
-                    href={~p"/devices/#{device.id}"}
-                    class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white"
-                  >
-                    Update
-                  </.link>
-                </li>
-                <li>
-                  <.link
-                    phx-click={show_modal("delete-device-modal-#{device.id}")}
-                    phx-value-device={device.id}
-                    class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white"
-                  >
-                    Delete
-                  </.link>
-                </li>
-                <li>
-                  <.link
-                    :if={not Device.recording?(device)}
-                    phx-click="start-recording"
-                    phx-value-device={device.id}
-                    class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white"
-                  >
-                    Start recording
-                  </.link>
-                </li>
-                <li>
-                  <.link
-                    :if={Device.recording?(device)}
-                    phx-click="stop-recording"
-                    phx-value-device={device.id}
-                    class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white"
-                  >
-                    Stop recording
-                  </.link>
-                </li>
-              </ul>
-            </div>
-          </.button>
+              <li>
+                <.link
+                  href={~p"/devices/#{device.id}"}
+                  class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white"
+                >
+                  Update
+                </.link>
+              </li>
+              <li>
+                <.link
+                  phx-click={show_modal("delete-device-modal-#{device.id}")}
+                  phx-value-device={device.id}
+                  class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white"
+                >
+                  Delete
+                </.link>
+              </li>
+              <li>
+                <.link
+                  :if={not Device.recording?(device)}
+                  phx-click="start-recording"
+                  phx-value-device={device.id}
+                  class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white"
+                >
+                  Start recording
+                </.link>
+              </li>
+              <li>
+                <.link
+                  :if={Device.recording?(device)}
+                  phx-click="stop-recording"
+                  phx-value-device={device.id}
+                  class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white"
+                >
+                  Stop recording
+                </.link>
+              </li>
+            </ul>
+          </div>
         </:action>
         <:action :let={device}>
           <.modal id={"delete-device-modal-#{device.id}"}>

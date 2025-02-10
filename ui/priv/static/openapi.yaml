@@ -2,7 +2,7 @@ openapi: 3.0.0
 info:
   title: ExNVR API
   description: Manage ExNVR via API endpoints
-  version: 0.17.0
+  version: 0.18.0
 servers:
   - url: '{protocol}://{host}:{port}'
     variables:
@@ -1347,11 +1347,28 @@ components:
               type: integer
             available_memory:
               type: integer
+        devices:
+          type: array
+          items:
+            type: object
+          description: Information and stats about the devices (e.g. cameras).
         block_storage:
           type: object
           description: Block storage information
         solar_charger:
           $ref: "#/components/schemas/VictronMPPT"
+        hostname:
+          type: string
+          description: The hostname of the system
+        serial_number:
+          type: string
+          description: The serial number of the system
+        device_model:
+          type: string
+          description: The device model.
+        serial_ports:
+          type: object
+          description: The serial ports attached to the device.
     User:
       type: object
       properties:

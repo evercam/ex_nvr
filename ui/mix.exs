@@ -2,7 +2,7 @@ defmodule ExNVR.MixProject do
   use Mix.Project
 
   @app :ex_nvr
-  @version "0.17.0"
+  @version "0.18.0"
 
   def project do
     [
@@ -47,6 +47,7 @@ defmodule ExNVR.MixProject do
       {:swoosh, "~> 1.15"},
       {:finch, "~> 0.19"},
       {:httpoison, "~> 2.2.1"},
+      {:membrane_raw_video_format, "~> 0.4.0", override: true},
       {:membrane_file_plugin, "~> 0.17.0"},
       {:membrane_mp4_plugin, "~> 0.35.0"},
       {:membrane_http_adaptive_stream_plugin, "~> 0.18.0"},
@@ -55,9 +56,9 @@ defmodule ExNVR.MixProject do
       {:membrane_ffmpeg_swscale_plugin, "~> 0.16.0"},
       {:membrane_realtimer_plugin, "~> 0.10.0"},
       {:membrane_funnel_plugin, "~> 0.9.1"},
-      {:ex_webrtc, "~> 0.7.0"},
+      {:ex_webrtc, "~> 0.8.0"},
       {:ex_libsrtp, "~> 0.7.0"},
-      {:ex_m3u8, "~> 0.14.2"},
+      {:ex_m3u8, "~> 0.15.0"},
       {:connection, "~> 1.1.0"},
       {:tzdata, "~> 1.1"},
       {:turbojpeg, "~> 0.4.0"},
@@ -84,7 +85,7 @@ defmodule ExNVR.MixProject do
       {:plug_cowboy, "~> 2.5"},
       {:corsica, "~> 2.1"},
       {:logger_json, "~> 6.1"},
-      {:flop_phoenix, "~> 0.23.0"},
+      {:flop_phoenix, "~> 0.24"},
       {:prom_ex, "~> 1.11.0"},
       {:reverse_proxy_plug, "~> 3.0"},
       {:circuits_uart, "~> 1.5"},

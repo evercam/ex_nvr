@@ -36,7 +36,8 @@ defmodule ExNVR.SystemStatus do
     data =
       %{
         version: Application.spec(:ex_nvr, :vsn) |> to_string(),
-        hostname: List.to_string(hostname)
+        hostname: List.to_string(hostname),
+        serial_ports: Circuits.UART.enumerate()
       }
       |> Map.merge(device_info())
 

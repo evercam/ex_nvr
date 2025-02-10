@@ -218,9 +218,10 @@ defmodule ExNVRWeb.CoreComponents do
     <button
       type={@type}
       class={[
-        "phx-submit-loading:opacity-75 rounded-lg bg-blue-700 hover:bg-blue-400 py-2 px-3",
-        "text-sm font-semibold leading-6 text-white active:text-white/80 dark:bg-blue-700",
-        "dark:border-gray-600 dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:focus:ring-offset-gray-80 dark:hover:bg-blue-500",
+        "phx-submit-loading:opacity-75 py-2.5 px-5 me-2 mb-2 text-sm font-medium text-gray-900",
+        "focus:outline-none bg-white rounded-md border border-gray-200 hover:bg-gray-100",
+        "hover:text-blue-700 focus:z-10 focus:ring-4 focus:ring-gray-100 dark:focus:ring-gray-700",
+        "dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:text-white dark:hover:bg-gray-700",
         @class
       ]}
       {@rest}
@@ -393,7 +394,7 @@ defmodule ExNVRWeb.CoreComponents do
         id={@id}
         name={@name}
         class={[
-          "mt-1 block w-full rounded-md border border-gray-300 bg-white shadow-sm focus:border-zinc-400 focus:ring-0 sm:text-sm",
+          "mt-1 block w-full rounded-md border border-gray-300 bg-white shadow-sm focus:border-zinc-400 focus:ring-0 text-sm",
           "dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
         ]}
         multiple={@multiple}
@@ -440,7 +441,7 @@ defmodule ExNVRWeb.CoreComponents do
         id={@id}
         value={Phoenix.HTML.Form.normalize_value(@type, @value)}
         class={[
-          "mt-2 block w-full rounded-lg text-black focus:ring-0 sm:text-sm sm:leading-6",
+          "mt-1 block w-full rounded-lg text-black focus:ring-0 sm:text-sm sm:leading-6",
           "phx-no-feedback:border-zinc-300 phx-no-feedback:focus:border-zinc-400",
           "border-zinc-300 focus:border-zinc-400 dark:bg-gray-700 dark:border-gray-600",
           "dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500",
@@ -845,6 +846,29 @@ defmodule ExNVRWeb.CoreComponents do
     |> JS.hide(to: "##{id}", transition: {"block", "block", "hidden"})
     |> JS.remove_class("overflow-hidden", to: "body")
     |> JS.pop_focus()
+  end
+
+  attr :dropdown_id, :string, required: true
+  attr :rest, :global
+
+  def three_dot(assigns) do
+    ~H"""
+    <button
+      data-dropdown-toggle={@dropdown_id}
+      class="text-sm ml-3 bg-gray-200 hover:bg-gray-200 text-zinc-900 dark:bg-gray-800 dark:text-gray-400"
+      {@rest}
+    >
+      <svg
+        class="w-5 h-5"
+        aria-hidden="true"
+        fill="currentColor"
+        viewBox="0 0 20 20"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
+      </svg>
+    </button>
+    """
   end
 
   @doc """

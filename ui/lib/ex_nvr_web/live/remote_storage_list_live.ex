@@ -20,47 +20,37 @@ defmodule ExNVRWeb.RemoteStorageListLive do
         <:col :let={remote_storage} label="Type">{remote_storage.type}</:col>
         <:col :let={remote_storage} label="Url">{remote_storage.url}</:col>
         <:action :let={remote_storage}>
-          <.button
+          <.three_dot
             id={"dropdownMenuIconButton_#{remote_storage.id}"}
-            data-dropdown-toggle={"dropdownDots_#{remote_storage.id}"}
-            class="text-sm ml-3 bg-gray-200 hover:bg-gray-200 text-zinc-900 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-400"
+            dropdown_id={"dropdownDots_#{remote_storage.id}"}
+          />
+
+          <div
+            id={"dropdownDots_#{remote_storage.id}"}
+            class="z-10 hidden text-left bg-white divide-y divide-gray-100 rounded-lg shadow w-44 dark:bg-gray-700 dark:divide-gray-600"
           >
-            <svg
-              class="w-5 h-5"
-              aria-hidden="true"
-              fill="currentColor"
-              viewBox="0 0 20 20"
-              xmlns="http://www.w3.org/2000/svg"
+            <ul
+              class="py-2 text-sm text-gray-700 dark:text-gray-200"
+              aria-labelledby={"dropdownMenuIconButton_#{remote_storage.id}"}
             >
-              <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
-            </svg>
-            <div
-              id={"dropdownDots_#{remote_storage.id}"}
-              class="z-10 hidden text-left bg-white divide-y divide-gray-100 rounded-lg shadow w-44 dark:bg-gray-700 dark:divide-gray-600"
-            >
-              <ul
-                class="py-2 text-sm text-gray-700 dark:text-gray-200"
-                aria-labelledby={"dropdownMenuIconButton_#{remote_storage.id}"}
-              >
-                <li>
-                  <.link
-                    href={~p"/remote-storages/#{remote_storage.id}"}
-                    class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white"
-                  >
-                    Update
-                  </.link>
-                </li>
-                <li>
-                  <.link
-                    phx-click={show_modal("delete-remote-storage-modal-#{remote_storage.id}")}
-                    class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white"
-                  >
-                    Delete
-                  </.link>
-                </li>
-              </ul>
-            </div>
-          </.button>
+              <li>
+                <.link
+                  href={~p"/remote-storages/#{remote_storage.id}"}
+                  class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white"
+                >
+                  Update
+                </.link>
+              </li>
+              <li>
+                <.link
+                  phx-click={show_modal("delete-remote-storage-modal-#{remote_storage.id}")}
+                  class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white"
+                >
+                  Delete
+                </.link>
+              </li>
+            </ul>
+          </div>
         </:action>
         <:action :let={remote_storage}>
           <.modal id={"delete-remote-storage-modal-#{remote_storage.id}"}>
