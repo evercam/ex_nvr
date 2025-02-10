@@ -30,6 +30,8 @@ jobs:
       NERVES_HUB_PRODUCT: ${{ vars.NERVES_HUB_PRODUCT }}
       NERVES_HUB_NON_INTERACTIVE: true
       NERVES_FIRMWARE_SIGNING_KEY: ${{ secrets.NERVES_FIRMWARE_SIGNING_KEY }}
+      EXNVR_REMOTE_SERVER_URI: ${{ vars.EXNVR_REMOTE_SERVER_URI }}
+      EXNVR_REMOTE_SERVER_TOKEN: ${{ secrets.EXNVR_REMOTE_SERVER_TOKEN }}
     steps:
       - uses: actions/checkout@v3
 
