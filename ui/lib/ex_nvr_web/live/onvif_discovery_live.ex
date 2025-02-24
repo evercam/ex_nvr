@@ -36,24 +36,30 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
   end
 
   def handle_event("discover", %{"discover_settings" => params}, socket) do
-    with {:ok, validated_params} <- validate_discover_params(params),
-         discovered_devices <-
-           ExNVR.Devices.discover(
-             probe_timeout: to_timeout(second: validated_params[:timeout]),
-             ip_address: validated_params[:ip_addr]
-           ) do
-      onvif_devices =
-        Enum.map(
-          discovered_devices,
-          &get_onvif_device(&1, validated_params.username, validated_params.password)
-        )
+    case validate_discover_params(params) do
+      {:ok, params} ->
+        {onvif_devices, socket} =
+          ExNVR.Devices.discover(
+            probe_timeout: to_timeout(second: params[:timeout]),
+            ip_address: params[:ip_addr]
+          )
+          |> Enum.map_reduce(socket, fn probe, socket ->
+            case get_onvif_device(probe, params.username, params.password) do
+              {:ok, device} ->
+                {device, socket}
 
-      socket
-      |> assign_discovery_form(params)
-      |> assign_discovered_devices(onvif_devices)
-      |> then(&{:noreply, &1})
-    else
-      {:error, %Changeset{} = changeset} ->
+              {:error, reason, device} ->
+                error = "Failed to connect to device: #{device.address} - #{reason}"
+                {device, put_flash(socket, :error, error)}
+            end
+          end)
+
+        socket
+        |> assign_discovery_form(params)
+        |> assign_discovered_devices(onvif_devices)
+        |> then(&{:noreply, &1})
+
+      {:error, changeset} ->
         {:noreply, assign_discovery_form(socket, changeset)}
     end
   end
@@ -113,7 +119,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
       type: :ip,
       vendor: selected_device.manufacturer,
       model: selected_device.model,
-      mac: device_details.network_interface.info.hw_address,
+      mac: device_details.network_interface && device_details.network_interface.info.hw_address,
       url: selected_device.address,
       stream_config: stream_config,
       credentials: %{username: selected_device.username, password: selected_device.password}
@@ -157,12 +163,19 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
     {:noreply, socket}
   end
 
-  defp assign_discovery_form(socket, params \\ nil) do
-    assign(
-      socket,
-      :discover_form,
-      to_form(params || @default_discovery_settings, as: :discover_settings)
-    )
+  defp assign_discovery_form(socket, params \\ nil)
+
+  defp assign_discovery_form(socket, %Ecto.Changeset{} = changeset) do
+    assign(socket, :discover_form, to_form(changeset, as: :discover_settings))
+  end
+
+  defp assign_discovery_form(socket, params) do
+    params =
+      Map.new(params || @default_discovery_settings, fn {key, value} ->
+        {to_string(key), value}
+      end)
+
+    assign(socket, :discover_form, to_form(params, as: :discover_settings))
   end
 
   defp assign_discovered_devices(socket, devices \\ []) do
@@ -184,22 +197,20 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
     |> Changeset.apply_action(:create)
   end
 
-  defp get_onvif_device(probe, username, password)
-       when not is_nil(username) and not is_nil(password) do
-    case Onvif.Device.init(probe, username, password) do
-      {:ok, device} -> device
-      _error -> get_onvif_device(probe, nil, nil)
+  defp get_onvif_device(probe, username, password) do
+    case Onvif.Device.init(probe, username || "", password || "") do
+      {:ok, device} -> {:ok, device}
+      {:error, reason} -> {:error, reason, get_onvif_device(probe)}
     end
   end
 
-  defp get_onvif_device(probe, _username, _password) do
+  defp get_onvif_device(probe) do
     %Onvif.Device{
       address: List.first(probe.address),
       manufacturer: scope_value(probe.scopes, "hardware"),
       model: scope_value(probe.scopes, "name"),
-      username: "",
-      password: "",
-      scopes: probe.scopes
+      scopes: probe.scopes,
+      auth_type: :no_auth
     }
   end
 
@@ -216,6 +227,8 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
       _error -> details
     end
   end
+
+  defp get_profiles(%{onvif_device: %{media_ver20_service_path: nil}} = details), do: details
 
   defp get_profiles(details) do
     case Media.Ver20.GetProfiles.request(details.onvif_device) do
