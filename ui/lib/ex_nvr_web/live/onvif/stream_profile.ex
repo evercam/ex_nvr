@@ -45,7 +45,7 @@ defmodule ExNVRWeb.Onvif.StreamProfile do
               field={@update_form[:gov_length]}
               id={"encoder_config_gov_#{@id}"}
               type="number"
-              label="Gov Length"
+              label="Group of Pictures"
               min={@view_encoder_options.gov_length_min}
               max={@view_encoder_options.gov_length_max}
             />

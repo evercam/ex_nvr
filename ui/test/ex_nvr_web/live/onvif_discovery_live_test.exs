@@ -66,6 +66,10 @@ defmodule ExNVRWeb.OnvifDiscoveryLiveTest do
     test "render found devices", %{conn: conn} do
       expect(Onvif.Discovery, :probe, fn _params -> @probes end)
 
+      expect(Onvif.Device, :init, 2, fn _probe, "", "" ->
+        {:error, "Invalid Credentials"}
+      end)
+
       {:ok, lv, _html} = live(conn, ~p"/onvif-discovery")
 
       html =
