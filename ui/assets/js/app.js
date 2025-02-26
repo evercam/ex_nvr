@@ -19,10 +19,13 @@
 import "phoenix_html"
 import { Socket } from "phoenix"
 import { LiveSocket } from "phoenix_live_view"
-import topbar from "../vendor/topbar"
+import {getHooks} from "live_vue"
+import liveVueApp from "../vue"
+import topbar from "topbar"
 import createTimeline, { updateTimelineSegments } from "./timeline"
 import "flowbite/dist/flowbite.phoenix"
 import Hls from "hls.js"
+import "../css/app.css"
 
 const MANIFEST_LOAD_TIMEOUT = 60_000
 
@@ -77,6 +80,7 @@ let Hooks = {
             updateTimelineSegments(this.el)
         },
     },
+    ...getHooks(liveVueApp)
 }
 
 let csrfToken = document
@@ -101,19 +105,7 @@ liveSocket.connect()
 // >> liveSocket.disableLatencySim()
 window.liveSocket = liveSocket
 
-function initDarkMode() {
-    const lightSwitch = document.getElementById("light-switch")
-    if (localStorage.getItem('dark-mode') === 'true' || (!('dark-mode' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-        document.querySelector('html').classList.add('dark');
-        lightSwitch.checked = true;
-    } else {
-        document.querySelector('html').classList.remove('dark');
-        lightSwitch.checked = false;
-    }
-
-}
-
-startStreaming = (elem_id, src, poster_url) => {
+const startStreaming = (elem_id, src, poster_url) => {
     var video = document.getElementById(elem_id)
     if (video != null && Hls.isSupported()) {
         if (window.hls) {
@@ -170,4 +162,11 @@ function downloadFile(url) {
     document.body.removeChild(anchor);
 }
 
-initDarkMode();
+(function() {
+    const lightSwitch = document.getElementById("light-switch")
+    if (localStorage.getItem('dark-mode') === 'true' || (!('dark-mode' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        lightSwitch.checked = true;
+    } else {
+        lightSwitch.checked = false;
+    }
+})()
