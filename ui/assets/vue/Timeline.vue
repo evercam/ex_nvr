@@ -12,6 +12,7 @@ export default defineComponent({
       endDate: "",
       minDate: "2023",
       maxDate: "2025",
+      focusedInterval: {},
       eventGroups: {Runs: {}},
       barColor: "#4dc007"
     }
@@ -57,10 +58,10 @@ export default defineComponent({
         return acc
       }, [])
 
-      this.startDate = this.formatDateToISO(new Date(minDate))
-      this.endDate = this.formatDateToISO(new Date(maxDate))
-      this.minDate = this.formatDateToISO(this.addYear(new Date(minDate), -1))
-      this.maxDate = this.formatDateToISO(this.addYear(new Date(maxDate), 2))
+      if (!this.startDate) {
+        this.minDate = this.formatDateToISO(this.addYear(new Date(minDate), -1))
+        this.maxDate = this.formatDateToISO(this.addYear(new Date(maxDate), 2))
+      }
 
       return formatedRanges
     },
@@ -85,8 +86,9 @@ export default defineComponent({
 </script>
 
 <template>
-  <div v-if="eventGroups" class="mt-3" style="width: 100%">
+  <div v-if="eventGroups.Runs?.events" class="mt-3" style="width: 100%">
     <ETimeline
+      ref="timeline"
       :events-groups="eventGroups"
       :bar-height="35"
       :bar-y-padding="15"
@@ -102,9 +104,9 @@ export default defineComponent({
         </div>
       </template>
 
-      <template #eventTooltip="{event, active}">
+      <template #eventTooltip="{ active, timestamp}">
         <div v-if="active" class="e-border e-rounded e-px-2 -e-left-2/4 e-relative e-bg-gray-900 e-text-white e-border-gray-700 e-p-3">
-          {{ formatDateToISO(new Date(event.startDate), " ") }} > {{ formatDateToISO(new Date(event.endDate), " ") }}
+          {{ formatDateToISO(new Date(timestamp), " ") }}
         </div>
       </template>
     </ETimeline>
