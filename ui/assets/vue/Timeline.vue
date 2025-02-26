@@ -59,7 +59,7 @@ export default defineComponent({
 
       this.startDate = this.formatDateToISO(new Date(minDate))
       this.endDate = this.formatDateToISO(new Date(maxDate))
-      this.minDate = this.formatDateToISO(this.addYear(new Date(minDate), -2))
+      this.minDate = this.formatDateToISO(this.addYear(new Date(minDate), -1))
       this.maxDate = this.formatDateToISO(this.addYear(new Date(maxDate), 2))
 
       return formatedRanges
@@ -91,8 +91,6 @@ export default defineComponent({
       :bar-height="35"
       :bar-y-padding="15"
       :show-labels="false"
-      :start-date="startDate"
-      :end-date="endDate"
       :min-date="minDate"
       :max-date="maxDate"
       @event-clicked="$emit('run-clicked', $event)"
