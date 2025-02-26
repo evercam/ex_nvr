@@ -5,6 +5,10 @@ export default defineComponent({
   name: 'Timeline',
   props: {
     segments: Array,
+    timezone: {
+      type: String,
+      default: "",
+    }
   },
   data() {
     return {
@@ -95,6 +99,7 @@ export default defineComponent({
       :show-labels="false"
       :min-date="minDate"
       :max-date="maxDate"
+      :timezone="timezone"
       @event-clicked="$emit('run-clicked', $event)"
       dark
     >
