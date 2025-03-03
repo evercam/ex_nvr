@@ -104,7 +104,7 @@ defmodule ExNVR.Nerves.RemoteConfigurer do
     {:ok, _} = ExNVR.Nerves.Netbird.up(@netbird_mangement_url, config["vpn_setup_key"], kit_id())
   end
 
-  defp format_hdd!() do
+  def format_hdd!() do
     ExNVR.Disk.list_drives!()
     |> Enum.reject(&ExNVR.Disk.has_filesystem?/1)
     |> case do
