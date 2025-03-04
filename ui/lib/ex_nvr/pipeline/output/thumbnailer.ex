@@ -53,22 +53,28 @@ defmodule ExNVR.Pipeline.Output.Thumbnailer do
   end
 
   @impl true
-  def handle_stream_format(:input, format, _ctx, state) do
-    codec = if is_struct(format, H264), do: :h264, else: :h265
+  def handle_stream_format(:input, format, ctx, state) do
+    old_stream_format = ctx.pads.input.stream_format
 
-    out_height = div(state.thumbnail_width * format.height, format.width)
-    out_height = out_height - rem(out_height, 2)
+    if is_nil(old_stream_format) or old_stream_format != format do
+      codec = if is_struct(format, H264), do: :h264, else: :h265
 
-    decoder = Decoder.new!(codec)
-    scaler = Image.Scaler.new!(format.width, format.height, state.thumbnail_width, out_height)
+      out_height = div(state.thumbnail_width * format.height, format.width)
+      out_height = out_height - rem(out_height, 2)
 
-    {[],
-     %{
-       state
-       | thumbnail_height: out_height,
-         decoder: decoder,
-         scaler: scaler
-     }}
+      decoder = Decoder.new!(codec)
+      scaler = Image.Scaler.new!(format.width, format.height, state.thumbnail_width, out_height)
+
+      {[],
+       %{
+         state
+         | thumbnail_height: out_height,
+           decoder: decoder,
+           scaler: scaler
+       }}
+    else
+      {[], state}
+    end
   end
 
   @impl true
@@ -85,7 +91,7 @@ defmodule ExNVR.Pipeline.Output.Thumbnailer do
   def handle_buffer(:input, _buffer, _ctx, state), do: {[], state}
 
   defp do_decode(buffer, state) do
-    with {:ok, decoded} <- decode(state, buffer),
+    with {:ok, decoded} <- Decoder.decode(state.decoder, buffer),
          {:ok, scaled} <- scale(decoded, state),
          {:ok, jpeg_image} <- to_jpeg(scaled, state),
          :ok <- File.write(image_path(state.dest, buffer), jpeg_image) do
@@ -94,12 +100,6 @@ defmodule ExNVR.Pipeline.Output.Thumbnailer do
       error ->
         Membrane.Logger.error("Failed to generate thumbnail: #{inspect(error)}")
         {[], state}
-    end
-  end
-
-  defp decode(state, buffer) do
-    with {:ok, []} <- Decoder.decode(state.decoder, buffer) do
-      state.decoder.flush(state.decoder_state)
     end
   end
 

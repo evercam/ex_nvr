@@ -91,6 +91,7 @@ keys =
     Path.join([System.user_home!(), ".ssh", "id_ed25519.pub"])
   ]
   |> Enum.filter(&File.exists?/1)
+  |> Enum.map(&File.read!(&1))
   |> Kernel.++([
     "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIH+CB6jKOH2BnJ2l6jLmNV6GjL/AAlWF6/IPjshV7jaS deployment"
   ])
