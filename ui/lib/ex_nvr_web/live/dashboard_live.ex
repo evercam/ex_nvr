@@ -6,7 +6,6 @@ defmodule ExNVRWeb.DashboardLive do
   alias ExNVR.Recordings
   alias ExNVR.Model.Device
   alias ExNVRWeb.Router.Helpers, as: Routes
-  alias ExNVRWeb.TimelineComponent
 
   @durations [
     {"2 Minutes", "120"},
@@ -102,11 +101,12 @@ defmodule ExNVRWeb.DashboardLive do
           >
             Device is not recording, live view is not available
           </div>
-          <.live_component
-            module={TimelineComponent}
-            id="tl"
+          <.vue
             segments={@segments}
             timezone={@timezone}
+            v-component="Timeline"
+            v-socket={@socket}
+            v-on:run-clicked={JS.push("run-clicked")}
           />
         </div>
       </div>
@@ -182,6 +182,8 @@ defmodule ExNVRWeb.DashboardLive do
   end
 
   def mount(_params, _session, socket) do
+    Recordings.subscribe_to_recording_events()
+
     socket
     |> assign_devices()
     |> assign(
@@ -212,6 +214,12 @@ defmodule ExNVRWeb.DashboardLive do
     |> then(&{:noreply, &1})
   end
 
+  def handle_info({event, nil}, socket) when event in [:delete, :new] do
+    {:noreply, assign_runs(socket)}
+  end
+
+  def handle_info(_, socket), do: socket
+
   def handle_event("switch_device", %{"device" => device_id}, socket) do
     route =
       Routes.dashboard_path(socket, :new, %{device_id: device_id, stream: socket.assigns.stream})
@@ -229,10 +237,10 @@ defmodule ExNVRWeb.DashboardLive do
     {:noreply, push_patch(socket, to: route, replace: true)}
   end
 
-  def handle_event("datetime", %{"value" => value}, socket) do
+  def handle_event("run-clicked", %{"timestamp" => timestamp}, socket) do
     current_datetime = socket.assigns.start_date
     timezone = socket.assigns.current_device.timezone
-    new_datetime = parse_datetime(value, timezone)
+    new_datetime = parse_datetime(timestamp, timezone)
 
     socket =
       if current_datetime != new_datetime do
@@ -303,7 +311,6 @@ defmodule ExNVRWeb.DashboardLive do
       Recordings.list_runs(%{device_id: device.id})
       |> Enum.map(&Map.take(&1, [:start_date, :end_date]))
       |> shift_timezones(device.timezone)
-      |> Jason.encode!()
 
     assign(socket, segments: segments)
   end
