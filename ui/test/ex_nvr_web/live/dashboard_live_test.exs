@@ -30,7 +30,7 @@ defmodule ExNVRWeb.DashboardTest do
       assert html =~ "Stream"
       assert html =~ "Download"
 
-      assert has_element?(lv, "#timeline")
+      assert has_element?(lv, "#Timeline-1")
       assert has_element?(lv, "#download-footage-btn")
 
       refute has_element?(lv, "#live-video")

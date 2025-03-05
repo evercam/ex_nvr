@@ -120,24 +120,19 @@ defmodule ExNVR.Nerves.RemoteConfigurer do
 
         Logger.info("[RemoteConfigurer] create ext4 filesystem on device: #{drive.path}")
 
-        {_output, 0} =
-          System.cmd("mkfs.ext4", ["-m", "1", drive.path <> "1"], stderr_to_stdout: true)
+        part = get_disk_first_part(drive.path)
+        {_output, 0} = System.cmd("mkfs.ext4", ["-m", "1", part.path], stderr_to_stdout: true)
 
         Logger.info("[RemoteConfigurer] Create mountpoint directory: #{@mountpoint}")
 
-        unless File.exists?(@mountpoint) do
+        if not File.exists?(@mountpoint) do
           File.mkdir_p!(@mountpoint)
           {_output, 0} = System.cmd("chattr", ["+i", @mountpoint])
         end
 
         Logger.info("[RemoteConfigurer] Add mountpoint to fstab and mount it")
 
-        part =
-          ExNVR.Disk.list_drives!()
-          |> Enum.find(&(&1.path == drive.path))
-          |> Map.get(:parts)
-          |> List.first()
-
+        part = get_disk_first_part(drive.path)
         :ok = ExNVR.Nerves.DiskMounter.add_fstab_entry(part.fs.uuid, @mountpoint, :ext4)
     end
   end
@@ -186,5 +181,12 @@ defmodule ExNVR.Nerves.RemoteConfigurer do
     }
 
     Req.post!(url(state), headers: [{"x-api-key", state.token}], json: body)
+  end
+
+  defp get_disk_first_part(path) do
+    ExNVR.Disk.list_drives!()
+    |> Enum.find(&(&1.path == path))
+    |> Map.get(:parts)
+    |> List.first()
   end
 end

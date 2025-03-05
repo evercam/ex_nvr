@@ -16,7 +16,8 @@ defmodule ExNVR.Elements.FunnelTee do
   def_input_pad :video,
     accepted_format: _any,
     flow_control: :auto,
-    availability: :on_request
+    availability: :on_request,
+    max_instances: 1
 
   def_output_pad :video_output,
     accepted_format: _any,
