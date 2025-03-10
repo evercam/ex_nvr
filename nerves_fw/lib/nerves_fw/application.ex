@@ -28,6 +28,7 @@ defmodule ExNVR.Nerves.Application do
       {ExNVR.Nerves.Netbird, []},
       {ExNVR.Nerves.DiskMounter, []},
       {ExNVR.Nerves.GrafanaAgent, grafana_agent_config()},
+      {MuonTrap.Daemon, ["nginx", [], [stderr_to_stdout: true, log_output: :info]]},
       {ExNVR.Nerves.RemoteConfigurer, Application.get_env(:ex_nvr_fw, :remote_configurer)},
       {ExNVR.Nerves.Monitoring.RUT, []},
       {ExNVR.Nerves.SystemStatus, []}
