@@ -49,6 +49,9 @@ defmodule NervesFw.MixProject do
       {:nerves_hub_cli, "~> 2.0"},
       {:ex_nvr, path: "../ui"},
       {:modbux, "~> 0.3.13"},
+      {:circuits_gpio, "~> 2.1"},
+      {:circuits_i2c, "~> 2.0"},
+      {:ramoops_logger, "~> 0.3.0"},
 
       # Dependencies for specific targets
       # NOTE: It's generally low risk and recommended to follow minor version
