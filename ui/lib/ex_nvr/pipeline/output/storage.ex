@@ -162,16 +162,10 @@ defmodule ExNVR.Pipeline.Output.Storage do
             state.correct_timestamp
           )
 
-        state = close_file(state, discontinuity)
-
-        # first segment has its start date adjusted
-        # because of camera buffering
-        if state.first_segment? do
-          File.rename!(
-            recording_path(state, Segment.start_date(segment)),
-            recording_path(state, Segment.start_date(state.current_segment))
-          )
-        end
+        state =
+          state
+          |> close_file(discontinuity)
+          |> rename_first_segment(segment)
 
         start_time =
           if discontinuity,
@@ -270,10 +264,12 @@ defmodule ExNVR.Pipeline.Output.Storage do
   defp handle_discontinuity(%{writer: nil} = state), do: state
 
   defp handle_discontinuity(state) do
+    old_segment = state.current_segment
     {state, _discontinuity} = finalize_segment(state, DateTime.utc_now(), false)
 
     state
     |> close_file(true)
+    |> rename_first_segment(old_segment)
     |> reset_state_fields()
   end
 
@@ -427,7 +423,8 @@ defmodule ExNVR.Pipeline.Output.Storage do
     start_date = div(start_date, 1_000)
     date = DateTime.from_unix!(start_date, :microsecond)
 
-    Path.join([state.directory | ExNVR.Utils.date_components(date)])
+    [state.directory | ExNVR.Utils.date_components(date)]
+    |> Path.join()
     |> Path.join("#{start_date}.mp4")
   end
 
@@ -455,4 +452,17 @@ defmodule ExNVR.Pipeline.Output.Storage do
 
   defp maybe_new_run(state, %Run{active: true} = run), do: %{state | run: run}
   defp maybe_new_run(state, _run), do: %{state | run: nil}
+
+  defp rename_first_segment(%{first_segment?: true} = state, segment) do
+    # first segment has its start date adjusted
+    # because of camera buffering
+    File.rename!(
+      recording_path(state, Segment.start_date(segment)),
+      recording_path(state, Segment.start_date(state.current_segment))
+    )
+
+    state
+  end
+
+  defp rename_first_segment(state, _segment), do: state
 end
