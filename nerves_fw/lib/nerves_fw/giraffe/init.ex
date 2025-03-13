@@ -7,7 +7,7 @@ defmodule ExNVR.Nerves.Giraffe.Init do
     * Power on PoE (GPIO26)
   """
 
-  use GenServer
+  use GenServer, restart: :transient
 
   alias Circuits.GPIO
 
@@ -17,7 +17,7 @@ defmodule ExNVR.Nerves.Giraffe.Init do
 
   @impl true
   def init(_options) do
-    {:ok, nil, continue: :init}
+    {:ok, nil, {:continue, :init}}
   end
 
   @impl true
