@@ -14,10 +14,10 @@ jobs:
     strategy:
       max-parallel: 1 # mix nerves_hub.firmware publish does not work on parallel uploads
       matrix:
-        target: [ex_nvr_rpi4, ex_nvr_rpi5]
+        target: [ex_nvr_rpi4, ex_nvr_rpi5, giraffe]
     env:
       MIX_ENV: prod
-      MIX_TARGET: ${{ matrix.target }}
+      MIX_TARGET: ${{ matrix.target.name }}
       NERVES_HUB_PRODUCT_KEY: ${{ secrets.NERVES_HUB_PRODUCT_KEY }}
       NERVES_HUB_PRODUCT_SECRET: ${{ secrets.NERVES_HUB_PRODUCT_SECRET }}
       SECRET_KEY_BASE: ${{ secrets.SECRET_KEY_BASE }}
@@ -39,6 +39,10 @@ jobs:
         with:
           otp-version: 27.2
           elixir-version: 1.17.3
+
+      - name: Set platform env variable
+        run: echo "NERVES_FW_PLATFORM=giraffe" >> $GITHUB_ENV
+        if: matrix.target == 'giraffe'
 
       - name: Install dependencies
         run: | 
