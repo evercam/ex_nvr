@@ -41,6 +41,7 @@ defmodule ExNVR.Nerves.SystemStatus do
     :ok = ExNVR.SystemStatus.set(:router, rut_data)
     :ok = ExNVR.SystemStatus.set(:netbird, netbird_data)
     :ok = ExNVR.SystemStatus.set(:nerves, true)
+    :ok = ExNVR.SystemStatus.set(:device_model, Nerves.Runtime.KV.get_all("a.nerves_fw_platform"))
 
     Process.send_after(self(), :collect_system_metrics, to_timeout(second: 30))
     {:noreply, state}

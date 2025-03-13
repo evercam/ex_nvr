@@ -23,17 +23,11 @@ defmodule ExNVR.Nerves.Application do
     []
   end
 
-  def children(_target) do
-    [
-      {ExNVR.Nerves.Netbird, []},
-      {ExNVR.Nerves.DiskMounter, []},
-      {ExNVR.Nerves.GrafanaAgent, grafana_agent_config()},
-      {MuonTrap.Daemon, ["nginx", [], [stderr_to_stdout: true, log_output: :info]]},
-      {ExNVR.Nerves.RemoteConfigurer, Application.get_env(:ex_nvr_fw, :remote_configurer)},
-      {ExNVR.Nerves.Monitoring.RUT, []},
-      {ExNVR.Nerves.SystemStatus, []}
-    ]
+  def children(:giraffe) do
+    [{ExNVR.Nerves.Giraffe.Init, []}] ++ common_config()
   end
+
+  def children(_target), do: common_config()
 
   def target() do
     Application.get_env(:ex_nvr_fw, :target)
@@ -45,6 +39,18 @@ defmodule ExNVR.Nerves.Application do
       serial_number: Runtime.serial_number(),
       platform: Runtime.KV.get("a.nerves_fw_platform"),
       kit_id: Runtime.KV.get("nerves_evercam_id")
+    ]
+  end
+
+  defp common_config() do
+    [
+      {ExNVR.Nerves.Netbird, []},
+      {ExNVR.Nerves.DiskMounter, []},
+      {ExNVR.Nerves.GrafanaAgent, grafana_agent_config()},
+      {MuonTrap.Daemon, ["nginx", [], [stderr_to_stdout: true, log_output: :info]]},
+      {ExNVR.Nerves.RemoteConfigurer, Application.get_env(:ex_nvr_fw, :remote_configurer)},
+      {ExNVR.Nerves.Monitoring.RUT, []},
+      {ExNVR.Nerves.SystemStatus, []}
     ]
   end
 end
