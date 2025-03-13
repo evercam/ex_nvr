@@ -3,7 +3,7 @@ defmodule NervesFw.MixProject do
 
   @app :ex_nvr_fw
   @version "0.18.0"
-  @all_targets [:ex_nvr_rpi4, :ex_nvr_rpi5]
+  @all_targets [:ex_nvr_rpi4, :ex_nvr_rpi5, :giraffe]
 
   def project do
     [
@@ -60,7 +60,10 @@ defmodule NervesFw.MixProject do
       {:ex_nvr_system_rpi4,
        github: "evercam/ex_nvr_system_rpi4", tag: "v1.29.2", runtime: false, targets: :ex_nvr_rpi4},
       {:ex_nvr_system_rpi5,
-       github: "evercam/ex_nvr_system_rpi5", tag: "v0.4.2", runtime: false, targets: :ex_nvr_rpi5}
+       github: "evercam/ex_nvr_system_rpi5",
+       tag: "v0.4.2",
+       runtime: false,
+       targets: [:ex_nvr_rpi5, :giraffe]}
     ]
   end
 
