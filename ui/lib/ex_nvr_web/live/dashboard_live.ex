@@ -103,7 +103,6 @@ defmodule ExNVRWeb.DashboardLive do
           </div>
           <.vue
             segments={@segments}
-            timezone={@timezone}
             v-component="Timeline"
             v-socket={@socket}
             v-on:run-clicked={JS.push("run-clicked")}

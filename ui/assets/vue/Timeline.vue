@@ -1,14 +1,11 @@
 <script>
 import {defineComponent} from 'vue'
+import * as moment from 'moment-timezone'
 
 export default defineComponent({
   name: 'Timeline',
   props: {
     segments: Array,
-    timezone: {
-      type: String,
-      default: "",
-    }
   },
   data() {
     return {
@@ -40,21 +37,21 @@ export default defineComponent({
       let minDate = Infinity
 
       const formatedRanges = this.segments?.reduce((acc, range) => {
-        let startDate = new Date(range.start_date)
-        let endDate = new Date(range.end_date)
+        let startDate = moment.utc(range.start_date)
+        let endDate = moment.utc(range.end_date)
 
-        if (startDate.getTime() > endDate.getTime()) {
+        if (startDate.isAfter(endDate)) {
           const temp = startDate
           startDate = endDate
           endDate = temp
         }
 
-        maxDate = Math.max(maxDate, endDate.getTime())
-        minDate = Math.min(minDate, startDate.getTime())
+        maxDate = Math.max(maxDate, endDate.unix())
+        minDate = Math.min(minDate, startDate.unix())
 
         acc.push({
-          startDate: startDate.getTime(),
-          endDate: endDate.getTime(),
+          startDate: startDate.toISOString(),
+          endDate: endDate.toISOString(),
           color: this.barColor,
           text: "",
         })
@@ -63,27 +60,14 @@ export default defineComponent({
       }, [])
 
       if (!this.startDate) {
-        this.minDate = this.formatDateToISO(this.addYear(new Date(minDate), -1))
-        this.maxDate = this.formatDateToISO(this.addYear(new Date(maxDate), 2))
+        this.minDate = moment.unix(minDate).subtract(1, "years").format("YYYY-MM-DD[T]HH:mm:ss")
+        this.maxDate = moment.unix(maxDate).add(1, "years").format("YYYY-MM-DD[T]HH:mm:ss")
       }
 
       return formatedRanges
     },
-    formatDateToISO(date, spacing = "T") {
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      const hours = String(date.getHours()).padStart(2, '0');
-      const minutes = String(date.getMinutes()).padStart(2, '0');
-      const seconds = String(date.getSeconds()).padStart(2, '0');
-
-      return `${year}-${month}-${day}${spacing}${hours}:${minutes}:${seconds}`;
-    },
-    addYear(initialDate, years) {
-      const date = new Date(initialDate)
-      date.setFullYear(date.getFullYear() + years)
-
-      return date
+    formatDateToISO(date) {
+      return moment.utc(date).format("YYYY-MM-DD HH:mm:ss")
     },
   },
 })
@@ -99,19 +83,18 @@ export default defineComponent({
       :show-labels="false"
       :min-date="minDate"
       :max-date="maxDate"
-      :timezone="timezone"
       @event-clicked="$emit('run-clicked', $event)"
       dark
     >
       <template #tooltip="{timestamp, active}">
         <div v-if="active" class="e-border e-rounded e-px-2 -e-left-2/4 e-relative e-bg-gray-900 e-text-white e-border-gray-700 e-p-3">
-          {{ formatDateToISO(new Date(timestamp), " ") }}
+          {{ formatDateToISO(timestamp) }}
         </div>
       </template>
 
       <template #eventTooltip="{ active, timestamp}">
         <div v-if="active" class="e-border e-rounded e-px-2 -e-left-2/4 e-relative e-bg-gray-900 e-text-white e-border-gray-700 e-p-3">
-          {{ formatDateToISO(new Date(timestamp), " ") }}
+          {{ formatDateToISO(timestamp) }}
         </div>
       </template>
     </ETimeline>
