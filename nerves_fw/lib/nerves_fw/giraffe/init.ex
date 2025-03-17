@@ -22,14 +22,8 @@ defmodule ExNVR.Nerves.Giraffe.Init do
 
   @impl true
   def handle_continue(:init, state) do
-    {:ok, gpio1} = GPIO.open("GPIO16", :output)
-    {:ok, gpio2} = GPIO.open("GPIO26", :output)
-
-    GPIO.write(gpio1, 1)
-    GPIO.write(gpio2, 1)
-
-    GPIO.close(gpio1)
-    GPIO.close(gpio2)
+    :ok = GPIO.write_one("GPIO16", 1)
+    :ok = GPIO.write_one("GPIO26", 1)
 
     {:stop, :normal, state}
   end

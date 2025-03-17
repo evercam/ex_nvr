@@ -24,8 +24,8 @@ defmodule ExNVR.Nerves.RemoteConfigurer do
   @default_admin_user "admin@localhost"
   @config_completed_file "/data/.kit_config"
 
-  def start_link(remote_url) do
-    GenServer.start_link(__MODULE__, remote_url, name: __MODULE__)
+  def start_link(config) do
+    GenServer.start_link(__MODULE__, config, name: __MODULE__)
   end
 
   @impl true

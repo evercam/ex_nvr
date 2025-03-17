@@ -173,4 +173,6 @@ config :nerves_time, :servers, [
 # of this file so it overrides the configuration defined above.
 # Uncomment to use target specific configurations
 
-# import_config "#{Mix.target()}.exs"
+if Mix.target() == :giraffe do
+  import_config "giraffe.exs"
+end
