@@ -1356,7 +1356,7 @@ components:
           type: object
           description: Block storage information
         solar_charger:
-          $ref: "#/components/schemas/VictronMPPT"
+          $ref: "#/components/schemas/Victron"
         hostname:
           type: string
           description: The hostname of the system
@@ -1404,7 +1404,7 @@ components:
             User's application language.
             Default to: en (English)
             * Only english available for now.
-    VictronMPPT:
+    Victron:
       type: object
       description: Data received from Victron MPPT (BlueSolar and SmartSolar) via VE.DIRECT to USB.
       nullable: true

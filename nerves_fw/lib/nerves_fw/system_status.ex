@@ -3,7 +3,6 @@ defmodule ExNVR.Nerves.SystemStatus do
   Can nerves specific system status information and
   merge them with `ExNVR.SystemStatus`.
   """
-  alias Mix.Tasks.Phx.Gen
 
   use GenServer
 
