@@ -26,7 +26,7 @@ defmodule ExNVRWeb.Application do
 
           Circuits.UART.enumerate()
           |> Map.keys()
-          |> Enum.filter(&(&1 in ["ttyS0", "ttyS1", "ttyAMA0", "ttyAMA10"]))
+          |> Enum.filter(&(&1 not in ["ttyS0", "ttyS1", "ttyAMA0", "ttyAMA10"]))
           |> Enum.each(
             &DynamicSupervisor.start_child(ExNVR.HardwareMonitor, {Victron, [port: &1]})
           )

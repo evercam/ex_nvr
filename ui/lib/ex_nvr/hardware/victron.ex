@@ -231,9 +231,10 @@ defmodule ExNVR.Hardware.Victron do
   # for now we do a simple test to check if the device is a victron device
   # data should be in the format of "key\tvalue"
   defp victron_device?(state, max_attempts) do
-    case Circuits.UART.read(state.pid, 1000) do
-      {:ok, ""} -> victron_device?(state, max_attempts - 1)
-      {:ok, data} when is_binary(data) -> String.split(data, "\t") |> length() == 2
+    with {:ok, data} when is_binary(data) <- Circuits.UART.read(state.pid, 1000),
+         [_key, _value] <- String.split(data, "\t") do
+      true
+    else
       _other -> victron_device?(state, max_attempts - 1)
     end
   end
