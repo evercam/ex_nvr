@@ -189,7 +189,7 @@ defmodule ExNVRWeb.CoreComponents do
   def simple_form(assigns) do
     ~H"""
     <.form :let={f} for={@for} as={@as} {@rest}>
-      <div class="mt-10 space-y-8 border-gray-500 bg-gray-300 dark:bg-gray-800">
+      <div class="space-y-8 border-gray-500 bg-gray-300 dark:bg-gray-800">
         {render_slot(@inner_block, f)}
         <div :for={action <- @actions} class={"mt-2 flex items-center gap-6 " <> @actions_class}>
           {render_slot(action, f)}

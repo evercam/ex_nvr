@@ -5,6 +5,10 @@
 @import "@evercam/ui/styles.css";
 
 /* This file is for your main application CSS */
+html, body, div[data-phx-main] {
+    height: 100vh;
+}
+
 #timeline .x-axis g {
     color: white;
     fill: white;

@@ -130,11 +130,11 @@ const startStreaming = (elem_id, src, poster_url) => {
 }
 
 window.addEventListener("phx:stream", (e) => {
-    startStreaming("live-video", e.detail.src, e.detail.poster)
+    //startStreaming("live-video", e.detail.src, e.detail.poster)
 })
 
 window.addEventListener("events:play-clip", (e) => {
-    startStreaming(e.target.id, e.detail.src, e.detail.poster)
+    //startStreaming(e.target.id, e.detail.src, e.detail.poster)
 })
 
 // Listen for reload-popovers events and re-init the popovers

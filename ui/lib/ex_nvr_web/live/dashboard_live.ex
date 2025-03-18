@@ -19,13 +19,13 @@ defmodule ExNVRWeb.DashboardLive do
 
   def render(assigns) do
     ~H"""
-    <div class="bg-gray-300 sm:w-2/3 dark:bg-gray-800">
+    <div class="bg-gray-300 e-w-full dark:bg-gray-800">
       <div :if={@devices == []} class="grid tracking-wide text-lg text-center dark:text-gray-200">
         You have no devices, you can create one
         <span><.link href={~p"/devices"} class="ml-2 dark:text-blue-600">here</.link></span>
       </div>
-      <div :if={@devices != []}>
-        <div class="flex items-center justify-between invisible sm:visible">
+      <div :if={@devices != []} class="e-h-full">
+        <%!-- <div class="flex items-center justify-between invisible sm:visible">
           <.simple_form for={@form} id="device_form">
             <div class="flex items-center bg-gray-300 dark:bg-gray-800">
               <div class="mr-4">
@@ -51,7 +51,7 @@ defmodule ExNVRWeb.DashboardLive do
             </div>
           </.simple_form>
 
-          <div class="mt-20 mb-2">
+          <div class="mb-2">
             <.button
               id="download-footage-btn"
               class="text-white dark:text-white px-4 py-2 rounded flex items-center"
@@ -76,24 +76,27 @@ defmodule ExNVRWeb.DashboardLive do
               Download
             </.button>
           </div>
-        </div>
+        </div> --%>
+        <.vue
+          v-component="Viewer"
+          class="e-h-full"
+          url={@stream_url}
+        />
 
-        <div class="relative mt-4">
-          <div :if={@live_view_enabled?} class="relative">
-            <video
-              id="live-video"
-              class="player w-full h-auto dark:bg-gray-500 rounded-tr rounded-tl"
-              autoplay
-              controls
-              muted
+        <div class="relative mt-4 e-h-full">
+          <div :if={@live_view_enabled?} class="relative e-h-full">
+            <.vue
+              v-component="Viewer"
+              class="e-h-full"
+              url={@stream_url}
             />
-            <div
+            <%!-- <div
               id="snapshot-button"
               class="absolute top-1 right-1 rounded-sm bg-zinc-900 py-1 px-2 text-sm text-white dark:bg-gray-700 dark:bg-opacity-80 hover:cursor-pointer"
               phx-hook="DownloadSnapshot"
             >
               <.icon name="hero-camera" />
-            </div>
+            </div> --%>
           </div>
           <div
             :if={not @live_view_enabled?}
@@ -101,12 +104,12 @@ defmodule ExNVRWeb.DashboardLive do
           >
             Device is not recording, live view is not available
           </div>
-          <.vue
-            segments={@segments}
+          <%!-- <.vue
             v-component="Timeline"
+            segments={@segments}
             v-socket={@socket}
             v-on:run-clicked={JS.push("run-clicked")}
-          />
+          /> --%>
         </div>
       </div>
 
@@ -189,6 +192,7 @@ defmodule ExNVRWeb.DashboardLive do
       start_date: nil,
       custom_duration: false
     )
+    |> assign(stream_url: "")
     |> then(&{:ok, &1})
   end
 
@@ -356,7 +360,9 @@ defmodule ExNVRWeb.DashboardLive do
 
         {stream_url, poster_url} = stream_url(device, datetime, current_stream)
 
-        push_event(socket, "stream", %{src: stream_url, poster: poster_url})
+        socket
+        |> push_event("stream", %{src: stream_url, poster: poster_url})
+        |> assign(stream_url: stream_url)
     end
   end
 
