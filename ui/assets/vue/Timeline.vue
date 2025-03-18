@@ -74,7 +74,7 @@ export default defineComponent({
 </script>
 
 <template>
-  <div v-if="eventGroups.Runs?.events" class="mt-3" style="width: 100%">
+  <div v-if="eventGroups.Runs?.events">
     <ETimeline
       ref="timeline"
       :events-groups="eventGroups"

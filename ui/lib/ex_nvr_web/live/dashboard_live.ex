@@ -80,23 +80,55 @@ defmodule ExNVRWeb.DashboardLive do
         <.vue
           v-component="Viewer"
           class="e-h-full"
+          segments={@segments}
+          v-socket={@socket}
           url={@stream_url}
-        />
+          devices={Enum.map(@devices, &Map.take(&1, [:name, :id]))}
+          streams={@supported_streams}
+          stream={@stream}
+          device={Map.get(@current_device, :id)}
+          v-on:switch_stream={JS.push("switch_stream")}
+          v-on:switch_device={JS.push("switch_device")}
+        >
+          <%!-- <:bottom-left>
+            <div class="flex items-center justify-between invisible sm:visible">
+              <.simple_form for={@form} id="device_form">
+                <div class="flex items-center">
+                  <div class="mr-4">
+                    <.input
+                      field={@form[:device]}
+                      id="device_form_id"
+                      type="select"
+                      label="Device"
+                      options={Enum.map(@devices, &{&1.name, &1.id})}
+                      phx-change="switch_device"
+                    />
+                  </div>
 
-        <div class="relative mt-4 e-h-full">
+                  <div class={[@start_date && "hidden"]}>
+                    <.input
+                      field={@form[:stream]}
+                      type="select"
+                      label="Stream"
+                      options={@supported_streams}
+                      phx-change="switch_stream"
+                    />
+                  </div>
+                </div>
+              </.simple_form>
+            </div>
+          </:bottom-left> --%>
+        </.vue>
+
+        <%!-- <div class="relative mt-4 e-h-full">
           <div :if={@live_view_enabled?} class="relative e-h-full">
-            <.vue
-              v-component="Viewer"
-              class="e-h-full"
-              url={@stream_url}
-            />
-            <%!-- <div
+            <div
               id="snapshot-button"
               class="absolute top-1 right-1 rounded-sm bg-zinc-900 py-1 px-2 text-sm text-white dark:bg-gray-700 dark:bg-opacity-80 hover:cursor-pointer"
               phx-hook="DownloadSnapshot"
             >
               <.icon name="hero-camera" />
-            </div> --%>
+            </div>
           </div>
           <div
             :if={not @live_view_enabled?}
@@ -104,13 +136,13 @@ defmodule ExNVRWeb.DashboardLive do
           >
             Device is not recording, live view is not available
           </div>
-          <%!-- <.vue
+          <.vue
             v-component="Timeline"
             segments={@segments}
             v-socket={@socket}
             v-on:run-clicked={JS.push("run-clicked")}
-          /> --%>
-        </div>
+          />
+        </div> --%>
       </div>
 
       <.modal id="download-modal">
@@ -297,9 +329,9 @@ defmodule ExNVRWeb.DashboardLive do
 
     {supported_streams, stream} =
       if Device.has_sub_stream(device) do
-        {[{"Main Stream", "main_stream"}, {"Sub Stream", "sub_stream"}], stream}
+        {[%{name: "Main Stream", value: "main_stream"}, %{name: "Sub Stream", value: "sub_stream"}], stream}
       else
-        {[{"Main Stream", "main_stream"}], "main_stream"}
+        {[%{name: "Main Stream", value: "main_stream"}], "main_stream"}
       end
 
     assign(socket, supported_streams: supported_streams, stream: stream)
