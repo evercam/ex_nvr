@@ -5,8 +5,8 @@
 @import "@evercam/ui/styles.css";
 
 /* This file is for your main application CSS */
-html, body, div[data-phx-main] {
-    height: 100vh;
+html, body {
+    height: 100%;
 }
 
 #timeline .x-axis g {

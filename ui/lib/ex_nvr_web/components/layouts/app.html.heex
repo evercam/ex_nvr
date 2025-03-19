@@ -1,5 +1,8 @@
 <header>
-  <nav class="fixed top-0 z-50 w-full bg-red-800 border-b border-white dark:bg-gray-800 dark:border-gray-700">
+  <nav
+    id="main-nav"
+    class="fixed top-0 z-50 w-full bg-red-800 border-b border-white dark:bg-gray-800 dark:border-gray-700"
+  >
     <div class="px-3 py-3 lg:px-5 lg:pl-3">
       <div class="flex items-center justify-between">
         <div class="flex items-center justify-start">
@@ -279,7 +282,7 @@
   </aside>
 </header>
 <main class="e-h-full bg-gray-300 dark:bg-gray-800">
-  <div class="flex e-h-full e-pt-14 align-stretch justify-stretch mx-auto sm:ml-64 bg-gray-300 dark:bg-gray-800">
+  <div class="flex e-h-full e-pt-14 sm:ml-64 bg-gray-300 dark:bg-gray-800">
     <.flash_group flash={@flash} />
     {@inner_content}
   </div>

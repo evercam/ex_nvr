@@ -25,124 +25,24 @@ defmodule ExNVRWeb.DashboardLive do
         <span><.link href={~p"/devices"} class="ml-2 dark:text-blue-600">here</.link></span>
       </div>
       <div :if={@devices != []} class="e-h-full">
-        <%!-- <div class="flex items-center justify-between invisible sm:visible">
-          <.simple_form for={@form} id="device_form">
-            <div class="flex items-center bg-gray-300 dark:bg-gray-800">
-              <div class="mr-4">
-                <.input
-                  field={@form[:device]}
-                  id="device_form_id"
-                  type="select"
-                  label="Device"
-                  options={Enum.map(@devices, &{&1.name, &1.id})}
-                  phx-change="switch_device"
-                />
-              </div>
-
-              <div class={[@start_date && "hidden"]}>
-                <.input
-                  field={@form[:stream]}
-                  type="select"
-                  label="Stream"
-                  options={@supported_streams}
-                  phx-change="switch_stream"
-                />
-              </div>
-            </div>
-          </.simple_form>
-
-          <div class="mb-2">
-            <.button
-              id="download-footage-btn"
-              class="text-white dark:text-white px-4 py-2 rounded flex items-center"
-              phx-click={show_modal("download-modal")}
-            >
-              <span title="Download footage" class="mr-2">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  class="w-5 h-5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="1.5"
-                    d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"
-                  />
-                </svg>
-              </span>
-              Download
-            </.button>
-          </div>
-        </div> --%>
         <.vue
           v-component="Viewer"
           class="e-h-full"
           segments={@segments}
           v-socket={@socket}
           url={@stream_url}
+          poster={@poster_url}
           devices={Enum.map(@devices, &Map.take(&1, [:name, :id]))}
           streams={@supported_streams}
           stream={@stream}
           device={Map.get(@current_device, :id)}
+          live-view-enabled={@live_view_enabled?}
+          start-date={@start_date}
           v-on:switch_stream={JS.push("switch_stream")}
           v-on:switch_device={JS.push("switch_device")}
-        >
-          <%!-- <:bottom-left>
-            <div class="flex items-center justify-between invisible sm:visible">
-              <.simple_form for={@form} id="device_form">
-                <div class="flex items-center">
-                  <div class="mr-4">
-                    <.input
-                      field={@form[:device]}
-                      id="device_form_id"
-                      type="select"
-                      label="Device"
-                      options={Enum.map(@devices, &{&1.name, &1.id})}
-                      phx-change="switch_device"
-                    />
-                  </div>
-
-                  <div class={[@start_date && "hidden"]}>
-                    <.input
-                      field={@form[:stream]}
-                      type="select"
-                      label="Stream"
-                      options={@supported_streams}
-                      phx-change="switch_stream"
-                    />
-                  </div>
-                </div>
-              </.simple_form>
-            </div>
-          </:bottom-left> --%>
-        </.vue>
-
-        <%!-- <div class="relative mt-4 e-h-full">
-          <div :if={@live_view_enabled?} class="relative e-h-full">
-            <div
-              id="snapshot-button"
-              class="absolute top-1 right-1 rounded-sm bg-zinc-900 py-1 px-2 text-sm text-white dark:bg-gray-700 dark:bg-opacity-80 hover:cursor-pointer"
-              phx-hook="DownloadSnapshot"
-            >
-              <.icon name="hero-camera" />
-            </div>
-          </div>
-          <div
-            :if={not @live_view_enabled?}
-            class="relative text-lg rounded-tr rounded-tl text-center bg-gray-200 dark:text-gray-200 mt-4 w-full dark:bg-gray-500 h-96 flex justify-center items-center d-flex"
-          >
-            Device is not recording, live view is not available
-          </div>
-          <.vue
-            v-component="Timeline"
-            segments={@segments}
-            v-socket={@socket}
-            v-on:run-clicked={JS.push("run-clicked")}
-          />
-        </div> --%>
+          v-on:show-download-modal={show_modal("download-modal")}
+          v-on:load-recording={JS.push("load-recording")}
+        />
       </div>
 
       <.modal id="download-modal">
@@ -224,7 +124,7 @@ defmodule ExNVRWeb.DashboardLive do
       start_date: nil,
       custom_duration: false
     )
-    |> assign(stream_url: "")
+    |> assign(stream_url: "", poster_url: "")
     |> then(&{:ok, &1})
   end
 
@@ -272,7 +172,7 @@ defmodule ExNVRWeb.DashboardLive do
     {:noreply, push_patch(socket, to: route, replace: true)}
   end
 
-  def handle_event("run-clicked", %{"timestamp" => timestamp}, socket) do
+  def handle_event("load-recording", %{"timestamp" => timestamp}, socket) do
     current_datetime = socket.assigns.start_date
     timezone = socket.assigns.current_device.timezone
     new_datetime = parse_datetime(timestamp, timezone)
@@ -392,9 +292,7 @@ defmodule ExNVRWeb.DashboardLive do
 
         {stream_url, poster_url} = stream_url(device, datetime, current_stream)
 
-        socket
-        |> push_event("stream", %{src: stream_url, poster: poster_url})
-        |> assign(stream_url: stream_url)
+        assign(socket, stream_url: stream_url, poster_url: poster_url)
     end
   end
 
@@ -413,6 +311,7 @@ defmodule ExNVRWeb.DashboardLive do
     assign(socket, live_view_enabled?: enabled?)
   end
 
+  defp parse_datetime(nil, _), do: nil
   defp parse_datetime(datetime, timezone) do
     with {:ok, naive_date} <- NaiveDateTime.from_iso8601(datetime),
          {:ok, zoned_date} <- DateTime.from_naive(naive_date, timezone) do
