@@ -3,7 +3,7 @@ defmodule ExNVRWeb.Application do
 
   use Application
 
-  alias ExNVR.Hardware.SolarCharger.VictronMPPT
+  alias ExNVR.Hardware.Victron
 
   @impl true
   def start(_type, _args) do
@@ -16,12 +16,21 @@ defmodule ExNVRWeb.Application do
         {Task.Supervisor, name: ExNVR.TaskSupervisor},
         {ExNVR.SystemStatus, []},
         {DynamicSupervisor, [name: ExNVR.PipelineSupervisor, strategy: :one_for_one]},
-        Task.child_spec(fn -> ExNVR.start() end),
         ExNVRWeb.Telemetry,
         ExNVRWeb.Endpoint,
         ExNVRWeb.PromEx,
         {ExNVRWeb.HlsStreamingMonitor, []},
-        {VictronMPPT, []}
+        {DynamicSupervisor, [name: ExNVR.HardwareMonitor, strategy: :one_for_one]},
+        Task.child_spec(fn ->
+          ExNVR.start()
+
+          Circuits.UART.enumerate()
+          |> Map.keys()
+          |> Enum.filter(&(&1 not in ["ttyS0", "ttyS1", "ttyAMA0", "ttyAMA10"]))
+          |> Enum.each(
+            &DynamicSupervisor.start_child(ExNVR.HardwareMonitor, {Victron, [port: &1]})
+          )
+        end)
       ] ++ remote_connector()
 
     opts = [strategy: :one_for_one, name: ExNVRWeb.Supervisor]

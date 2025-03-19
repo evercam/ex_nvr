@@ -3,7 +3,7 @@ defmodule ExNVR.SystemStatus.RegistryTest do
 
   use ExNVR.DataCase
 
-  alias ExNVR.Hardware.SolarCharger.VictronMPPT
+  alias ExNVR.Hardware.Victron
   alias ExNVR.SystemStatus
 
   test "test system status" do
@@ -32,7 +32,7 @@ defmodule ExNVR.SystemStatus.RegistryTest do
     assert {:ok, pid} = SystemStatus.start_link(name: __MODULE__)
     assert %{} = SystemStatus.get_all(__MODULE__)
 
-    victron_mppt = %VictronMPPT{v: 25_000, i: 1_600}
+    victron_mppt = %Victron{v: 25_000, i: 1_600}
     SystemStatus.set(__MODULE__, :solar_charger, victron_mppt)
 
     assert %{solar_charger: ^victron_mppt} = SystemStatus.get_all(__MODULE__)

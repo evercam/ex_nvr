@@ -1356,7 +1356,7 @@ components:
           type: object
           description: Block storage information
         solar_charger:
-          $ref: "#/components/schemas/VictronMPPT"
+          $ref: "#/components/schemas/Victron"
         hostname:
           type: string
           description: The hostname of the system
@@ -1404,9 +1404,9 @@ components:
             User's application language.
             Default to: en (English)
             * Only english available for now.
-    VictronMPPT:
+    Victron:
       type: object
-      description: Data received from Victron MPPT (BlueSolar and SmartSolar) via VE.DIRECT to USB.
+      description: Data received from Victron MPPT (BlueSolar and SmartSolar) and SmartShunt via serial port.
       nullable: true
       properties:
         v:
@@ -1437,6 +1437,51 @@ components:
         off_reason:
           type: integer
           description: The off reason.
+        p:
+          type: integer
+          description: Instantaneous power.
+        battery_temp:
+          type: integer
+          description: Battery temperature
+        consumed_amps:
+          type: integer
+          description: Consumed amps hours in mAh
+        soc:
+          type: integer
+          description: State of charge in ‰.
+        ttg:
+          type: integer
+          description: Time to go in minutes. -1 if not discharging.
+        alarm:
+          type: string
+          enum: [on, off]
+          description: alarm state.
+        alarm_reasons:
+          type: array
+          items:
+            type: string
+          description: List of reasons for the alarm if alarm is `on`.
+        h1:
+          type: integer
+          description: Depth of the deepest discharge in mAh
+        h2:
+          type: integer
+          description: Depth of the lasst discharge in mAh
+        h3:
+          type: integer
+          description: Depth of the average discharge in mAh
+        h4:
+          type: integer
+          description: Number of charge cycles
+        h5:
+          type: integer
+          description: Number of full discharges
+        h6:
+          type: integer
+          description: Cumulative Amps hours drawn in mAh
+        h9:
+          type: integer
+          description: Number of seconds since last full charge
         h19:
           type: integer
           description: Yield total in 0.01 kWh.

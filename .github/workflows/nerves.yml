@@ -17,7 +17,7 @@ jobs:
         target: [ex_nvr_rpi4, ex_nvr_rpi5, giraffe]
     env:
       MIX_ENV: prod
-      MIX_TARGET: ${{ matrix.target.name }}
+      MIX_TARGET: ${{ matrix.target }}
       NERVES_HUB_PRODUCT_KEY: ${{ secrets.NERVES_HUB_PRODUCT_KEY }}
       NERVES_HUB_PRODUCT_SECRET: ${{ secrets.NERVES_HUB_PRODUCT_SECRET }}
       SECRET_KEY_BASE: ${{ secrets.SECRET_KEY_BASE }}
