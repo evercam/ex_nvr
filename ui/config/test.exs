@@ -37,3 +37,7 @@ config :swoosh, :api_client, false
 config :phoenix, :plug_init_mode, :runtime
 
 config :ex_nvr, ExNVRWeb.PromEx, disabled: true
+
+config :live_vue,
+  ssr_module: LiveVue.SSR.ViteJS,
+  ssr: true

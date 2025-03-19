@@ -88,7 +88,7 @@ defmodule ExNVR.MixProject do
       {:circuits_uart, "~> 1.5"},
       {:onvif, github: "hammeraj/onvif", ref: "1b47735"},
       {:slipstream, "~> 1.2.0"},
-      {:live_vue, "~> 0.5.7"},
+      {:live_vue, github: "Valian/live_vue", ref: "88b6f57"},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:mimic, "~> 1.11.0", only: :test},
       {:faker, "~> 0.17", only: :test},

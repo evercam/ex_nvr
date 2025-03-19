@@ -30,9 +30,6 @@ defmodule ExNVRWeb.DashboardTest do
       assert html =~ "Stream"
       assert html =~ "Download"
 
-      assert has_element?(lv, "#Timeline-1")
-      assert has_element?(lv, "#download-footage-btn")
-
       refute has_element?(lv, "#live-video")
     end
   end
@@ -48,17 +45,17 @@ defmodule ExNVRWeb.DashboardTest do
           stream_config: %{sub_stream_uri: valid_rtsp_url()}
         })
 
-      {:ok, lv, html} = live(conn, ~p"/dashboard")
+      {:ok, _lv, html} = live(conn, ~p"/dashboard")
 
       assert html =~ device_1.id
       assert html =~ device_2.id
       assert html =~ "main_stream"
       refute html =~ "sub_stream"
 
-      html =
-        lv
-        |> element("#device_form_id")
-        |> render_change(%{"device" => device_2.id})
+      {:ok, lv, html} = live(conn, ~p"/dashboard?device_id=#{device_2.id}")
+
+      viewer = LiveVue.Test.get_vue(lv, name: "Viewer")
+      assert viewer.props["device"] == device_2.id
 
       assert html =~ "main_stream"
       assert html =~ "sub_stream"

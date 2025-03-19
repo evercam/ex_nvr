@@ -5,6 +5,7 @@
           <ERow>
             <select
               :value="device"
+              id="device_form_id"
               name="devices"
               class="text-sm dark:bg-gray-800 dark:placeholder-gray-400 dark:text-white dark:hover:bg-gray-600 e-border-transparent"
               @input="$emit('switch_device', {stream: $event.target.value})"
