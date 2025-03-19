@@ -155,9 +155,9 @@ config :nerves_hub_link,
   ],
   health: [
     metadata: %{
-      "router_mac_address" => {ExNVR.Nerves.Health.Metadata, :router_mac_address, []},
-      "router_serial_number" => {ExNVR.Nerves.Health.Metadata, :router_serial_number, []},
-      "nvr_kit_id" => {Nerves.Runtime.KV, :get, ["nerves_evercam_id"]}
+      "Router Mac Address" => {ExNVR.Nerves.Health.Metadata, :router_mac_address, []},
+      "Router Serial Number" => {ExNVR.Nerves.Health.Metadata, :router_serial_number, []},
+      "Kit ID" => {Nerves.Runtime.KV, :get, ["nerves_evercam_id"]}
     }
   ]
 
