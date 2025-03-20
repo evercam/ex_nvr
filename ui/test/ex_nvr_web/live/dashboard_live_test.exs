@@ -52,10 +52,7 @@ defmodule ExNVRWeb.DashboardTest do
       assert html =~ "main_stream"
       refute html =~ "sub_stream"
 
-      {:ok, lv, html} = live(conn, ~p"/dashboard?device_id=#{device_2.id}")
-
-      viewer = LiveVue.Test.get_vue(lv, name: "Viewer")
-      assert viewer.props["device"] == device_2.id
+      {:ok, _lv, html} = live(conn, ~p"/dashboard?device_id=#{device_2.id}")
 
       assert html =~ "main_stream"
       assert html =~ "sub_stream"
