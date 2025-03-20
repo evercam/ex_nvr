@@ -40,4 +40,4 @@ config :ex_nvr, ExNVRWeb.PromEx, disabled: true
 
 config :live_vue,
   ssr_module: LiveVue.SSR.ViteJS,
-  ssr: true
+  ssr: false
