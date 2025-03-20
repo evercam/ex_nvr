@@ -229,7 +229,10 @@ defmodule ExNVRWeb.DashboardLive do
 
     {supported_streams, stream} =
       if Device.has_sub_stream(device) do
-        {[%{name: "Main Stream", value: "main_stream"}, %{name: "Sub Stream", value: "sub_stream"}], stream}
+        {[
+           %{name: "Main Stream", value: "main_stream"},
+           %{name: "Sub Stream", value: "sub_stream"}
+         ], stream}
       else
         {[%{name: "Main Stream", value: "main_stream"}], "main_stream"}
       end
@@ -312,6 +315,7 @@ defmodule ExNVRWeb.DashboardLive do
   end
 
   defp parse_datetime(nil, _), do: nil
+
   defp parse_datetime(datetime, timezone) do
     with {:ok, naive_date} <- NaiveDateTime.from_iso8601(datetime),
          {:ok, zoned_date} <- DateTime.from_naive(naive_date, timezone) do
