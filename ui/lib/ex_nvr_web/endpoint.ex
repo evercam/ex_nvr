@@ -38,7 +38,7 @@ defmodule ExNVRWeb.Endpoint do
   plug Plug.Static,
     at: "/",
     from: :ex_nvr,
-    gzip: false,
+    gzip: true,
     only: ExNVRWeb.static_paths()
 
   # Code reloading can be explicitly enabled under the

@@ -11,7 +11,7 @@ defmodule Mix.Tasks.Firmware.Deps do
 
   @impl true
   def run(_args) do
-    :ok = Application.ensure_started(:req)
+    {:ok, _apps} = Application.ensure_all_started(:req)
 
     File.rm_rf!(@dest)
 
