@@ -7,7 +7,7 @@ defmodule ExNVRWeb.UserListLive do
 
   def render(assigns) do
     ~H"""
-    <div class="grow">
+    <div class="grow e-m-8">
       <div :if={@current_user.role == :admin} class="ml-4 sm:ml-0">
         <.link href={~p"/users/new"}>
           <.button>Add User</.button>
@@ -35,7 +35,7 @@ defmodule ExNVRWeb.UserListLive do
             :if={@current_user.role == :admin}
             id={"dropdownMenuIconButton-#{user.id}"}
             data-dropdown-toggle={"dropdownDots-#{user.id}"}
-            class="text-sm ml-3 bg-gray-200 hover:bg-gray-200 text-zinc-900 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-400"
+            class="text-sm ml-3 e-p-1 bg-gray-200 hover:bg-gray-200 text-zinc-900 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-400"
           >
             <svg
               class="w-5 h-5"

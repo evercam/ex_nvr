@@ -17,16 +17,16 @@
     "@vitejs/plugin-vue": "^5.2.1",
     "autoprefixer": "^10.4.19",
     "postcss": "^8.4.38",
+    "sass": "^1.85.1",
     "tailwindcss": "^3.4.3",
     "typescript": "~5.6.3",
     "vue-tsc": "^2.1.10"
   },
   "dependencies": {
-    "@evercam/ui": "0.0.63-vue-demi.0.5",
+    "@evercam/ui": "0.0.63-vue-demi.0.10",
     "d3": "^7.8.5",
     "flowbite": "^3.1.1",
     "heroicons": "^2.2.0",
-    "hls.js": "^1.5.15",
     "live_vue": "file:../deps/live_vue",
     "moment-timezone": "^0.5.43",
     "phoenix": "file:../deps/phoenix",

@@ -19,15 +19,11 @@
 import "phoenix_html"
 import { Socket } from "phoenix"
 import { LiveSocket } from "phoenix_live_view"
-import {getHooks} from "live_vue"
+import { getHooks } from "live_vue"
 import liveVueApp from "../vue"
 import topbar from "topbar"
-import createTimeline, { updateTimelineSegments } from "./timeline"
 import "flowbite/dist/flowbite.phoenix"
-import Hls from "hls.js"
 import "../css/app.css"
-
-const MANIFEST_LOAD_TIMEOUT = 60_000
 
 let Hooks = {
     SwitchDarkMode: {
@@ -44,41 +40,6 @@ let Hooks = {
                 localStorage.setItem('dark-mode', false);
             }
         }
-    },
-    DownloadSnapshot: {
-        mounted() {
-            this.el.addEventListener("click", this.downloadSnapshot);
-        },
-        downloadSnapshot(event) {
-            const player = document.getElementById("live-video");
-            var canvas = document.createElement("canvas");
-
-            canvas.width = player.videoWidth;
-            canvas.height = player.videoHeight;
-            canvas.getContext('2d').drawImage(player, 0, 0, canvas.width, canvas.height);
-            
-            const dataUri = canvas.toDataURL('image/png');
-
-            const link = document.createElement("a");
-            link.style.display = "none";
-            link.download = "snapshot.png";
-            link.href = dataUri;
-
-            document.body.appendChild(link);
-            link.click();
-
-            document.body.removeChild(link);
-            canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
-        }
-    },
-    Timeline: {
-        mounted() {
-            createTimeline(this.el)
-            window.TimelineHook = this
-        },
-        updated() {
-            updateTimelineSegments(this.el)
-        },
     },
     ...getHooks(liveVueApp)
 }
@@ -104,38 +65,6 @@ liveSocket.connect()
 // >> liveSocket.enableLatencySim(1000)  // enabled for duration of browser session
 // >> liveSocket.disableLatencySim()
 window.liveSocket = liveSocket
-
-const startStreaming = (elem_id, src, poster_url) => {
-    var video = document.getElementById(elem_id)
-    if (video != null && Hls.isSupported()) {
-        if (window.hls) {
-            window.hls.destroy()
-        }
-
-        if (poster_url != null) {
-            video.poster = poster_url
-        }
-
-        window.hls = new Hls({
-            manifestLoadingTimeOut: MANIFEST_LOAD_TIMEOUT,
-        })
-        window.hls.loadSource(src)
-        window.hls.attachMedia(video)
-
-        window.hls.on(Hls.Events.ERROR, (event, data) => {
-            // handle error
-            console.log(data)
-        })
-    }
-}
-
-window.addEventListener("phx:stream", (e) => {
-    startStreaming("live-video", e.detail.src, e.detail.poster)
-})
-
-window.addEventListener("events:play-clip", (e) => {
-    startStreaming(e.target.id, e.detail.src, e.detail.poster)
-})
 
 // Listen for reload-popovers events and re-init the popovers
 // phx-loading-xxx events are not triggered by push_patch
