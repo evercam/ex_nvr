@@ -43,6 +43,7 @@ export default defineConfig(({ command }) => {
       rollupOptions: {
         input: {
           app: path.resolve(__dirname, "./js/app.js"),
+          webrtc: path.resolve(__dirname, "./js/webrtc.js"),
         },
         output: {
           // remove hashes to match phoenix way of handling assets
