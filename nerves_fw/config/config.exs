@@ -55,8 +55,6 @@ config :bundlex, disable_precompiled_os_deps: true
 
 config :membrane_core, enable_metrics: false
 
-config :tzdata, data_dir: "/data/elixir_tzdata"
-
 config :nerves_hub_link, connect: false
 
 if Mix.target() == :host do
