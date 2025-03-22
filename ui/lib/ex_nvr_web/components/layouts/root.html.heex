@@ -16,8 +16,8 @@
       {assigns[:page_title] || "ExNVR"}
     </.live_title>
     <LiveVue.Reload.vite_assets assets={["/js/app.js", "/css/app.css", "/js/webrtc.js"]}>
-      <link phx-track-static rel="stylesheet" href={ static_path(@conn, "/assets/app.css") } />
-      <script defer phx-track-static type="module" src={ static_path(@conn, "/assets/app.js") } />
+      <link phx-track-static rel="stylesheet" href={static_path(@conn, "/assets/app.css")} />
+      <script defer phx-track-static type="module" src={static_path(@conn, "/assets/app.js")} />
     </LiveVue.Reload.vite_assets>
   </head>
   <body class="bg-gray-300 dark:bg-gray-800 antialiased">
