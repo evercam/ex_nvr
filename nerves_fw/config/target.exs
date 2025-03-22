@@ -170,6 +170,8 @@ config :nerves_time, :servers, [
   "3.pool.ntp.org"
 ]
 
+config :tzdata, data_dir: "/data/elixir_tzdata"
+
 # Import target specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
 # Uncomment to use target specific configurations
