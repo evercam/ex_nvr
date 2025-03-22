@@ -24,7 +24,7 @@ defmodule ExNVR.Nerves.Application do
   end
 
   def children(:giraffe) do
-    [{ExNVR.Nerves.Giraffe.Init, []}] ++ common_config()
+    [{ExNVR.Nerves.Giraffe.Init, []}] ++ common_config() ++ remote_config()
   end
 
   def children(_target), do: common_config()
@@ -44,13 +44,23 @@ defmodule ExNVR.Nerves.Application do
 
   defp common_config() do
     [
-      {ExNVR.Nerves.Netbird, []},
       {ExNVR.Nerves.DiskMounter, []},
-      {ExNVR.Nerves.GrafanaAgent, grafana_agent_config()},
       {MuonTrap.Daemon, ["nginx", [], [stderr_to_stdout: true, log_output: :info]]},
-      {ExNVR.Nerves.RemoteConfigurer, Application.get_env(:ex_nvr_fw, :remote_configurer)},
-      {ExNVR.Nerves.Monitoring.RUT, []},
-      {ExNVR.Nerves.SystemStatus, []}
     ]
+  end
+
+  defp remote_config() do
+    config = Application.get_env(:ex_nvr_fw, :remote_configurer)
+    if config[:token] do
+      [
+        {ExNVR.Nerves.Netbird, []},
+        {ExNVR.Nerves.GrafanaAgent, grafana_agent_config()},
+        {ExNVR.Nerves.RemoteConfigurer, Application.get_env(:ex_nvr_fw, :remote_configurer)},
+        {ExNVR.Nerves.Monitoring.RUT, []},
+        {ExNVR.Nerves.SystemStatus, []}
+      ]
+    else
+      []
+    end
   end
 end
