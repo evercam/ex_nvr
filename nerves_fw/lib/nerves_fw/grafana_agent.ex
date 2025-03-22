@@ -3,9 +3,14 @@ defmodule ExNVR.Nerves.GrafanaAgent do
   Start grafana agent as a port.
   """
 
-  use Supervisor
+  use GenServer
 
+  require Logger
+
+  alias Credo.CLI.Task.PrepareChecksToRun
   alias __MODULE__.ConfigRenderer
+
+  @github_api_url "https://api.github.com/repos/grafana/agent/releases"
 
   @default_config [
     config_dir: "/data/grafana_agent",
@@ -13,15 +18,11 @@ defmodule ExNVR.Nerves.GrafanaAgent do
   ]
 
   def start_link(config) do
-    Supervisor.start_link(__MODULE__, config, name: __MODULE__)
+    GenServer.start_link(__MODULE__, config, name: __MODULE__)
   end
 
   def reconfigure(new_config) do
-    config = Keyword.merge(@default_config, new_config)
-    config_dir = config[:config_dir]
-    ConfigRenderer.generate_config_file(Map.new(config), config_dir)
-    # This should be restarted by the supervisor
-    Supervisor.stop(__MODULE__)
+    GenServer.cast(__MODULE__, {:reconfigure, new_config})
   end
 
   @impl true
@@ -30,23 +31,84 @@ defmodule ExNVR.Nerves.GrafanaAgent do
     config_dir = config[:config_dir]
     config_file = Path.join(config_dir, "agent.yml")
 
-    unless File.exists?(config_dir) do
+    state = %{config_dir: config_dir, pid: nil}
+
+    if not File.exists?(config_dir) do
       File.mkdir!(config_dir)
     end
 
-    unless File.exists?(config_file) do
+    if not File.exists?(config_file) do
       ConfigRenderer.generate_config_file(Map.new(config), config_dir)
     end
 
-    children = [
-      {MuonTrap.Daemon,
-       [
-         "grafana-agent",
-         ["-config.file", config_file],
-         [log_output: :info, stderr_to_stdout: true]
-       ]}
-    ]
+    case File.exists?(Path.join(config_dir, "grafana-agent")) do
+      true ->
+        {:ok, start_grafana_agent(state)}
 
-    Supervisor.init(children, strategy: :one_for_one)
+      false ->
+        Process.send_after(self(), :download, to_timeout(second: 5))
+        {:ok, state}
+    end
+  end
+
+  @impl true
+  def handle_cast({:reconfigure, new_config}, state) do
+    config = Keyword.merge(@default_config, new_config)
+    ConfigRenderer.generate_config_file(Map.new(config), config[:config_dir])
+
+    case state.pid do
+      nil ->
+        {:noreply, state}
+
+      pid ->
+        Process.exit(pid, :normal)
+        {:noreply, start_grafana_agent(state)}
+    end
+  end
+
+  @impl true
+  def handle_info(:download, state) do
+    Logger.info("Download grafana agent...")
+    tmp_path = Path.join(System.tmp_dir!(), "grafana-agent.zip")
+
+    %{status: 200} = Req.get!(grafana_agent_download_url(), into: File.stream!(tmp_path))
+
+    Logger.info("Unzip grafana agent zip file...")
+    {:ok, [grafana_agent]} = :zip.unzip(to_charlist(tmp_path), cwd: to_charlist(state.config_dir))
+    File.rename!(List.to_string(grafana_agent), Path.join(state.config_dir, "grafana-agent"))
+
+    File.rm!(tmp_path)
+
+    {:noreply, start_grafana_agent(state)}
+  end
+
+  @impl true
+  def handle_info(_msg, state) do
+    {:noreply, state}
+  end
+
+  defp grafana_agent_download_url() do
+    Req.get!(@github_api_url,
+      headers: [{"content-type", "application/vnd.github+json"}],
+      params: [per_page: 1]
+    )
+    |> Map.get(:body)
+    |> List.first()
+    |> Map.get("assets")
+    # all our firmware are aarch64
+    |> Enum.find(&String.ends_with?(&1["name"], "linux-arm64.zip"))
+    |> Map.get("browser_download_url")
+  end
+
+  defp start_grafana_agent(%{config_dir: config_dir} = state) do
+    {:ok, pid} =
+      MuonTrap.Daemon.start_link(
+        Path.join(config_dir, "grafana-agent"),
+        ["-config.file", Path.join(config_dir, "agent.yml")],
+        log_output: :info,
+        stderr_to_stdout: true
+      )
+
+    %{state | pid: pid}
   end
 end
