@@ -64,5 +64,8 @@ npm-debug.log
 # Vscode settings
 .vscode
 
+# Jetbrains IDE file
+.idea
+
 # .env files
 /nerves_fw/.env
