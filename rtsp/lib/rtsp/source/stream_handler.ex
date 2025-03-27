@@ -16,6 +16,7 @@ defmodule ExNVR.RTSP.Source.StreamHandler do
           parser_mod: module(),
           parser_state: any(),
           buffered_actions: [],
+          wallclock_timestamp: DateTime.t(),
           previous_seq_num: integer() | nil
         }
 
@@ -23,13 +24,14 @@ defmodule ExNVR.RTSP.Source.StreamHandler do
     :parser_mod,
     :parser_state,
     timestamps: nil,
+    wallclock_timestamp: nil,
     clock_rate: 90_000,
     buffered_actions: [],
     previous_seq_num: nil
   ]
 
-  @spec handle_packet(t(), ExRTP.Packet.t()) :: {[Buffer.t()], t()}
-  def handle_packet(handler, packet) do
+  @spec handle_packet(t(), ExRTP.Packet.t(), DateTime.t()) :: {[Buffer.t()], t()}
+  def handle_packet(handler, packet, wallclock_timestamp) do
     {event, handler} =
       if discontinuty?(packet, handler.previous_seq_num) do
         parser_state = handler.parser_mod.handle_discontinuity(handler.parser_state)
@@ -40,6 +42,7 @@ defmodule ExNVR.RTSP.Source.StreamHandler do
 
     {buffers, handler} =
       %{handler | previous_seq_num: packet.sequence_number}
+      |> set_wallclock_timestamp(wallclock_timestamp)
       |> convert_timestamp(packet)
       |> parse()
 
@@ -75,8 +78,21 @@ defmodule ExNVR.RTSP.Source.StreamHandler do
 
   defp parse({handler, packet}) do
     case handler.parser_mod.handle_packet(packet, handler.parser_state) do
+      {:ok, {[], state}} ->
+        {[], %{handler | parser_state: state}}
+
       {:ok, {buffers, state}} ->
-        {buffers, %{handler | parser_state: state}}
+        buffers =
+          Enum.map(buffers, fn
+            %Membrane.Buffer{} = buffer ->
+              metadata = Map.put(buffer.metadata, :timestamp, handler.wallclock_timestamp)
+              %{buffer | metadata: metadata}
+
+            other ->
+              other
+          end)
+
+        {buffers, %{handler | parser_state: state, wallclock_timestamp: nil}}
 
       {:error, reason, state} ->
         Logger.warning("""
@@ -106,4 +122,10 @@ defmodule ExNVR.RTSP.Source.StreamHandler do
     |> Enum.min_by(fn {_atom, distance} -> distance end)
     |> then(fn {result, _value} -> result end)
   end
+
+  defp set_wallclock_timestamp(%{wallclock_timestamp: nil} = handler, wallclock_timestamp) do
+    %{handler | wallclock_timestamp: wallclock_timestamp}
+  end
+
+  defp set_wallclock_timestamp(handler, _wallclock_timestamp), do: handler
 end
