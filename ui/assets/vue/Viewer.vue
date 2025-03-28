@@ -1,5 +1,5 @@
 <template>
-    <ECol v-resize-observer="handleResize" class="e-h-full e-p-0 overflow-hidden">
+    <ECol v-resize-observer="handleResize" class="dashboard-viewer e-h-full e-p-0 overflow-hidden">
       <ERow ref="topMenu" justify="between" align-content="start" class="top-bar dark:bg-gray-900">
         <ECol class="e-p-0" cols="5">
           <ERow>
@@ -22,8 +22,8 @@
               :value="stream"
               name="streams"
               class="text-sm dark:bg-gray-800 dark:placeholder-gray-400 dark:text-white dark:hover:bg-gray-600 e-border-transparent"
-              @input="$emit('switch_stream', {stream: $event.target.value})"
-              >
+              @input="$emit('switch_stream', {device: $event.target.value})"
+            >
               <option
                 v-for="stream in streams"
                 :key="stream.value"
@@ -34,36 +34,41 @@
             </select>
           </ERow>
         </ECol>
-        <button
-          v-if="liveViewEnabled"
-          class="
-              dark:bg-gray-800 dark:border-gray-600
-              text-white dark:text-white px-4 flex items-center dark:hover:bg-gray-600"
-          @click="$emit('load-recording', { timestamp: null })"
-        >
-          <span class="">Live</span>
-          <div v-if="!startDate" class="ml-2">
-            <EPulsatingDot :size="12" color="#c5393d" />
-          </div>
-        </button>
+        <ETooltip v-if="liveViewEnabled" position="bottom" text="Go live">
+          <button
+            class="
+                dark:bg-gray-800 dark:border-gray-600 e-h-full
+                text-white dark:text-white px-4 flex items-center dark:hover:bg-gray-600"
+            @click="$emit('load-recording', { timestamp: null })"
+          >
+            <span class="">Live</span>
+            <div v-if="!startDate" class="ml-2">
+              <EPulsatingDot :size="12" color="#c5393d" />
+            </div>
+          </button>
+        </ETooltip>
         <ECol class="e-p-0" cols="5" align-self="stretch">
-          <ERow v-if="liveViewEnabled" class="e-h-full" align-content="stretch" justify="end">
-            <button
-              class="
-                dark:bg-gray-800 dark:border-gray-600
-                text-white dark:text-white px-4 flex items-center dark:hover:bg-gray-600"
-              @click="downloadSnapshot"
-            >
-              <EIcon icon="camera" size="xl" class="e-mt-1" />
-            </button>
-            <button
-              class="
-                dark:bg-gray-800 dark:border-gray-600
-                text-white dark:text-white px-4 flex items-center dark:hover:bg-gray-600"
-              @click="$emit('show-download-modal')"
-            >
-              <EIcon icon="video" size="xl" class="e-mt-1" />
-            </button>
+          <ERow class="right-buttons e-h-full" align-content="stretch" justify="end">
+            <ETooltip v-if="liveViewEnabled" position="bottom" text="Download current snapshot">
+              <button
+                class="
+                  dark:bg-gray-800 dark:border-gray-600 e-h-full
+                  text-white dark:text-white px-4 flex items-center dark:hover:bg-gray-600"
+                @click="downloadSnapshot"
+              >
+                <EIcon icon="camera" size="xl" class="e-mt-1" />
+              </button>
+            </ETooltip>
+            <ETooltip position="bottom" text="Download footage">
+              <button
+                class="
+                  dark:bg-gray-800 dark:border-gray-600 e-h-full
+                  text-white dark:text-white px-4 flex items-center dark:hover:bg-gray-600"
+                @click="$emit('show-download-modal')"
+              >
+                <EIcon icon="download" size="xl" class="e-mt-1" />
+              </button>
+            </ETooltip>
           </ERow>
         </ECol>
       </ERow>
@@ -238,7 +243,17 @@ export default defineComponent({
 </script>
 
 <style lang="scss">
-.top-bar {
-  min-height: 2.5em;
+.dashboard-viewer {
+  .top-bar {
+    min-height: 2.5em;
+  }
+
+  .tooltip {
+    z-index: 100;
+  }
+
+  .right-buttons .tooltip {
+    transform: translate(-80%, 0) !important;
+  }
 }
 </style>
