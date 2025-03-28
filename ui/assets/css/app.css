@@ -5,6 +5,10 @@
 @import "@evercam/ui/styles.css";
 
 /* This file is for your main application CSS */
+html, body {
+    height: 100%;
+}
+
 #timeline .x-axis g {
     color: white;
     fill: white;

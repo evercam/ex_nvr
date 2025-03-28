@@ -11,7 +11,7 @@ defmodule ExNVRWeb.LPREventsListLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="grow">
+    <div class="grow e-m-8">
       <.filter_form meta={@meta} devices={@devices} id="lpr-event-filter-form" />
       <Flop.Phoenix.table
         id="events"

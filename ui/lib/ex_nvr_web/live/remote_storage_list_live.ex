@@ -7,7 +7,7 @@ defmodule ExNVRWeb.RemoteStorageListLive do
 
   def render(assigns) do
     ~H"""
-    <div class="grow">
+    <div class="grow e-m-8">
       <div class="ml-4 sm:ml-0">
         <.link href={~p"/remote-storages/new"}>
           <.button>Add remote storage</.button>

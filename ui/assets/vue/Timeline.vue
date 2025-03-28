@@ -50,8 +50,8 @@ export default defineComponent({
         minDate = Math.min(minDate, startDate.unix())
 
         acc.push({
-          startDate: startDate.toISOString(),
-          endDate: endDate.toISOString(),
+          startDate: startDate?.toISOString(),
+          endDate: endDate?.toISOString(),
           color: this.barColor,
           text: "",
         })
@@ -74,8 +74,9 @@ export default defineComponent({
 </script>
 
 <template>
-  <div v-if="eventGroups.Runs?.events" class="mt-3" style="width: 100%">
+  <div>
     <ETimeline
+      v-if="eventGroups.Runs?.events"
       ref="timeline"
       :events-groups="eventGroups"
       :bar-height="35"
@@ -91,7 +92,6 @@ export default defineComponent({
           {{ formatDateToISO(timestamp) }}
         </div>
       </template>
-
       <template #eventTooltip="{ active, timestamp}">
         <div v-if="active" class="e-border e-rounded e-px-2 -e-left-2/4 e-relative e-bg-gray-900 e-text-white e-border-gray-700 e-p-3">
           {{ formatDateToISO(timestamp) }}
