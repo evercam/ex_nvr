@@ -8,7 +8,7 @@
               id="device_form_id"
               name="devices"
               class="text-sm dark:bg-gray-800 dark:placeholder-gray-400 dark:text-white dark:hover:bg-gray-600 e-border-transparent"
-              @input="$emit('switch_device', {stream: $event.target.value})"
+              @input="$emit('switch_device', {device: $event.target.value})"
             >
               <option
                 v-for="device in devices"
@@ -22,7 +22,7 @@
               :value="stream"
               name="streams"
               class="text-sm dark:bg-gray-800 dark:placeholder-gray-400 dark:text-white dark:hover:bg-gray-600 e-border-transparent"
-              @input="$emit('switch_stream', {device: $event.target.value})"
+              @input="$emit('switch_stream', {stream: $event.target.value})"
             >
               <option
                 v-for="stream in streams"
