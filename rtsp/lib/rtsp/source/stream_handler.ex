@@ -148,7 +148,9 @@ defmodule ExNVR.RTSP.Source.StreamHandler do
 
   defp set_wallclock_timestamp(handler, _wallclock_timestamp), do: handler
 
-  defp set_last_replay_timestamp(handler, %{extensions: %OnvifReplayExtension{timestamp: timestamp}}) do
+  defp set_last_replay_timestamp(handler, %{
+         extensions: %OnvifReplayExtension{timestamp: timestamp}
+       }) do
     %{handler | last_replay_timestamp: timestamp}
   end
 

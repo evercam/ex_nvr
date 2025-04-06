@@ -46,6 +46,11 @@ defmodule ExNVR.RTSP.Source do
                 spec: DateTime.t(),
                 default: nil,
                 description: "The start date of the footage to replay"
+              ],
+              end_date: [
+                spec: DateTime.t(),
+                default: nil,
+                description: "The end date of the footage to replay"
               ]
 
   def_output_pad :output,
@@ -67,7 +72,8 @@ defmodule ExNVR.RTSP.Source do
             socket: :inet.socket() | nil,
             unprocessed_data: <<>>,
             onvif_replay: boolean(),
-            start_date: DateTime.t()
+            start_date: DateTime.t(),
+            end_date: DateTime.t()
           }
 
     @enforce_keys [:stream_uri, :allowed_media_types, :timeout, :keep_alive_interval]
@@ -81,7 +87,8 @@ defmodule ExNVR.RTSP.Source do
                   unprocessed_data: <<>>,
                   stream_handlers: %{},
                   onvif_replay: false,
-                  start_date: nil
+                  start_date: nil,
+                  end_date: nil
                 ]
   end
 

@@ -52,8 +52,14 @@ defmodule ExNVR.RTSP.Source.ConnectionManager do
     headers =
       case state.onvif_replay do
         true ->
-          datetime = Calendar.strftime(state.start_date, "%Y%m%dT%H%M%S.%fZ")
-          [{"Require", "onvif-replay"}, {"Range", "clock=#{datetime}-"}, {"Rate-Control", "no"}]
+          start_date = Calendar.strftime(state.start_date, "%Y%m%dT%H%M%S.%fZ")
+          end_date = state.end_date && Calendar.strftime(state.end_date, "%Y%m%dT%H%M%S.%fZ")
+
+          [
+            {"Require", "onvif-replay"},
+            {"Range", "clock=#{start_date}-#{end_date}"},
+            {"Rate-Control", "no"}
+          ]
 
         false ->
           []
