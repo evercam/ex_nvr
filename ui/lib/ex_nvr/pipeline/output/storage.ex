@@ -68,6 +68,10 @@ defmodule ExNVR.Pipeline.Output.Storage do
 
                 The max error the date will be adjusted is in the range ± 30 ms.
                 """
+              ],
+              onvif_replay: [
+                spec: boolean(),
+                default: false
               ]
 
   @impl true
@@ -80,7 +84,8 @@ defmodule ExNVR.Pipeline.Output.Storage do
         directory: Device.recording_dir(opts.device, opts.stream),
         target_duration: opts.target_segment_duration,
         correct_timestamp: opts.correct_timestamp,
-        track: nil
+        track: nil,
+        onvif_replay: opts.onvif_replay
       }
       |> reset_state_fields()
 
@@ -139,7 +144,7 @@ defmodule ExNVR.Pipeline.Output.Storage do
       %{
         state
         | current_segment: Time.from_datetime(buffer.metadata.timestamp) |> Segment.new(),
-          first_segment?: true,
+          first_segment?: state.onvif_replay,
           last_buffer: buffer,
           monotonic_start_time: System.monotonic_time()
       }
@@ -167,6 +172,7 @@ defmodule ExNVR.Pipeline.Output.Storage do
           |> close_file(discontinuity)
           |> rename_first_segment(segment)
 
+        # in case of time jump, we need to start a new segment
         start_time =
           if discontinuity,
             do: state.current_segment.wallclock_end_date,
@@ -327,6 +333,7 @@ defmodule ExNVR.Pipeline.Output.Storage do
     start_date = Segment.start_date(segment)
     recording_path = recording_path(state, start_date)
     File.mkdir_p!(Path.dirname(recording_path))
+    if File.exists?(recording_path), do: File.rm!(recording_path)
 
     writer =
       Writer.new!(recording_path, fast_start: true)
