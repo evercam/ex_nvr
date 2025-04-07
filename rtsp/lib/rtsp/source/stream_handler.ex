@@ -5,10 +5,12 @@ defmodule ExNVR.RTSP.Source.StreamHandler do
 
   require Logger
 
+  alias ExNVR.RTSP.OnvifReplayExtension
   alias Membrane.{Buffer, Time}
 
   @timestamp_limit Bitwise.bsl(1, 32)
   @seq_number_limit Bitwise.bsl(1, 16)
+  @max_replay_timestamp_diff 10
 
   @type t :: %__MODULE__{
           timestamps: {integer(), integer()} | nil,
@@ -16,22 +18,26 @@ defmodule ExNVR.RTSP.Source.StreamHandler do
           parser_mod: module(),
           parser_state: any(),
           buffered_actions: [],
-          previous_seq_num: integer() | nil
+          wallclock_timestamp: DateTime.t(),
+          previous_seq_num: integer() | nil,
+          last_replay_timestamp: DateTime.t()
         }
 
   defstruct [
     :parser_mod,
     :parser_state,
     timestamps: nil,
+    wallclock_timestamp: nil,
     clock_rate: 90_000,
     buffered_actions: [],
-    previous_seq_num: nil
+    previous_seq_num: nil,
+    last_replay_timestamp: ~U(1970-01-01 00:00:00Z)
   ]
 
-  @spec handle_packet(t(), ExRTP.Packet.t()) :: {[Buffer.t()], t()}
-  def handle_packet(handler, packet) do
+  @spec handle_packet(t(), ExRTP.Packet.t(), DateTime.t()) :: {[Buffer.t()], t()}
+  def handle_packet(handler, packet, wallclock_timestamp) do
     {event, handler} =
-      if discontinuty?(packet, handler.previous_seq_num) do
+      if discontinuity?(packet, handler) do
         parser_state = handler.parser_mod.handle_discontinuity(handler.parser_state)
         {[%Membrane.Event.Discontinuity{}], %{handler | parser_state: parser_state}}
       else
@@ -40,17 +46,33 @@ defmodule ExNVR.RTSP.Source.StreamHandler do
 
     {buffers, handler} =
       %{handler | previous_seq_num: packet.sequence_number}
+      |> set_wallclock_timestamp(wallclock_timestamp)
+      |> set_last_replay_timestamp(packet)
       |> convert_timestamp(packet)
       |> parse()
 
     {event ++ buffers, handler}
   end
 
-  @spec discontinuty?(ExRTP.Packet.t(), integer() | nil) :: boolean()
-  defp discontinuty?(_rtp_packet, nil), do: false
+  @spec discontinuity?(ExRTP.Packet.t(), t()) :: boolean()
+  defp discontinuity?(_rtp_packet, %{previous_seq_num: nil}), do: false
 
-  defp discontinuty?(%{sequence_number: seq_num}, previous_seq_num) do
-    rem(previous_seq_num + 1, @seq_number_limit) != seq_num
+  defp discontinuity?(%{extensions: %OnvifReplayExtension{} = ex}, handler) do
+    cond do
+      ex.discontinuity? ->
+        true
+
+      # Some cameras don't set the discontinuity flag in the extension
+      DateTime.diff(ex.timestamp, handler.last_replay_timestamp) >= @max_replay_timestamp_diff ->
+        true
+
+      true ->
+        false
+    end
+  end
+
+  defp discontinuity?(%{sequence_number: seq_num}, handler) do
+    rem(handler.previous_seq_num + 1, @seq_number_limit) != seq_num
   end
 
   @spec convert_timestamp(t(), ExRTP.Packet.t()) :: {t(), ExRTP.Packet.t()}
@@ -75,8 +97,21 @@ defmodule ExNVR.RTSP.Source.StreamHandler do
 
   defp parse({handler, packet}) do
     case handler.parser_mod.handle_packet(packet, handler.parser_state) do
+      {:ok, {[], state}} ->
+        {[], %{handler | parser_state: state}}
+
       {:ok, {buffers, state}} ->
-        {buffers, %{handler | parser_state: state}}
+        buffers =
+          Enum.map(buffers, fn
+            %Membrane.Buffer{} = buffer ->
+              metadata = Map.put(buffer.metadata, :timestamp, handler.wallclock_timestamp)
+              %{buffer | metadata: metadata}
+
+            other ->
+              other
+          end)
+
+        {buffers, %{handler | parser_state: state, wallclock_timestamp: nil}}
 
       {:error, reason, state} ->
         Logger.warning("""
@@ -106,4 +141,18 @@ defmodule ExNVR.RTSP.Source.StreamHandler do
     |> Enum.min_by(fn {_atom, distance} -> distance end)
     |> then(fn {result, _value} -> result end)
   end
+
+  defp set_wallclock_timestamp(%{wallclock_timestamp: nil} = handler, wallclock_timestamp) do
+    %{handler | wallclock_timestamp: wallclock_timestamp}
+  end
+
+  defp set_wallclock_timestamp(handler, _wallclock_timestamp), do: handler
+
+  defp set_last_replay_timestamp(handler, %{
+         extensions: %OnvifReplayExtension{timestamp: timestamp}
+       }) do
+    %{handler | last_replay_timestamp: timestamp}
+  end
+
+  defp set_last_replay_timestamp(handler, _packet), do: handler
 end

@@ -49,7 +49,23 @@ defmodule ExNVR.RTSP.Source.ConnectionManager do
   def play(state) do
     Membrane.Logger.debug("ConnectionManager: Setting RTSP on play mode")
 
-    case RTSP.play(state.rtsp_session) do
+    headers =
+      case state.onvif_replay do
+        true ->
+          start_date = Calendar.strftime(state.start_date, "%Y%m%dT%H%M%S.%fZ")
+          end_date = state.end_date && Calendar.strftime(state.end_date, "%Y%m%dT%H%M%S.%fZ")
+
+          [
+            {"Require", "onvif-replay"},
+            {"Range", "clock=#{start_date}-#{end_date}"},
+            {"Rate-Control", "no"}
+          ]
+
+        false ->
+          []
+      end
+
+    case RTSP.play(state.rtsp_session, headers) do
       {:ok, %{status: 200}} ->
         %{state | keep_alive_timer: start_keep_alive_timer(state, self())}
 
@@ -99,7 +115,7 @@ defmodule ExNVR.RTSP.Source.ConnectionManager do
 
   @spec setup_rtsp_connection(State.t()) :: connection_establishment_phase_return()
   defp setup_rtsp_connection(%{transport: :tcp} = state) do
-    case setup_rtsp_connection_with_tcp(state.rtsp_session, state.tracks) do
+    case setup_rtsp_connection_with_tcp(state.rtsp_session, state.tracks, state.onvif_replay) do
       {:ok, tracks} -> {:ok, %{state | tracks: tracks}}
       {:error, reason} -> {:error, reason, state}
     end
@@ -117,16 +133,18 @@ defmodule ExNVR.RTSP.Source.ConnectionManager do
     Process.send_after(pid, :keep_alive, interval |> Membrane.Time.as_milliseconds(:round))
   end
 
-  @spec setup_rtsp_connection_with_tcp(RTSP.t(), [track()]) ::
+  @spec setup_rtsp_connection_with_tcp(RTSP.t(), [track()], boolean()) ::
           {:ok, tracks :: [track()]} | {:error, reason :: term()}
-  defp setup_rtsp_connection_with_tcp(rtsp_session, tracks) do
+  defp setup_rtsp_connection_with_tcp(rtsp_session, tracks, onvif_replay?) do
     socket = RTSP.get_socket(rtsp_session)
+    onvif_header = if onvif_replay?, do: [{"Require", "onvif-replay"}], else: []
 
     tracks
     |> Enum.with_index()
     |> Enum.reduce_while({:ok, []}, fn {track, idx}, {:ok, set_up_tracks} ->
       transport_header =
-        [{"Transport", "RTP/AVP/TCP;unicast;interleaved=#{idx * 2}-#{idx * 2 + 1}"}]
+        [{"Transport", "RTP/AVP/TCP;unicast;interleaved=#{idx * 2}-#{idx * 2 + 1}"}] ++
+          onvif_header
 
       case RTSP.setup(rtsp_session, track.control_path, transport_header) do
         {:ok, %{status: 200}} ->

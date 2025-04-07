@@ -36,6 +36,21 @@ defmodule ExNVR.RTSP.Source do
                 Send a heartbeat to the RTSP server at a regular interval to
                 keep the session alive.
                 """
+              ],
+              onvif_replay: [
+                spec: boolean(),
+                default: false,
+                description: "The stream uri is an onvif replay"
+              ],
+              start_date: [
+                spec: DateTime.t(),
+                default: nil,
+                description: "The start date of the footage to replay"
+              ],
+              end_date: [
+                spec: DateTime.t(),
+                default: nil,
+                description: "The end date of the footage to replay"
               ]
 
   def_output_pad :output,
@@ -55,7 +70,10 @@ defmodule ExNVR.RTSP.Source do
             rtsp_session: Membrane.RTSP.t() | nil,
             keep_alive_timer: reference() | nil,
             socket: :inet.socket() | nil,
-            unprocessed_data: <<>>
+            unprocessed_data: <<>>,
+            onvif_replay: boolean(),
+            start_date: DateTime.t(),
+            end_date: DateTime.t()
           }
 
     @enforce_keys [:stream_uri, :allowed_media_types, :timeout, :keep_alive_interval]
@@ -67,7 +85,10 @@ defmodule ExNVR.RTSP.Source do
                   rtsp_session: nil,
                   keep_alive_timer: nil,
                   unprocessed_data: <<>>,
-                  stream_handlers: %{}
+                  stream_handlers: %{},
+                  onvif_replay: false,
+                  start_date: nil,
+                  end_date: nil
                 ]
   end
 
@@ -115,6 +136,8 @@ defmodule ExNVR.RTSP.Source do
 
   @impl true
   def handle_info(:recv, ctx, state) do
+    Membrane.Logger.debug("Receiving data from socket")
+
     case :gen_tcp.recv(state.socket, 0, Time.as_milliseconds(state.timeout, :round)) do
       {:ok, message} ->
         datetime = DateTime.utc_now()
@@ -125,17 +148,27 @@ defmodule ExNVR.RTSP.Source do
         {actions, stream_handlers} =
           rtp_packets
           |> Stream.map(&decode_rtp!/1)
+          |> Stream.map(&decode_onvif_replay_extension/1)
           |> Enum.flat_map_reduce(state.stream_handlers, fn rtp_packet, handlers ->
             {notifcation_action, handlers} =
               maybe_init_stream_handler(state, handlers, rtp_packet)
 
             ssrc = rtp_packet.ssrc
 
-            {buffers, handler} = StreamHandler.handle_packet(handlers[ssrc], rtp_packet)
+            datetime =
+              case state do
+                %State{onvif_replay: true} ->
+                  rtp_packet.extensions && rtp_packet.extensions.timestamp
+
+                _state ->
+                  datetime
+              end
+
+            {buffers, handler} = StreamHandler.handle_packet(handlers[ssrc], rtp_packet, datetime)
 
             {actions, handler} =
               buffers
-              |> map_buffers_into_actions(ssrc, datetime)
+              |> map_buffers_into_actions(ssrc)
               |> maybe_buffer_actions(handler, ssrc, ctx)
 
             {notifcation_action ++ actions, Map.put(handlers, ssrc, handler)}
@@ -173,6 +206,13 @@ defmodule ExNVR.RTSP.Source do
         """
     end
   end
+
+  defp decode_onvif_replay_extension(%ExRTP.Packet{extension_profile: 0xABAC} = packet) do
+    extension = ExNVR.RTSP.OnvifReplayExtension.decode(packet.extensions)
+    %{packet | extensions: extension}
+  end
+
+  defp decode_onvif_replay_extension(packet), do: packet
 
   defp maybe_init_stream_handler(_state, handlers, %{ssrc: ssrc}) when is_map_key(handlers, ssrc),
     do: {[], handlers}
@@ -212,10 +252,9 @@ defmodule ExNVR.RTSP.Source do
     {Parser.H265, parser_state}
   end
 
-  defp map_buffers_into_actions(buffers, ssrc, datetime) do
+  defp map_buffers_into_actions(buffers, ssrc) do
     Enum.map(buffers, fn
       %Membrane.Buffer{} = buffer ->
-        buffer = %{buffer | metadata: Map.put(buffer.metadata, :timestamp, datetime)}
         {:buffer, {Pad.ref(:output, ssrc), buffer}}
 
       %Membrane.Event.Discontinuity{} = event ->
