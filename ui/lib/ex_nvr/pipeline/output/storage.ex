@@ -393,16 +393,7 @@ defmodule ExNVR.Pipeline.Output.Storage do
       {:ok, _, run} ->
         duration_ms = Time.as_milliseconds(Segment.duration(segment), :round)
 
-        Membrane.Logger.info("""
-        Segment saved successfully
-          Stream: #{state.stream}
-          Media duration: #{duration_ms} ms
-          Realtime (monotonic) duration: #{Time.as_milliseconds(Segment.realtime_duration(segment), :round)} ms
-          Wallclock duration: #{Time.as_milliseconds(Segment.wall_clock_duration(segment), :round)} ms
-          Size: #{div(Segment.size(segment), 1024)} KiB
-          Segment end date: #{recording.end_date}
-          Current date time: #{Time.to_datetime(segment.wallclock_end_date)}
-        """)
+        log_recording_details(state, segment)
 
         :telemetry.execute(
           @recordings_event,
@@ -472,4 +463,31 @@ defmodule ExNVR.Pipeline.Output.Storage do
   end
 
   defp rename_first_segment(state, _segment), do: state
+
+  defp log_recording_details(%{onvif_replay: true} = state, segment) do
+    duration_ms = Time.as_milliseconds(Segment.duration(segment), :round)
+
+    Membrane.Logger.info("""
+    Replay segment saved successfully
+      Stream: #{state.stream}
+      Media duration: #{duration_ms} ms
+      Size: #{div(Segment.size(segment), 1024)} KiB
+      Segment end date: #{Segment.end_date(segment) |> Time.to_datetime()}
+    """)
+  end
+
+  defp log_recording_details(state, segment) do
+    duration_ms = Time.as_milliseconds(Segment.duration(segment), :round)
+
+    Membrane.Logger.info("""
+    Segment saved successfully
+      Stream: #{state.stream}
+      Media duration: #{duration_ms} ms
+      Realtime (monotonic) duration: #{Time.as_milliseconds(Segment.realtime_duration(segment), :round)} ms
+      Wallclock duration: #{Time.as_milliseconds(Segment.wall_clock_duration(segment), :round)} ms
+      Size: #{div(Segment.size(segment), 1024)} KiB
+      Segment end date: #{Segment.end_date(segment) |> Time.to_datetime()}
+      Current date time: #{Time.to_datetime(segment.wallclock_end_date)}
+    """)
+  end
 end
