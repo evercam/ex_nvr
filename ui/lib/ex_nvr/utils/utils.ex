@@ -75,6 +75,13 @@ defmodule ExNVR.Utils do
     end
   end
 
+  @spec redact_url(binary()) :: binary()
+  def redact_url(uri) do
+    URI.parse(uri)
+    |> Map.put(:userinfo, nil)
+    |> URI.to_string()
+  end
+
   # Streaming & Codecs utilities
   defguard keyframe(buffer)
            when (is_map_key(buffer.metadata, :h264) and buffer.metadata.h264.key_frame?) or

@@ -25,8 +25,8 @@ defmodule ExNVR.Pipeline.Source.RTSP do
 
     Membrane.Logger.info("""
     Start streaming for
-    main stream: #{main_stream_uri}
-    sub stream: #{sub_stream_uri}
+    main stream: #{ExNVR.Utils.redact_url(main_stream_uri)}
+    sub stream: #{ExNVR.Utils.redact_url(sub_stream_uri)}
     """)
 
     state = %{
