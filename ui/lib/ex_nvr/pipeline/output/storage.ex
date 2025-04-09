@@ -333,7 +333,6 @@ defmodule ExNVR.Pipeline.Output.Storage do
     start_date = Segment.start_date(segment)
     recording_path = recording_path(state, start_date)
     File.mkdir_p!(Path.dirname(recording_path))
-    if File.exists?(recording_path), do: File.rm!(recording_path)
 
     writer =
       Writer.new!(recording_path, fast_start: true)
@@ -454,10 +453,10 @@ defmodule ExNVR.Pipeline.Output.Storage do
   defp rename_first_segment(%{first_segment?: true} = state, segment) do
     # first segment has its start date adjusted
     # because of camera buffering
-    File.rename!(
-      recording_path(state, Segment.start_date(segment)),
-      recording_path(state, Segment.start_date(state.current_segment))
-    )
+
+    dest = recording_path(state, Segment.start_date(state.current_segment))
+    File.mkdir_p!(Path.dirname(dest))
+    File.rename!(recording_path(state, Segment.start_date(segment)), dest)
 
     state
   end
