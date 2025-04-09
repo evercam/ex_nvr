@@ -24,11 +24,11 @@ html, body {
     stroke: #0000;
 }
 
-.player::-webkit-media-controls-timeline, 
+.player::-webkit-media-controls-timeline,
 .player::-webkit-media-controls-play-button,
-.player::-webkit-media-controls-time-remaining-display, 
-.player::-webkit-media-controls-current-time-display { 
-    display: none 
+.player::-webkit-media-controls-time-remaining-display,
+.player::-webkit-media-controls-current-time-display {
+    display: none
 }
 ::-webkit-calendar-picker-indicator {
     filter: invert(0.7);
@@ -37,7 +37,7 @@ html, body {
 .popup-container {
     z-index: 9999; /* Make sure the popup is above everything */
 }
-  
+
 .popup-close {
     background: none;
     border: none;
@@ -91,12 +91,17 @@ html, body {
     opacity: 0.7;
 }
 
-select#flop_filters_0_value {
-    line-height: 1.5rem;
-    margin-top: 0.5rem;
-}
-
 tr {
     --tw-border-opacity: 0.4;
     border-color: rgb(55 65 81 / var(--tw-border-opacity));
+}
+
+select {
+    height: 42px;
+}
+
+.shiki {
+    padding: 1.125rem;
+    border-radius: 0.5rem;
+    overflow: hidden
 }

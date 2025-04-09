@@ -12,6 +12,10 @@
         document.documentElement.classList.remove('dark');
       }
     </script>
+    <script type="module">
+      import * as Shiki from 'https://esm.sh/shiki@3.0.0'
+      window.Shiki = Shiki
+    </script>
     <.live_title suffix=" · Network Video Recorder">
       {assigns[:page_title] || "ExNVR"}
     </.live_title>

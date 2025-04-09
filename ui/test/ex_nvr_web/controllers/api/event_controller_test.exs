@@ -22,6 +22,27 @@ defmodule ExNVRWeb.Api.EventControllerTest do
     "plate_image" => @plate_image |> File.read!() |> Base.encode64()
   }
 
+  @generic_event %{
+    "location" => "kitchen",
+    "motion_level" => 9000
+  }
+
+  defp matches(api_event, %ExNVR.Events.Event{} = event) do
+    assert api_event["id"] == event.id
+    assert api_event["device_id"] == event.device_id
+    assert api_event["event_type"] == event.event_type
+    assert api_event["event_data"] == event.event_data
+
+    case event.event_time do
+      nil ->
+        assert api_event["event_time"]
+
+      event_time ->
+        {:ok, api_date_time, _} = DateTime.from_iso8601(api_event["event_time"])
+        assert api_date_time == event_time
+    end
+  end
+
   setup %{tmp_dir: tmp_dir} do
     device = camera_device_fixture(tmp_dir, %{vendor: "Milesight Technology Co.,Ltd."})
     [device: device]
@@ -43,18 +64,40 @@ defmodule ExNVRWeb.Api.EventControllerTest do
       assert {:ok, [_plate]} = File.ls(ExNVR.Model.Device.lpr_thumbnails_dir(device))
     end
 
-    test "return not found on wrong event type", %{conn: conn, device: device, token: token} do
+    test "create a new generic event", %{conn: conn, device: device, token: token} do
       conn
       |> post(
-        ~p"/api/devices/#{device.id}/events?event_type=alpr&token=#{token}",
-        @milesight_lpr_event
+        ~p"/api/devices/#{device.id}/events?event_type=my_event_type&token=#{token}",
+        @generic_event
       )
-      |> json_response(404)
+      |> response(201)
+
+      {:ok, {[event], _}} = ExNVR.Events.list_events(%{})
+
+      assert event.device_id == device.id
+      assert event.event_data == @generic_event
+      assert event.event_type == "my_event_type"
+    end
+
+    test "return bad_argument when event_type is missing", %{
+      conn: conn,
+      device: device,
+      token: token
+    } do
+      response =
+        conn
+        |> post(
+          ~p"/api/devices/#{device.id}/events?token=#{token}",
+          %{}
+        )
+        |> json_response(400)
+
+      assert response["code"] == "BAD_ARGUMENT"
     end
 
     test "return unauthorized on wrong/missing token", %{conn: conn, device: device} do
       conn
-      |> post(~p"/api/devices/#{device.id}/events?event_type=alpr", @milesight_lpr_event)
+      |> post(~p"/api/devices/#{device.id}/events?event_type=lpr", @milesight_lpr_event)
       |> json_response(401)
     end
 
@@ -67,7 +110,7 @@ defmodule ExNVRWeb.Api.EventControllerTest do
 
       conn
       |> post(
-        ~p"/api/devices/#{device.id}/events?event_type=alpr&token=#{token}",
+        ~p"/api/devices/#{device.id}/events?event_type=lpr&token=#{token}",
         @milesight_lpr_event
       )
       |> json_response(404)
@@ -79,7 +122,7 @@ defmodule ExNVRWeb.Api.EventControllerTest do
       %{conn: log_in_user_with_access_token(conn, user_fixture())}
     end
 
-    test "get events", %{conn: conn} do
+    test "get LPR events", %{conn: conn} do
       event_fixture(:lpr, camera_device_fixture())
       event_fixture(:lpr, camera_device_fixture())
 
@@ -92,7 +135,7 @@ defmodule ExNVRWeb.Api.EventControllerTest do
       assert [%{"plate_image" => nil}, %{"plate_image" => nil}] = response["data"]
     end
 
-    test "filter events", %{conn: conn} do
+    test "filter LPR events", %{conn: conn} do
       device = camera_device_fixture()
       event_1 = event_fixture(:lpr, device)
       event_fixture(:lpr, camera_device_fixture())
@@ -106,7 +149,7 @@ defmodule ExNVRWeb.Api.EventControllerTest do
       assert List.first(response["data"])["id"] == event_1.id
     end
 
-    test "get events with plate image", %{conn: conn} do
+    test "get LPR events with plate image", %{conn: conn} do
       event_fixture(:lpr, camera_device_fixture())
       event_fixture(:lpr, camera_device_fixture())
 
@@ -120,10 +163,92 @@ defmodule ExNVRWeb.Api.EventControllerTest do
       assert not is_nil(image)
     end
 
-    test "invalid params", %{conn: conn} do
+    test "invalid LPR params", %{conn: conn} do
       response =
         conn
         |> get("/api/events/lpr?filters[0][field]=device&order_by=some_field")
+        |> json_response(400)
+
+      assert response["code"] == "BAD_ARGUMENT"
+    end
+  end
+
+  describe "GET /api/events" do
+    setup %{conn: conn} do
+      %{conn: log_in_user_with_access_token(conn, user_fixture())}
+    end
+
+    test "get all events", %{conn: conn, device: device} do
+      {:ok, event_1} = event_fixture("motion", device, %{"location" => "kitchen"})
+      {:ok, event_2} = event_fixture("fire", device, %{"location" => "barn"})
+
+      response =
+        conn
+        |> get(~p"/api/events")
+        |> json_response(200)
+
+      %{
+        "data" => [
+          api_event_2,
+          api_event_1
+        ],
+        "meta" => meta
+      } = response
+
+      assert meta["total_count"] == 2
+      assert api_event_1 |> matches(event_1)
+      assert api_event_2 |> matches(event_2)
+    end
+
+    test "filter by device_id", %{conn: conn, device: device} do
+      {:ok, event_1} = event_fixture("noise", device, %{"decibels" => 93})
+      {:ok, _event_2} = event_fixture("vibration", camera_device_fixture(), %{"intensity" => 9})
+
+      response =
+        conn
+        |> get(~p"/api/events?filters[0][field]=device_id&filters[0][value]=#{device.id}")
+        |> json_response(200)
+
+      assert response["meta"]["total_count"] == 1
+      assert [api_event] = response["data"]
+      assert api_event |> matches(event_1)
+    end
+
+    test "filter by event_time", %{conn: conn, device: device} do
+      {:ok, event_1} =
+        event_fixture("crowd", device, %{"event_time" => "2024-01-02T10:00:00Z", "count" => 15})
+
+      {:ok, _event_2} =
+        event_fixture("tamper", device, %{"event_time" => "2024-01-03T10:00:00Z"})
+
+      response =
+        conn
+        |> get(~p"/api/events?start_date=2024-01-02T00:00:00Z&end_date=2024-01-02T23:59:59Z")
+        |> json_response(200)
+
+      assert response["meta"]["total_count"] == 1
+      assert [api_event] = response["data"]
+      assert api_event |> matches(event_1)
+    end
+
+    test "filter by event_type", %{conn: conn, device: device} do
+      {:ok, event_1} = event_fixture("air_quality_alert", device, %{"value" => 130})
+      {:ok, _event_2} = event_fixture("ppe_violation", device, %{"item" => "gloves"})
+
+      response =
+        conn
+        |> get(~p"/api/events?filters[0][field]=event_type&filters[0][value]=air_quality_alert")
+        |> json_response(200)
+
+      assert response["meta"]["total_count"] == 1
+      assert [api_event] = response["data"]
+      assert api_event |> matches(event_1)
+    end
+
+    test "invalid query params return BAD_ARGUMENT", %{conn: conn} do
+      response =
+        conn
+        |> get(~p"/api/events?filters[0][field]=unknown_field")
         |> json_response(400)
 
       assert response["code"] == "BAD_ARGUMENT"

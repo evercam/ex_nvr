@@ -45,7 +45,12 @@ defmodule ExNVR.EventsFixtures do
     event
   end
 
-  defp do_create_event(event_type, _device, _attrs) do
-    raise("could not create event, no such type #{inspect(event_type)}")
+  defp do_create_event(event_type, device, event_data) do
+    params = %{
+      "event_type" => event_type,
+      "event_time" => event_data["event_time"]
+    }
+
+    Events.create_event(device, params, event_data)
   end
 end
