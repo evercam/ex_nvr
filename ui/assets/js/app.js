@@ -47,6 +47,7 @@ let Hooks = {
     },
     HighlightSyntax: {
         highlight: async (el) => {
+            const Shiki = await import("https://esm.sh/shiki@3.0.0")
             const code = el.innerText.trim()
             const lang = el.dataset.lang ?? "txt"
             const isDarkMode = [null, 'true'].includes(localStorage.getItem('dark-mode'))
