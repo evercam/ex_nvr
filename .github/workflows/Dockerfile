@@ -2,10 +2,16 @@ FROM hexpm/elixir:1.17.3-erlang-27.2-debian-bullseye-20241202-slim
 
 # install build dependencies
 RUN \
-  apt-get update && apt-get install -y \
+  apt-get update && mkdir -p /etc/apt/keyrings \
+  && apt-get install -y curl gpg \
+  && curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg \
+  && echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_20.x nodistro main" | tee /etc/apt/sources.list.d/nodesource.list \
+  && apt-get update \
+  && apt-get install -y \
+  libssl-dev \
   wget \
   xz-utils \
-  npm \
+  nodejs \
   git \
   make \
   cmake \
@@ -28,7 +34,7 @@ RUN mix local.hex --force && \
 # install mix dependencies
 COPY rtsp rtsp
 COPY ui ui
-RUN rm -rf ui/priv/bundlex
+RUN rm -rf ui/priv/bundlex ui/assets/node_modules
 
 WORKDIR /app/ui
 

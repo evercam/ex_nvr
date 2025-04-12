@@ -19,8 +19,12 @@ jobs:
           otp-version: 27.2
           elixir-version: 1.17.3
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 23.6.1
+
       - name: Install dependencies
-        run: sudo apt-get update && sudo apt-get -y install npm libsrtp2-dev libturbojpeg-dev
+        run: sudo apt-get update && sudo apt-get -y install libsrtp2-dev libturbojpeg-dev
    
       - name: Get deps
         run: mix deps.get --only prod
@@ -71,6 +75,7 @@ jobs:
         with:
           name: ${{ github.ref_name }}
           generate_release_notes: true
+          draft: true
           files: |
             ui/_build/prod/*.deb
             ui/_build/prod/*.tar.gz

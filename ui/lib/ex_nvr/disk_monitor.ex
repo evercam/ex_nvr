@@ -34,7 +34,7 @@ defmodule ExNVR.DiskMonitor do
     used_space = get_device_disk_usage(device)
     threshold = device.storage_config.full_drive_threshold
 
-    Logger.debug("Disk usage percetage: #{used_space}%")
+    Logger.debug("Disk usage percentage: #{used_space}%")
 
     state =
       cond do
@@ -56,10 +56,10 @@ defmodule ExNVR.DiskMonitor do
 
   defp get_device_disk_usage(device) do
     if Kernel.function_exported?(:disksup, :get_disk_info, 1) do
-      case :disksup.get_disk_info(device.storage_config.address) do
-        [] -> 0
-        [{_mountpoint, 0, _avail, _percentage}] -> 0
-        [{_mountpoint, total, avail, _percentage}] -> (1 - avail / total) * 100
+      case get_disk_info(device.storage_config.address) do
+        nil -> 0
+        {_mountpoint, 0, _avail, _percentage} -> 0
+        {_mountpoint, total, avail, _percentage} -> (1 - avail / total) * 100
       end
     else
       :disksup.get_disk_data()
@@ -67,5 +67,10 @@ defmodule ExNVR.DiskMonitor do
       |> Enum.find({nil, 0}, &(elem(&1, 0) == device.storage_config.address))
       |> elem(1)
     end
+  end
+
+  defp get_disk_info(mountpoint) do
+    :disksup.get_disk_info()
+    |> Enum.find(fn {mp, _, _, _} -> to_string(mp) == mountpoint end)
   end
 end
