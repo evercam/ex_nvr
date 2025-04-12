@@ -149,10 +149,6 @@ config :nerves_hub_link,
     product_key: System.get_env("NERVES_HUB_PRODUCT_KEY", "fake_key"),
     product_secret: System.get_env("NERVES_HUB_PRODUCT_SECRET", "fake_secret")
   ],
-  fwup_public_keys: [
-    "iKuGXqQaMi4xwDRYobdGM0uO/BS4Kmpt0sFrkGGTLSE=",
-    "cu1VGLQcf81MODI7Pd/l1Zx8WtMslxM99IRGOZx/ezw="
-  ],
   health: [
     metadata: %{
       "Router Mac Address" => {ExNVR.Nerves.Health.Metadata, :router_mac_address, []},
