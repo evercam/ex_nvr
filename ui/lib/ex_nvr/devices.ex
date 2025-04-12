@@ -5,7 +5,7 @@ defmodule ExNVR.Devices do
 
   require Logger
 
-  alias __MODULE__.Supervisor
+  alias __MODULE__.{Onvif, Supervisor}
   alias Ecto.Multi
   alias ExNVR.Model.{Device, Recording, Run}
   alias ExNVR.{HTTP, Repo}
@@ -143,7 +143,7 @@ defmodule ExNVR.Devices do
     |> Task.async_stream(
       fn device ->
         Map.take(device, [:id, :name, :state, :type])
-        |> Map.put(:onvif_profiles, onvif_stream_profiles(device))
+        |> Map.put(:onvif_profiles, Onvif.stream_profiles(device))
         |> Map.put(:stream_stats, stream_stats(device))
       end,
       timeout: :infinity
@@ -173,18 +173,6 @@ defmodule ExNVR.Devices do
       vendor = Device.vendor(device)
       camera_module!(vendor).fetch_lpr_event(url, opts)
     end
-  end
-
-  @spec discover(Keyword.t()) :: [Onvif.Discovery.Probe.t()]
-  def discover(options) do
-    Onvif.Discovery.probe(options)
-    |> Enum.uniq()
-    |> Enum.map(fn probe ->
-      # Ignore link local addresses
-      probe.address
-      |> Enum.reject(&String.starts_with?(&1, ["http://169.254", "https://169.254"]))
-      |> then(&Map.put(probe, :address, &1))
-    end)
   end
 
   # Supervisor functions
@@ -261,33 +249,6 @@ defmodule ExNVR.Devices do
 
       _error ->
         raise "Not implementation module is found for #{inspect(vendor)}"
-    end
-  end
-
-  defp onvif_stream_profiles(%Device{} = device) do
-    case Device.onvif_device(device) do
-      {:ok, onvif_device} ->
-        config = device.stream_config
-
-        [
-          {:main_stream, do_get_onvif_stream_profile(onvif_device, config.profile_token)},
-          {:sub_stream, do_get_onvif_stream_profile(onvif_device, config.sub_profile_token)}
-        ]
-        |> Enum.reject(&is_nil(elem(&1, 1)))
-        |> Map.new()
-
-      _error ->
-        %{}
-    end
-  end
-
-  defp do_get_onvif_stream_profile(_onvif_device, nil), do: nil
-  defp do_get_onvif_stream_profile(_onvif_device, ""), do: nil
-
-  defp do_get_onvif_stream_profile(onvif_device, profile_token) do
-    case Onvif.Media.Ver20.GetProfiles.request(onvif_device, [profile_token]) do
-      {:ok, [profile]} -> profile
-      _other -> nil
     end
   end
 

@@ -38,6 +38,8 @@ defmodule ExNVR.Pipelines.HlsPlayback do
     Logger.metadata(device_id: options[:device].id)
     Membrane.Logger.info("Start playback pipeline with options: #{inspect(options)}")
 
+    Process.set_label({:hls_playback, options[:device].id})
+
     spec = [
       child(:source, %Elements.Recording{
         device: options[:device],
