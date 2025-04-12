@@ -37,7 +37,7 @@ defmodule ExNVR.Nerves.Monitoring.RUT do
 
   @impl true
   def init(opts) do
-    {:ok, modbus_pid} = Client.start_link(active: false, timeout: :timer.seconds(5))
+    {:ok, modbus_pid} = Client.start_link(active: false, timeout: to_timeout(second: 3))
 
     state = %{
       modbus_pid: modbus_pid,
