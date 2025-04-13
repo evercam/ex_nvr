@@ -111,7 +111,7 @@ defmodule ExNVRWeb.GenericEventsLive.WebhookConfig do
 
             <div class="mt-4">
               <div class="relative w-full h-[4rem]">
-                <div class="hidden" id="full-endpoint">{endpoint_url(assigns)}</div>
+                <div class="hidden" id="full-endpoint">{endpoint_url(assigns, true)}</div>
                 <.code_snippet
                   id="endpoint-url"
                   lang="txt"
