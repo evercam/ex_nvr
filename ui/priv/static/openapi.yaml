@@ -917,50 +917,105 @@ paths:
           $ref: "#/components/responses/BadArg"
   /api/devices/{device_id}/events:
     post:
-      summary: Create an event
+      summary: Create a Generic Event
       description: |
-        Create a new event.
+        Create a new generic event for a specific device.
 
-        The endpoint is a webhook to be used by third party services to push events to the NVR.
-
-        ## Event Types
-        ### LPR
-        Some IP Cameras has support for `LPR` (License Plate Recognizer) and they can be configured to 
-        push event via webhook in realtime. Since each camera event has a different schema, we have parsers 
-        for each type of IP Camera that we need to support.
-
-        Currently we support the following camera:
-          * Milesight
+        The request body is stored as the event metadata.
 
         ## Authorization
-        Since event are pushed by third party systems, we need to authenticate this requests. For this
-        we need to create a `webhook` token. A webhook token has no expiry date and only authorize this 
+        Since events are pushed by third party systems, we need to authenticate these requests. For this
+        we use a `webhook` token. A webhook token has no expiry date and only authorizes this 
         endpoint.
 
-        The webhook token should be sent in the `Authorization` header (recommneded) or as a query param `token`.
+        The webhook token should be sent in the `Authorization` header (recommended) or as a query param `token`.
+        
+        ## Example
+        Here's an example of using cURL to send an event to the webhook endpoint
+
         ```
-        curl -XPOST http://my.server/api/devices/:device_id/events?type=lpr&token=mytoken
+        curl -X POST \
+          "https://my-server.com/api/devices/:device_id/events?type=my_event_type&token=:webhook_token" \
+          -H "Content-Type: application/json" \
+          -d '{
+            "time": "2025-01-01T10:10:00.000000Z",
+            "description": "Example event payload"
+          }'
         ```
       operationId: createEvent
       tags:
         - Event
       parameters:
         - $ref: '#/components/parameters/device_id'
-        - name: type
-          in: query
-          required: true
-          description: The event type
-          schema:
-            type: string
-            enum: [lpr]
+      security:
+        - bearerAuth: []
+        - queryParamAuth: []
       requestBody:
+        required: true
         content:
           application/json:
             schema:
               type: object
+              properties:
+                type:
+                  type: string
+                  description: Event type
+                time:
+                  type: string
+                  format: date-time
+                  description: Event time (defaults to current time if not provided)
+              required: [ type ]
       responses:
         '201':
           description: Created
+          content: { }
+        '400':
+          $ref: "#/components/responses/BadArg"
+        '404':
+          $ref: "#/components/responses/NotFound"
+  /api/devices/{device_id}/events/lpr:
+    post:
+      summary: Create LPR event
+      description: |
+        Create a new license plate recognition (LPR) event for a specific device.
+        
+        This endpoint processes camera-specific LPR data formats and stores them in a standardized format.
+        
+        ## Supported cameras
+        Milesight LPR cameras.
+        
+        ## Authorization
+        Uses the same webhook token authorization as the regular events endpoint.
+      operationId: createLPREvent
+      tags:
+        - Event
+      parameters:
+        - $ref: '#/components/parameters/device_id'
+      security:
+        - bearerAuth: []
+        - queryParamAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MilesightLprEvent'
+            example:
+              plate: "01-D-12345"
+              time: "2024-02-01 06:00:05.509"
+              direction: "Approach"
+              type: "White"
+              resolution_width: "1920"
+              resolution_height: "1080"
+              coordinate_x1: "0"
+              coordinate_y1: "100"
+              coordinate_x2: "0"
+              coordinate_y2: "50"
+              plate_image: "base64encodedimagedata..."
+      responses:
+        '201':
+          description: Created
+          content: {}
         '400':
           $ref: "#/components/responses/BadArg"
         '404':
@@ -988,10 +1043,63 @@ paths:
                 $ref: '#/components/schemas/SystemStatus'
         '403':
           $ref: "#/components/responses/Unauthorized"
+
+  /api/events:
+    get:
+      summary: List generic events
+      description: |
+        Get all generic events with pagination and filtering capabilities.
+
+        The response includes metadata about pagination and an array of events.
+      operationId: getEvents
+      tags:
+        - Event
+      parameters:
+        - name: start_date
+          in: query
+          required: false
+          description: Filter events that occurred after this date
+          schema:
+            type: string
+            format: date-time
+          example: 2023-01-15T10:00:01Z
+        - name: end_date
+          in: query
+          required: false
+          description: Filter events that occurred before this date
+          schema:
+            type: string
+            format: date-time
+          example: 2023-01-16T10:00:01Z
+        - $ref: '#/components/parameters/filters'
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/page_size'
+        - $ref: '#/components/parameters/order_by'
+        - $ref: '#/components/parameters/order_directions'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  meta:
+                    $ref: '#/components/schemas/ResultMeta'
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Event'
+        '400':
+          $ref: "#/components/responses/BadArg"
+
   /api/events/lpr:
     get:
-      summary: Get LPR events
-      description: Get all LPR events
+      summary: List LPR events
+      description: |
+        Get all license plate recognition (LPR) events with pagination and filtering.
+        
+        The response includes metadata about pagination and an array of LPR events.
       operationId: getLPREvents
       tags:
         - Event
@@ -1000,7 +1108,7 @@ paths:
           in: query
           required: false
           description: |
-            Include base64 encoded plate images. This param is ignored if the event type is not `lpr`
+            Include base64 encoded plate images in the response.
           schema:
             type: boolean
             default: false
@@ -1015,15 +1123,27 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/LPREvent'
+                type: object
+                properties:
+                  meta:
+                    $ref: '#/components/schemas/ResultMeta'
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/LPREvent'
+        '400':
+          $ref: "#/components/responses/BadArg"
+
 components:
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: opaque
+    queryParamAuth:
+      type: apiKey
+      in: query
+      name: token
   schemas:
     Credentials:
       type: object
@@ -1164,6 +1284,26 @@ components:
         token:
           type: string
           description: Remote Storage token
+    Event:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Event ID
+        time:
+          type: string
+          format: date-time
+          description: Event timestamp
+        type:
+          type: string
+          description: Event type
+        metadata:
+          type: object
+          description: Additional event data
+        device_id:
+          type: string
+          format: uuid
+          description: ID of the associated device
     LPREvent:
       type: object
       properties:
@@ -1215,6 +1355,56 @@ components:
             vehicle_color:
               type: string
               description: The vehicle color.
+    MilesightLprEvent:
+      type: object
+      description: LPR event data format for Milesight cameras
+      properties:
+        plate:
+          type: string
+          description: The recognized license plate number
+          example: "01-D-12345"
+        time:
+          type: string
+          description: Time when the license plate was captured
+          example: "2024-02-01 06:00:05.509"
+        direction:
+          type: string
+          description: Direction of the vehicle
+          enum: [ "Approach", "Leave" ]
+          example: "Approach"
+        type:
+          type: string
+          description: List type of the plate
+          enum: [ "White", "Black", "Other" ]
+          example: "White"
+        resolution_width:
+          type: string
+          description: Width of the captured image
+          example: "1920"
+        resolution_height:
+          type: string
+          description: Height of the captured image
+          example: "1080"
+        coordinate_x1:
+          type: string
+          description: X coordinate of the first point of the plate bounding box
+          example: "0"
+        coordinate_y1:
+          type: string
+          description: Y coordinate of the first point of the plate bounding box
+          example: "100"
+        coordinate_x2:
+          type: string
+          description: X coordinate of the second point of the plate bounding box
+          example: "0"
+        coordinate_y2:
+          type: string
+          description: Y coordinate of the second point of the plate bounding box
+          example: "50"
+        plate_image:
+          type: string
+          format: base64
+          description: Base64-encoded image of the license plate
     Recording:
       type: object
       properties:
