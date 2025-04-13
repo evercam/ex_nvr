@@ -179,20 +179,20 @@
             <ul id="dropdown-events" class="hidden py-2 space-y-2">
               <li>
                 <.link
+                  href={~p"/events/generic"}
+                  class="flex items-center p-2 text-gray-900 rounded-lg text-white dark:text-white hover:bg-gray-500 dark:hover:bg-gray-700"
+                >
+                  <.icon name="hero-code-bracket" class="w-6 h-6 dark:text-gray-400" />
+                  <span class="flex-1 ml-3 whitespace-nowrap">Generic Events</span>
+                </.link>
+              </li>
+              <li>
+                <.link
                   href={~p"/events/lpr"}
                   class="flex items-center p-2 text-gray-900 rounded-lg text-white dark:text-white hover:bg-gray-500 dark:hover:bg-gray-700"
                 >
                   <.icon name="hero-truck-solid" class="w-6 h-6 dark:text-gray-400" />
                   <span class="flex-1 ml-3 whitespace-nowrap">Vehicle Plates</span>
-                </.link>
-              </li>
-              <li>
-                <.link
-                  href={~p"/events/webhook"}
-                  class="flex items-center p-2 text-gray-900 rounded-lg text-white dark:text-white hover:bg-gray-500 dark:hover:bg-gray-700"
-                >
-                  <.icon name="hero-code-bracket" class="w-6 h-6 dark:text-gray-400" />
-                  <span class="flex-1 ml-3 whitespace-nowrap">Webhook Events</span>
                 </.link>
               </li>
             </ul>

@@ -101,7 +101,7 @@ window.addEventListener("phx:js-exec", ({ detail }) => {
 
 window.addEventListener("phx:download-footage", (e) => downloadFile(e.detail.url))
 
-window.addEventListener("events:clipboard-copŷ", (e) => {
+window.addEventListener("events:clipboard-copy", (e) => {
     navigator.clipboard.writeText(e.target.innerText)
 
     const toggleIcon = () => {

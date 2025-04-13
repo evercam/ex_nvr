@@ -9,6 +9,13 @@ defmodule ExNVR.Events do
 
   @type flop_result :: {:ok, {[map()], Flop.Meta.t()}} | {:error, Flop.Meta.t()}
 
+  @spec create_event(Device.t(), map()) :: {:ok, Event.t()} | {:error, Ecto.Changeset.t()}
+  def create_event(device, params) do
+    %Event{device_id: device.id}
+    |> Event.changeset(params)
+    |> Repo.insert()
+  end
+
   @spec create_lpr_event(Device.t(), map(), binary() | nil) ::
           {:ok, LPR.t()} | {:error, Ecto.Changeset.t()}
   def create_lpr_event(device, params, plate_picture) do
@@ -31,6 +38,14 @@ defmodule ExNVR.Events do
     end
   end
 
+  @spec list_events(map()) :: flop_result()
+  def list_events(params) do
+    Event
+    |> preload([:device])
+    |> Event.filter(params)
+    |> ExNVR.Flop.validate_and_run(params, for: Event)
+  end
+
   @spec list_lpr_events(map(), Keyword.t()) :: flop_result()
   def list_lpr_events(params, opts \\ []) do
     LPR
@@ -43,6 +58,12 @@ defmodule ExNVR.Events do
       other ->
         other
     end
+  end
+
+  @spec get_event(integer()) :: Event.t() | nil
+  def get_event(id) do
+    Repo.get(Event, id)
+    |> Repo.preload(:device)
   end
 
   @spec last_lpr_event_timestamp(Device.t()) :: DateTime.t() | nil
@@ -74,32 +95,4 @@ defmodule ExNVR.Events do
   end
 
   defp maybe_include_lpr_thumbnails(_other, entries), do: entries
-
-  @spec create_event(Device.t(), map(), map()) :: {:ok, Event.t()} | {:error, Ecto.Changeset.t()}
-  def create_event(device, params, event_data \\ %{}) do
-    event_params = %{
-      device_id: device.id,
-      event_type: params["event_type"],
-      event_time: Map.get(params, "event_time", DateTime.utc_now()),
-      event_data: event_data
-    }
-
-    %Event{}
-    |> Event.changeset(event_params)
-    |> Repo.insert()
-  end
-
-  @spec list_events(map()) :: flop_result()
-  def list_events(params) do
-    Event
-    |> preload([:device])
-    |> Event.filter(params)
-    |> ExNVR.Flop.validate_and_run(params, for: Event)
-  end
-
-  @spec get_event(integer()) :: Event.t() | nil
-  def get_event(id) do
-    Repo.get(Event, id)
-    |> Repo.preload(:device)
-  end
 end

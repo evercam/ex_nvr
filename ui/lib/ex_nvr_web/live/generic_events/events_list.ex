@@ -1,4 +1,4 @@
-defmodule ExNVRWeb.WebhookEventsLive.EventsList do
+defmodule ExNVRWeb.GenericEventsLive.EventsList do
   use ExNVRWeb, :live_component
 
   alias ExNVR.Events
@@ -26,9 +26,9 @@ defmodule ExNVRWeb.WebhookEventsLive.EventsList do
                   options: @devices,
                   prompt: "Choose your device"
                 ],
-                event_type: [op: :like, placeholder: "Filter by event type"],
-                event_time: [op: :>=, label: "Min event time"],
-                event_time: [op: :<=, label: "Max event time"]
+                type: [op: :like, placeholder: "Filter by event type"],
+                time: [op: :>=, label: "Min event time"],
+                time: [op: :<=, label: "Max event time"]
               ]}
             >
               <div>
@@ -49,19 +49,19 @@ defmodule ExNVRWeb.WebhookEventsLive.EventsList do
           opts={ExNVRWeb.FlopConfig.table_opts()}
           items={@events}
           meta={@meta}
-          path={~p"/events/webhook"}
+          path={~p"/events/generic"}
         >
           <:col :let={event} label="Device" field={:device_name}>
             {event.device.name}
           </:col>
-          <:col :let={event} label="Event Type" field={:event_type}>
-            {event.event_type}
+          <:col :let={event} label="Event Type" field={:type}>
+            {event.type}
           </:col>
-          <:col :let={event} label="Event Time" field={:event_time}>
-            {Calendar.strftime(event.event_time, "%b %d, %Y %H:%M:%S %Z")}
+          <:col :let={event} label="Event Time" field={:time}>
+            {Calendar.strftime(event.time, "%b %d, %Y %H:%M:%S %Z")}
           </:col>
           <:col :let={event} label="Data">
-            {Jason.encode!(event.event_data)}
+            {Jason.encode!(event.metadata)}
           </:col>
         </Flop.Phoenix.table>
 
@@ -90,7 +90,7 @@ defmodule ExNVRWeb.WebhookEventsLive.EventsList do
     {:noreply,
      socket
      |> assign(:filter_params, filter_params)
-     |> push_patch(to: Routes.webhook_events_path(socket, :index, filter_params))}
+     |> push_patch(to: Routes.generic_events_path(socket, :index, filter_params))}
   end
 
   @impl true
@@ -104,7 +104,7 @@ defmodule ExNVRWeb.WebhookEventsLive.EventsList do
     {:noreply,
      socket
      |> assign(pagination_params: pagination_params)
-     |> push_patch(to: Routes.webhook_events_path(socket, :index, params), replace: true)}
+     |> push_patch(to: Routes.generic_events_path(socket, :index, params), replace: true)}
   end
 
   defp load_events(socket, params) do

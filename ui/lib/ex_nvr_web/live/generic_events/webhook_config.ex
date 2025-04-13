@@ -1,4 +1,4 @@
-defmodule ExNVRWeb.WebhookEventsLive.WebhookConfig do
+defmodule ExNVRWeb.GenericEventsLive.WebhookConfig do
   use ExNVRWeb, :live_component
 
   alias ExNVR.Accounts
@@ -46,7 +46,7 @@ defmodule ExNVRWeb.WebhookEventsLive.WebhookConfig do
 
             <div class="flex items-center justify-between mt-3">
               <p class="text-sm leading-6 text-zinc-600 dark:text-white">
-                Created: <time>{format_datetime(@token_data.created_at)}</time>
+                Created: <time>{format_datetime(@token_data.inserted_at)}</time>
               </p>
               <.button
                 phx-click="delete_token"
@@ -99,9 +99,9 @@ defmodule ExNVRWeb.WebhookEventsLive.WebhookConfig do
                 <div>
                   <.input
                     type="text"
-                    name="event_type"
-                    id="event_type"
-                    value={@event_type}
+                    name="type"
+                    id="type"
+                    value={@type}
                     placeholder="e.g. lpr"
                     label="Event Type"
                   />
@@ -170,7 +170,7 @@ defmodule ExNVRWeb.WebhookEventsLive.WebhookConfig do
      |> assign_new(:show_token, fn -> false end)
      |> assign_new(:token_data, fn -> token_data end)
      |> assign_new(:device_id, fn -> device_id end)
-     |> assign_new(:event_type, fn -> "my_event_type" end)}
+     |> assign_new(:type, fn -> "my_type" end)}
   end
 
   @impl true
@@ -203,7 +203,7 @@ defmodule ExNVRWeb.WebhookEventsLive.WebhookConfig do
     {:noreply,
      socket
      |> assign(:device_id, Map.get(params, "device_id"))
-     |> assign(:event_type, Map.get(params, "event_type"))}
+     |> assign(:type, Map.get(params, "type"))}
   end
 
   defp token_str(
@@ -221,10 +221,10 @@ defmodule ExNVRWeb.WebhookEventsLive.WebhookConfig do
     base_url = "#{ExNVRWeb.Endpoint.url()}/api/devices/"
 
     device = assigns.device_id || ":device_id"
-    event = assigns.event_type || ":event_type"
+    event = assigns.type || ":type"
     token = token_str(assigns, copyable)
 
-    "#{base_url}#{device}/events?event_type=#{event}&token=#{token}"
+    "#{base_url}#{device}/events?type=#{event}&token=#{token}"
   end
 
   defp curl_example(assigns, copyable \\ false) do
@@ -233,7 +233,7 @@ defmodule ExNVRWeb.WebhookEventsLive.WebhookConfig do
       "#{endpoint_url(assigns, copyable)}" \\
       -H "Content-Type: application/json" \\
       -d '{
-        "timestamp": "#{DateTime.utc_now() |> DateTime.to_iso8601()}",
+        "time": "#{DateTime.utc_now() |> DateTime.to_iso8601()}",
         "description": "Example event payload"
       }'
     """

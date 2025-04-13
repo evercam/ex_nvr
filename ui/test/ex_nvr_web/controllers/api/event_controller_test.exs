@@ -27,22 +27,6 @@ defmodule ExNVRWeb.Api.EventControllerTest do
     "motion_level" => 9000
   }
 
-  defp matches(api_event, %ExNVR.Events.Event{} = event) do
-    assert api_event["id"] == event.id
-    assert api_event["device_id"] == event.device_id
-    assert api_event["event_type"] == event.event_type
-    assert api_event["event_data"] == event.event_data
-
-    case event.event_time do
-      nil ->
-        assert api_event["event_time"]
-
-      event_time ->
-        {:ok, api_date_time, _} = DateTime.from_iso8601(api_event["event_time"])
-        assert api_date_time == event_time
-    end
-  end
-
   setup %{tmp_dir: tmp_dir} do
     device = camera_device_fixture(tmp_dir, %{vendor: "Milesight Technology Co.,Ltd."})
     [device: device]
@@ -56,7 +40,7 @@ defmodule ExNVRWeb.Api.EventControllerTest do
     test "create a new lpr event", %{conn: conn, device: device, token: token} do
       conn
       |> post(
-        ~p"/api/devices/#{device.id}/events?event_type=lpr&token=#{token}",
+        ~p"/api/devices/#{device.id}/events/lpr?token=#{token}",
         @milesight_lpr_event
       )
       |> response(201)
@@ -67,7 +51,7 @@ defmodule ExNVRWeb.Api.EventControllerTest do
     test "create a new generic event", %{conn: conn, device: device, token: token} do
       conn
       |> post(
-        ~p"/api/devices/#{device.id}/events?event_type=my_event_type&token=#{token}",
+        ~p"/api/devices/#{device.id}/events?type=my_type&token=#{token}",
         @generic_event
       )
       |> response(201)
@@ -75,11 +59,11 @@ defmodule ExNVRWeb.Api.EventControllerTest do
       {:ok, {[event], _}} = ExNVR.Events.list_events(%{})
 
       assert event.device_id == device.id
-      assert event.event_data == @generic_event
-      assert event.event_type == "my_event_type"
+      assert event.metadata == @generic_event
+      assert event.type == "my_type"
     end
 
-    test "return bad_argument when event_type is missing", %{
+    test "return bad_argument when type is missing", %{
       conn: conn,
       device: device,
       token: token
@@ -97,7 +81,7 @@ defmodule ExNVRWeb.Api.EventControllerTest do
 
     test "return unauthorized on wrong/missing token", %{conn: conn, device: device} do
       conn
-      |> post(~p"/api/devices/#{device.id}/events?event_type=lpr", @milesight_lpr_event)
+      |> post(~p"/api/devices/#{device.id}/events/lpr", @milesight_lpr_event)
       |> json_response(401)
     end
 
@@ -110,7 +94,7 @@ defmodule ExNVRWeb.Api.EventControllerTest do
 
       conn
       |> post(
-        ~p"/api/devices/#{device.id}/events?event_type=lpr&token=#{token}",
+        ~p"/api/devices/#{device.id}/events/lpr?token=#{token}",
         @milesight_lpr_event
       )
       |> json_response(404)
@@ -214,12 +198,12 @@ defmodule ExNVRWeb.Api.EventControllerTest do
       assert api_event |> matches(event_1)
     end
 
-    test "filter by event_time", %{conn: conn, device: device} do
+    test "filter by time", %{conn: conn, device: device} do
       {:ok, event_1} =
-        event_fixture("crowd", device, %{"event_time" => "2024-01-02T10:00:00Z", "count" => 15})
+        event_fixture("crowd", device, %{"time" => "2024-01-02T10:00:00Z", "count" => 15})
 
       {:ok, _event_2} =
-        event_fixture("tamper", device, %{"event_time" => "2024-01-03T10:00:00Z"})
+        event_fixture("tamper", device, %{"time" => "2024-01-03T10:00:00Z"})
 
       response =
         conn
@@ -231,13 +215,13 @@ defmodule ExNVRWeb.Api.EventControllerTest do
       assert api_event |> matches(event_1)
     end
 
-    test "filter by event_type", %{conn: conn, device: device} do
+    test "filter by type", %{conn: conn, device: device} do
       {:ok, event_1} = event_fixture("air_quality_alert", device, %{"value" => 130})
       {:ok, _event_2} = event_fixture("ppe_violation", device, %{"item" => "gloves"})
 
       response =
         conn
-        |> get(~p"/api/events?filters[0][field]=event_type&filters[0][value]=air_quality_alert")
+        |> get(~p"/api/events?filters[0][field]=type&filters[0][value]=air_quality_alert")
         |> json_response(200)
 
       assert response["meta"]["total_count"] == 1
@@ -252,6 +236,22 @@ defmodule ExNVRWeb.Api.EventControllerTest do
         |> json_response(400)
 
       assert response["code"] == "BAD_ARGUMENT"
+    end
+  end
+
+  defp matches(api_event, %ExNVR.Events.Event{} = event) do
+    assert api_event["id"] == event.id
+    assert api_event["device_id"] == event.device_id
+    assert api_event["type"] == event.type
+    assert api_event["metadata"] == event.metadata
+
+    case event.time do
+      nil ->
+        assert api_event["time"]
+
+      time ->
+        {:ok, api_date_time, _} = DateTime.from_iso8601(api_event["time"])
+        assert api_date_time == time
     end
   end
 end

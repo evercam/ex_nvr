@@ -1,15 +1,15 @@
-defmodule ExNVRWeb.WebhookEventsLive do
+defmodule ExNVRWeb.GenericEventsLive do
   use ExNVRWeb, :live_view
 
   alias ExNVR.Devices
   alias ExNVRWeb.Router.Helpers, as: Routes
-  alias ExNVRWeb.WebhookEventsLive.{WebhookConfig, EventsList}
+  alias ExNVRWeb.GenericEventsLive.{WebhookConfig, EventsList}
 
   @impl true
   def render(assigns) do
     ~H"""
     <div class="w-full space-y-8 mt-4">
-      <.tabs id="webhook-live" active_tab={@active_tab} on_change={:tab_changed}>
+      <.tabs id="generic-events-live" active_tab={@active_tab} on_change={:tab_changed}>
         <:tab id="events" label="Events" />
         <:tab id="webhook" label="Webhook Config" />
 
@@ -57,6 +57,6 @@ defmodule ExNVRWeb.WebhookEventsLive do
     {:noreply,
      socket
      |> assign(:active_tab, tab)
-     |> push_patch(to: Routes.webhook_events_path(socket, :index, params))}
+     |> push_patch(to: Routes.generic_events_path(socket, :index, params))}
   end
 end

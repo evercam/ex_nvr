@@ -8,21 +8,22 @@ defmodule ExNVRWeb.API.EventController do
   alias ExNVR.Model.Device
   alias Plug.Conn
 
-  @spec create(Conn.t(), map()) :: {:error, term()} | Conn.t()
-  def create(conn, %{"event_type" => "lpr"} = params) do
+  @spec create(Plug.Conn.t(), map()) :: Plug.Conn.t()
+  def create(conn, params) do
     device = conn.assigns.device
+    event_params = Map.put(params, "metadata", conn.body_params)
 
-    with {:ok, {event, plate_image}} <- get_lpr_event(device, params),
-         {:ok, _event} <- Events.create_lpr_event(device, event, plate_image) do
+    with {:ok, _event} <- Events.create_event(device, event_params) do
       send_resp(conn, 201, "")
     end
   end
 
-  @spec create(Plug.Conn.t(), map()) :: Plug.Conn.t()
-  def create(conn, params) do
+  @spec create_lpr(Conn.t(), map()) :: {:error, term()} | Conn.t()
+  def create_lpr(conn, params) do
     device = conn.assigns.device
 
-    with {:ok, _event} <- Events.create_event(device, params, conn.body_params) do
+    with {:ok, {event, plate_image}} <- get_lpr_event(device, params),
+         {:ok, _event} <- Events.create_lpr_event(device, event, plate_image) do
       send_resp(conn, 201, "")
     end
   end

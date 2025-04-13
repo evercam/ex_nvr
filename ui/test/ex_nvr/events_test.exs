@@ -80,45 +80,45 @@ defmodule ExNVR.EventsTest do
 
   describe "create generic events" do
     test "create a generic event", %{device: device} do
-      event_data = %{"location" => "server room", "temperature" => 42}
-      params = %{"event_type" => "temperature_alert"}
+      metadata = %{"location" => "server room", "temperature" => 42}
+      params = %{"type" => "temperature_alert", "metadata" => metadata}
 
-      {:ok, event} = Events.create_event(device, params, event_data)
+      {:ok, event} = Events.create_event(device, params)
 
       assert event.device_id == device.id
-      assert event.event_type == "temperature_alert"
-      assert event.event_data == event_data
+      assert event.type == "temperature_alert"
+      assert event.metadata == metadata
     end
 
     test "assign a default timestamp when no event_time is provided", %{device: device} do
       params = %{
-        "event_type" => "intrusion"
+        "type" => "intrusion"
       }
 
       before = DateTime.utc_now()
       {:ok, event} = Events.create_event(device, params)
       after_ = DateTime.utc_now()
 
-      assert DateTime.compare(event.event_time, before) != :lt
-      assert DateTime.compare(event.event_time, after_) != :gt
+      assert DateTime.compare(event.time, before) != :lt
+      assert DateTime.compare(event.time, after_) != :gt
     end
 
-    test "assign an empty json when no event_data is provided", %{device: device} do
+    test "assign an empty json when no metadata is provided", %{device: device} do
       params = %{
-        "event_type" => "door_open"
+        "type" => "door_open"
       }
 
       {:ok, event} = Events.create_event(device, params)
-      assert event.event_data == %{}
+      assert event.metadata == %{}
     end
 
-    test "reject invalid event_data JSON", %{device: device} do
-      params = %{"event_type" => "cosmic_rays_exposure"}
-      invalid_data = %{"value" => {:a, :b}}
+    test "reject invalid metadata JSON", %{device: device} do
+      invalid_json = %{"value" => {:a, :b}}
+      params = %{"type" => "cosmic_rays_exposure", "metadata" => invalid_json}
 
-      {:error, changeset} = Events.create_event(device, params, invalid_data)
+      {:error, changeset} = Events.create_event(device, params)
 
-      assert %{event_data: ["must be JSON serializable"]} = errors_on(changeset)
+      assert %{metadata: ["must be JSON serializable"]} = errors_on(changeset)
     end
   end
 end
