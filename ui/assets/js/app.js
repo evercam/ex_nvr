@@ -39,6 +39,28 @@ let Hooks = {
                 document.documentElement.classList.remove('dark');
                 localStorage.setItem('dark-mode', false);
             }
+
+            document.documentElement.dispatchEvent(
+                new CustomEvent("dark-mode-change")
+            )
+        }
+    },
+    HighlightSyntax: {
+        highlight: async (el) => {
+            const Shiki = await import("https://esm.sh/shiki@3.0.0")
+            const code = el.innerText.trim()
+            const lang = el.dataset.lang ?? "txt"
+            const isDarkMode = [null, 'true'].includes(localStorage.getItem('dark-mode'))
+            const theme =  isDarkMode ? "github-dark-dimmed" : "github-light"
+
+            el.innerHTML = await Shiki.codeToHtml(code, { lang, theme })
+        },
+        mounted() {
+            this.highlight(this.el)
+            document.documentElement.addEventListener("dark-mode-change", () => this.highlight(this.el))
+        },
+        updated() {
+            this.highlight(this.el)
         }
     },
     ...getHooks(liveVueApp)
@@ -78,6 +100,18 @@ window.addEventListener("phx:js-exec", ({ detail }) => {
 })
 
 window.addEventListener("phx:download-footage", (e) => downloadFile(e.detail.url))
+
+window.addEventListener("events:clipboard-copy", (e) => {
+    navigator.clipboard.writeText(e.target.innerText)
+
+    const toggleIcon = () => {
+        e.detail.dispatcher.querySelector(".copy-icon")?.classList.toggle("hidden")
+        e.detail.dispatcher.querySelector(".copied-icon")?.classList.toggle("hidden")
+    }
+
+    toggleIcon()
+    setTimeout(toggleIcon, 1500)
+})
 
 function downloadFile(url) {
     const anchor = document.createElement("a");

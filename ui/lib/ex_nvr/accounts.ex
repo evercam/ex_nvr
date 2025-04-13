@@ -145,6 +145,26 @@ defmodule ExNVR.Accounts do
     token
   end
 
+  def get_webhook_token(user) do
+    user
+    |> UserToken.user_and_contexts_query(["webhook"])
+    |> Repo.one()
+    |> map_webhook_token
+  end
+
+  defp map_webhook_token(%UserToken{token: token} = user_token),
+    do: %{user_token | token: Base.url_encode64(token)}
+
+  defp map_webhook_token(nil), do: nil
+
+  def delete_webhook_token(user) do
+    user
+    |> UserToken.user_and_contexts_query(["webhook"])
+    |> Repo.delete_all()
+
+    :ok
+  end
+
   def get_user_by_session_token(token) do
     {:ok, query} = UserToken.verify_session_token_query(token)
     Repo.one(query)

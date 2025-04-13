@@ -727,21 +727,22 @@ defmodule ExNVRWeb.CoreComponents do
           :for={idx <- 3..(@meta.total_pages - 2)}
           :if={@meta.total_pages > 6 && abs(@meta.current_page - idx) <= 1}
         >
-          <.pagination_link current_page={@meta.current_page} page={idx} />
+          <.pagination_link current_page={@meta.current_page} page={idx} target={assigns[:target]} />
         </li>
         <li :if={@meta.total_pages > 6 && @meta.current_page < @meta.total_pages - 3}>
           <span class="px-3 h-8 text-gray-500">...</span>
         </li>
         <li :for={page <- [@meta.total_pages - 1, @meta.total_pages]} :if={@meta.total_pages > 6}>
-          <.pagination_link current_page={@meta.current_page} page={page} />
+          <.pagination_link current_page={@meta.current_page} page={page} target={assigns[:target]} />
         </li>
         <li :for={idx <- 1..@meta.total_pages} :if={@meta.total_pages <= 6}>
-          <.pagination_link current_page={@meta.current_page} page={idx} />
+          <.pagination_link current_page={@meta.current_page} page={idx} target={assigns[:target]} />
         </li>
         <li>
           <a
             href="#"
             phx-click="paginate"
+            phx-target={assigns[:target]}
             phx-value-page={@meta.next_page}
             class={
               [
@@ -782,6 +783,7 @@ defmodule ExNVRWeb.CoreComponents do
     <.link
       href="#"
       phx-click="paginate"
+      phx-target={assigns[:target]}
       phx-value-page={@page}
       class={
         [
@@ -898,4 +900,47 @@ defmodule ExNVRWeb.CoreComponents do
   def translate_errors(errors, field) when is_list(errors) do
     for {^field, {msg, opts}} <- errors, do: translate_error({msg, opts})
   end
+
+  attr :target, :string
+
+  def copy_button(assigns) do
+    ~H"""
+    <button
+      class="bg-gray-700 hover:bg-slate-600 text-white font-bold py-2 px-3 rounded-md"
+      phx-click={JS.dispatch("events:clipboard-copy", to: "#{@target}")}
+      title="Copy to clipboard"
+    >
+      <.icon name="hero-document-duplicate" class="copy-icon" />
+      <.icon name="hero-check" class="copied-icon hidden" />
+    </button>
+    """
+  end
+
+  slot :actions
+  attr :id, :string
+  attr :code, :string
+  attr :lang, :string
+  attr :copy_target, :string, required: false
+
+  def code_snippet(assigns) do
+    ~H"""
+    <div class="relative h-full">
+      <div
+        id={@id}
+        phx-hook="HighlightSyntax"
+        data-lang={@lang}
+        class="relative bg-gray-100 dark:bg-gray-800 rounded-md overflow-x-auto border border-white dark:bg-gray-800 dark:border-gray-700"
+      >
+        <pre class="text-sm text-gray-400 p-5"><code><%= @code %></code></pre>
+      </div>
+
+      <div class="absolute top-3 right-3 gap-2">
+        <.copy_button target={if assigns[:copy_target], do: assigns[:copy_target], else: "##{@id}"} />
+        {render_slot(@actions)}
+      </div>
+    </div>
+    """
+  end
+
+  defdelegate tabs(assigns), to: ExNVRWeb.Components.Tabs
 end

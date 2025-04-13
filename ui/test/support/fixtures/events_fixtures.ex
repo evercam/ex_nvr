@@ -28,8 +28,8 @@ defmodule ExNVR.EventsFixtures do
   end
 
   @spec event_fixture(atom(), ExNVR.Model.Device.t(), map()) :: Events.LPR.t()
-  def event_fixture(event_type, device, attrs \\ %{}) do
-    do_create_event(event_type, device, attrs)
+  def event_fixture(type, device, attrs \\ %{}) do
+    do_create_event(type, device, attrs)
   end
 
   defp do_create_event(:lpr, device, attrs) do
@@ -45,7 +45,13 @@ defmodule ExNVR.EventsFixtures do
     event
   end
 
-  defp do_create_event(event_type, _device, _attrs) do
-    raise("could not create event, no such type #{inspect(event_type)}")
+  defp do_create_event(type, device, params) do
+    {time, metadata} = Map.pop(params, "time")
+
+    Events.create_event(device, %{
+      "type" => type,
+      "time" => time,
+      "metadata" => metadata
+    })
   end
 end

@@ -32,6 +32,7 @@ defmodule ExNVRWeb.Router do
     pipe_through [:api, :require_webhook_token, ExNVRWeb.Plug.Device]
 
     post "/devices/:device_id/events", API.EventController, :create
+    post "/devices/:device_id/events/lpr", API.EventController, :create_lpr
   end
 
   scope "/api", ExNVRWeb do
@@ -43,6 +44,7 @@ defmodule ExNVRWeb.Router do
 
     resources "/devices", API.DeviceController, except: [:new, :edit]
 
+    get "/events", API.EventController, :events
     get "/events/lpr", API.EventController, :lpr
 
     get "/recordings/chunks", API.RecordingController, :chunks
@@ -119,6 +121,7 @@ defmodule ExNVRWeb.Router do
       live "/devices", DeviceListLive, :list
 
       live "/recordings", RecordingListLive, :list
+      live "/events/generic", GenericEventsLive, :index
       live "/events/lpr", LPREventsListLive, :list
 
       live "/users/settings", UserSettingsLive, :edit

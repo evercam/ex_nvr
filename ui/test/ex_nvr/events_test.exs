@@ -17,15 +17,15 @@ defmodule ExNVR.EventsTest do
     %{device: camera_device_fixture(ctx.tmp_dir)}
   end
 
-  describe "Create events" do
-    test "require plate number and capture time", ctx do
+  describe "Create LPR events" do
+    test "require LPR plate number and capture time", ctx do
       {:error, changeset} = Events.create_lpr_event(ctx.device, %{}, nil)
 
       assert %{plate_number: ["can't be blank"], capture_time: ["can't be blank"]} =
                errors_on(changeset)
     end
 
-    test "validate bounding box", ctx do
+    test "validate LPR event bounding box", ctx do
       event = %{
         plate_number: @valid_plate_number,
         capture_time: @valid_capture_time,
@@ -46,7 +46,7 @@ defmodule ExNVR.EventsTest do
                errors_on(changeset)
     end
 
-    test "create a new event", ctx do
+    test "create a new LPR event", ctx do
       event = %{
         plate_number: @valid_plate_number,
         capture_time: @valid_capture_time,
@@ -62,7 +62,7 @@ defmodule ExNVR.EventsTest do
       assert %{bounding_box: [0.1, 0.3, 0.15, 0.36]} = event.metadata
     end
 
-    test "create a new event with plate image", ctx do
+    test "create a new LPR event with plate image", ctx do
       event = %{
         plate_number: @valid_plate_number,
         capture_time: @valid_capture_time,
@@ -75,6 +75,50 @@ defmodule ExNVR.EventsTest do
       assert Device.lpr_thumbnails_dir(ctx.device)
              |> Path.join(Events.LPR.plate_name(event))
              |> File.exists?()
+    end
+  end
+
+  describe "create generic events" do
+    test "create a generic event", %{device: device} do
+      metadata = %{"location" => "server room", "temperature" => 42}
+      params = %{"type" => "temperature_alert", "metadata" => metadata}
+
+      {:ok, event} = Events.create_event(device, params)
+
+      assert event.device_id == device.id
+      assert event.type == "temperature_alert"
+      assert event.metadata == metadata
+    end
+
+    test "assign a default timestamp when no event_time is provided", %{device: device} do
+      params = %{
+        "type" => "intrusion"
+      }
+
+      before = DateTime.utc_now()
+      {:ok, event} = Events.create_event(device, params)
+      after_ = DateTime.utc_now()
+
+      assert DateTime.compare(event.time, before) != :lt
+      assert DateTime.compare(event.time, after_) != :gt
+    end
+
+    test "assign an empty json when no metadata is provided", %{device: device} do
+      params = %{
+        "type" => "door_open"
+      }
+
+      {:ok, event} = Events.create_event(device, params)
+      assert event.metadata == %{}
+    end
+
+    test "reject invalid metadata JSON", %{device: device} do
+      invalid_json = %{"value" => {:a, :b}}
+      params = %{"type" => "cosmic_rays_exposure", "metadata" => invalid_json}
+
+      {:error, changeset} = Events.create_event(device, params)
+
+      assert %{metadata: ["must be JSON serializable"]} = errors_on(changeset)
     end
   end
 end

@@ -300,4 +300,74 @@ defmodule ExNVRWeb.UserAuthTest do
       assert json_response(conn, 401) == %{"message" => "unauthorized"}
     end
   end
+
+  describe "webhook tokens:" do
+    test "generate and retrieve a webhook token", %{user: user} do
+      assert nil == Accounts.get_webhook_token(user)
+
+      token = Accounts.generate_webhook_token(user)
+      assert is_binary(token)
+
+      %{token: retrieved_token} = Accounts.get_webhook_token(user)
+      assert retrieved_token == token
+    end
+
+    test "delete a webhook token", %{user: user} do
+      Accounts.generate_webhook_token(user)
+      assert Accounts.get_webhook_token(user)
+
+      Accounts.delete_webhook_token(user)
+      refute Accounts.get_webhook_token(user)
+    end
+
+    test "authenticates request with a valid webhook token via query param", %{
+      conn: conn,
+      user: user
+    } do
+      token = Accounts.generate_webhook_token(user)
+      conn = %{conn | query_params: %{"token" => token}}
+
+      new_conn = UserAuth.require_webhook_token(conn, [])
+      refute new_conn.halted
+    end
+
+    test "authenticates request with a valid webhook token via header", %{conn: conn, user: user} do
+      token = Accounts.generate_webhook_token(user)
+
+      conn =
+        conn
+        |> put_req_header("authorization", "Bearer #{token}")
+
+      new_conn = UserAuth.require_webhook_token(conn, [])
+      refute new_conn.halted
+    end
+
+    test "rejects request with a regular access token", %{conn: conn, user: user} do
+      user_token = Accounts.generate_user_access_token(user)
+
+      conn =
+        conn
+        |> put_req_header("authorization", "Bearer #{user_token}")
+
+      new_conn = UserAuth.require_webhook_token(conn, [])
+      assert new_conn.halted
+      assert json_response(new_conn, 401) == %{"message" => "unauthorized"}
+    end
+
+    test "rejects request with an invalid token", %{conn: conn} do
+      conn =
+        conn
+        |> put_req_header("authorization", "Bearer invalid_token")
+
+      new_conn = UserAuth.require_webhook_token(conn, [])
+      assert new_conn.halted
+      assert json_response(new_conn, 401) == %{"message" => "unauthorized"}
+    end
+
+    test "rejects request with no token", %{conn: conn} do
+      new_conn = UserAuth.require_webhook_token(conn, [])
+      assert new_conn.halted
+      assert json_response(new_conn, 401) == %{"message" => "unauthorized"}
+    end
+  end
 end
