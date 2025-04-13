@@ -907,7 +907,7 @@ defmodule ExNVRWeb.CoreComponents do
     ~H"""
     <button
       class="bg-gray-700 hover:bg-slate-600 text-white font-bold py-2 px-3 rounded-md"
-      phx-click={JS.dispatch("events:clipboard-copŷ", to: "#{@target}")}
+      phx-click={JS.dispatch("events:clipboard-copy", to: "#{@target}")}
       title="Copy to clipboard"
     >
       <.icon name="hero-document-duplicate" class="copy-icon" />

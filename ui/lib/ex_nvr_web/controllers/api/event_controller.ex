@@ -8,7 +8,7 @@ defmodule ExNVRWeb.API.EventController do
   alias ExNVR.Model.Device
   alias Plug.Conn
 
-  @spec create(Plug.Conn.t(), map()) :: Plug.Conn.t()
+  @spec create(Conn.t(), map()) :: Conn.t()
   def create(conn, params) do
     device = conn.assigns.device
     event_params = Map.put(params, "metadata", conn.body_params)
