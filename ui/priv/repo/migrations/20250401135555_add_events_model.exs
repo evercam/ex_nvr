@@ -7,6 +7,8 @@ defmodule ExNVR.Repo.Migrations.AddEventsModel do
       add :type, :string, null: false
       add :metadata, :map
       add :device_id, references("devices"), null: false
+
+      timestamps(type: :utc_datetime_usec, updated_at: false)
     end
 
     create index("events", [:device_id])

@@ -39,6 +39,8 @@ defmodule ExNVR.Events.Event do
     field(:metadata, :map, default: %{})
 
     belongs_to(:device, ExNVR.Model.Device)
+
+    timestamps(type: :utc_datetime_usec, updated_at: false)
   end
 
   def filter(query \\ __MODULE__, params) do

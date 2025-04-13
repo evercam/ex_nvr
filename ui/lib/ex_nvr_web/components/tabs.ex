@@ -1,6 +1,5 @@
 defmodule ExNVRWeb.Components.Tabs do
   use Phoenix.LiveComponent
-  use Phoenix.Component
 
   attr :id, :string, required: true
   attr :active_tab, :string, default: nil
