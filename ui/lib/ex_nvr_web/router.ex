@@ -121,7 +121,7 @@ defmodule ExNVRWeb.Router do
       live "/devices", DeviceListLive, :list
 
       live "/recordings", RecordingListLive, :list
-      live("/events/generic", GenericEventsLive, :index)
+      live "/events/generic", GenericEventsLive, :index
       live "/events/lpr", LPREventsListLive, :list
 
       live "/users/settings", UserSettingsLive, :edit

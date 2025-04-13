@@ -924,14 +924,14 @@ defmodule ExNVRWeb.CoreComponents do
 
   def code_snippet(assigns) do
     ~H"""
-    <div class="relative">
+    <div class="relative h-full">
       <div
         id={@id}
         phx-hook="HighlightSyntax"
         data-lang={@lang}
         class="relative bg-gray-100 dark:bg-gray-800 rounded-md overflow-x-auto border border-white dark:bg-gray-800 dark:border-gray-700"
       >
-        <pre class="text-sm"><code><%= @code %></code></pre>
+        <pre class="text-sm text-gray-400 p-5"><code><%= @code %></code></pre>
       </div>
 
       <div class="absolute top-3 right-3 gap-2">
