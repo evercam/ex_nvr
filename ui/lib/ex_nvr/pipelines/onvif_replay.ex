@@ -11,16 +11,36 @@ defmodule ExNVR.Pipelines.OnvifReplay do
     def_input_pad :input, accepted_format: _any, flow_control: :auto
     def_output_pad :output, accepted_format: _any, flow_control: :auto
 
-    def_options start_date: [spec: DateTime.t()]
+    def_options start_date: [spec: DateTime.t()], end_date: [spec: DateTime.t(), default: nil]
 
     @impl true
     def handle_init(_ctx, options) do
-      {[], %{start_date: options.start_date, check?: true}}
+      {[],
+       %{
+         start_date: options.start_date,
+         end_date: options.end_date,
+         check?: true,
+         end_of_stream?: false
+       }}
+    end
+
+    @impl true
+    def handle_buffer(:input, _buffer, _ctx, %{end_of_stream?: true} = state) do
+      {[], state}
     end
 
     @impl true
     def handle_buffer(:input, buffer, _ctx, %{check?: false} = state) do
-      {[forward: buffer], state}
+      cond do
+        is_nil(state.end_date) ->
+          {[forward: buffer], state}
+
+        DateTime.compare(state.end_date, buffer.metadata.timestamp) == :lt ->
+          {[notify_parent: :end_of_stream], %{state | end_of_stream?: true}}
+
+        true ->
+          {[forward: buffer], state}
+      end
     end
 
     @impl true
@@ -69,7 +89,7 @@ defmodule ExNVR.Pipelines.OnvifReplay do
     spec = [
       get_child(:tee)
       |> via_out(:video_output)
-      |> child(:filter, %TimestampFilter{start_date: state.start_date})
+      |> child(:filter, %TimestampFilter{start_date: state.start_date, end_date: state.end_date})
       |> child(:storage, %ExNVR.Pipeline.Output.Storage{
         device: state.device,
         onvif_replay: true,
@@ -83,6 +103,11 @@ defmodule ExNVR.Pipelines.OnvifReplay do
     ]
 
     {[spec: spec], state}
+  end
+
+  @impl true
+  def handle_child_notification(:end_of_stream, :filter, _ctx, state) do
+    {[terminate: :normal], state}
   end
 
   @impl true
