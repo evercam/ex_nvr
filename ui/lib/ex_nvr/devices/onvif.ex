@@ -66,6 +66,9 @@ defmodule ExNVR.Devices.Onvif do
     end
   end
 
+  defp do_get_recordings(%{recording_ver10_service_path: nil}),
+    do: {:error, :no_recording_service}
+
   defp do_get_recordings(device) do
     with {:ok, token} <-
            FindRecordings.request(device, %Schemas.FindRecordings{keep_alive_time: 120}),
