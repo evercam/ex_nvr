@@ -5,16 +5,40 @@ on:
     tags:
       - 'v*'
 
+  workflow_call:
+    inputs:
+      version:
+        description: 'Custom version string to use instead of the tag-based version'
+        required: false
+        type: string
+      target:
+        description: 'Specific target to build (ex_nvr_rpi4, ex_nvr_rpi5, or giraffe). If not specified, all targets will be built.'
+        required: false
+        type: string
+
+
 jobs:
+  define-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      targets: ${{ steps.targets.outputs.targets }}
+    steps:
+      - id: targets
+        run: |
+          if [ "${{ inputs.target }}" = "" ]; then
+            echo 'targets=["ex_nvr_rpi4", "ex_nvr_rpi5", "giraffe"]' >> $GITHUB_OUTPUT
+          else
+            echo 'targets=["${{ inputs.target }}"]' >> $GITHUB_OUTPUT
+          fi
   firmware:
     runs-on: ubuntu-latest
+    needs: define-matrix
     defaults:
       run:
         working-directory: ./nerves_fw
     strategy:
-      max-parallel: 1 # mix nerves_hub.firmware publish does not work on parallel uploads
       matrix:
-        target: [ex_nvr_rpi4, ex_nvr_rpi5, giraffe]
+        target: ${{ fromJSON(needs.define-matrix.outputs.targets) }}
     env:
       MIX_ENV: prod
       MIX_TARGET: ${{ matrix.target }}
@@ -44,6 +68,12 @@ jobs:
         run: echo "NERVES_FW_PLATFORM=giraffe" >> $GITHUB_ENV
         if: matrix.target == 'giraffe'
 
+      - name: Set version if provided
+        if: inputs.version != ''
+        run: |
+          echo "VERSION=${{ inputs.version }}" >> $GITHUB_ENV
+          echo "Using version: ${{ inputs.version }}"
+
       - name: Install dependencies
         run: | 
           sudo apt-get update && \
@@ -71,7 +101,14 @@ jobs:
         run: mix do deps.get, firmware.deps
 
       - name: Create firmware
-        run: mix firmware
+        run: |
+          if [ -n "$VERSION" ]; then
+            sed -i "s/@version \"[^\"]*\"/@version \"${VERSION}\"/" mix.exs
+            mix firmware
+            git checkout -- mix.exs
+          else
+            mix firmware
+          fi
 
       - name: Sign firmware
         run: |
