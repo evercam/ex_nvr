@@ -39,7 +39,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
     case validate_discover_params(params) do
       {:ok, params} ->
         {onvif_devices, socket} =
-          ExNVR.Devices.discover(
+          ExNVR.Devices.Onvif.discover(
             probe_timeout: to_timeout(second: params[:timeout]),
             ip_address: params[:ip_addr]
           )

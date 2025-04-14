@@ -94,6 +94,7 @@ defmodule ExNVR.RTSP.Source do
 
   @impl true
   def handle_init(_ctx, options) do
+    Process.set_label(:rtsp_source)
     state = struct(State, Map.from_struct(options))
     {[], state}
   end

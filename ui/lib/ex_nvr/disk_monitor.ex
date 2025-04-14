@@ -22,6 +22,8 @@ defmodule ExNVR.DiskMonitor do
     Logger.metadata(device_id: device.id)
     Logger.info("Start disk monitor")
 
+    Process.set_label({:disk_monitor, device.id})
+
     if device.storage_config.full_drive_action != :nothing do
       send(self(), :tick)
     end
@@ -55,17 +57,10 @@ defmodule ExNVR.DiskMonitor do
   end
 
   defp get_device_disk_usage(device) do
-    if Kernel.function_exported?(:disksup, :get_disk_info, 1) do
-      case get_disk_info(device.storage_config.address) do
-        nil -> 0
-        {_mountpoint, 0, _avail, _percentage} -> 0
-        {_mountpoint, total, avail, _percentage} -> (1 - avail / total) * 100
-      end
-    else
-      :disksup.get_disk_data()
-      |> Enum.map(fn {mountpoint, _total, usage} -> {to_string(mountpoint), usage} end)
-      |> Enum.find({nil, 0}, &(elem(&1, 0) == device.storage_config.address))
-      |> elem(1)
+    case get_disk_info(device.storage_config.address) do
+      nil -> 0
+      {_mountpoint, 0, _avail, _percentage} -> 0
+      {_mountpoint, total, avail, _percentage} -> (1 - avail / total) * 100
     end
   end
 

@@ -89,6 +89,8 @@ defmodule ExNVR.Pipeline.Output.Storage do
       }
       |> reset_state_fields()
 
+    Process.set_label({:storage, opts.device.id, opts.stream})
+
     {[], state}
   end
 

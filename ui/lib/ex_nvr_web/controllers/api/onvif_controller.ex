@@ -15,7 +15,7 @@ defmodule ExNVRWeb.API.OnvifController do
     with :ok <- authorize(conn.assigns.current_user, :onvif, :discover),
          {:ok, params} <- validate_discover_query_params(params),
          discover_params <- Keyword.new(Map.take(params, [:ip_address, :probe_timeout])),
-         devices <- ExNVR.Devices.discover(discover_params) do
+         devices <- ExNVR.Devices.Onvif.discover(discover_params) do
       result = Enum.map(devices, &init_device(&1, params))
       json(conn, result)
     end

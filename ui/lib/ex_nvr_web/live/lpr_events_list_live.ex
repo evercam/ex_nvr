@@ -216,6 +216,7 @@ defmodule ExNVRWeb.LPREventsListLive do
 
   defp preview_event(lpr_event) do
     JS.remove_class("hidden", to: "#popup-container")
+    |> JS.remove_attribute("src", to: "#event-image")
     |> JS.set_attribute(
       {"src",
        "/api/devices/#{lpr_event.device_id}/snapshot?time=#{lpr_event.capture_time}&method=precise"},

@@ -47,6 +47,8 @@ defmodule ExNVR.Pipelines.OnvifReplay do
       "[OnvifReplay] Start onvif replay pipeline for #{options[:device].id} from #{options[:start_date]} to #{options[:end_date]}"
     )
 
+    Process.set_label({:onvif_replay, options[:device].id})
+
     spec =
       [
         {child(:source, %ExNVR.RTSP.Source{
