@@ -1,0 +1,33 @@
+name: PR Comment
+
+on:
+  pull_request:
+    types: [opened]
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  comment_on_pr:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Post comment with build instructions
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const scripts = require('./.github/workflows/scripts.js')
+            await scripts.postComment({ 
+                github,
+                context,
+                body: `
+                  📦 To trigger a firmware build, comment \`/build\` below.
+                  To build a specific target, comment \`/build <target>\` with on of the following targets
+                  Valid target names:
+                  - ex_nvr_rpi4
+                  - ex_nvr_rpi5
+                  - giraffe
+                `
+            })
