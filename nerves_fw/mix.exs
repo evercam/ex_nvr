@@ -63,7 +63,9 @@ defmodule NervesFw.MixProject do
        github: "evercam/ex_nvr_system_rpi5",
        tag: "v0.4.2",
        runtime: false,
-       targets: [:ex_nvr_rpi5, :giraffe]}
+       targets: [:ex_nvr_rpi5, :giraffe]},
+      {:livebook, "~> 0.14.7"},
+      {:kino, "~> 0.13.2"}
     ]
   end
 
