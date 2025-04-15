@@ -17,7 +17,7 @@ This nerves image is tailored for [Evercam](https://evercam.io/) use case. So it
 
 ### Dependencies
 
-In Evercam, we use [grafana-agent](https://github.com/grafana/agent) and [netbird](https://github.com/netbirdio/netbird). So we include the binaries directly in the nerves image as it is easier than creating a busybox config to install them.
+In Evercam, we use [netbird](https://github.com/netbirdio/netbird). So we include the binary directly in the nerves image as it is easier than creating a busybox or buildroot config to install them.
 
 The mix task `firmware.deps` is responsible for downlading the dependencies.
 
