@@ -9,6 +9,8 @@ defmodule ExNVR.Nerves.Application do
 
   @impl true
   def start(_type, _args) do
+    initialize_data_directory()
+
     opts = [strategy: :one_for_one, name: ExNVR.Nerves.Supervisor]
 
     children = [] ++ children(target())
@@ -40,6 +42,23 @@ defmodule ExNVR.Nerves.Application do
       platform: Runtime.KV.get("a.nerves_fw_platform"),
       kit_id: Runtime.KV.get("nerves_evercam_id")
     ]
+  end
+
+  defp initialize_data_directory() do
+    destination_dir = "/data/livebook"
+    source_dir = Application.app_dir(:ex_nvr_fw, "priv")
+
+    # Best effort create everything
+    _ = File.mkdir_p(destination_dir)
+    Enum.each(["welcome.livemd", "samples"], &symlink(source_dir, destination_dir, &1))
+  end
+
+  defp symlink(source_dir, destination_dir, filename) do
+    source = Path.join(source_dir, filename)
+    dest = Path.join(destination_dir, filename)
+
+    _ = File.rm(dest)
+    _ = File.ln_s(source, dest)
   end
 
   defp common_config() do

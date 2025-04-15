@@ -66,7 +66,7 @@ config :livebook, :storage, Livebook.Storage.Ets
 config :livebook, :runtime_modules, [Livebook.Runtime.Embedded, Livebook.Runtime.Attached]
 
 # Allow Livebook to power off  the device
-config :livebook, :shutdown_callback, {Process, :spawn, [Nerves.Runtime, :poweroff, [], []]}
+config :livebook, :shutdown_callback, {Process, :spawn, [System, :cmd, ["sudo", ["poweroff"]], []]}
 
 # Defaults for required configurations
 config :livebook,
@@ -87,7 +87,6 @@ config :livebook,
   within_iframe: false
 
 config :livebook, Livebook.Apps.Manager, retry_backoff_base_ms: 5_000
-config :livebook, LivebookWeb.Endpoint, code_reloader: false
 
 config :membrane_core, enable_metrics: false
 

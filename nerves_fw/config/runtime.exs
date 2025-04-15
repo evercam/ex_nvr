@@ -1,12 +1,8 @@
 import Config
 
 mix_target = Nerves.Runtime.mix_target()
-{:ok, hostname} = :inet.gethostname()
 
 url = URI.parse(System.get_env("EXNVR_URL", "http://localhost:4000"))
-
-## SSL Support
-enable_ssl = String.to_existing_atom(System.get_env("EXNVR_ENABLE_HTTPS", "false"))
 
 # Start with Livebook defaults
 Livebook.config_runtime()
