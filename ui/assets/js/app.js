@@ -113,6 +113,34 @@ window.addEventListener("events:clipboard-copy", (e) => {
     setTimeout(toggleIcon, 1500)
 })
 
+window.addEventListener("events:play-clip", (e) => {
+    startStreaming(e.target.id, e.detail.src, e.detail.poster)
+})
+
+function startStreaming(elem_id, src, poster_url) {
+    var video = document.getElementById(elem_id)
+    if (video != null && Hls.isSupported()) {
+        if (window.hls) {
+            window.hls.destroy()
+        }
+
+        if (poster_url != null) {
+            video.poster = poster_url
+        }
+
+        window.hls = new Hls({
+            manifestLoadingTimeOut: MANIFEST_LOAD_TIMEOUT,
+        })
+        window.hls.loadSource(src)
+        window.hls.attachMedia(video)
+
+        window.hls.on(Hls.Events.ERROR, (event, data) => {
+            // handle error
+            console.log(data)
+        })
+    }
+}
+
 function downloadFile(url) {
     const anchor = document.createElement("a");
     anchor.style.display = "none";
