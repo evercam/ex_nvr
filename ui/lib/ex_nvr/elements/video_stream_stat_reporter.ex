@@ -117,8 +117,8 @@ defmodule ExNVR.Elements.VideoStreamStatReporter do
   @impl true
   def handle_tick(:report_stats, _ctx, state) do
     stats = %ExNVR.Pipeline.Track.Stat{
-      width: elem(state.resolution, 0),
-      height: elem(state.resolution, 1),
+      width: state.resolution && elem(state.resolution, 0),
+      height: state.resolution && elem(state.resolution, 1),
       profile: state.profile,
       recv_bytes: state.total_bytes,
       total_frames: state.total_frames,

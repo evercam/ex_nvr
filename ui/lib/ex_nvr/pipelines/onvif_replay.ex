@@ -63,8 +63,14 @@ defmodule ExNVR.Pipelines.OnvifReplay do
 
   @impl true
   def handle_init(_ctx, options) do
+    state = %{
+      device: options[:device],
+      start_date: options[:start_date],
+      end_date: options[:end_date]
+    }
+
     Membrane.Logger.info(
-      "[OnvifReplay] Start onvif replay pipeline for #{options[:device].id} from #{options[:start_date]} to #{options[:end_date]}"
+      "[OnvifReplay] Start onvif replay pipeline for #{state.device.id} from #{state.start_date} to #{state.end_date}"
     )
 
     Process.set_label({:onvif_replay, options[:device].id})
@@ -75,13 +81,13 @@ defmodule ExNVR.Pipelines.OnvifReplay do
            stream_uri: options[:stream_uri],
            allowed_media_types: [:video],
            onvif_replay: true,
-           start_date: options[:start_date],
-           end_date: options[:end_date]
+           start_date: state.start_date,
+           end_date: state.end_date
          }), group: :source_group, crash_group_mode: :temporary},
         child(:tee, ExNVR.Elements.FunnelTee)
       ]
 
-    {[spec: spec], %{device: options[:device], start_date: options[:start_date]}}
+    {[spec: spec], state}
   end
 
   @impl true

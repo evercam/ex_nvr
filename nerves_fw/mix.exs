@@ -2,7 +2,7 @@ defmodule NervesFw.MixProject do
   use Mix.Project
 
   @app :ex_nvr_fw
-  @version "0.18.0"
+  @version "0.19.0"
   @all_targets [:ex_nvr_rpi4, :ex_nvr_rpi5, :giraffe]
 
   def project do
@@ -45,7 +45,7 @@ defmodule NervesFw.MixProject do
 
       # Dependencies for all targets except :host
       {:nerves_pack, "~> 0.7.0", targets: @all_targets},
-      {:nerves_hub_link, "~> 2.5"},
+      {:nerves_hub_link, github: "nerves-hub/nerves_hub_link", ref: "7d617ae"},
       {:nerves_hub_cli, "~> 2.0"},
       {:ex_nvr, path: "../ui"},
       {:modbux, "~> 0.3.13"},
