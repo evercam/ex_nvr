@@ -130,7 +130,7 @@ function startStreaming(elem_id, src, poster_url) {
         }
 
         window.hls = new Hls({
-            manifestLoadingTimeOut: 60,
+            manifestLoadingTimeOut: 60_000,
         })
         window.hls.loadSource(src)
         window.hls.attachMedia(video)

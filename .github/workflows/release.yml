@@ -16,7 +16,7 @@ jobs:
 
       - uses: erlef/setup-beam@v1.18
         with:
-          otp-version: 27.2
+          otp-version: 27.3.3
           elixir-version: 1.17.3
 
       - uses: actions/setup-node@v4
@@ -83,7 +83,7 @@ jobs:
   publish-docs:
     needs: [release]
 
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
 
     steps:
     - name: Checkout code
