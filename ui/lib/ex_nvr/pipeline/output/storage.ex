@@ -146,7 +146,7 @@ defmodule ExNVR.Pipeline.Output.Storage do
       %{
         state
         | current_segment: Time.from_datetime(buffer.metadata.timestamp) |> Segment.new(),
-          first_segment?: state.onvif_replay,
+          first_segment?: not state.onvif_replay,
           last_buffer: buffer,
           monotonic_start_time: System.monotonic_time()
       }
