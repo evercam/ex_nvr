@@ -20,6 +20,7 @@ import "phoenix_html"
 import { Socket } from "phoenix"
 import { LiveSocket } from "phoenix_live_view"
 import { getHooks } from "live_vue"
+import Hls from "hls.js"
 import liveVueApp from "../vue"
 import topbar from "topbar"
 import "flowbite/dist/flowbite.phoenix"
@@ -129,7 +130,7 @@ function startStreaming(elem_id, src, poster_url) {
         }
 
         window.hls = new Hls({
-            manifestLoadingTimeOut: MANIFEST_LOAD_TIMEOUT,
+            manifestLoadingTimeOut: 60,
         })
         window.hls.loadSource(src)
         window.hls.attachMedia(video)
