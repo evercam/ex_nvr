@@ -42,6 +42,11 @@ defmodule ExNVR.Events do
   end
 
   @spec list_events(map()) :: flop_result()
+  def list_events(%Flop{} = flop) do
+    Event |> preload([:device]) |> ExNVR.Flop.validate_and_run(flop)
+  end
+
+  @spec list_events(map()) :: flop_result()
   def list_events(params) do
     Event
     |> preload([:device])

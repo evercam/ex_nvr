@@ -12,6 +12,7 @@ defmodule NervesFw.MixProject do
       elixir: "~> 1.17",
       archives: [nerves_bootstrap: "~> 1.13"],
       start_permanent: Mix.env() == :prod,
+      elixirc_paths: elixirc_paths(Mix.env()),
       deps: deps(),
       aliases: aliases(),
       releases: [{@app, release()}],
@@ -82,4 +83,7 @@ defmodule NervesFw.MixProject do
   defp aliases do
     []
   end
+
+  defp elixirc_paths(:test), do: ["lib", "test/support"]
+  defp elixirc_paths(_), do: ["lib"]
 end

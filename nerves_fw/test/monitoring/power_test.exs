@@ -1,5 +1,5 @@
 defmodule ExNVR.Nerves.Monitoring.PowerTest do
-  use ExUnit.Case, async: true
+  use ExNVR.DataCase, async: false
 
   alias ExNVR.Nerves.Monitoring.Power
 
@@ -24,10 +24,11 @@ defmodule ExNVR.Nerves.Monitoring.PowerTest do
     Process.sleep(to_timeout(second: 2))
 
     assert %{ac_ok?: 0, low_battery?: 1} = Power.state(pid)
-    assert {:ok, {[event], _flop}} = ExNVR.Events.list_events(%{type: "power"})
+
+    assert {:ok, {[event], _flop}} = ExNVR.Events.list_events(%Flop{filters: Flop.Filter.new(type: "power")})
     assert %{"state" => 0} = event.metadata
 
-    assert {:ok, {[event], _flop}} = ExNVR.Events.list_events(%{type: "low-battery"})
+    assert {:ok, {[event], _flop}} = ExNVR.Events.list_events(%Flop{filters: Flop.Filter.new(type: "low-battery")})
     assert %{"state" => 1} = event.metadata
   end
 end

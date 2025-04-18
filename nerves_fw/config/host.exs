@@ -21,3 +21,7 @@ config :nerves_runtime,
      }}
 
 config :circuits_gpio, default_backend: {Circuits.GPIO.CDev, test: true}
+
+if Mix.env() == :test do
+  import_config "test.exs"
+end
