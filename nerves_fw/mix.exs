@@ -58,10 +58,10 @@ defmodule NervesFw.MixProject do
       # version updates, please review their release notes in case
       # changes to your application are needed.
       {:ex_nvr_system_rpi4,
-       github: "evercam/ex_nvr_system_rpi4", tag: "v1.29.2", runtime: false, targets: :ex_nvr_rpi4},
+       github: "evercam/ex_nvr_system_rpi4", tag: "v1.30.1", runtime: false, targets: :ex_nvr_rpi4},
       {:ex_nvr_system_rpi5,
        github: "evercam/ex_nvr_system_rpi5",
-       tag: "v0.4.2",
+       tag: "v0.5.1",
        runtime: false,
        targets: [:ex_nvr_rpi5, :giraffe]}
     ]

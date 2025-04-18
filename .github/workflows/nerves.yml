@@ -37,7 +37,7 @@ jobs:
 
       - uses: erlef/setup-beam@v1.18
         with:
-          otp-version: 27.2
+          otp-version: 27.3.3
           elixir-version: 1.17.3
 
       - name: Set platform env variable
