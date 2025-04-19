@@ -18,6 +18,8 @@ jobs:
       target: ${{ steps.parse_command.outputs.target }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
       - name: Parse the firmware build command
         id: parse_command
         uses: actions/github-script@v7
@@ -29,17 +31,30 @@ jobs:
 
   build_firmware:
     needs: prepare
-    uses: ./.github/workflows/nerves.yml
-    secrets: inherit
-    with:
-      version: ${{ needs.prepare.outputs.version }}
-      target: ${{ needs.prepare.outputs.target }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Dump GitHub context
+        env:
+          GITHUB_CONTEXT: ${{ toJson(github) }}
+        run: echo "$GITHUB_CONTEXT"
+
+      - uses: ./.github/workflows/nerves.yml
+        secrets: inherit
+        with:
+          version: ${{ needs.prepare.outputs.version }}
+          target: ${{ needs.prepare.outputs.target }}
 
   post_results:
     needs: [prepare, build_firmware]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
       - name: Comment with build result
         uses: actions/github-script@v7
         with:

@@ -31,7 +31,7 @@ jobs:
                   - giraffe
                   
                   You can also specify a custom version: \`/build <target> version=<version>\`
-                  Example: \`/build ex_nvr_rpi4 1.0.0-test.123\`
+                  Example: \`/build ex_nvr_rpi4 version=1.0.0-test.123\`
                   If no version is specified, one will be generated automatically.
                 `
             })
