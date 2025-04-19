@@ -8,6 +8,8 @@ defmodule ExNVR.Hardware.SerialPortChecker do
 
   use GenServer
 
+  require Logger
+
   @serial_ports_interval_check to_timeout(second: 30)
 
   def start_link(opts) do
@@ -17,22 +19,26 @@ defmodule ExNVR.Hardware.SerialPortChecker do
   @impl true
   def init(_opts) do
     Process.send_after(self(), :check_serial_ports, 0)
-    {:ok, nil}
+    {:ok, %{serial_ports: ["ttyS0", "ttyS1", "ttyAMA0", "ttyAMA10"]}}
   end
 
   @impl true
   def handle_info(:check_serial_ports, state) do
-    start_victron_processes()
+    Logger.info("Checking for new serial ports")
     Process.send_after(self(), :check_serial_ports, @serial_ports_interval_check)
-    {:noreply, state}
-  end
 
-  defp start_victron_processes() do
-    Circuits.UART.enumerate()
-    |> Map.keys()
-    |> Enum.filter(&(&1 not in ["ttyS0", "ttyS1", "ttyAMA0", "ttyAMA10"]))
+    serial_ports =
+      Circuits.UART.enumerate()
+      |> Map.keys()
+      |> Kernel.--(state.serial_ports)
+
+    serial_ports
     |> Enum.map(&[port: &1, name: :"victron_#{&1}"])
-    |> Enum.filter(&is_nil(Process.whereis(&1.name)))
-    |> Enum.each(&DynamicSupervisor.start_child(ExNVR.Hardware.Supervisor, {ExNVR.Hardware.Victron, &1}))
+    |> Enum.filter(&is_nil(Process.whereis(&1[:name])))
+    |> Enum.each(
+      &DynamicSupervisor.start_child(ExNVR.Hardware.Supervisor, {ExNVR.Hardware.Victron, &1})
+    )
+
+    {:noreply, %{serial_ports: state.serial_ports ++ serial_ports}}
   end
 end
