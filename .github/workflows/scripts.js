@@ -3,17 +3,19 @@ const path = require("path")
 
 module.exports = {
     postComment,
+    getPrData,
     handleNervesBuildCommand,
     handleNervesBuildResult,
 }
 
 async function handleNervesBuildCommand({github, context, core}) {
     const {target, customVersion} = await parseBuildArguments({github, context, core})
-    const prData = await getPrData({github, context})
-    const version = customVersion || await generateCustomVersion({...prData, core})
+    const {branch, ref} = await getPrData({github, context})
+    const version = customVersion || await generateCustomVersion({branch, ref, core})
 
     core.setOutput("target", target)
     core.setOutput("version", version)
+    core.setOutput("ref", ref)
 
     await postComment({
         github,
