@@ -106,7 +106,7 @@ async function getPrData({github, context}) {
 
     return {
         branch: pr.data.head.ref,
-        sha: pr.data.head.sha.substring(0, 6),
+        sha: pr.data.head.sha,
     }
 }
 
@@ -121,8 +121,9 @@ async function generateCustomVersion({branch, sha, core}) {
         const versionRegex = /@version\s+"([^"]+)"/
         const versionMatch = mixExsContent.match(versionRegex)
         const formattedBranch = branch.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 5)
+        const formattedSha = sha.slice(0, 5)
 
-        return `${versionMatch[1]}-${formattedBranch}-${sha}`
+        return `${versionMatch[1]}-${formattedBranch}-${formattedSha}`
     } catch (error) {
         core.setFailed(`Error reading mix.exs: ${error.message}`)
         process.exit()
