@@ -35,7 +35,7 @@ jobs:
     with:
       version: ${{ needs.prepare.outputs.version }}
       target: ${{ needs.prepare.outputs.target }}
-      ref: ${{ needs.prepare.outputs.ref }}
+      checkout_ref: ${{ needs.prepare.outputs.ref }}
 
   post_results:
     needs: [prepare, build_firmware]
