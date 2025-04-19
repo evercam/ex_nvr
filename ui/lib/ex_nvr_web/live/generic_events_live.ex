@@ -51,7 +51,6 @@ defmodule ExNVRWeb.GenericEventsLive do
 
   @impl true
   def handle_info({:tab_changed, %{tab: tab}}, socket) do
-    IO.inspect("handle_info ----> " <> tab)
     params = Map.put(socket.assigns.params, "tab", tab)
 
     {:noreply,

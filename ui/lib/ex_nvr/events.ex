@@ -9,11 +9,14 @@ defmodule ExNVR.Events do
 
   @type flop_result :: {:ok, {[map()], Flop.Meta.t()}} | {:error, Flop.Meta.t()}
 
+  @spec create_event(map()) :: {:ok, Event.t()} | {:error, Ecto.Changeset.t()}
+  def create_event(params) do
+    do_create_event(nil, params)
+  end
+
   @spec create_event(Device.t(), map()) :: {:ok, Event.t()} | {:error, Ecto.Changeset.t()}
   def create_event(device, params) do
-    %Event{device_id: device.id}
-    |> Event.changeset(params)
-    |> Repo.insert()
+    do_create_event(device.id, params)
   end
 
   @spec create_lpr_event(Device.t(), map(), binary() | nil) ::
@@ -85,6 +88,12 @@ defmodule ExNVR.Events do
       {:ok, image} -> Base.encode64(image)
       _other -> nil
     end
+  end
+
+  defp do_create_event(device_id, params) do
+    %Event{device_id: device_id}
+    |> Event.changeset(params)
+    |> Repo.insert()
   end
 
   defp maybe_include_lpr_thumbnails(true, entries) do
