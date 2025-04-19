@@ -15,6 +15,11 @@ on:
         description: 'Specific target to build (ex_nvr_rpi4, ex_nvr_rpi5, or giraffe). If not specified, all targets will be built.'
         required: false
         type: string
+      git_sha:
+        description: 'Target git ref for @actions/checkout. (defaults to "master")'
+        default: 'master'
+        required: false
+        type: string
 
 
 jobs:
@@ -58,6 +63,8 @@ jobs:
       EXNVR_REMOTE_SERVER_TOKEN: ${{ secrets.EXNVR_REMOTE_SERVER_TOKEN }}
     steps:
       - uses: actions/checkout@v3
+        with:
+          ref: ${{ inputs.git_sha }}
 
       - uses: erlef/setup-beam@v1.18
         with:
