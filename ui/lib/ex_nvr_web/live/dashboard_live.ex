@@ -25,24 +25,7 @@ defmodule ExNVRWeb.DashboardLive do
         <span><.link href={~p"/devices"} class="ml-2 dark:text-blue-600">here</.link></span>
       </div>
       <div :if={@devices != []} class="e-h-full">
-        <.vue
-          v-component="Viewer"
-          class="e-h-full"
-          segments={@segments}
-          v-socket={@socket}
-          url={@stream_url}
-          poster={@poster_url}
-          devices={Enum.map(@devices, &Map.take(&1, [:name, :id]))}
-          streams={@supported_streams}
-          stream={@stream}
-          device={Map.get(@current_device, :id)}
-          live-view-enabled={@live_view_enabled?}
-          start-date={@start_date}
-          v-on:switch_stream={JS.push("switch_stream")}
-          v-on:switch_device={JS.push("switch_device")}
-          v-on:show-download-modal={show_modal("download-modal")}
-          v-on:load-recording={JS.push("load-recording")}
-        />
+        <h1 class="text-xl text-black dark:text-white font-bold mb-4">My ExNVR Custom Version</h1>
       </div>
 
       <.modal id="download-modal">
