@@ -15,7 +15,7 @@ async function handleNervesBuildCommand({github, context, core}) {
 
     core.setOutput("target", target)
     core.setOutput("version", version)
-    core.setOutput("ref", ref)
+    core.setOutput("checkout_ref", ref)
 
     await postComment({
         github,

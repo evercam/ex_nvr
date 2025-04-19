@@ -15,8 +15,8 @@ on:
         description: 'Specific target to build (ex_nvr_rpi4, ex_nvr_rpi5, or giraffe). If not specified, all targets will be built.'
         required: false
         type: string
-      ref:
-        description: 'Target git ref to build. (defaults to "master")'
+      checkout_ref:
+        description: 'Target git ref for @actions/checkout. (defaults to "master")'
         default: 'master'
         required: false
         type: string
@@ -64,12 +64,17 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
-          ref: ${{ inputs.ref }}
+          ref: ${{ inputs.checkout_ref }}
 
       - name: Dump GitHub context
         env:
           GITHUB_CONTEXT: ${{ toJson(github) }}
-        run: echo "$GITHUB_CONTEXT"
+          WORKFLOW_INPUTS: ${{ toJson(inputs) }}
+        run: |
+          echo CONTEXT:
+          echo "$GITHUB_CONTEXT"
+          echo INPUTS:
+          echo "$WORKFLOW_INPUTS"
 
 #      - uses: erlef/setup-beam@v1.18
 #        with:
