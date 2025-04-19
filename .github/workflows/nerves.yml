@@ -58,61 +58,68 @@ jobs:
       EXNVR_REMOTE_SERVER_TOKEN: ${{ secrets.EXNVR_REMOTE_SERVER_TOKEN }}
     steps:
       - uses: actions/checkout@v3
-
-      - uses: erlef/setup-beam@v1.18
         with:
-          otp-version: 27.2
-          elixir-version: 1.17.3
+          ref: ${{ github.sha }}
 
-      - name: Set platform env variable
-        run: echo "NERVES_FW_PLATFORM=giraffe" >> $GITHUB_ENV
-        if: matrix.target == 'giraffe'
+      - name: Dump GitHub context
+        env:
+          GITHUB_CONTEXT: ${{ toJson(github) }}
+        run: echo "$GITHUB_CONTEXT"
 
-      - name: Set version if provided
-        if: inputs.version != ''
-        run: |
-          echo "VERSION=${{ inputs.version }}" >> $GITHUB_ENV
-          echo "Using version: ${{ inputs.version }}"
-
-      - name: Install dependencies
-        run: | 
-          sudo apt-get update && \
-          sudo apt-get -y install npm wget build-essential automake autoconf git squashfs-tools ssh-askpass \
-                                  pkg-config curl libmnl-dev libssl-dev libncurses5-dev help2man libconfuse-dev \
-                                  libarchive-dev libsrtp2-dev libturbojpeg-dev
-
-      - name: Install fwup
-        run: |
-          wget https://github.com/fwup-home/fwup/releases/download/v1.11.0/fwup_1.11.0_amd64.deb && \
-          sudo dpkg -i fwup_1.11.0_amd64.deb && \
-          rm fwup_1.11.0_amd64.deb
-
-      - name: Install Nerves
-        run: |
-          mix local.hex --force && \
-          mix local.rebar --force && \
-          mix archive.install hex nerves_bootstrap --force
-
-      - name: Build assets
-        run: mix do deps.get, cmd --cd assets npm install, assets.deploy
-        working-directory: ./ui
-
-      - name: Download firmware dependencies
-        run: mix do deps.get, firmware.deps
-
-      - name: Create firmware
-        run: |
-          if [ -n "$VERSION" ]; then
-            sed -i "s/@version \"[^\"]*\"/@version \"${VERSION}\"/" mix.exs
-            mix firmware
-            git checkout -- mix.exs
-          else
-            mix firmware
-          fi
-
-      - name: Sign firmware
-        run: |
-          fwup -S --private-key ${{ env.NERVES_FIRMWARE_SIGNING_KEY }} -i _build/${{ env.MIX_TARGET }}_${{ env.MIX_ENV}}/nerves/images/ex_nvr_fw.fw -o ex_nvr_fw.fw
-
-      - name: Upload to Nerves hub
-        run: mix nerves_hub.firmware publish --product ${{ env.NERVES_HUB_PRODUCT }} ex_nvr_fw.fw
+#      - uses: erlef/setup-beam@v1.18
+#        with:
+#          otp-version: 27.2
+#          elixir-version: 1.17.3
+#
+#      - name: Set platform env variable
+#        run: echo "NERVES_FW_PLATFORM=giraffe" >> $GITHUB_ENV
+#        if: matrix.target == 'giraffe'
+#
+#      - name: Set version if provided
+#        if: inputs.version != ''
+#        run: |
+#          echo "VERSION=${{ inputs.version }}" >> $GITHUB_ENV
+#          echo "Using version: ${{ inputs.version }}"
+#
+#      - name: Install dependencies
+#        run: |
+#          sudo apt-get update && \
+#          sudo apt-get -y install npm wget build-essential automake autoconf git squashfs-tools ssh-askpass \
+#                                  pkg-config curl libmnl-dev libssl-dev libncurses5-dev help2man libconfuse-dev \
+#                                  libarchive-dev libsrtp2-dev libturbojpeg-dev
+#
+#      - name: Install fwup
+#        run: |
+#          wget https://github.com/fwup-home/fwup/releases/download/v1.11.0/fwup_1.11.0_amd64.deb && \
+#          sudo dpkg -i fwup_1.11.0_amd64.deb && \
+#          rm fwup_1.11.0_amd64.deb
+#
+#      - name: Install Nerves
+#        run: |
+#          mix local.hex --force && \
+#          mix local.rebar --force && \
+#          mix archive.install hex nerves_bootstrap --force
+#
+#      - name: Build assets
+#        run: mix do deps.get, cmd --cd assets npm install, assets.deploy
+#        working-directory: ./ui
+#
+#      - name: Download firmware dependencies
+#        run: mix do deps.get, firmware.deps
+#
+#      - name: Create firmware
+#        run: |
+#          if [ -n "$VERSION" ]; then
+#            sed -i "s/@version \"[^\"]*\"/@version \"${VERSION}\"/" mix.exs
+#            mix firmware
+#            git checkout -- mix.exs
+#          else
+#            mix firmware
+#          fi
+#
+#      - name: Sign firmware
+#        run: |
+#          fwup -S --private-key ${{ env.NERVES_FIRMWARE_SIGNING_KEY }} -i _build/${{ env.MIX_TARGET }}_${{ env.MIX_ENV}}/nerves/images/ex_nvr_fw.fw -o ex_nvr_fw.fw
+#
+#      - name: Upload to Nerves hub
+#        run: mix nerves_hub.firmware publish --product ${{ env.NERVES_HUB_PRODUCT }} ex_nvr_fw.fw

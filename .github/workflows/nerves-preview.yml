@@ -18,6 +18,8 @@ jobs:
       target: ${{ steps.parse_command.outputs.target }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
       - name: Parse the firmware build command
         id: parse_command
         uses: actions/github-script@v7
@@ -40,6 +42,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
       - name: Comment with build result
         uses: actions/github-script@v7
         with:
