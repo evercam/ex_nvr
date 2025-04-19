@@ -1,4 +1,4 @@
-defmodule ExNVR.Nerves.Monitoring.RUT do
+defmodule ExNVR.Nerves.Hardware.RUT do
   @moduledoc """
   Get basic data from Teltonika routers.
 

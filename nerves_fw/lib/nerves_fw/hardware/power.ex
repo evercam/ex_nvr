@@ -1,4 +1,4 @@
-defmodule ExNVR.Nerves.Monitoring.Power do
+defmodule ExNVR.Nerves.Hardware.Power do
   @moduledoc """
   Monitor AC and battery alarms.
 

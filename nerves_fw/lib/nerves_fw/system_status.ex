@@ -28,7 +28,7 @@ defmodule ExNVR.Nerves.SystemStatus do
           evercam_id
       end
 
-    rut_data = ExNVR.Nerves.Monitoring.RUT.state()
+    rut_data = ExNVR.Nerves.Hardware.RUT.state()
 
     netbird_data =
       case ExNVR.Nerves.Netbird.status() do

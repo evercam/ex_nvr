@@ -28,7 +28,8 @@ defmodule ExNVR.Nerves.Application do
   end
 
   def children(_target) do
-    [{ExNVR.Nerves.Monitoring.Power, []}] ++ common_config()
+    DynamicSupervisor.start_child(ExNVR.Hardware.Supervisor, {ExNVR.Nerves.Hardware.Power, []})
+    common_config()
   end
 
   def target() do
@@ -45,7 +46,7 @@ defmodule ExNVR.Nerves.Application do
   end
 
   defp common_config() do
-    DynamicSupervisor.start_child(ExNVR.Hardware.Supervisor, {ExNVR.Nerves.Monitoring.RUT, []})
+    DynamicSupervisor.start_child(ExNVR.Hardware.Supervisor, {ExNVR.Nerves.Hardware.RUT, []})
 
     [
       {ExNVR.Nerves.Netbird, []},

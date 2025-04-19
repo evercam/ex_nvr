@@ -1,7 +1,7 @@
 defmodule ExNVR.Nerves.Health.Metadata do
   @moduledoc false
 
-  alias ExNVR.Nerves.Monitoring.RUT
+  alias ExNVR.Nerves.Hardware.RUT
 
   @spec router_serial_number() :: String.t() | nil
   def router_serial_number(), do: router_state()[:serial_number]
