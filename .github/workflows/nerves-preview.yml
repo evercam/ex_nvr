@@ -42,11 +42,11 @@ jobs:
           GITHUB_CONTEXT: ${{ toJson(github) }}
         run: echo "$GITHUB_CONTEXT"
 
-      - uses: ./.github/workflows/nerves.yml
-        secrets: inherit
-        with:
-          version: ${{ needs.prepare.outputs.version }}
-          target: ${{ needs.prepare.outputs.target }}
+#      - uses: ./.github/workflows/nerves.yml
+#        secrets: inherit
+#        with:
+#          version: ${{ needs.prepare.outputs.version }}
+#          target: ${{ needs.prepare.outputs.target }}
 
   post_results:
     needs: [prepare, build_firmware]
