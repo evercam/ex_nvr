@@ -20,17 +20,9 @@ defmodule ExNVRWeb.Application do
         ExNVRWeb.Endpoint,
         ExNVRWeb.PromEx,
         {ExNVRWeb.HlsStreamingMonitor, []},
-        {DynamicSupervisor, [name: ExNVR.HardwareMonitor, strategy: :one_for_one]},
-        Task.child_spec(fn ->
-          ExNVR.start()
-
-          Circuits.UART.enumerate()
-          |> Map.keys()
-          |> Enum.filter(&(&1 not in ["ttyS0", "ttyS1", "ttyAMA0", "ttyAMA10"]))
-          |> Enum.each(
-            &DynamicSupervisor.start_child(ExNVR.HardwareMonitor, {Victron, [port: &1]})
-          )
-        end)
+        {DynamicSupervisor, [name: ExNVR.Hardware.Supervisor, strategy: :one_for_one]},
+        {ExNVR.Hardware.SerialPortChecker, []},
+        Task.child_spec(fn -> ExNVR.start() end)
       ] ++ remote_connector()
 
     opts = [strategy: :one_for_one, name: ExNVRWeb.Supervisor]

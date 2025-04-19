@@ -15,6 +15,7 @@ defmodule ExNVR.Nerves.Monitoring.RUT do
 
   import Bitwise
 
+  require Logger
   alias Modbux.Tcp.Client
 
   @connect_interval to_timeout(second: 30)
@@ -37,6 +38,7 @@ defmodule ExNVR.Nerves.Monitoring.RUT do
 
   @impl true
   def init(opts) do
+    Logger.info("Start RUT monitoring")
     {:ok, modbus_pid} = Client.start_link(active: false, timeout: to_timeout(second: 3))
 
     state = %{
