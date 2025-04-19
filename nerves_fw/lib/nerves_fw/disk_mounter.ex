@@ -70,17 +70,22 @@ defmodule ExNVR.Nerves.DiskMounter do
   end
 
   @impl true
-  def handle_info(%PropertyTable.Event{value: %{"subsystem" => "block"}}, state) do
+  def handle_info(%PropertyTable.Event{value: %{"subsystem" => "block"}} = event, state) do
+    Logger.warning("New block device connected: #{inspect(event.value)}")
     mount_all(state)
     {:noreply, state}
   end
 
   @impl true
   def handle_info(
-        %PropertyTable.Event{value: nil, previous_value: %{"subsystem" => "block"}} = event,
+        %PropertyTable.Event{
+          value: nil,
+          previous_value: %{"subsystem" => "block", "devtype" => "disk"}
+        } = event,
         state
       ) do
     Logger.warning("[Remove] Block kernel event: #{inspect(event.previous_value)}")
+    ExNVR.Events.create_event(%{type: "disk", metadata: %{connected: 0}})
     {:noreply, state}
   end
 

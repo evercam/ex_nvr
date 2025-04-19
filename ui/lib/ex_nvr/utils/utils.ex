@@ -75,7 +75,9 @@ defmodule ExNVR.Utils do
     end
   end
 
-  @spec redact_url(binary()) :: binary()
+  @spec redact_url(binary() | nil) :: binary() | nil
+  def redact_url(nil), do: nil
+
   def redact_url(uri) do
     URI.parse(uri)
     |> Map.put(:userinfo, nil)

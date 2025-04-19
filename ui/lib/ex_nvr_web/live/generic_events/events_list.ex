@@ -52,7 +52,7 @@ defmodule ExNVRWeb.GenericEventsLive.EventsList do
           path={~p"/events/generic"}
         >
           <:col :let={event} label="Device" field={:device_name}>
-            {event.device.name}
+            {if event.device, do: event.device.name, else: "N/A"}
           </:col>
           <:col :let={event} label="Event Type" field={:type}>
             {event.type}

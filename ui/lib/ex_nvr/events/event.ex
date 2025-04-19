@@ -54,12 +54,6 @@ defmodule ExNVR.Events.Event do
   def changeset(event \\ %__MODULE__{}, params) do
     event
     |> Changeset.cast(params, [:time, :type, :metadata, :device_id])
-    |> Changeset.validate_required([:type, :device_id])
-    |> Changeset.validate_change(:metadata, fn :metadata, metadata ->
-      case Jason.encode(metadata) do
-        {:ok, _json} -> []
-        {:error, _reason} -> [metadata: "must be JSON serializable"]
-      end
-    end)
+    |> Changeset.validate_required([:type])
   end
 end
