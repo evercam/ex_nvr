@@ -16,6 +16,7 @@ jobs:
     outputs:
       version: ${{ steps.parse_command.outputs.version }}
       target: ${{ steps.parse_command.outputs.target }}
+      git_sha: ${{ steps.parse_command.outputs.git_sha }}
     steps:
       - uses: actions/checkout@v4
       - name: Parse the firmware build command
@@ -25,7 +26,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const scripts = require('./.github/workflows/scripts.js')
-            await scripts.parseNervesBuildCommand({ github, context, core })
+            await scripts.handleNervesBuildCommand({ github, context, core })
 
   build_firmware:
     needs: prepare
@@ -34,6 +35,7 @@ jobs:
     with:
       version: ${{ needs.prepare.outputs.version }}
       target: ${{ needs.prepare.outputs.target }}
+      git_sha: ${{ needs.prepare.outputs.git_sha }}
 
   post_results:
     needs: [prepare, build_firmware]

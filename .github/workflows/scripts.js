@@ -3,26 +3,27 @@ const path = require("path")
 
 module.exports = {
   postComment,
-  parseNervesBuildCommand,
+  handleNervesBuildCommand,
   handleNervesBuildResult,
 }
 
-async function parseNervesBuildCommand({ github, context, core }) {
-  const target = await parseBuildTarget({ github, context, core })
-  const prData = await getPrData({ github, context })
-  const version = await generateCustomVersion(prData, core)
+async function handleNervesBuildCommand({ github, context, core }) {
+  const { target, customVersion } = await parseBuildArguments({ github, context, core })
+  const { branch, sha } = await getPrData({ github, context })
+  const version = customVersion || (await generateCustomVersion({ branch, sha, core }))
 
   core.setOutput("target", target)
   core.setOutput("version", version)
+  core.setOutput("git_sha", sha)
 
   await postComment({
     github,
     context,
     body: `
-      🛠️ Starting preview build for version: **${version}** for target **${
-      formatTarget(target)
-    }**
-    This may take up to 15 minutes. You can check the progress on the [Github Actions page](https://github.com/evercam/ex_nvr/actions) 
+      🛠️ Starting preview build for version: **${version}** for target **${formatTarget(
+        target
+      )}**
+      This may take up to 15 minutes. You can check the progress on the [Github Actions page](https://github.com/evercam/ex_nvr/actions) 
     `,
   })
 }
@@ -32,7 +33,7 @@ async function handleNervesBuildResult({ github, context, version, target, resul
   if (result === "success") {
     body = `
       ✅ Build succeeded!
-      Version: **${version}** for target: **${formatTarget(target)}** can be found on [NervesHub](https://manage.nervescloud.com/).
+      Version: **${version}** for target: **${formatTarget(target)}** can be found on [NervesHub](https://manage.nervescloud.com/org/Evercam/ex_nvr_fw/firmware).
     `
   } else {
     body = `
@@ -44,11 +45,19 @@ async function handleNervesBuildResult({ github, context, version, target, resul
   await postComment({ github, context, body })
 }
 
-async function parseBuildTarget({ github, context, core }) {
+async function parseBuildArguments({ github, context, core }) {
   const comment = context.payload.comment.body
-  const target = comment.match(/^\/build\s+([a-z0-9_]+)/)?.[1]
-  const validTargets = ["ex_nvr_rpi4", "ex_nvr_rpi5", "giraffe"]
+  const commandRegex = /\/build(?:\s+(?!version=)([^\s]+))?(?:\s+version=([^\s]+))?/
+  const [_, target, customVersion] = commandRegex.exec(comment) || []
 
+  await validateTarget({ github, context, core, target })
+  await validateVersion({ github, context, core, customVersion })
+
+  return { target, customVersion }
+}
+
+async function validateTarget({ github, context, core, target }) {
+  const validTargets = ["ex_nvr_rpi4", "ex_nvr_rpi5", "giraffe"]
   if (target && !validTargets.includes(target)) {
     await postComment({
       github,
@@ -62,10 +71,32 @@ async function parseBuildTarget({ github, context, core }) {
 
     core.setFailed(`Invalid build target: ${target}`)
     process.exit()
-    return
   }
+}
 
-  return target
+async function validateVersion({ github, context, core, customVersion }) {
+  const semVerRegex = /^\d+\.\d+\.\d+(?:-[\w\d.-]+)?(?:\+[\w\d.-]+)?$/
+  if (customVersion && !semVerRegex.test(customVersion)) {
+    await postComment({
+      github,
+      context,
+      body: `
+        ❌ Error: Invalid version format **${customVersion}**.
+        
+        Version names must follow the semantic versioning format: **MAJOR.MINOR.PATCH[PRERELEASE][BUILD]**
+        
+        Examples
+        - 1.0.0
+        - 1.1.1-abcd
+        - 0.22.1-alpha.1
+        - 0.1.1-test-1
+        - 1.42.3-beta.2+build.123
+      `,
+    })
+
+    core.setFailed(`Invalid version format: ${customVersion}`)
+    process.exit()
+  }
 }
 
 async function getPrData({ github, context }) {
@@ -74,7 +105,7 @@ async function getPrData({ github, context }) {
 
   return {
     branch: pr.data.head.ref,
-    sha: pr.data.head.sha.substring(0, 6),
+    sha: pr.data.head.sha,
   }
 }
 
@@ -88,9 +119,10 @@ async function generateCustomVersion({ branch, sha, core }) {
     const mixExsContent = fs.readFileSync(mixExsPath, "utf8")
     const versionRegex = /@version\s+"([^"]+)"/
     const versionMatch = mixExsContent.match(versionRegex)
-    const formattedBranch = branch.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 5)
+    const formattedBranch = branch.replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 5)
+    const formattedSha = sha.slice(0, 5)
 
-    return `${versionMatch[1]}-${formattedBranch}-${sha}`
+    return `${versionMatch[1]}-${formattedBranch}-${formattedSha}`
   } catch (error) {
     core.setFailed(`Error reading mix.exs: ${error.message}`)
     process.exit()
