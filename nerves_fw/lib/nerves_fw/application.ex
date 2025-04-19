@@ -27,7 +27,9 @@ defmodule ExNVR.Nerves.Application do
     [{ExNVR.Nerves.Giraffe.Init, []}] ++ common_config()
   end
 
-  def children(_target), do: common_config()
+  def children(_target) do
+    [{ExNVR.Nerves.Monitoring.Power, []}] ++ common_config()
+  end
 
   def target() do
     Application.get_env(:ex_nvr_fw, :target)

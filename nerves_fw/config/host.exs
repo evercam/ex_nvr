@@ -19,3 +19,9 @@ config :nerves_runtime,
        "a.nerves_fw_platform" => "host",
        "a.nerves_fw_version" => "0.0.0"
      }}
+
+config :circuits_gpio, default_backend: {Circuits.GPIO.CDev, test: true}
+
+if Mix.env() == :test do
+  import_config "test.exs"
+end
