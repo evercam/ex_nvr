@@ -10,12 +10,12 @@ module.exports = {
 
 async function handleNervesBuildCommand({github, context, core}) {
     const {target, customVersion} = await parseBuildArguments({github, context, core})
-    const {branch, ref} = await getPrData({github, context})
-    const version = customVersion || await generateCustomVersion({branch, ref, core})
+    const {branch, sha} = await getPrData({github, context})
+    const version = customVersion || await generateCustomVersion({branch, sha, core})
 
     core.setOutput("target", target)
     core.setOutput("version", version)
-    core.setOutput("checkout_ref", ref)
+    core.setOutput("git_sha", sha)
 
     await postComment({
         github,
@@ -102,6 +102,7 @@ async function validateVersion({github, context, core, customVersion}) {
 async function getPrData({github, context}) {
     const prUrl = context.payload.issue.pull_request.url
     const pr = await github.request(`GET ${prUrl}`)
+
 
     return {
         branch: pr.data.head.ref,

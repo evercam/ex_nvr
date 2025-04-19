@@ -16,7 +16,7 @@ jobs:
     outputs:
       version: ${{ steps.parse_command.outputs.version }}
       target: ${{ steps.parse_command.outputs.target }}
-      ref: ${{ steps.parse_command.outputs.ref }}
+      git_sha: ${{ steps.parse_command.outputs.git_sha }}
     steps:
       - uses: actions/checkout@v4
       - name: Parse the firmware build command
@@ -35,7 +35,7 @@ jobs:
     with:
       version: ${{ needs.prepare.outputs.version }}
       target: ${{ needs.prepare.outputs.target }}
-      checkout_ref: ${{ needs.prepare.outputs.ref }}
+      git_sha: ${{ needs.prepare.outputs.git_sha }}
 
   post_results:
     needs: [prepare, build_firmware]

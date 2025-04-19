@@ -15,7 +15,7 @@ on:
         description: 'Specific target to build (ex_nvr_rpi4, ex_nvr_rpi5, or giraffe). If not specified, all targets will be built.'
         required: false
         type: string
-      checkout_ref:
+      git_sha:
         description: 'Target git ref for @actions/checkout. (defaults to "master")'
         default: 'master'
         required: false
@@ -64,7 +64,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
-          ref: ${{ inputs.checkout_ref }}
+          ref: ${{ inputs.git_sha }}
 
       - name: Dump GitHub context
         env:
