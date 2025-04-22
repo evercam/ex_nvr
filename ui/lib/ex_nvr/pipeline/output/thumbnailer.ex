@@ -49,6 +49,8 @@ defmodule ExNVR.Pipeline.Output.Thumbnailer do
         last_buffer_pts: nil
       })
 
+    Process.set_label(:thumbnailer)
+
     {[], state}
   end
 

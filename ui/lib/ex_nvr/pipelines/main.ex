@@ -220,6 +220,26 @@ defmodule ExNVR.Pipelines.Main do
   end
 
   @impl true
+  def handle_child_notification({:recording, true}, {:storage, :main_stream}, _ctx, state) do
+    state = %{state | record_main_stream?: state.device.type != :file}
+
+    if state.sub_stream_video_track,
+      do: {build_sub_stream_bif_spec(state.device), state},
+      else: {[], state}
+  end
+
+  @impl true
+  def handle_child_notification({:recording, false}, {:storage, :main_stream}, ctx, state) do
+    state = %{maybe_update_device_and_report(state, :streaming) | record_main_stream?: false}
+
+    if Map.has_key?(ctx.children, {:thumbnailer, :sub_stream}) do
+      {[remove_children: {:thumbnailer, :sub_stream}], state}
+    else
+      {[], state}
+    end
+  end
+
+  @impl true
   def handle_child_notification(_notification, _element, _ctx, state) do
     {[], state}
   end
@@ -337,25 +357,8 @@ defmodule ExNVR.Pipelines.Main do
   end
 
   defp build_main_stream_spec(state, encoding) do
-    spec = [child(:tee, ExNVR.Elements.FunnelTee)]
-
-    spec =
-      if state.record_main_stream? do
-        spec ++
-          [
-            get_child(:tee)
-            |> via_out(:video_output)
-            |> child({:storage, :main_stream}, %Output.Storage{
-              device: state.device,
-              target_segment_duration: state.segment_duration,
-              correct_timestamp: true
-            })
-          ]
-      else
-        spec
-      end
-
-    spec ++
+    [child(:tee, ExNVR.Elements.FunnelTee)] ++
+      build_main_stream_storage_spec(state) ++
       [
         get_child(:tee)
         |> via_out(:video_output)
@@ -391,7 +394,21 @@ defmodule ExNVR.Pipelines.Main do
     ] ++
       build_sub_stream_storage_spec(device) ++
       build_sub_stream_webrtc_spec(state) ++
-      build_sub_stream_bif_spec(device)
+      build_sub_stream_bif_spec(state)
+  end
+
+  defp build_main_stream_storage_spec(%{record_main_stream?: false}), do: []
+
+  defp build_main_stream_storage_spec(state) do
+    [
+      get_child(:tee)
+      |> via_out(:video_output)
+      |> child({:storage, :main_stream}, %Output.Storage{
+        device: state.device,
+        target_segment_duration: state.segment_duration,
+        correct_timestamp: true
+      })
+    ]
   end
 
   defp build_sub_stream_storage_spec(device) do
@@ -421,13 +438,13 @@ defmodule ExNVR.Pipelines.Main do
     ]
   end
 
-  defp build_sub_stream_bif_spec(device) do
-    if device.settings.generate_bif do
+  defp build_sub_stream_bif_spec(state) do
+    if state.record_main_stream? and state.device.settings.generate_bif do
       [
         get_child({:tee, :sub_stream})
         |> via_out(:video_output)
         |> child({:thumbnailer, :sub_stream}, %Output.Thumbnailer{
-          dest: Device.bif_thumbnails_dir(device)
+          dest: Device.bif_thumbnails_dir(state.device)
         })
       ]
     else

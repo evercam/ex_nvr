@@ -269,7 +269,7 @@ defmodule ExNVR.Model.Device do
     config = Map.take(snapshot_config, [:enabled, :remote_storage, :upload_interval])
 
     if config.enabled do
-      {:ok, schedule} = SnapshotConfig.parse_schedule(snapshot_config.schedule)
+      schedule = ExNVR.Model.Schedule.parse!(snapshot_config.schedule)
       Map.put(snapshot_config, :schedule, schedule)
     else
       config

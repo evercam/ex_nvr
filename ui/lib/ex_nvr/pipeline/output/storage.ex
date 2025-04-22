@@ -11,6 +11,7 @@ defmodule ExNVR.Pipeline.Output.Storage do
   alias ExMP4.Writer
   alias ExNVR.Model.Device
   alias ExNVR.Model.Run
+  alias ExNVR.Model.Schedule
   alias ExNVR.Pipeline.Event.StreamClosed
   alias ExNVR.Pipeline.Output.Storage.Segment
   alias ExNVR.Utils
@@ -23,6 +24,7 @@ defmodule ExNVR.Pipeline.Output.Storage do
   @time_error Time.milliseconds(30)
   @time_drift_threshold Time.seconds(30)
   @check_interval Time.seconds(5)
+  @schedule_interval Time.seconds(5)
   @timescale 90_000
 
   @recordings_event [:ex_nvr, :recordings, :stop]
@@ -76,6 +78,8 @@ defmodule ExNVR.Pipeline.Output.Storage do
 
   @impl true
   def handle_init(_ctx, opts) do
+    schedule = opts.device.storage_config.schedule
+
     state =
       %{
         record?: true,
@@ -85,7 +89,8 @@ defmodule ExNVR.Pipeline.Output.Storage do
         target_duration: opts.target_segment_duration,
         correct_timestamp: opts.correct_timestamp,
         track: nil,
-        onvif_replay: opts.onvif_replay
+        onvif_replay: opts.onvif_replay,
+        schedule: schedule && Schedule.parse!(schedule)
       }
       |> reset_state_fields()
 
@@ -98,7 +103,9 @@ defmodule ExNVR.Pipeline.Output.Storage do
   def handle_setup(_ctx, %{directory: dest} = state) do
     case Utils.writable(dest) do
       :ok ->
-        {[], state}
+        record? = record?(state)
+        notify_action = if not record?, do: [notify_parent: {:recording, false}], else: []
+        {schedule_timer_action(state) ++ notify_action, %{state | record?: record?}}
 
       {:error, reason} ->
         Membrane.Logger.error("Destination '#{dest}' is not writable, error: #{inspect(reason)}")
@@ -229,9 +236,27 @@ defmodule ExNVR.Pipeline.Output.Storage do
     case ExNVR.Utils.writable(state.directory) do
       :ok ->
         Membrane.Logger.info("Destination '#{state.directory}' is writable")
-        {[stop_timer: :recording_dir], %{state | record?: true}}
+
+        {[stop_timer: :recording_dir] ++ schedule_timer_action(state),
+         %{state | record?: record?(state)}}
 
       _error ->
+        {[], state}
+    end
+  end
+
+  @impl true
+  def handle_tick(:check_schedule, _ctx, state) do
+    record? = record?(state)
+
+    cond do
+      state.record? and not record? ->
+        {[notify_parent: {:recording, false}], handle_discontinuity(%{state | record?: false})}
+
+      not state.record? and record? ->
+        {[notify_parent: {:recording, true}], %{state | record?: true}}
+
+      true ->
         {[], state}
     end
   end
@@ -489,5 +514,15 @@ defmodule ExNVR.Pipeline.Output.Storage do
       Segment end date: #{Segment.end_date(segment) |> Time.to_datetime()}
       Current date time: #{Time.to_datetime(segment.wallclock_end_date)}
     """)
+  end
+
+  defp schedule_timer_action(%{schedule: nil}), do: []
+
+  defp schedule_timer_action(_state), do: [start_timer: {:check_schedule, @schedule_interval}]
+
+  defp record?(%{schedule: nil}), do: true
+
+  defp record?(%{schedule: schedule} = state) do
+    Schedule.scheduled?(schedule, DateTime.now!(state.device.timezone))
   end
 end
