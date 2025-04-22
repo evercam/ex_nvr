@@ -11,7 +11,11 @@ defmodule ExNVRWeb.API.EventController do
   @spec create(Conn.t(), map()) :: Conn.t()
   def create(conn, params) do
     device = conn.assigns.device
-    event_params = Map.put(params, "metadata", conn.body_params)
+
+    event_params =
+      params
+      |> Map.put("metadata", conn.body_params)
+      |> Map.put("time", generic_event_time(params, device.timezone))
 
     with {:ok, _event} <- Events.create_event(device, event_params) do
       send_resp(conn, 201, "")
@@ -63,6 +67,29 @@ defmodule ExNVRWeb.API.EventController do
       |> json(%{meta: meta, data: events})
     end
   end
+
+  defp parse_naive_time(time, timezone) do
+    case NaiveDateTime.from_iso8601(time) do
+      {:ok, t} ->
+        t
+        |> DateTime.from_naive!(timezone)
+        |> DateTime.shift_zone!("UTC")
+
+      {:error, _} ->
+        now()
+    end
+  end
+
+  defp generic_event_time(%{"time" => time}, timezone) do
+    case DateTime.from_iso8601(time) do
+      {:ok, t, _} -> DateTime.shift_zone!(t, "UTC")
+      {:error, :missing_offset} -> parse_naive_time(time, timezone)
+    end
+  end
+
+  defp generic_event_time(_, _), do: now()
+
+  defp now(), do: DateTime.utc_now() |> DateTime.to_iso8601()
 
   defp get_lpr_event(device, params) do
     case Device.vendor(device) do

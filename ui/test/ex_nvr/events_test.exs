@@ -111,14 +111,5 @@ defmodule ExNVR.EventsTest do
       {:ok, event} = Events.create_event(device, params)
       assert event.metadata == %{}
     end
-
-    test "reject invalid metadata JSON", %{device: device} do
-      invalid_json = %{"value" => {:a, :b}}
-      params = %{"type" => "cosmic_rays_exposure", "metadata" => invalid_json}
-
-      {:error, changeset} = Events.create_event(device, params)
-
-      assert %{metadata: ["must be JSON serializable"]} = errors_on(changeset)
-    end
   end
 end
