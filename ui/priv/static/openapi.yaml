@@ -1220,6 +1220,9 @@ components:
 
               * `nothing` - Do nothing, keep recording.
               * `overwrite` - Delete old recordings.
+        schedule:
+          type: object
+          description: A schedule when the recordings should be stored.
       required: [address]
     DeviceSnapshotConfig:
       type: object
