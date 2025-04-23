@@ -28,7 +28,12 @@ defmodule ExNVRWeb.Api.EventControllerTest do
   }
 
   setup %{tmp_dir: tmp_dir} do
-    device = camera_device_fixture(tmp_dir, %{vendor: "Milesight Technology Co.,Ltd."})
+    device =
+      camera_device_fixture(tmp_dir, %{
+        vendor: "Milesight Technology Co.,Ltd.",
+        timezone: "Africa/Algiers"
+      })
+
     [device: device]
   end
 
@@ -98,6 +103,67 @@ defmodule ExNVRWeb.Api.EventControllerTest do
         @milesight_lpr_event
       )
       |> json_response(404)
+    end
+
+    test "create generic event with naive timestamp format", %{
+      conn: conn,
+      device: device,
+      token: token
+    } do
+      utc_time = ~U[2025-04-01 09:00:00.000000Z]
+      dz_naive_time = "2025-04-01 10:00:00"
+      payload = %{"time" => dz_naive_time}
+
+      conn
+      |> post(
+        ~p"/api/devices/#{device.id}/events?type=my_type&token=#{token}",
+        payload
+      )
+      |> response(201)
+
+      {:ok, {[event], _}} = ExNVR.Events.list_events(%{})
+
+      assert event.time == utc_time
+      assert event.metadata["time"] == dz_naive_time
+    end
+
+    test "create generic event with ISO timestamp format", %{
+      conn: conn,
+      device: device,
+      token: token
+    } do
+      utc_time = ~U[2025-04-01 09:00:00.000000Z]
+      dz_time = "2025-04-01T10:00:00+01:00"
+      payload = %{"time" => dz_time}
+
+      conn
+      |> post(
+        ~p"/api/devices/#{device.id}/events?type=my_type&token=#{token}",
+        payload
+      )
+      |> response(201)
+
+      {:ok, {[event], _}} = ExNVR.Events.list_events(%{})
+
+      assert event.time == utc_time
+      assert event.metadata["time"] == dz_time
+    end
+
+    test "creating a generic event with no timestamp, defaults to now", %{
+      conn: conn,
+      device: device,
+      token: token
+    } do
+      conn
+      |> post(
+        ~p"/api/devices/#{device.id}/events?type=my_type&token=#{token}",
+        @generic_event
+      )
+      |> response(201)
+
+      {:ok, {[event], _}} = ExNVR.Events.list_events(%{})
+
+      assert DateTime.diff(event.time, event.inserted_at) == 0
     end
   end
 
