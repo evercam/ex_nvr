@@ -7,7 +7,6 @@ defmodule ExNVR.Nerves.GrafanaAgent do
 
   require Logger
 
-  alias Credo.CLI.Task.PrepareChecksToRun
   alias __MODULE__.ConfigRenderer
 
   @github_api_url "https://api.github.com/repos/grafana/agent/releases"

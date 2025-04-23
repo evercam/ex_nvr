@@ -5,6 +5,8 @@ defmodule ExNVR.Model.Device.StorageConfig do
 
   import Ecto.Changeset
 
+  alias ExNVR.Model.Schedule
+
   @type t :: %__MODULE__{}
 
   @primary_key false
@@ -15,6 +17,7 @@ defmodule ExNVR.Model.Device.StorageConfig do
     field :full_drive_action, Ecto.Enum, values: [:nothing, :overwrite], default: :overwrite
     # Sub stream
     field :record_sub_stream, Ecto.Enum, values: [:never, :always], default: :never
+    field :schedule, :map
   end
 
   @spec changeset(t(), map()) :: Ecto.Changeset.t()
@@ -33,7 +36,7 @@ defmodule ExNVR.Model.Device.StorageConfig do
   @spec update_changeset(t(), map()) :: Ecto.Changeset.t()
   def update_changeset(struct, params) do
     struct
-    |> cast(params, [:full_drive_threshold, :full_drive_action, :record_sub_stream])
+    |> cast(params, [:full_drive_threshold, :full_drive_action, :record_sub_stream, :schedule])
     |> common_changeset()
   end
 
@@ -45,5 +48,11 @@ defmodule ExNVR.Model.Device.StorageConfig do
       message: "value must be between 0 and 100"
     )
     |> validate_required([:address])
+    |> validate_change(:schedule, fn :schedule, schedule ->
+      case Schedule.validate(schedule) do
+        {:ok, _schedule} -> []
+        {:error, _reason} -> [schedule: "Invalid schedule"]
+      end
+    end)
   end
 end
