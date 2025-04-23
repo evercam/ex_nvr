@@ -76,7 +76,7 @@ defmodule ExNVRWeb.API.EventController do
         |> DateTime.shift_zone!("UTC")
 
       {:error, _} ->
-        now()
+        DateTime.utc_now()
     end
   end
 
@@ -87,9 +87,7 @@ defmodule ExNVRWeb.API.EventController do
     end
   end
 
-  defp generic_event_time(_, _), do: now()
-
-  defp now(), do: DateTime.utc_now() |> DateTime.to_iso8601()
+  defp generic_event_time(_, _), do: DateTime.utc_now()
 
   defp get_lpr_event(device, params) do
     case Device.vendor(device) do
