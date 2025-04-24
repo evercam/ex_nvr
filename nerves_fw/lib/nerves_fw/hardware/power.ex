@@ -10,29 +10,36 @@ defmodule ExNVR.Nerves.Hardware.Power do
 
   use GenServer
 
+  alias Circuits.GPIO
+  alias ExNVR.Nerves.SystemSettings
+
   def start_link(options) do
     GenServer.start_link(__MODULE__, options, name: __MODULE__)
   end
 
-  def state(pid \\ __MODULE__) do
-    GenServer.call(pid, :state)
+  # force_read? read state even if publish? is false
+  def state(force_read? \\ false, pid \\ __MODULE__) do
+    GenServer.call(pid, {:state, force_read?})
+  end
+
+  def reload(pid \\ __MODULE__) do
+    GenServer.cast(pid, :reload)
   end
 
   @impl true
   def init(options) do
+    system_settings = SystemSettings.get_settings()
+
     ac_pin = Keyword.get(options, :ac_pin, "GPIO23")
     bat_pin = Keyword.get(options, :battery_pin, "GPIO16")
 
-    {:ok, ac_gpio} = Circuits.GPIO.open(ac_pin, :input)
-    {:ok, bat_gpio} = Circuits.GPIO.open(bat_pin, :input)
+    {:ok, ac_gpio} = GPIO.open(ac_pin, :input, pull_mode: :pulldown)
+    {:ok, bat_gpio} = GPIO.open(bat_pin, :input, pull_mode: :pulldown)
 
-    :ok = Circuits.GPIO.set_pull_mode(bat_gpio, :pulldown)
-    :ok = Circuits.GPIO.set_pull_mode(ac_gpio, :pulldown)
+    :ok = GPIO.set_interrupts(bat_gpio, :both)
+    :ok = GPIO.set_interrupts(ac_gpio, :both)
 
-    # Set up event handlers
-    :ok = Circuits.GPIO.set_interrupts(bat_gpio, :both)
-    :ok = Circuits.GPIO.set_interrupts(ac_gpio, :both)
-
+    # publish? is set to true if system is wired for monitoring power.
     state = %{
       ac_pin: ac_pin,
       bat_pin: bat_pin,
@@ -40,16 +47,27 @@ defmodule ExNVR.Nerves.Hardware.Power do
       bat_gpio: bat_gpio,
       ac_timer: nil,
       bat_timer: nil,
-      ac_ok?: Circuits.GPIO.read(ac_gpio),
-      low_battery?: Circuits.GPIO.read(bat_gpio)
+      ac_ok?: GPIO.read(ac_gpio),
+      low_battery?: GPIO.read(bat_gpio),
+      publish?: system_settings.monitor_power == true
     }
 
     {:ok, state}
   end
 
   @impl true
-  def handle_call(:state, _from, state) do
-    {:reply, Map.take(state, [:ac_ok?, :low_battery?]), state}
+  def handle_call({:state, force_read?}, _from, state) do
+    reply =
+      if state.publish? or force_read? do
+        %{ac_ok?: to_bool(state.ac_ok?), low_battery?: to_bool(state.low_battery?)}
+      end
+
+    {:reply, reply, state}
+  end
+
+  @impl true
+  def handle_cast(:reload, state) do
+    {:noreply, %{state | publish?: SystemSettings.get_settings().monitor_power == true}}
   end
 
   @impl true
@@ -81,7 +99,8 @@ defmodule ExNVR.Nerves.Hardware.Power do
       Logger.error("Failed to save event: #{inspect(changeset)}")
     end
 
-    {:noreply, state}
+    SystemSettings.update_setting(:monitor_power, true)
+    {:noreply, %{state | publish?: true}}
   end
 
   @impl true
@@ -92,4 +111,7 @@ defmodule ExNVR.Nerves.Hardware.Power do
 
   defp event_name(:ac_ok?), do: "power"
   defp event_name(:low_battery?), do: "low-battery"
+
+  defp to_bool(0), do: false
+  defp to_bool(_other), do: true
 end
