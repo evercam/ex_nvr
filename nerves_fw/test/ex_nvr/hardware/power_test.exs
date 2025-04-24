@@ -1,7 +1,13 @@
-defmodule ExNVR.Nerves.Monitoring.PowerTest do
+defmodule ExNVR.Nerves.Hardware.PowerTest do
   use ExNVR.DataCase, async: false
 
   alias ExNVR.Nerves.Hardware.Power
+
+  @moduletag :tmp_dir
+
+  setup %{tmp_dir: tmp_dir} do
+    Application.put_env(:ex_nvr_fw, :system_settings_path, Path.join(tmp_dir, "settings.json"))
+  end
 
   test "Power state" do
     # Power pins (3.3v)
@@ -9,10 +15,10 @@ defmodule ExNVR.Nerves.Monitoring.PowerTest do
     assert {:ok, bat_power} = Circuits.GPIO.open({"gpiochip0", 4}, :output)
 
     Circuits.GPIO.write(ac_power, 1)
-    Circuits.GPIO.write(bat_power, 0)
 
     assert {:ok, pid} = Power.start_link(ac_pin: {"gpiochip0", 1}, battery_pin: {"gpiochip0", 5})
-    assert %{ac_ok?: 1, low_battery?: 0} = Power.state(pid)
+    refute Power.state(false, pid)
+    assert %{ac_ok?: true, low_battery?: false} = Power.state(true, pid)
 
     # Simulate switch bouncing
     ac_series = [1, 1, 0, 1, 0, 0, 0, 0]
@@ -23,7 +29,8 @@ defmodule ExNVR.Nerves.Monitoring.PowerTest do
 
     Process.sleep(to_timeout(second: 2))
 
-    assert %{ac_ok?: 0, low_battery?: 1} = Power.state(pid)
+    assert %{ac_ok?: false, low_battery?: true} = Power.state(false, pid)
+    assert ExNVR.Nerves.SystemSettings.get_settings().monitor_power
 
     assert {:ok, {[event], _flop}} =
              ExNVR.Events.list_events(%Flop{filters: Flop.Filter.new(type: "power")})

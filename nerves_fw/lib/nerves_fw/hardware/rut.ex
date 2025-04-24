@@ -31,9 +31,12 @@ defmodule ExNVR.Nerves.Hardware.RUT do
     GenServer.start_link(__MODULE__, nil, name: __MODULE__)
   end
 
-  @spec state() :: map()
+  @spec state() :: {:ok, map()} | {:error, :not_started}
   def state() do
-    GenServer.call(__MODULE__, :state)
+    case Process.whereis(__MODULE__) do
+      pid when is_pid(pid) -> GenServer.call(__MODULE__, :state)
+      other -> {:error, :not_started}
+    end
   end
 
   @impl true
@@ -54,7 +57,7 @@ defmodule ExNVR.Nerves.Hardware.RUT do
 
   @impl true
   def handle_call(:state, _from, state) do
-    {:reply, state.data, state}
+    {:reply, {:ok, state.data}, state}
   end
 
   @impl true
