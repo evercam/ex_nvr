@@ -62,7 +62,7 @@ defmodule ExNVR.Nerves.SystemStatus do
 
   defp power_data() do
     case Process.whereis(Power) do
-      pid when is_pid(pid) -> Power.state(true)
+      pid when is_pid(pid) -> Power.state(false)
       _other -> nil
     end
   end
