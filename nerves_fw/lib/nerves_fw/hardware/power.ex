@@ -22,6 +22,10 @@ defmodule ExNVR.Nerves.Hardware.Power do
     GenServer.call(pid, {:state, force_read?})
   end
 
+  def reload(pid \\ __MODULE__) do
+    GenServer.cast(pid, :reload)
+  end
+
   @impl true
   def init(options) do
     system_settings = SystemSettings.get_settings()
@@ -59,6 +63,11 @@ defmodule ExNVR.Nerves.Hardware.Power do
       end
 
     {:reply, reply, state}
+  end
+
+  @impl true
+  def handle_cast(:reload, state) do
+    {:noreply, %{state | publish?: SystemSettings.get_settings().monitor_power == true}}
   end
 
   @impl true
