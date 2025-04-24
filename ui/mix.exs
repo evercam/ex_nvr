@@ -86,7 +86,7 @@ defmodule ExNVR.MixProject do
       {:prom_ex, "~> 1.11.0"},
       {:reverse_proxy_plug, "~> 3.0"},
       {:circuits_uart, "~> 1.5"},
-      {:onvif, github: "hammeraj/onvif", ref: "f351420"},
+      {:onvif, github: "gBillal/onvif", tag: "v0.6.0"},
       {:slipstream, "~> 1.2.0"},
       {:live_vue, "~> 0.5.7"},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},

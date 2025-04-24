@@ -6,8 +6,8 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
   require Logger
 
   alias Ecto.Changeset
-  alias Onvif.{Devices, Media}
-  alias Onvif.Devices.Schemas.NetworkInterface
+  alias Onvif.{Devices, Media2}
+  alias Onvif.Devices.NetworkInterface
 
   @scope_regex ~r[^onvif://www.onvif.org/(name|hardware)/(.*)]
 
@@ -138,7 +138,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
     device_details = socket.assigns.device_details
     onvif_device = socket.assigns.selected_device
 
-    {:ok, [profile]} = Media.Ver20.GetProfiles.request(onvif_device, [reference_token])
+    {:ok, [profile]} = Media2.get_profiles(onvif_device, token: reference_token)
 
     {:noreply,
      assign(socket,
@@ -222,7 +222,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
   end
 
   defp get_network_interface(%CameraDetails{} = details) do
-    case Devices.GetNetworkInterfaces.request(details.onvif_device) do
+    case Devices.get_network_interfaces(details.onvif_device) do
       {:ok, interfaces} -> %CameraDetails{details | network_interface: List.first(interfaces)}
       _error -> details
     end
@@ -231,10 +231,9 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
   defp get_profiles(%{onvif_device: %{media_ver20_service_path: nil}} = details), do: details
 
   defp get_profiles(details) do
-    case Media.Ver20.GetProfiles.request(details.onvif_device) do
+    case Media2.get_profiles(details.onvif_device) do
       {:ok, profiles} ->
         profiles
-        |> Enum.reverse()
         |> Enum.map(&%MediaProfile{profile: &1})
         |> then(&%CameraDetails{details | media_profiles: &1})
 

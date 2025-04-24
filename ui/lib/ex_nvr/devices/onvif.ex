@@ -2,8 +2,8 @@ defmodule ExNVR.Devices.Onvif do
   @moduledoc false
 
   alias ExNVR.Model.Device
+  alias Onvif.Search
   alias Onvif.Search.{FindRecordings, GetRecordingSearchResults}
-  alias Onvif.Search.Schemas
 
   @spec discover(Keyword.t()) :: [Onvif.Discovery.Probe.t()]
   def discover(options) do
@@ -60,7 +60,7 @@ defmodule ExNVR.Devices.Onvif do
   defp do_get_onvif_stream_profile(_onvif_device, ""), do: nil
 
   defp do_get_onvif_stream_profile(onvif_device, profile_token) do
-    case Onvif.Media.Ver20.GetProfiles.request(onvif_device, [profile_token]) do
+    case Onvif.Media2.get_profiles(onvif_device, token: profile_token) do
       {:ok, [profile]} -> profile
       _other -> nil
     end
@@ -70,10 +70,9 @@ defmodule ExNVR.Devices.Onvif do
     do: {:error, :no_recording_service}
 
   defp do_get_recordings(device) do
-    with {:ok, token} <-
-           FindRecordings.request(device, %Schemas.FindRecordings{keep_alive_time: 120}),
+    with {:ok, token} <- Search.find_recordings(device, %FindRecordings{keep_alive_time: 120}),
          {:ok, result} <-
-           GetRecordingSearchResults.request(device, %Schemas.GetRecordingSearchResults{
+           Search.get_recording_search_results(device, %GetRecordingSearchResults{
              search_token: token
            }) do
       {:ok,

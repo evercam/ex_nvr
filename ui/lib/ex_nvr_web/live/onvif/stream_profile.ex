@@ -5,8 +5,8 @@ defmodule ExNVRWeb.Onvif.StreamProfile do
 
   require Logger
 
-  alias Onvif.Media
-  alias Onvif.Media.Ver20.Schemas.Profile.VideoEncoder
+  alias Onvif.Media2
+  alias Onvif.Media2.Profile.VideoEncoder
 
   def render(assigns) do
     ~H"""
@@ -255,6 +255,7 @@ defmodule ExNVRWeb.Onvif.StreamProfile do
 
   def handle_event("update-profile", %{"video_encoder" => params}, socket) do
     profile = socket.assigns.profile
+    device = socket.assigns.onvif_device
 
     params =
       Map.update!(params, "resolution", fn value ->
@@ -263,11 +264,7 @@ defmodule ExNVRWeb.Onvif.StreamProfile do
       end)
 
     with {:ok, video_encoder} <- validate_encoder_params(profile, params),
-         {:ok, _response} <-
-           Media.Ver20.SetVideoEncoderConfiguration.request(
-             socket.assigns.onvif_device,
-             [video_encoder]
-           ) do
+         :ok  <- Media2.set_video_encoder_configuration(device, video_encoder) do
       send(self(), {:profile_updated, profile.reference_token})
       {:noreply, assign(socket, edit_mode: false)}
     else
@@ -281,22 +278,19 @@ defmodule ExNVRWeb.Onvif.StreamProfile do
   end
 
   defp snapshot_uri(profile, onvif_device) do
-    {:ok, snapshot_uri} =
-      Media.Ver10.GetSnapshotUri.request(onvif_device, [profile.reference_token])
-
+    {:ok, snapshot_uri} = Media2.get_snapshot_uri(onvif_device, profile.reference_token)
     snapshot_uri
   end
 
   defp stream_uri(profile, onvif_device) do
-    {:ok, stream_uri} = Media.Ver20.GetStreamUri.request(onvif_device, [profile.reference_token])
+    {:ok, stream_uri} = Media2.get_stream_uri(onvif_device, profile.reference_token)
     stream_uri
   end
 
   defp encoder_options(profile, onvif_device) do
-    case Media.Ver20.GetVideoEncoderConfigurationOptions.request(onvif_device, [
-           nil,
-           profile.reference_token
-         ]) do
+    case Media2.get_video_encoder_configuration_options(onvif_device,
+           profile_token: profile.reference_token
+         ) do
       {:ok, options} -> options
       _error -> []
     end
@@ -338,6 +332,6 @@ defmodule ExNVRWeb.Onvif.StreamProfile do
   end
 end
 
-defimpl Phoenix.HTML.Safe, for: Onvif.Media.Ver20.Schemas.Profile.VideoEncoder.Resolution do
+defimpl Phoenix.HTML.Safe, for: Onvif.Media.VideoResolution do
   def to_iodata(%{width: width, height: height}), do: "#{width}|#{height}"
 end
