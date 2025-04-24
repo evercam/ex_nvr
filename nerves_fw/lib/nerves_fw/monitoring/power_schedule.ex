@@ -34,23 +34,24 @@ defmodule ExNVR.Nerves.Monitoring.PowerSchedule do
 
   @impl true
   def handle_info(:check_schedule, state) do
+    ntp_synced? = NervesTime.synchronized?()
+
     cond do
       is_nil(state.schedule) ->
         Process.send_after(self(), :check_schedule, to_timeout(minute: 5))
-        {:noreply, state}
 
-      not NervesTime.synchronized?() ->
-        Logger.warning("[Power schedule]: NTP not synched, skipping schedule check")
-        Process.send_after(self(), :check_schedule, to_timeout(second: 15))
-        {:noreply, state}
+      not ntp_synced? or Schedule.scheduled?(state.schedule, DateTime.now!(state.timezone)) ->
+        if not ntp_synced? do
+          Logger.warning("[Power schedule]: NTP not synched, skipping schedule check")
+        end
 
-      Schedule.scheduled?(state.schedule, DateTime.now!(state.timezone)) ->
         Process.send_after(self(), :check_schedule, to_timeout(second: 15))
-        {:noreply, state}
 
       true ->
         trigger_action(state.action)
     end
+
+    {:noreply, state}
   end
 
   defp trigger_action("poweroff") do
