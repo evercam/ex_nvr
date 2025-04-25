@@ -1,4 +1,5 @@
 defmodule ExNVRWeb.Endpoint do
+  use Sentry.PlugCapture
   use Phoenix.Endpoint, otp_app: :ex_nvr
 
   # The session will be stored in the cookie and signed,
@@ -15,7 +16,8 @@ defmodule ExNVRWeb.Endpoint do
     websocket: [check_origin: false],
     longpoll: [check_origin: false]
 
-  socket "/live", Phoenix.LiveView.Socket, websocket: [connect_info: [session: @session_options]]
+  socket "/live", Phoenix.LiveView.Socket,
+    websocket: [connect_info: [:peer_data, :uri, :user_agent, session: @session_options]]
 
   origins =
     case System.get_env("EXNVR_CORS_ALLOWED_ORIGINS") do
@@ -63,6 +65,8 @@ defmodule ExNVRWeb.Endpoint do
     parsers: [:urlencoded, :multipart, :json],
     pass: ["*/*"],
     json_decoder: Phoenix.json_library()
+
+  plug Sentry.PlugContext
 
   plug Plug.MethodOverride
   plug Plug.Head

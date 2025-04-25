@@ -176,7 +176,7 @@ root_source_code = [
 
 config :sentry,
   dsn: System.get_env("SENTRY_DSN"),
-  release: "ex_nvr@0.19.0",
+  release: "ex_nvr@0.19.1",
   report_deps: false,
   root_source_code_paths: root_source_code,
   context_lines: 5,
