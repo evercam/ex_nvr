@@ -35,7 +35,7 @@ defmodule ExNVR.Nerves.Hardware.RUT do
   def state() do
     case Process.whereis(__MODULE__) do
       pid when is_pid(pid) -> GenServer.call(__MODULE__, :state)
-      other -> {:error, :not_started}
+      _other -> {:error, :not_started}
     end
   end
 

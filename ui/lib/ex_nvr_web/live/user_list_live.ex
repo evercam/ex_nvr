@@ -31,50 +31,39 @@ defmodule ExNVRWeb.UserListLive do
           </div>
         </:col>
         <:action :let={user}>
-          <.button
+          <.three_dot
             :if={@current_user.role == :admin}
             id={"dropdownMenuIconButton-#{user.id}"}
-            data-dropdown-toggle={"dropdownDots-#{user.id}"}
-            class="text-sm ml-3 e-p-1 bg-gray-200 hover:bg-gray-200 text-zinc-900 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-400"
+            dropdown_id={"dropdownDots-#{user.id}"}
+          />
+          <div
+            id={"dropdownDots-#{user.id}"}
+            class="z-10 hidden text-left bg-white divide-y divide-gray-100 rounded-lg shadow w-44 dark:bg-gray-700 dark:divide-gray-600"
           >
-            <svg
-              class="w-5 h-5"
-              aria-hidden="true"
-              fill="currentColor"
-              viewBox="0 0 20 20"
-              xmlns="http://www.w3.org/2000/svg"
+            <ul
+              class="py-2 text-sm text-gray-700 dark:text-gray-200"
+              aria-labelledby={"dropdownMenuIconButton-#{user.id}"}
             >
-              <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
-            </svg>
-            <div
-              id={"dropdownDots-#{user.id}"}
-              class="z-10 hidden text-left bg-white divide-y divide-gray-100 rounded-lg shadow w-44 dark:bg-gray-700 dark:divide-gray-600"
-            >
-              <ul
-                class="py-2 text-sm text-gray-700 dark:text-gray-200"
-                aria-labelledby={"dropdownMenuIconButton-#{user.id}"}
-              >
-                <li>
-                  <.link
-                    href={~p"/users/#{user.id}"}
-                    class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white"
-                  >
-                    Update
-                  </.link>
-                </li>
-                <li>
-                  <.link
-                    id={"delete_user-#{user.id}"}
-                    href="#"
-                    class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-red"
-                    phx-click={show_modal("delete-modal-#{user.id}")}
-                  >
-                    Delete
-                  </.link>
-                </li>
-              </ul>
-            </div>
-          </.button>
+              <li>
+                <.link
+                  href={~p"/users/#{user.id}"}
+                  class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white"
+                >
+                  Update
+                </.link>
+              </li>
+              <li>
+                <.link
+                  id={"delete_user-#{user.id}"}
+                  href="#"
+                  class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-red"
+                  phx-click={show_modal("delete-modal-#{user.id}")}
+                >
+                  Delete
+                </.link>
+              </li>
+            </ul>
+          </div>
           <.modal id={"delete-modal-#{user.id}"}>
             <div class="bg-blue-300 p-4 rounded-lg text-center dark:bg-gray-800 dark:border-gray-700">
               <p class="text-l text-black dark:text-white font-bold mb-4">

@@ -61,6 +61,7 @@ jobs:
       NERVES_FIRMWARE_SIGNING_KEY: ${{ secrets.NERVES_FIRMWARE_SIGNING_KEY }}
       EXNVR_REMOTE_SERVER_URI: ${{ vars.EXNVR_REMOTE_SERVER_URI }}
       EXNVR_REMOTE_SERVER_TOKEN: ${{ secrets.EXNVR_REMOTE_SERVER_TOKEN }}
+      SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
     steps:
       - uses: actions/checkout@v3
         with:
@@ -106,6 +107,9 @@ jobs:
 
       - name: Download firmware dependencies
         run: mix do deps.get, firmware.deps
+
+      - name: Package source code for sentry
+        run: mix sentry.package_source_code
 
       - name: Create firmware
         run: |

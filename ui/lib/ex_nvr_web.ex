@@ -56,6 +56,7 @@ defmodule ExNVRWeb do
         layout: {ExNVRWeb.Layouts, :app}
 
       unquote(html_helpers())
+      on_mount Sentry.LiveViewHook
     end
   end
 
