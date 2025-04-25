@@ -7,9 +7,10 @@ defmodule ExNVRWeb.OnvifDiscoveryLiveTest do
   import Mimic
   import Phoenix.LiveViewTest
 
-  alias Onvif.Devices.Schemas.{NetworkInterface, SystemDateAndTime}
+  alias Onvif.Devices.{NetworkInterface, SystemDateAndTime}
   alias Onvif.Discovery.Probe
-  alias Onvif.Media.Ver20.Schemas.Profile
+  alias Onvif.Media.VideoResolution
+  alias Onvif.Media2.{Profile, VideoEncoderConfigurationOption}
 
   @probes [
     %Probe{
@@ -35,11 +36,8 @@ defmodule ExNVRWeb.OnvifDiscoveryLiveTest do
   ]
 
   setup_all do
-    Mimic.copy(Onvif.Devices.GetNetworkInterfaces)
-    Mimic.copy(Onvif.Media.Ver20.GetProfiles)
-    Mimic.copy(Onvif.Media.Ver20.GetStreamUri)
-    Mimic.copy(Onvif.Media.Ver10.GetSnapshotUri)
-    Mimic.copy(Onvif.Media.Ver20.GetVideoEncoderConfigurationOptions)
+    Mimic.copy(Onvif.Devices)
+    Mimic.copy(Onvif.Media2)
   end
 
   setup %{conn: conn} do
@@ -123,7 +121,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLiveTest do
          }}
       end)
 
-      expect(Onvif.Devices.GetNetworkInterfaces, :request, fn _device ->
+      expect(Onvif.Devices, :get_network_interfaces, fn _device ->
         {:ok,
          [
            %NetworkInterface{
@@ -137,93 +135,73 @@ defmodule ExNVRWeb.OnvifDiscoveryLiveTest do
          ]}
       end)
 
-      expect(Onvif.Media.Ver20.GetProfiles, :request, fn _device ->
+      expect(Onvif.Media2, :get_profiles, fn _device ->
         {:ok,
          [
+          %Profile{
+            reference_token: "Profile_1",
+            name: "mainStream",
+            video_encoder_configuration: %Profile.VideoEncoder{
+              encoding: :h265,
+              resolution: %VideoResolution{width: 3840, height: 2160},
+              rate_control: %Profile.VideoEncoder.RateControl{
+                constant_bitrate: true,
+                bitrate_limit: 4096
+              }
+            }
+          },
            %Profile{
              reference_token: "Profile_2",
              name: "subStream",
              video_encoder_configuration: %Profile.VideoEncoder{
                encoding: :h264,
-               resolution: %Profile.VideoEncoder.Resolution{
-                 width: 640,
-                 height: 480
-               },
+               resolution: %VideoResolution{width: 640, height: 480},
                rate_control: %Profile.VideoEncoder.RateControl{
                  constant_bitrate: false,
                  bitrate_limit: 600
                }
              }
-           },
-           %Profile{
-             reference_token: "Profile_1",
-             name: "mainStream",
-             video_encoder_configuration: %Profile.VideoEncoder{
-               encoding: :h265,
-               resolution: %Profile.VideoEncoder.Resolution{
-                 width: 3840,
-                 height: 2160
-               },
-               rate_control: %Profile.VideoEncoder.RateControl{
-                 constant_bitrate: true,
-                 bitrate_limit: 4096
-               }
-             }
            }
          ]}
       end)
 
-      expect(Onvif.Media.Ver20.GetStreamUri, :request, fn _device, ["Profile_1"] ->
+      expect(Onvif.Media2, :get_stream_uri, fn _device, "Profile_1" ->
         {:ok, "rtsp://192.168.1.100:554/main"}
       end)
-      |> expect(:request, fn _device, ["Profile_2"] ->
+      |> expect(:get_stream_uri, fn _device, "Profile_2" ->
         {:ok, "rtsp://192.168.1.100:554/sub"}
       end)
 
-      expect(Onvif.Media.Ver10.GetSnapshotUri, :request, fn _device, ["Profile_1"] ->
+      expect(Onvif.Media2, :get_snapshot_uri, fn _device, "Profile_1" ->
         {:ok, "http://192.168.1.100:8101/snapshot"}
       end)
-      |> expect(:request, fn _device, ["Profile_2"] ->
+      |> expect(:get_snapshot_uri, fn _device, "Profile_2" ->
         {:ok, "http://192.168.1.100:8101/sub"}
       end)
 
-      expect(Onvif.Media.Ver20.GetVideoEncoderConfigurationOptions, :request, fn _device,
-                                                                                 [
-                                                                                   nil,
-                                                                                   "Profile_1"
-                                                                                 ] ->
+      expect(Onvif.Media2, :get_video_encoder_configuration_options, fn _device,
+                                                                        profile_token: "Profile_1" ->
         {:ok,
          [
-           %Profile.VideoEncoderConfigurationOption{
+           %VideoEncoderConfigurationOption{
              resolutions_available: [],
              encoding: :h265,
              gov_length_range: [1, 50],
-             bitrate_range: %Profile.VideoEncoderConfigurationOption.BitrateRange{
-               min: 10,
-               max: 1000
-             },
-             quality_range: %Profile.VideoEncoderConfigurationOption.QualityRange{
-               min: 1,
-               max: 10
-             }
+             bitrate_range: %Onvif.Schemas.IntRange{min: 10, max: 1000},
+             quality_range: %Onvif.Schemas.FloatRange{min: 1, max: 10}
            }
          ]}
       end)
-      |> expect(:request, fn _device, [nil, "Profile_2"] ->
+      |> expect(:get_video_encoder_configuration_options, fn _device,
+                                                             profile_token: "Profile_2" ->
         {:ok,
          [
-           %Profile.VideoEncoderConfigurationOption{
+           %VideoEncoderConfigurationOption{
              resolutions_available: [],
              encoding: :h264,
              gov_length_range: [1, 25],
-             bitrate_range: %Profile.VideoEncoderConfigurationOption.BitrateRange{
-               min: 10,
-               max: 100
-             },
-             quality_range: %Profile.VideoEncoderConfigurationOption.QualityRange{
-               min: 1,
-               max: 10
-             }
+             bitrate_range: %Onvif.Schemas.IntRange{min: 10, max: 100},
+             quality_range: %Onvif.Schemas.FloatRange{min: 1, max: 10}
            }
          ]}
       end)
