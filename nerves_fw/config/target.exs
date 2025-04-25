@@ -168,6 +168,21 @@ config :nerves_time, :servers, [
 
 config :tzdata, data_dir: "/data/elixir_tzdata"
 
+root_source_code = [
+  File.cwd!(),
+  Path.join([File.cwd!(), "..", "ui"]),
+  Path.join([File.cwd!(), "..", "rtsp"])
+]
+
+config :sentry,
+  release: "ex_nvr@0.19.0",
+  report_deps: false,
+  root_source_code_paths: root_source_code,
+  context_lines: 5,
+  environment_name: config_env(),
+  enable_source_code_context: true,
+  before_send: {ExNVR.Sentry, :before_send}
+
 # Import target specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
 # Uncomment to use target specific configurations

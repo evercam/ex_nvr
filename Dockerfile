@@ -42,7 +42,7 @@ RUN mix deps.get
 RUN mix deps.compile
 
 # compile and build release
-RUN mix do compile, release
+RUN mix do compile, sentry.package_source_code, release
 
 # prepare release image
 FROM alpine:3.18.9 AS app

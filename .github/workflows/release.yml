@@ -31,7 +31,7 @@ jobs:
         working-directory: ./ui
 
       - name: Create release
-        run: mix release
+        run: mix do sentry.package_source_code, release
         working-directory: ./ui
 
       - name: Setup QEMU

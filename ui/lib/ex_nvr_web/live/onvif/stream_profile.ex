@@ -264,7 +264,7 @@ defmodule ExNVRWeb.Onvif.StreamProfile do
       end)
 
     with {:ok, video_encoder} <- validate_encoder_params(profile, params),
-         :ok  <- Media2.set_video_encoder_configuration(device, video_encoder) do
+         :ok <- Media2.set_video_encoder_configuration(device, video_encoder) do
       send(self(), {:profile_updated, profile.reference_token})
       {:noreply, assign(socket, edit_mode: false)}
     else

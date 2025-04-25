@@ -28,5 +28,19 @@ config :live_vue,
   ssr_module: LiveVue.SSR.NodeJS,
   ssr: false
 
+root_source_code = [
+  File.cwd!(),
+  Path.join([File.cwd!(), "..", "rtsp"])
+]
+
+config :sentry,
+  release: "ex_nvr@0.19.0",
+  report_deps: false,
+  root_source_code_paths: root_source_code,
+  context_lines: 5,
+  environment_name: config_env(),
+  enable_source_code_context: true,
+  before_send: {ExNVR.Sentry, :before_send}
+
 # Runtime production configuration, including reading
 # of environment variables, is done on config/runtime.exs.

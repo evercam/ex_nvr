@@ -41,6 +41,7 @@ WORKDIR /app/ui
 RUN mix deps.get
 RUN mix deps.compile
 
+RUN mix sentry.package_source_code
 RUN mix release
 
 RUN mkdir build-assets
