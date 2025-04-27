@@ -73,19 +73,15 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
 
   defp serve_live_snapshot(conn, params) do
     device = conn.assigns.device
+    timestamp = DateTime.utc_now()
 
     with {:error, _details} <- Devices.fetch_snapshot(device),
          :recording <- device.state do
       {:ok, snapshot} = Main.live_snapshot(device, params.format)
-
-      conn
-      |> put_resp_content_type("image/#{params.format}")
-      |> send_resp(:ok, snapshot)
+      do_serve_snapshot(conn, snapshot, timestamp, params.format)
     else
       {:ok, snapshot} ->
-        conn
-        |> put_resp_content_type("image/jpeg")
-        |> send_resp(:ok, snapshot)
+        do_serve_snapshot(conn, snapshot, timestamp)
 
       _ ->
         {:error, :not_found}
@@ -98,14 +94,18 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
     with [recording] <- Recordings.get_recordings_between(device.id, params.stream, time, time),
          {:ok, timestamp, snapshot} <-
            Recordings.snapshot(device, recording, time, method: params.method) do
-      conn
-      |> put_resp_header("x-timestamp", "#{DateTime.to_unix(timestamp, :millisecond)}")
-      |> put_resp_content_type("image/jpeg")
-      |> send_resp(:ok, snapshot)
+      do_serve_snapshot(conn, snapshot, timestamp)
     else
       [] -> {:error, :not_found}
       _other -> {:error, :no_jpeg}
     end
+  end
+
+  defp do_serve_snapshot(conn, snapshot, timestamp, format \\ :jpeg) do
+    conn
+    |> put_resp_header("x-timestamp", "#{DateTime.to_unix(timestamp, :millisecond)}")
+    |> put_resp_content_type("image/#{format}")
+    |> send_resp(:ok, snapshot)
   end
 
   @spec footage(Plug.Conn.t(), map()) :: return_t()

@@ -105,6 +105,11 @@ defmodule ExNVRWeb.API.DeviceStreamingControllerTest do
 
       assert conn.status == 200
       assert get_resp_header(conn, "content-type") == ["image/jpeg; charset=utf-8"]
+
+      input_timestamp = recording.start_date |> DateTime.to_unix(:millisecond)
+      [resp_timestamp] = conn |> get_resp_header("x-timestamp")
+
+      assert resp_timestamp == "#{input_timestamp}"
     end
 
     test "Get snapshot from recorded sub stream videos", %{
@@ -117,6 +122,11 @@ defmodule ExNVRWeb.API.DeviceStreamingControllerTest do
 
       assert conn.status == 200
       assert get_resp_header(conn, "content-type") == ["image/jpeg; charset=utf-8"]
+
+      input_timestamp = recording.start_date |> DateTime.to_unix(:millisecond)
+      [resp_timestamp] = get_resp_header(conn, "x-timestamp")
+
+      assert resp_timestamp == "#{input_timestamp}"
     end
 
     test "Returns 404 if there's no recording", %{conn: conn, device: device} do
@@ -155,6 +165,7 @@ defmodule ExNVRWeb.API.DeviceStreamingControllerTest do
         |> Conn.resp(200, <<20, 12, 23>>)
       end)
 
+      req_timestamp = DateTime.utc_now() |> DateTime.to_unix(:millisecond)
       conn = get(conn, "/api/devices/#{device.id}/snapshot")
       assert get_resp_header(conn, "content-type") == ["image/jpeg; charset=utf-8"]
 
@@ -162,6 +173,9 @@ defmodule ExNVRWeb.API.DeviceStreamingControllerTest do
                status: 200,
                resp_body: <<20, 12, 23>>
              } = conn
+
+      {resp_timestamp, _} = get_resp_header(conn, "x-timestamp") |> Enum.at(0) |> Integer.parse()
+      assert resp_timestamp - req_timestamp < 1000
     end
   end
 
