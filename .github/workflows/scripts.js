@@ -101,33 +101,23 @@ async function validateVersion({ github, context, core, customVersion }) {
 }
 
 async function handleWorkflowFailure({ github, context, core, workflowName, runId, runUrl }) {
-  const { owner, repo } = context.repo
-  const headBranch = context.payload.workflow_run.head_branch
-  const { data: prs } = await github.rest.pulls.list({
-    owner,
-    repo,
-    state: 'open',
-    head: `${owner}:${headBranch}`
-  })
+  try {
+    const prData = await getPrData({ github, context })
+    const failedJobsInfo = await getFailedJobsInfo({ github, context, runId })
 
-  if (prs.length === 0) {
-    core.info(`No open PRs found for commit: ${headBranch}`)
-    return
+    await postComment({
+      github,
+      context,
+      prNumber: prData.number,
+      body: `
+        ❌ Workflow **${workflowName}** failed. [Click here to check the logs](${runUrl})
+        
+        ${failedJobsInfo}.
+      `
+    })
+  } catch(e) {
+    core.warning(`Error posting workflow failure comment: ${e.message}`)
   }
-
-  const prNumber = prs[0].number
-  const failedJobsInfo = await getFailedJobsInfo({ github, context, runId })
-
-  await postComment({
-    github,
-    context,
-    prNumber,
-    body: `
-      ❌ Workflow **${workflowName}** failed. [Click here to check the logs](${runUrl})
-      
-      ${failedJobsInfo}.
-    `
-  })
 }
 
 async function getFailedJobsInfo({ github, context, runId }) {
@@ -153,6 +143,7 @@ async function getPrData({ github, context }) {
   const pr = await github.request(`GET ${prUrl}`)
 
   return {
+    number: pr.data.number,
     branch: pr.data.head.ref,
     sha: pr.data.head.sha,
   }
