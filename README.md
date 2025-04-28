@@ -191,3 +191,4 @@ The project is in a `poncho` style, it consists of the following (sub)projects:
    * `ui` - Contains the core logic of `ex_nvr` and a live view app.
    * `nerves_fw` - Contains nerves firmware image. Check [here](/nerves_fw/README.md)
 
+
