@@ -36,9 +36,11 @@ async function handleNervesBuildResult({ github, context, version, target, resul
       Version: **${version}** for target: **${formatTarget(target)}** can be found on [NervesHub](https://manage.nervescloud.com/org/Evercam/ex_nvr_fw/firmware).
     `
   } else {
+    const repoUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}`;
+    const actionsUrl = `${repoUrl}/actions/runs/${context.runId}`;
     body = `
       ❌ Build failed for version: **${version}**, target: **${formatTarget(target)}**
-      Check the logs for more information.
+      [Check the logs](${actionsUrl}) for more information.
     `
   }
 
