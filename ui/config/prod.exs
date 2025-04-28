@@ -34,7 +34,7 @@ root_source_code = [
 ]
 
 config :sentry,
-  release: "ex_nvr@0.19.1",
+  release: "ex_nvr@0.20.0",
   report_deps: false,
   root_source_code_paths: root_source_code,
   context_lines: 5,
