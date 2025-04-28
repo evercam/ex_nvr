@@ -57,6 +57,8 @@ config :membrane_core, enable_metrics: false
 
 config :nerves_hub_link, connect: false
 
+config :exqlite, force_build: true
+
 if Mix.target() == :host do
   import_config "host.exs"
 else
