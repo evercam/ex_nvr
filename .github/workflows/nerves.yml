@@ -63,6 +63,9 @@ jobs:
       EXNVR_REMOTE_SERVER_TOKEN: ${{ secrets.EXNVR_REMOTE_SERVER_TOKEN }}
       SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
     steps:
+      - name: Simulate failure
+        run: exit 1
+
       - uses: actions/checkout@v3
         with:
           ref: ${{ inputs.git_sha }}
