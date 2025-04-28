@@ -62,6 +62,7 @@ jobs:
       EXNVR_REMOTE_SERVER_URI: ${{ vars.EXNVR_REMOTE_SERVER_URI }}
       EXNVR_REMOTE_SERVER_TOKEN: ${{ secrets.EXNVR_REMOTE_SERVER_TOKEN }}
       SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+      SENTRY_ENABLED: ${{ github.ref == 'refs/heads/master' }}
     steps:
       - uses: actions/checkout@v3
         with:
@@ -109,6 +110,7 @@ jobs:
         run: mix do deps.get, firmware.deps
 
       - name: Package source code for sentry
+        if: env.SENTRY_ENABLED == 'true'
         run: mix sentry.package_source_code
 
       - name: Create firmware

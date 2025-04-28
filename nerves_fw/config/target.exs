@@ -174,16 +174,19 @@ root_source_code = [
   Path.join([File.cwd!(), "..", "rtsp"])
 ]
 
-config :sentry,
-  dsn: System.get_env("SENTRY_DSN"),
-  release: "ex_nvr@0.19.1",
-  report_deps: false,
-  root_source_code_paths: root_source_code,
-  context_lines: 5,
-  environment_name: config_env(),
-  enable_source_code_context: true,
-  before_send: {ExNVR.Sentry, :before_send}
+sentry_enabled? = String.to_existing_atom(System.get_env("SENTRY_ENABLED", "false"))
 
+if sentry_enabled? do
+  config :sentry,
+    dsn: System.get_env("SENTRY_DSN"),
+    release: "ex_nvr@0.19.1",
+    report_deps: false,
+    root_source_code_paths: root_source_code,
+    context_lines: 5,
+    environment_name: config_env(),
+    enable_source_code_context: true,
+    before_send: {ExNVR.Sentry, :before_send}
+end
 # Import target specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
 # Uncomment to use target specific configurations
