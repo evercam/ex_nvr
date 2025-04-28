@@ -182,8 +182,7 @@ config :sentry,
   root_source_code_paths: root_source_code,
   context_lines: 5,
   environment_name: config_env(),
-  enable_source_code_context: true,
-  before_send: {ExNVR.Sentry, :before_send}
+  enable_source_code_context: true
 
 # Import target specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.

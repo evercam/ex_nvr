@@ -56,6 +56,7 @@ defmodule ExNVR.Nerves.Monitoring.PowerSchedule do
 
   defp trigger_action("poweroff") do
     Logger.info("[Power schedule]: powering off the device")
+    ExNVR.Events.create_event(%{type: "shutdown"})
     Enum.each(Devices.list(), &Devices.Supervisor.stop/1)
     Nerves.Runtime.poweroff()
   end

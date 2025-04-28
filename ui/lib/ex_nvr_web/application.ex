@@ -9,8 +9,7 @@ defmodule ExNVRWeb.Application do
       config: %{
         metadata: [:file, :line],
         rate_limiting: [max_events: 10, interval: _1_second = 1_000],
-        capture_log_messages: true,
-        level: :error
+        capture_log_messages: false
       }
     })
 
