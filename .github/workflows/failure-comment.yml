@@ -22,6 +22,24 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
+             const { owner, repo } = context.repo;
+            const run_id = context.payload.workflow_run.id;
+            const workflow_name = context.payload.workflow_run.name;
+            const run_url = context.payload.workflow_run.html_url;
+            
+            console.log(`Processing failed workflow run #${run_id}: ${workflow_name}`);
+            
+            const { data: workflowRun } = await github.rest.actions.getWorkflowRun({
+              owner,
+              repo,
+              run_id: run_id
+            });
+            
+            console.log(`Workflow was triggered by event: ${workflowRun.event}`);
+            console.log(`Head SHA: ${workflowRun.head_sha}`);
+            console.log(`Head branch: ${workflowRun.head_branch}`);
+            console.log("Workflow:", workflowRun);
+            
             const scripts = require('./.github/workflows/scripts.js')
             await scripts.handleWorkflowFailure({
               github,
