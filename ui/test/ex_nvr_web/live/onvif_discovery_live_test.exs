@@ -138,18 +138,18 @@ defmodule ExNVRWeb.OnvifDiscoveryLiveTest do
       expect(Onvif.Media2, :get_profiles, fn _device ->
         {:ok,
          [
-          %Profile{
-            reference_token: "Profile_1",
-            name: "mainStream",
-            video_encoder_configuration: %Profile.VideoEncoder{
-              encoding: :h265,
-              resolution: %VideoResolution{width: 3840, height: 2160},
-              rate_control: %Profile.VideoEncoder.RateControl{
-                constant_bitrate: true,
-                bitrate_limit: 4096
-              }
-            }
-          },
+           %Profile{
+             reference_token: "Profile_1",
+             name: "mainStream",
+             video_encoder_configuration: %Profile.VideoEncoder{
+               encoding: :h265,
+               resolution: %VideoResolution{width: 3840, height: 2160},
+               rate_control: %Profile.VideoEncoder.RateControl{
+                 constant_bitrate: true,
+                 bitrate_limit: 4096
+               }
+             }
+           },
            %Profile{
              reference_token: "Profile_2",
              name: "subStream",

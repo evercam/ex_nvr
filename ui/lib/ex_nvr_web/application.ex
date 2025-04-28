@@ -49,7 +49,7 @@ defmodule ExNVRWeb.Application do
       token = options[:token]
       uri = if token, do: "#{uri}?token=#{token}", else: uri
 
-      [{ExNVR.RemoteConnection, [uri: uri]}]
+      [{ExNVR.RemoteConnection, [uri: uri, message_handler: options[:message_handler]]}]
     else
       []
     end

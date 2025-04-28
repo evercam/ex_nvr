@@ -20,7 +20,8 @@ config :ex_nvr, ice_servers: System.get_env("EXNVR_ICE_SERVERS", "[]")
 config :ex_nvr,
   remote_server: [
     uri: System.get_env("EXNVR_REMOTE_SERVER_URI"),
-    token: System.get_env("EXNVR_REMOTE_SERVER_TOKEN")
+    token: System.get_env("EXNVR_REMOTE_SERVER_TOKEN"),
+    message_handler: ExNVR.Nerves.RemoteConfigHandler
   ]
 
 url = URI.parse(System.get_env("EXNVR_URL", "http://localhost:4000"))
