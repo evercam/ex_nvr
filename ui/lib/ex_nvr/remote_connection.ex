@@ -18,7 +18,12 @@ defmodule ExNVR.RemoteConnection do
 
   @impl Slipstream
   def init(options) do
-    {:ok, connect!(options)}
+    opts = [uri: options[:uri]]
+
+    opts
+    |> connect!()
+    |> assign(:message_handler, options[:message_handler])
+    |> then(&{:ok, &1})
   end
 
   @impl Slipstream
@@ -30,7 +35,7 @@ defmodule ExNVR.RemoteConnection do
   @impl Slipstream
   def handle_join(@topic, _response, socket) do
     Logger.info("Joined topic: #{@topic}")
-    {:ok, ref} = :timer.send_interval(to_timeout(minute: 1), :send_system_status)
+    {:ok, ref} = :timer.send_interval(to_timeout(second: 30), :send_system_status)
     {:ok, assign(socket, timer_ref: ref)}
   end
 
@@ -41,8 +46,15 @@ defmodule ExNVR.RemoteConnection do
   end
 
   @impl Slipstream
-  def handle_message(topic, event, msg, socket) do
-    Logger.warning("Received unknown message: #{topic} #{event} #{inspect(msg)}")
+  def handle_message(@topic, event, msg, socket) do
+    if handler = socket.assigns[:message_handler] do
+      handler.handle_message(event, msg)
+    else
+      Logger.warning(
+        "No handler found for event #{event} on topic #{@topic} with message #{inspect(msg)}"
+      )
+    end
+
     {:noreply, socket}
   end
 
