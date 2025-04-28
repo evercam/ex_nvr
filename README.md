@@ -190,3 +190,4 @@ The project is in a `poncho` style, it consists of the following (sub)projects:
    * `rtsp` - Contains the code needed to connect to cameras via `RTSP` and parsing `RTP` packets.
    * `ui` - Contains the core logic of `ex_nvr` and a live view app.
    * `nerves_fw` - Contains nerves firmware image. Check [here](/nerves_fw/README.md)
+
