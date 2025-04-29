@@ -177,13 +177,12 @@ root_source_code = [
 
 config :sentry,
   dsn: System.get_env("SENTRY_DSN", nil),
-  release: "ex_nvr@0.19.1",
+  release: "ex_nvr@0.20.0",
   report_deps: false,
   root_source_code_paths: root_source_code,
   context_lines: 5,
   environment_name: config_env(),
-  enable_source_code_context: true,
-  before_send: {ExNVR.Sentry, :before_send}
+  enable_source_code_context: true
 
 # Import target specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.

@@ -73,7 +73,7 @@ if config_env() == :prod do
   if log_json? do
     config :logger, :default_handler,
       level: :info,
-      formatter: {LoggerJSON.Formatters.Basic, []}
+      formatter: LoggerJSON.Formatters.Basic.new(metadata: [:request_id])
   end
 
   config :ex_nvr,

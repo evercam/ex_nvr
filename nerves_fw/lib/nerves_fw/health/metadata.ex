@@ -10,6 +10,9 @@ defmodule ExNVR.Nerves.Health.Metadata do
   def router_mac_address(), do: router_state()[:mac_address]
 
   defp router_state() do
-    if Process.whereis(RUT), do: RUT.state(), else: %{}
+    case RUT.state() do
+      {:ok, state} -> state
+      {:error, :not_started} -> %{}
+    end
   end
 end
