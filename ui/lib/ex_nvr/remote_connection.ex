@@ -35,7 +35,7 @@ defmodule ExNVR.RemoteConnection do
   @impl Slipstream
   def handle_join(@topic, _response, socket) do
     Logger.info("Joined topic: #{@topic}")
-    {:ok, ref} = :timer.send_interval(to_timeout(second: 30), :send_system_status)
+    {:ok, ref} = :timer.send_interval(to_timeout(minute: 1), :send_system_status)
     {:ok, assign(socket, timer_ref: ref)}
   end
 

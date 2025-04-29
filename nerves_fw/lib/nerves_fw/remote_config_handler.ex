@@ -13,7 +13,7 @@ defmodule ExNVR.Nerves.RemoteConfigHandler do
     SystemSettings.update_setting(:schedule_timezone, config["schedule_timezone"])
 
     if action = config["schedule_action"] do
-      SystemSettings.update_setting(:schedule_action, config["schedule_action"])
+      SystemSettings.update_setting(:schedule_action, action)
     end
 
     PowerSchedule.reload()
