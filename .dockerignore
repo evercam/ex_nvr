@@ -1,0 +1,5 @@
+**/_build
+**/.elixir_ls
+**/deps
+**/data
+**/priv/bundlex
