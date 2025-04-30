@@ -6,7 +6,8 @@ defmodule ExNVR.Nerves.SystemStatus do
 
   use GenServer
 
-  alias ExNVR.Nerves.Hardware.{Power, RUT}
+  alias ExNVR.Nerves.Hardware.Power
+  alias ExNVR.Nerves.RUT
 
   def start_link(_options) do
     GenServer.start_link(__MODULE__, %{}, name: __MODULE__)
@@ -54,7 +55,7 @@ defmodule ExNVR.Nerves.SystemStatus do
   end
 
   defp rut_data() do
-    case RUT.state() do
+    case RUT.system_information() do
       {:ok, data} -> data
       _error -> nil
     end
