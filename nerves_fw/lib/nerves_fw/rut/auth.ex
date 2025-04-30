@@ -19,12 +19,12 @@ defmodule ExNVR.Nerves.RUT.Auth do
   end
 
   @impl true
-  def init(opts) do
+  def init(_opts) do
     settings = ExNVR.Nerves.SystemSettings.get_settings()
 
     state = %{
-      username: settings[:router_username],
-      password: settings[:router_password],
+      username: settings.router_username,
+      password: settings.router_password,
       client: nil,
       refresh_timer: nil
     }

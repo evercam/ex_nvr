@@ -12,7 +12,7 @@ defmodule ExNVR.Nerves.Health.Metadata do
   defp router_state() do
     case RUT.system_information() do
       {:ok, info} -> info
-      {:error, reason} -> %{}
+      {:error, _reason} -> %{}
     end
   end
 end

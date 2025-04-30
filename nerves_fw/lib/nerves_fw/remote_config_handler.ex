@@ -9,8 +9,10 @@ defmodule ExNVR.Nerves.RemoteConfigHandler do
   def handle_message("config", config) do
     Logger.info("[RemoteConfigHandler] handle new incoming config event")
 
+    settings = SystemSettings.get_settings()
+
     settings = %{
-      SystemSettings.get_settings()
+      settings
       | power_schedule: config["power_schedule"],
         schedule_timezone: config["schedule_timezone"],
         schedule_action: config["schedule_action"] || settings.schedule_action,
