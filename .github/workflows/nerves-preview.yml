@@ -43,7 +43,7 @@ jobs:
     if: >
       ${{
         always() &&
-        needs.build_firmware.result != ''
+        needs.build_firmware.result != 'skipped'
       }}
     steps:
       - uses: actions/checkout@v4
