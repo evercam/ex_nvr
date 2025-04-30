@@ -11,7 +11,9 @@ defmodule ExNVR.Nerves.SystemSettings do
   defstruct power_schedule: nil,
             schedule_timezone: "UTC",
             schedule_action: "poweroff",
-            monitor_power: false
+            monitor_power: false,
+            router_username: nil,
+            router_password: nil
 
   @spec get_settings() :: State.t()
   def get_settings() do
@@ -24,6 +26,11 @@ defmodule ExNVR.Nerves.SystemSettings do
       {:error, _reason} ->
         %__MODULE__{}
     end
+  end
+
+  @spec update_settings(map()) :: :ok
+  def update_settings(new_settings) do
+    File.write!(settings_path(), Jason.encode!(new_settings))
   end
 
   @spec update_setting(atom(), any()) :: :ok

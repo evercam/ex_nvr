@@ -14,6 +14,10 @@ defmodule ExNVR.Nerves.RUT.Auth do
     GenServer.call(__MODULE__, :get_client, timeout)
   end
 
+  def reload() do
+    GenServer.cast(__MODULE__, :reload)
+  end
+
   @impl true
   def init(opts) do
     settings = ExNVR.Nerves.SystemSettings.get_settings()
@@ -47,6 +51,12 @@ defmodule ExNVR.Nerves.RUT.Auth do
   @impl true
   def handle_call(:get_client, _from, %{client: client} = state) do
     {:reply, {:ok, client}, state}
+  end
+
+  @impl true
+  def handle_cast(:reload, state) do
+    settings = ExNVR.Nerves.SystemSettings.get_settings()
+    {:noreply, %{state | username: settings.router_username, password: settings.router_password}}
   end
 
   @impl true

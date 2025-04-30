@@ -5,6 +5,8 @@ defmodule ExNVR.Nerves.RUT do
 
   alias __MODULE__.{Auth, SystemInformation}
 
+  def reload(), do: Auth.reload()
+
   def system_information() do
     with {:ok, client} <- Auth.get_client() do
       legacy_api? = Req.Request.get_private(client, :legacy)

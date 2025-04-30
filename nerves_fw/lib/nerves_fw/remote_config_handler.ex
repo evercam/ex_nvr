@@ -4,18 +4,23 @@ defmodule ExNVR.Nerves.RemoteConfigHandler do
   require Logger
 
   alias ExNVR.Nerves.Monitoring.PowerSchedule
-  alias ExNVR.Nerves.SystemSettings
+  alias ExNVR.Nerves.{RUT, SystemSettings}
 
   def handle_message("config", config) do
     Logger.info("[RemoteConfigHandler] handle new incoming config event")
 
-    SystemSettings.update_setting(:power_schedule, config["power_schedule"])
-    SystemSettings.update_setting(:schedule_timezone, config["schedule_timezone"])
+    settings = %{
+      SystemSettings.get_settings()
+      | power_schedule: config["power_schedule"],
+        schedule_timezone: config["schedule_timezone"],
+        schedule_action: config["schedule_action"] || settings.schedule_action,
+        router_username: config["router_username"],
+        router_password: config["router_password"]
+    }
 
-    if action = config["schedule_action"] do
-      SystemSettings.update_setting(:schedule_action, action)
-    end
+    :ok = SystemSettings.update_settings(settings)
 
     PowerSchedule.reload()
+    RUT.reload()
   end
 end
