@@ -1,18 +1,18 @@
 defmodule ExNVR.Nerves.Health.Metadata do
   @moduledoc false
 
-  alias ExNVR.Nerves.Hardware.RUT
+  alias ExNVR.Nerves.RUT
 
   @spec router_serial_number() :: String.t() | nil
-  def router_serial_number(), do: router_state()[:serial_number]
+  def router_serial_number(), do: Map.get(router_state(), :serial)
 
   @spec router_mac_address() :: String.t() | nil
-  def router_mac_address(), do: router_state()[:mac_address]
+  def router_mac_address(), do: Map.get(router_state(), :mac)
 
   defp router_state() do
-    case RUT.state() do
-      {:ok, state} -> state
-      {:error, :not_started} -> %{}
+    case RUT.system_information() do
+      {:ok, info} -> info
+      {:error, reason} -> %{}
     end
   end
 end
