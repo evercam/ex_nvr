@@ -40,7 +40,11 @@ jobs:
   post_results:
     needs: [prepare, build_firmware]
     runs-on: ubuntu-latest
-    if: ${{ always() }}
+    if: >
+      ${{
+        always() &&
+        needs.build_firmware.result != ''
+      }}
     steps:
       - uses: actions/checkout@v4
       - name: Comment with build result
