@@ -63,7 +63,7 @@ defmodule ExNVR.Nerves.RUT.Auth do
   def handle_info(:refresh, %{client: client} = state) do
     Logger.info("[RUT] Refresh auth token")
 
-    case refresh?(client) |> IO.inspect() do
+    case refresh?(client) do
       true ->
         {:noreply, state}
 
