@@ -40,7 +40,7 @@ defmodule ExNVR.Pipelines.Main.State do
                 live_snapshot_waiting_pids: [],
                 main_stream_video_track: nil,
                 sub_stream_video_track: nil,
-                record_main_stream?: true,
+                record_main_stream?: false,
                 ice_servers: []
               ]
 end

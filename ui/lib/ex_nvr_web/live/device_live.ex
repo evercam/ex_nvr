@@ -201,7 +201,7 @@ defmodule ExNVRWeb.DeviceLive do
         {to_string(mountpoint), {total_space, percentage}}
       end)
       |> Enum.reject(fn {mountpoint, _value} ->
-        String.match?(mountpoint, ~r[/(dev|sys|run).*])
+        String.match?(mountpoint, ~r[/(dev|sys|run|tmp|boot)])
       end)
     end
   end

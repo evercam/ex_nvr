@@ -42,7 +42,7 @@ defmodule ExNVR.Pipelines.Main do
   alias ExNVR.{Devices, Recordings, Utils}
   alias ExNVR.Elements.VideoStreamStatReporter
   alias ExNVR.Model.Device
-  alias ExNVR.Pipeline.{Output, Source}
+  alias ExNVR.Pipeline.{Output, Source, StorageMonitor}
   alias __MODULE__.State
 
   @type encoding :: :H264 | :H265
@@ -116,7 +116,6 @@ defmodule ExNVR.Pipelines.Main do
     state = %State{
       device: device,
       segment_duration: options[:segment_duration] || @default_segment_duration,
-      record_main_stream?: device.type != :file,
       ice_servers: ice_servers
     }
 
@@ -132,6 +131,8 @@ defmodule ExNVR.Pipelines.Main do
           segment_name_prefix: "live"
         })
       ] ++ build_device_spec(device)
+
+    StorageMonitor.start_link(device: device)
 
     # Set device state and make last active run inactive
     # may happens on application crash
@@ -220,26 +221,6 @@ defmodule ExNVR.Pipelines.Main do
   end
 
   @impl true
-  def handle_child_notification({:recording, true}, {:storage, :main_stream}, _ctx, state) do
-    state = %{state | record_main_stream?: state.device.type != :file}
-
-    if state.sub_stream_video_track,
-      do: {build_sub_stream_bif_spec(state.device), state},
-      else: {[], state}
-  end
-
-  @impl true
-  def handle_child_notification({:recording, false}, {:storage, :main_stream}, ctx, state) do
-    state = %{maybe_update_device_and_report(state, :streaming) | record_main_stream?: false}
-
-    if Map.has_key?(ctx.children, {:thumbnailer, :sub_stream}) do
-      {[remove_children: {:thumbnailer, :sub_stream}], state}
-    else
-      {[], state}
-    end
-  end
-
-  @impl true
   def handle_child_notification(_notification, _element, _ctx, state) do
     {[], state}
   end
@@ -278,6 +259,51 @@ defmodule ExNVR.Pipelines.Main do
       ]
 
       {[spec: spec] ++ notify_action, state}
+    end
+  end
+
+  @impl true
+  def handle_info({:storage_monitor, :record?, false}, ctx, state) do
+    Membrane.Logger.info("[StorageMonitor] stop recording")
+
+    childs_to_delete = [
+      {:thumbnailer, :sub_stream},
+      {:storage, :sub_stream},
+      {:storage, :main_stream}
+    ]
+
+    state = %{maybe_update_device_and_report(state, :streaming) | record_main_stream?: false}
+
+    actions =
+      Map.keys(ctx.children)
+      |> Enum.filter(&Enum.member?(childs_to_delete, &1))
+      |> then(&[remove_children: &1])
+
+    {actions, state}
+  end
+
+  @impl true
+  def handle_info({:storage_monitor, :record?, true}, _ctx, state) do
+    Membrane.Logger.info("[StorageMonitor] start recording")
+    state = %{state | record_main_stream?: state.device.type != :file}
+
+    main_stream_spec = build_main_stream_storage_spec(state)
+
+    sub_stream_spec =
+      build_sub_stream_storage_spec(state.device) ++ build_sub_stream_bif_spec(state)
+
+    case {state.main_stream_video_track, state.sub_stream_video_track} do
+      {nil, nil} ->
+        {[], state}
+
+      {nil, _sub_stream} ->
+        {[spec: sub_stream_spec], state}
+
+      {_main_stream, nil} ->
+        {[spec: main_stream_spec], state}
+
+      {_main_stream, _sub_stream} ->
+        {[spec: main_stream_spec ++ sub_stream_spec], state}
     end
   end
 
@@ -410,6 +436,8 @@ defmodule ExNVR.Pipelines.Main do
       })
     ]
   end
+
+  defp build_sub_stream_storage_spec(%{record_main_stream?: false}), do: []
 
   defp build_sub_stream_storage_spec(device) do
     case device.storage_config.record_sub_stream do
