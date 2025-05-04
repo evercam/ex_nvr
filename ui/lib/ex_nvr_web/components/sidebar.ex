@@ -1,7 +1,8 @@
 defmodule ExNVRWeb.Components.Sidebar do
-  use ExNVRWeb, :live_view
+  use ExNVRWeb, :live_component
 
   attr :current_user, :map, required: true
+  attr :current_path, :string, default: nil
   def sidebar(assigns) do
     ~H"""
     <aside
@@ -15,6 +16,7 @@ defmodule ExNVRWeb.Components.Sidebar do
             <.sidebar_group
               items={group}
               current_user={@current_user}
+              current_path={@current_path}
               border={index > 0}
             />
           <% end %>
@@ -32,7 +34,9 @@ defmodule ExNVRWeb.Components.Sidebar do
 
   attr :items, :list, required: true
   attr :current_user, :map, required: true
+  attr :current_path, :string, default: nil
   attr :border, :boolean, default: false
+
   defp sidebar_group(assigns) do
     class = case assigns[:border] do
       true -> "pt-4 mt-4 border-t border-white dark:border-gray-700"
@@ -52,6 +56,7 @@ defmodule ExNVRWeb.Components.Sidebar do
           children={item[:children] || []}
           role={item[:role]}
           current_user={@current_user}
+          current_path={@current_path}
         />
       <% end %>
     </ul>
@@ -64,8 +69,22 @@ defmodule ExNVRWeb.Components.Sidebar do
   attr :target, :string, default: nil
   attr :children, :list, default: []
   attr :current_user, :map, default: nil
+  attr :current_path, :string, default: nil
+  attr :is_active, :boolean, default: false
   attr :role, :atom, default: nil
+
   defp sidebar_item(assigns) do
+    is_active = is_active?(assigns.href, assigns.current_path)
+    has_active_child = has_active_child?(assigns.children, assigns.current_path)
+
+    assigns =
+      assigns
+      |> assign(:is_active, is_active)
+      |> assign(:has_active_child, has_active_child)
+      |> assign(:link_classes, link_classes(is_active))
+      |> assign(:icon_classes, icon_classes(is_active))
+      |> assign(:menu_classes, menu_classes(has_active_child))
+
     ~H"""
     <%= if is_nil(@role) or (@current_user && @current_user.role == @role) do %>
       <li>
@@ -75,6 +94,7 @@ defmodule ExNVRWeb.Components.Sidebar do
             class="flex items-center justify-between w-full p-2 text-white rounded-lg hover:bg-gray-500 dark:hover:bg-gray-700"
             aria-controls={"dropdown-#{@label}"}
             data-collapse-toggle={"dropdown-#{@label}"}
+            aria-expanded={@has_active_child}
           >
             <div class="flex items-center">
               <.icon name={@icon} class="w-6 h-6 dark:text-gray-400" />
@@ -82,7 +102,10 @@ defmodule ExNVRWeb.Components.Sidebar do
             </div>
             <.icon name="hero-chevron-down-solid" class="w-6 h-6 dark:text-gray-400" />
           </button>
-          <ul id={"dropdown-#{@label}"} class="hidden py-2 space-y-2">
+          <ul
+            id={"dropdown-#{@label}"}
+            class={@menu_classes}
+          >
             <%= for child <- @children do %>
               <.sidebar_item
                 label={child[:label]}
@@ -91,6 +114,7 @@ defmodule ExNVRWeb.Components.Sidebar do
                 target={child[:target]}
                 children={child[:children] || []}
                 current_user={@current_user}
+                current_path={@current_path}
                 role={child[:role]}
               />
             <% end %>
@@ -99,9 +123,9 @@ defmodule ExNVRWeb.Components.Sidebar do
           <.link
             href={@href}
             target={@target}
-            class="flex items-center p-2 text-white rounded-lg hover:bg-gray-500 dark:hover:bg-gray-700"
+            class={@link_classes}
           >
-            <.icon name={@icon} class="w-6 h-6 dark:text-gray-400" />
+            <.icon name={@icon} class={@icon_classes} />
             <span class="ml-3"><%= @label %></span>
           </.link>
         <% end %>
@@ -164,4 +188,23 @@ defmodule ExNVRWeb.Components.Sidebar do
       ]
     ]
   end
+
+  defp is_active?(nil, _), do: false
+  defp is_active?(_, nil), do: false
+  defp is_active?(href, current_path), do: String.starts_with?(current_path, href)
+
+  defp has_active_child?(children, current_path) do
+    Enum.any?(children, fn child ->
+      is_active?(child[:href], current_path)
+    end)
+  end
+
+  defp link_classes(true = _active), do: "flex items-center p-2 text-white rounded-lg bg-opacity-10 dark:bg-opacity-10 bg-blue-600 dark:bg-blue-500 text-blue-600 dark:text-blue-500"
+  defp link_classes(false = _active), do: "flex items-center p-2 text-white rounded-lg hover:bg-gray-500 dark:hover:bg-gray-700"
+
+  defp icon_classes(true = _active), do: "w-6 h-6 text-blue-600 dark:text-blue-500"
+  defp icon_classes(false = _active), do: "w-6 h-6 text-gray-400 dark:text-gray-400"
+
+  defp menu_classes(true = _active), do: "py-2 space-y-2 px-2"
+  defp menu_classes(false = _active), do: "py-2 space-y-2 hidden"
 end

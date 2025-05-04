@@ -115,7 +115,10 @@ defmodule ExNVRWeb.Router do
     live_dashboard "/live-dashboard", metrics: ExNVRWeb.Telemetry
 
     live_session :require_authenticated_user,
-      on_mount: [{ExNVRWeb.UserAuth, :ensure_authenticated}] do
+      on_mount: [
+        {ExNVRWeb.UserAuth, :ensure_authenticated},
+        {ExNVRWeb.Navigation, :attach_hook}
+      ] do
       live "/dashboard", DashboardLive, :new
 
       live "/devices", DeviceListLive, :list
@@ -147,7 +150,8 @@ defmodule ExNVRWeb.Router do
     live_session :require_admin_user,
       on_mount: [
         {ExNVRWeb.UserAuth, :ensure_authenticated},
-        {ExNVRWeb.UserAuth, :ensure_user_is_admin}
+        {ExNVRWeb.UserAuth, :ensure_user_is_admin},
+        {ExNVRWeb.Navigation, :attach_hook}
       ] do
       live "/devices/:id", DeviceLive, :edit
 
