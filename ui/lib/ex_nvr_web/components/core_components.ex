@@ -880,6 +880,8 @@ defmodule ExNVRWeb.CoreComponents do
     """
   end
 
+  defdelegate sidebar(assigns), to: Components.Sidebar
+
   defdelegate tabs(assigns), to: Components.Tabs
 
   defdelegate icon(assigns), to: Components.Icon
