@@ -46,8 +46,6 @@ defmodule ExNVR.Nerves.Application do
   end
 
   defp common_config() do
-    DynamicSupervisor.start_child(ExNVR.Hardware.Supervisor, {ExNVR.Nerves.Hardware.RUT, []})
-
     [
       {ExNVR.Nerves.Netbird, []},
       {ExNVR.Nerves.DiskMounter, []},
