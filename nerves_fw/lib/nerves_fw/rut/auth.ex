@@ -106,19 +106,9 @@ defmodule ExNVR.Nerves.RUT.Auth do
     url = base_url <> @login_path
 
     case Req.post(url, json: %{username: username, password: password}) do
-      {:ok, %Req.Response{status: 200, body: body}} ->
-        {token, expires_in, legacy} =
-          case body do
-            %{"jwtToken" => token} -> {token, body["expires"], true}
-            %{"ubus_rpc_session" => token} -> {token, body["expires"], true}
-            %{"data" => data} -> {data["token"], data["expires"], false}
-          end
-
-        req =
-          Req.new(base_url: base_url <> "/api", auth: {:bearer, token})
-          |> Req.Request.put_private(:legacy, legacy)
-
-        {:ok, req, expires_in}
+      {:ok, %Req.Response{status: 200, body: %{"data" => data}}} ->
+        req = Req.new(base_url: base_url <> "/api", auth: {:bearer, data["token"]})
+        {:ok, req, data["expires"]}
 
       {:ok, %Req.Response{body: body}} ->
         {:error, body["errors"]}
@@ -129,13 +119,7 @@ defmodule ExNVR.Nerves.RUT.Auth do
   end
 
   defp refresh?(client) do
-    url =
-      case Req.Request.get_private(client, :legacy) do
-        false -> "/session/status"
-        true -> "/system/device/status"
-      end
-
-    case Req.get(client, url: url) do
+    case Req.get(client, url: "/session/status") do
       {:ok, %{body: %{"success" => true}}} -> true
       _other -> false
     end
