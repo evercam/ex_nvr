@@ -12,14 +12,13 @@ defmodule ExNVRWeb.Components.Sidebar do
     >
       <div class="flex flex-col justify-between h-full px-3 pb-4 overflow-y-auto bg-zinc-900 dark:bg-gray-800">
         <div>
-          <%= for {group, index} <- Enum.with_index(groups()) do %>
-            <.sidebar_group
-              items={group}
-              current_user={@current_user}
-              current_path={@current_path}
-              border={index > 0}
-            />
-          <% end %>
+          <.sidebar_group
+            :for={{group, index} <- Enum.with_index(groups())}
+            items={group}
+            current_user={@current_user}
+            current_path={@current_path}
+            border={index > 0}
+          />
         </div>
 
         <ul class="pt-4 mt-4 space-y-2 font-medium border-t border-white dark:border-gray-700">
@@ -47,18 +46,17 @@ defmodule ExNVRWeb.Components.Sidebar do
 
     ~H"""
     <ul class={"space-y-2 font-medium #{@class}"}>
-      <%= for item <- @items do %>
-        <.sidebar_item
-          label={item.label}
-          icon={item.icon}
-          href={item[:href]}
-          target={item[:target]}
-          children={item[:children] || []}
-          role={item[:role]}
-          current_user={@current_user}
-          current_path={@current_path}
-        />
-      <% end %>
+      <.sidebar_item
+        :for={item <- @items}
+        label={item.label}
+        icon={item.icon}
+        href={item[:href]}
+        target={item[:target]}
+        children={item[:children] || []}
+        role={item[:role]}
+        current_user={@current_user}
+        current_path={@current_path}
+      />
     </ul>
     """
   end
@@ -86,51 +84,47 @@ defmodule ExNVRWeb.Components.Sidebar do
       |> assign(:menu_classes, menu_classes(has_active_child))
 
     ~H"""
-    <%= if is_nil(@role) or (@current_user && @current_user.role == @role) do %>
-      <li>
-        <%= if @children != [] do %>
-          <button
-            type="button"
-            class="flex items-center justify-between w-full p-2 text-white rounded-lg hover:bg-gray-500 dark:hover:bg-gray-700"
-            aria-controls={"dropdown-#{@label}"}
-            data-collapse-toggle={"dropdown-#{@label}"}
-            aria-expanded={@has_active_child}
-          >
-            <div class="flex items-center">
-              <.icon name={@icon} class="w-6 h-6 dark:text-gray-400" />
-              <span class="flex-1 ml-3 whitespace-nowrap"><%= @label %></span>
-            </div>
-            <.icon name="hero-chevron-down-solid" class="w-6 h-6 dark:text-gray-400" />
-          </button>
-          <ul
-            id={"dropdown-#{@label}"}
-            class={@menu_classes}
-          >
-            <%= for child <- @children do %>
-              <.sidebar_item
-                label={child[:label]}
-                icon={child[:icon]}
-                href={child[:href]}
-                target={child[:target]}
-                children={child[:children] || []}
-                current_user={@current_user}
-                current_path={@current_path}
-                role={child[:role]}
-              />
-            <% end %>
-          </ul>
-        <% else %>
-          <.link
-            href={@href}
-            target={@target}
-            class={@link_classes}
-          >
-            <.icon name={@icon} class={@icon_classes} />
-            <span class="ml-3"><%= @label %></span>
-          </.link>
-        <% end %>
-      </li>
-    <% end %>
+    <li :if={is_nil(@role) or (@current_user && @current_user.role == @role)}>
+      <button
+        type="button"
+        :if={@children != []}
+        class="flex items-center justify-between w-full p-2 text-white rounded-lg hover:bg-gray-500 dark:hover:bg-gray-700"
+        aria-controls={"dropdown-#{@label}"}
+        data-collapse-toggle={"dropdown-#{@label}"}
+        aria-expanded={@has_active_child}
+      >
+        <div class="flex items-center">
+          <.icon name={@icon} class="w-6 h-6 dark:text-gray-400" />
+          <span class="flex-1 ml-3 whitespace-nowrap"><%= @label %></span>
+        </div>
+        <.icon name="hero-chevron-down-solid" class="w-6 h-6 dark:text-gray-400" />
+      </button>
+      <ul
+        id={"dropdown-#{@label}"}
+        class={@menu_classes}
+      >
+        <.sidebar_item
+          :for={child <- @children}
+          label={child[:label]}
+          icon={child[:icon]}
+          href={child[:href]}
+          target={child[:target]}
+          children={child[:children] || []}
+          current_user={@current_user}
+          current_path={@current_path}
+          role={child[:role]}
+        />
+      </ul>
+      <.link
+        :if={@children == []}
+        href={@href}
+        target={@target}
+        class={@link_classes}
+      >
+        <.icon name={@icon} class={@icon_classes} />
+        <span class="ml-3"><%= @label %></span>
+      </.link>
+    </li>
     """
   end
 
