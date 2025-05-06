@@ -23,14 +23,14 @@ defmodule ExNVR.Nerves.RUT do
 
   def io_status() do
     with {:ok, client} <- Auth.get_client() do
-      do_request(client, "/io/status", &Function.identity/1)
+      do_request(client, "/io/status")
     end
   end
 
   def scheduler() do
     with {:ok, client} <- Auth.get_client(),
-         {:ok, data} <- do_request(client, "/io/scheduler/global", &Function.identity/1),
-         {:ok, instances} <- do_request(client, "/io/scheduler/config", &Function.identity/1) do
+         {:ok, data} <- do_request(client, "/io/scheduler/global"),
+         {:ok, instances} <- do_request(client, "/io/scheduler/config") do
       {:ok, Scheduler.from_response(data, instances)}
     end
   end
@@ -84,7 +84,7 @@ defmodule ExNVR.Nerves.RUT do
     end
   end
 
-  defp do_request(client, url, response_handler) do
+  defp do_request(client, url, response_handler \\ &Function.identity/1) do
     client
     |> Req.get(url: url)
     |> handle_response()

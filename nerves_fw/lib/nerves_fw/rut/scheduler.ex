@@ -116,6 +116,8 @@ defmodule ExNVR.Nerves.RUT.Scheduler do
     end)
   end
 
+  defp combine_instances([]), do: []
+
   defp combine_instances([first_instance | rest]) do
     new_instances =
       rest
