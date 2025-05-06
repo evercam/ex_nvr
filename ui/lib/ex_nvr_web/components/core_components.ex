@@ -18,6 +18,7 @@ defmodule ExNVRWeb.CoreComponents do
   use Phoenix.Component
 
   alias Phoenix.LiveView.JS
+  alias ExNVRWeb.Components
 
   @doc """
   Renders a modal.
@@ -632,33 +633,6 @@ defmodule ExNVRWeb.CoreComponents do
   end
 
   @doc """
-  Renders a [Hero Icon](https://heroicons.com).
-
-  Hero icons come in three styles – outline, solid, and mini.
-  By default, the outline style is used, but solid an mini may
-  be applied by using the `-solid` and `-mini` suffix.
-
-  You can customize the size and colors of the icons by setting
-  width, height, and background color classes.
-
-  Icons are extracted from your `assets/vendor/heroicons` directory and bundled
-  within your compiled app.css by the plugin in your `assets/tailwind.config.js`.
-
-  ## Examples
-
-      <.icon name="hero-x-mark-solid" />
-      <.icon name="hero-arrow-path" class="ml-1 w-3 h-3 animate-spin" />
-  """
-  attr :name, :string, required: true
-  attr :class, :string, default: nil
-
-  def icon(%{name: "hero-" <> _} = assigns) do
-    ~H"""
-    <span class={[@name, @class]} />
-    """
-  end
-
-  @doc """
   Renders a simple form.
 
   ## Examples
@@ -700,21 +674,7 @@ defmodule ExNVRWeb.CoreComponents do
             }
           >
             <span class="sr-only">Previous</span>
-            <svg
-              class="w-2.5 h-2.5"
-              aria-hidden="true"
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 6 10"
-            >
-              <path
-                stroke="currentColor"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M5 1 1 5l4 4"
-              />
-            </svg>
+            <.icon name="hero-chevron-left" class="w-4 h-4" />
           </a>
         </li>
         <li :for={page <- 1..2} :if={@meta.total_pages > 6}>
@@ -756,21 +716,7 @@ defmodule ExNVRWeb.CoreComponents do
             }
           >
             <span class="sr-only">Next</span>
-            <svg
-              class="w-2.5 h-2.5"
-              aria-hidden="true"
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 6 10"
-            >
-              <path
-                stroke="currentColor"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="m1 9 4-4-4-4"
-              />
-            </svg>
+            <.icon name="hero-chevron-right" class="w-4 h-4" />
           </a>
         </li>
       </ul>
@@ -860,15 +806,7 @@ defmodule ExNVRWeb.CoreComponents do
       class="text-sm ml-3 bg-gray-200 hover:bg-gray-200 text-zinc-900 dark:bg-gray-800 dark:text-gray-400"
       {@rest}
     >
-      <svg
-        class="w-5 h-5"
-        aria-hidden="true"
-        fill="currentColor"
-        viewBox="0 0 20 20"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
-      </svg>
+      <.icon name="hero-ellipsis-vertical" class="w-6 h-6" />
     </button>
     """
   end
@@ -942,5 +880,9 @@ defmodule ExNVRWeb.CoreComponents do
     """
   end
 
-  defdelegate tabs(assigns), to: ExNVRWeb.Components.Tabs
+  defdelegate sidebar(assigns), to: Components.Sidebar
+
+  defdelegate tabs(assigns), to: Components.Tabs
+
+  defdelegate icon(assigns), to: Components.Icon
 end
