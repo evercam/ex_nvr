@@ -39,6 +39,15 @@ defmodule ExNVR.Nerves.RUT do
     with {:ok, client} <- Auth.get_client(),
          {:ok, scheduler} <- scheduler(),
          {:ok, io_pins} <- io_status() do
+      delete_instances =
+        if not Enum.empty?(scheduler.instances) do
+          %{
+            endpoint: "/api/io/scheduler/config",
+            method: "DELETE",
+            data: Enum.map(scheduler.instances, & &1.id)
+          }
+        end
+
       io_pins =
         io_pins
         |> Enum.filter(&(&1["id"] in ["dout1", "relay0"]))
@@ -69,13 +78,8 @@ defmodule ExNVR.Nerves.RUT do
                 endpoint: "/api/io/scheduler/global",
                 method: "PUT",
                 data: %{enabled: if(schedule, do: "1", else: "0")}
-              },
-              %{
-                endpoint: "/api/io/scheduler/config",
-                method: "DELETE",
-                data: Enum.map(scheduler.instances, & &1.id)
               }
-            ] ++ instances_body
+            ] ++ List.wrap(delete_instances) ++ instances_body
         }
 
       client
