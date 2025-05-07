@@ -129,7 +129,7 @@ defmodule ExNVRWeb.Components.Sidebar do
   end
 
   defp groups do
-    [
+    base_groups = [
       [
         %{label: "Dashboard", icon: "hero-tv-solid", href: ~p"/dashboard"},
         %{label: "Recordings", icon: "hero-film-solid", href: ~p"/recordings"},
@@ -181,6 +181,18 @@ defmodule ExNVRWeb.Components.Sidebar do
         }
       ]
     ]
+
+    plugin_entries = ExNVRWeb.PluginRegistry.menu_entries()
+
+    Enum.reduce(plugin_entries, base_groups, fn entry, groups ->
+      insert_menu_entry(groups, entry)
+    end)
+  end
+
+  defp insert_menu_entry(groups, %{position: [group: group_index, index: insert_index]} = entry) do
+    List.update_at(groups, group_index, fn group ->
+      List.insert_at(group, insert_index, Map.delete(entry, :position))
+    end)
   end
 
   defp is_active?(nil, _), do: false

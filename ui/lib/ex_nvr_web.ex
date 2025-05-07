@@ -92,6 +92,9 @@ defmodule ExNVRWeb do
       # Shortcut for generating JS commands
       alias Phoenix.LiveView.JS
 
+      # Plugin registry helper
+      alias ExNVRWeb.PluginRegistry
+
       # Add support to Vue components
       use LiveVue
       use LiveVue.Components, vue_root: ["../assets/vue"]

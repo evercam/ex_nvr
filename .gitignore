@@ -34,6 +34,7 @@ ex_nvr-*.tar
 # Ignore assets that are produced by build tools.
 /**/priv/static/assets/
 /**/priv/vue/
+/**/assets/plugins
 
 # Ignore digested assets cache.
 /**/priv/static/cache_manifest.json

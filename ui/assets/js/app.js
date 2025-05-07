@@ -26,7 +26,7 @@ import topbar from "topbar"
 import "flowbite/dist/flowbite.phoenix"
 import "../css/app.css"
 
-let Hooks = {
+window.Hooks = {
     SwitchDarkMode: {
         mounted() {
             this.el.addEventListener("change", this.switchDarkMode);

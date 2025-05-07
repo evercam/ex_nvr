@@ -105,11 +105,11 @@ defmodule ExNVRWeb.Router do
     post "/users/login", UserSessionController, :create
   end
 
-  scope "/", ExNVRWeb do
+  scope "/" do
     pipe_through [:browser, :require_authenticated_user]
 
-    get "/", PageController, :home
-    get "/webrtc/:device_id", PageController, :webrtc
+    get "/", ExNVRWeb.PageController, :home
+    get "/webrtc/:device_id", ExNVRWeb.PageController, :webrtc
 
     import Phoenix.LiveDashboard.Router
     live_dashboard "/live-dashboard", metrics: ExNVRWeb.Telemetry
@@ -119,16 +119,20 @@ defmodule ExNVRWeb.Router do
         {ExNVRWeb.UserAuth, :ensure_authenticated},
         {ExNVRWeb.Navigation, :attach_hook}
       ] do
-      live "/dashboard", DashboardLive, :new
+      live "/dashboard", ExNVRWeb.DashboardLive, :new
 
-      live "/devices", DeviceListLive, :list
+      live "/devices", ExNVRWeb.DeviceListLive, :list
 
-      live "/recordings", RecordingListLive, :list
-      live "/events/generic", GenericEventsLive, :index
-      live "/events/lpr", LPREventsListLive, :list
+      live "/recordings", ExNVRWeb.RecordingListLive, :list
+      live "/events/generic", ExNVRWeb.GenericEventsLive, :index
+      live "/events/lpr", ExNVRWeb.LPREventsListLive, :list
 
-      live "/users/settings", UserSettingsLive, :edit
-      live "/users/settings/confirm-email/:token", UserSettingsLive, :confirm_email
+      live "/users/settings", ExNVRWeb.UserSettingsLive, :edit
+      live "/users/settings/confirm-email/:token", ExNVRWeb.UserSettingsLive, :confirm_email
+
+      for {path, view, action} <- ExNVRWeb.PluginRegistry.routes() do
+        live path, view, action
+      end
     end
   end
 

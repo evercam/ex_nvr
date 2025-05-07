@@ -8,8 +8,8 @@
   "author": "",
   "license": "ISC",
   "scripts": {
-    "dev": "vite --host -l warn",
-    "build": "vue-tsc && vite build",
+    "dev": "node scripts/dev.js",
+    "build": "node scripts/build.js",
     "build-server": "vue-tsc && vite build --ssr js/server.js --out-dir ../priv/vue --minify esbuild --ssrManifest && echo '{\"type\": \"module\" } ' > ../priv/vue/package.json"
   },
   "devDependencies": {
@@ -25,6 +25,7 @@
   "dependencies": {
     "@evercam/ui": "0.0.63-vue-demi.0.10",
     "d3": "^7.8.5",
+    "defu": "^6.1.4",
     "flowbite": "^3.1.1",
     "heroicons": "^2.2.0",
     "live_vue": "file:../deps/live_vue",
