@@ -15,7 +15,8 @@ config :ex_nvr, ExNVR.Repo,
 
 config :ex_nvr,
   hls_directory: Path.expand("../../ui/data/hls", Path.dirname(__ENV__.file)),
-  run_pipelines: true
+  run_pipelines: true,
+  plugins: [EvercamPlugin]
 
 # Enable the Nerves integration with Mix
 Application.start(:nerves_bootstrap)

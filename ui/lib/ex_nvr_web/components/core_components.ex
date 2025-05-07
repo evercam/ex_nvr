@@ -885,4 +885,6 @@ defmodule ExNVRWeb.CoreComponents do
   defdelegate tabs(assigns), to: Components.Tabs
 
   defdelegate icon(assigns), to: Components.Icon
+
+  defdelegate logo(assigns), to: Components.Logo
 end

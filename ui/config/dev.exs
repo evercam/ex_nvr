@@ -62,3 +62,6 @@ config :live_vue,
   vite_host: "http://localhost:5173",
   ssr_module: LiveVue.SSR.ViteJS,
   ssr: false
+
+config :ex_nvr,
+  plugins: [EvercamPlugin]

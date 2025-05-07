@@ -1,0 +1,13 @@
+{
+  "dependencies": {
+    "@codemirror/autocomplete": "^6.18.6",
+    "@codemirror/theme-one-dark": "^6.1.2",
+    "@codemirror/view": "^6.36.7",
+    "@rollup/plugin-node-resolve": "^16.0.1",
+    "codemirror": "^6.0.1",
+    "codemirror-lang-elixir": "^4.0.0",
+    "phoenix": "^1.7.21",
+    "phoenix_html": "^4.2.1",
+    "phoenix_live_view": "^1.0.11"
+  }
+}
