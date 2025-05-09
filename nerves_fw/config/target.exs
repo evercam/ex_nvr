@@ -41,7 +41,7 @@ config :ex_nvr, ExNVRWeb.Endpoint,
   secret_key_base: System.fetch_env!("SECRET_KEY_BASE"),
   url: [scheme: url.scheme, host: url.host, port: url.port],
   check_origin: check_origin,
-  server: true,
+  server: false,
   render_errors: [
     formats: [html: ExNVRWeb.ErrorHTML, json: ExNVRWeb.ErrorJSON],
     layout: false

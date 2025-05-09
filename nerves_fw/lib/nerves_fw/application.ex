@@ -20,7 +20,7 @@ defmodule ExNVR.Nerves.Application do
 
   # List all child processes to be supervised
   def children(:host) do
-    []
+    [NervesWeb.Endpoint]
   end
 
   def children(:giraffe) do
@@ -30,6 +30,12 @@ defmodule ExNVR.Nerves.Application do
   def children(_target) do
     DynamicSupervisor.start_child(ExNVR.Hardware.Supervisor, {ExNVR.Nerves.Hardware.Power, []})
     common_config()
+  end
+
+  @impl true
+  def config_change(changed, _new, removed) do
+    NervesWeb.Endpoint.config_change(changed, removed)
+    :ok
   end
 
   def target() do

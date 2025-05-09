@@ -13,7 +13,7 @@ defmodule ExNVRWeb.Components.Sidebar do
       <div class="flex flex-col justify-between h-full px-3 pb-4 overflow-y-auto bg-zinc-900 dark:bg-gray-800">
         <div>
           <.sidebar_group
-            :for={{group, index} <- Enum.with_index(groups())}
+            :for={{group, index} <- Enum.with_index(groups(@extra_items))}
             items={group}
             current_user={@current_user}
             current_path={@current_path}
@@ -128,8 +128,8 @@ defmodule ExNVRWeb.Components.Sidebar do
     """
   end
 
-  defp groups do
-    [
+  defp groups(extra_items \\ []) do
+    base_groups = [
       [
         %{label: "Dashboard", icon: "hero-tv-solid", href: ~p"/dashboard"},
         %{label: "Recordings", icon: "hero-film-solid", href: ~p"/recordings"},
@@ -181,6 +181,16 @@ defmodule ExNVRWeb.Components.Sidebar do
         }
       ]
     ]
+
+    Enum.reduce(extra_items, base_groups, fn entry, groups ->
+      insert_menu_entry(groups, entry)
+    end)
+  end
+
+  defp insert_menu_entry(groups, %{position: [group: group_index, index: insert_index]} = entry) do
+    List.update_at(groups, group_index, fn group ->
+      List.insert_at(group, insert_index, Map.delete(entry, :position))
+    end)
   end
 
   defp is_active?(nil, _), do: false

@@ -133,10 +133,6 @@ defmodule ExNVRWeb.Router do
   end
 
   scope "/", ExNVRWeb do
-    pipe_through [:browser]
-
-    delete "/users/logout", UserSessionController, :delete
-
     live_session :current_user,
       on_mount: [{ExNVRWeb.UserAuth, :mount_current_user}] do
       live "/users/confirm/:token", UserConfirmationLive, :edit

@@ -22,6 +22,37 @@ config :nerves_runtime,
 
 config :circuits_gpio, default_backend: {Circuits.GPIO.CDev, test: true}
 
+config :ex_nvr_fw, NervesWeb.Endpoint,
+  http: [ip: {0, 0, 0, 0}, port: 4000],
+  check_origin: false,
+  code_reloader: true,
+  debug_errors: true,
+  secret_key_base: "N3BcJ3uTqFM8etN2w9NAYYYjqaGQTGwLL1qM2vXt7yF5VqXnas30RBqci94ZLKvB",
+  watchers: [
+    npm: ["--silent", "run", "dev", cd: Path.expand("../assets", __DIR__)]
+  ],
+  render_errors: [
+    formats: [html: ExNVRWeb.ErrorHTML, json: ExNVRWeb.ErrorJSON],
+    layout: false
+  ],
+  pubsub_server: ExNVR.PubSub,
+  live_view: [signing_salt: "ASTBdstw"]
+
+
+ex_nvr_web = Path.expand("../../ui/lib/ex_nvr_web", __DIR__)
+nerves_fw = Path.expand("..", __DIR__)
+
+config :phoenix_live_reload, :dirs, [nerves_fw, ex_nvr_web]
+
+config :ex_nvr_fw, NervesWeb.Endpoint,
+  live_reload: [
+    patterns: [
+      ~r"#{nerves_fw}/priv/static/.*(js|css|png|jpeg|jpg|gif|svg)$",
+      ~r"#{nerves_fw}/priv/gettext/.*(po)$",
+      ~r"#{nerves_fw}/lib/nerves_fw_web/(controllers|live|components)/.*(ex|heex)$"
+    ]
+  ]
+
 if Mix.env() == :test do
   import_config "test.exs"
 end

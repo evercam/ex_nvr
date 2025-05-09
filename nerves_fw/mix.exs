@@ -51,6 +51,8 @@ defmodule NervesFw.MixProject do
       {:ex_nvr, path: "../ui"},
       {:circuits_gpio, "~> 2.1"},
       {:circuits_i2c, "~> 2.0"},
+      {:phoenix_live_reload, "~> 1.2", only: :dev},
+
 
       # Dependencies for specific targets
       # NOTE: It's generally low risk and recommended to follow minor version
