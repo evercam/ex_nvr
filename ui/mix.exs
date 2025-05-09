@@ -1,4 +1,6 @@
 defmodule ExNVR.MixProject do
+  Code.require_file("mix/utils.exs", __DIR__)
+
   use Mix.Project
 
   @app :ex_nvr
@@ -28,8 +30,8 @@ defmodule ExNVR.MixProject do
   end
 
   # Specifies which paths to compile per environment.
-  defp elixirc_paths(:test), do: ["lib", "test/support"]
-  defp elixirc_paths(_), do: ["lib"]
+  defp elixirc_paths(:test), do: ["lib", "test/support"] ++ ExNVR.Mix.Utils.plugin_paths()
+  defp elixirc_paths(_), do: ["lib"] ++ ExNVR.Mix.Utils.plugin_paths()
 
   # Specifies your project dependencies.
   #

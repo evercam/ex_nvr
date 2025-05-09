@@ -1,5 +1,7 @@
 import Config
 
+Code.require_file("../mix/utils.exs", __DIR__)
+
 # Configure your database
 config :ex_nvr, ExNVR.Repo,
   database: Path.expand("../ex_nvr_dev.db", Path.dirname(__ENV__.file)),
@@ -30,13 +32,11 @@ config :ex_nvr, ExNVRWeb.Endpoint,
   ]
 
 # Watch static and templates for browser reloading.
+config :phoenix_live_reload, :dirs, ExNVR.Mix.Utils.watch_dirs()
+
 config :ex_nvr, ExNVRWeb.Endpoint,
   live_reload: [
-    patterns: [
-      ~r"priv/static/.*(js|css|png|jpeg|jpg|gif|svg)$",
-      ~r"priv/gettext/.*(po)$",
-      ~r"lib/ex_nvr_web/(controllers|live|components)/.*(ex|heex)$"
-    ]
+    patterns: ExNVR.Mix.Utils.watch_patterns()
   ]
 
 # Enable dev routes for dashboard and mailbox

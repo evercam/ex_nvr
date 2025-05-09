@@ -102,7 +102,13 @@ jobs:
           mix archive.install hex nerves_bootstrap --force
 
       - name: Build assets
-        run: mix do deps.get, cmd --cd assets npm install, assets.deploy
+        env:
+          PLUGIN_PATHS: ${{ github.workspace }}/nerves_fw/priv/ui
+        run: |
+          mix deps.get
+          mix cmd --cd ../nerves_fw/priv/ui/assets npm install
+          mix cmd --cd assets npm install
+          mix assets.deploy
         working-directory: ./ui
 
       - name: Download firmware dependencies
@@ -112,6 +118,8 @@ jobs:
         run: mix sentry.package_source_code
 
       - name: Create firmware
+        env:
+          PLUGIN_PATHS: ${{ github.workspace }}/nerves_fw/priv/ui
         run: |
           if [ -n "$VERSION" ]; then
             sed -i "s/@version \"[^\"]*\"/@version \"${VERSION}\"/" mix.exs
