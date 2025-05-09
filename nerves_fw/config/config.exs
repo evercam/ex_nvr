@@ -34,7 +34,9 @@ config :nerves, :firmware,
 
 config :nerves, source_date_epoch: "1729094794"
 
-config :ex_nvr, env: :prod
+config :ex_nvr,
+   env: :prod,
+   nerves_routes: true
 
 config :elixir, :time_zone_database, Tzdata.TimeZoneDatabase
 

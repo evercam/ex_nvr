@@ -159,4 +159,19 @@ defmodule ExNVRWeb.Router do
       live "/users/:id", UserLive, :edit
     end
   end
+
+  if Application.compile_env(:ex_nvr, :nerves_routes) do
+    scope "/nerves", NervesWeb do
+      pipe_through [:browser, :require_authenticated_user, :require_admin_user]
+
+      live_session :nerves_live_session,
+        on_mount: [
+          {ExNVRWeb.UserAuth, :ensure_authenticated},
+          {ExNVRWeb.UserAuth, :ensure_user_is_admin},
+          {ExNVRWeb.Navigation, :attach_hook}
+        ] do
+        live "/example", ExampleLive, :index
+      end
+    end
+  end
 end

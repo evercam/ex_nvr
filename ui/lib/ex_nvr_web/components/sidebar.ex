@@ -4,6 +4,8 @@ defmodule ExNVRWeb.Components.Sidebar do
   attr :current_user, :map, required: true
   attr :current_path, :string, default: nil
 
+  @nerves_routes? Application.compile_env(:ex_nvr, :nerves_routes)
+
   def sidebar(assigns) do
     ~H"""
     <aside
@@ -123,7 +125,7 @@ defmodule ExNVRWeb.Components.Sidebar do
   end
 
   defp groups do
-    [
+    base_groups = [
       [
         %{label: "Dashboard", icon: "hero-tv-solid", href: ~p"/dashboard"},
         %{label: "Recordings", icon: "hero-film-solid", href: ~p"/recordings"},
@@ -175,6 +177,31 @@ defmodule ExNVRWeb.Components.Sidebar do
         }
       ]
     ]
+
+    Enum.reduce(extra_items(), base_groups, fn entry, groups ->
+      insert_menu_entry(groups, entry)
+    end)
+  end
+
+  defp extra_items() do
+    if @nerves_routes? do
+      nerves_items = [
+        %{
+          label: "Example",
+          icon: "hero-beaker",
+          href: "/nerves/example",
+          position: [group: 1, index: 1]
+        }
+      ]
+    else
+      []
+    end
+  end
+
+  defp insert_menu_entry(groups, %{position: [group: group_index, index: insert_index]} = entry) do
+    List.update_at(groups, group_index, fn group ->
+      List.insert_at(group, insert_index, Map.delete(entry, :position))
+    end)
   end
 
   defp is_active?(nil, _), do: false
