@@ -1,4 +1,4 @@
-FROM hexpm/elixir-arm64:1.17.3-erlang-27.3.3-debian-bullseye-20250407-slim
+FROM hexpm/elixir:1.18.3-erlang-27.3.3-debian-bullseye-20250428-slim
 
 # install build dependencies
 RUN \
