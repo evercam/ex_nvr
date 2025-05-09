@@ -5,8 +5,7 @@ defmodule ExNVRWeb.Navigation do
     {:cont, attach_hook(socket, :current_path, :handle_params, &set_current_path/3)}
   end
 
-
-  defp set_current_path(params, uri, socket) do
+  defp set_current_path(_params, uri, socket) do
     {:cont, assign(socket, current_path: URI.parse(uri).path)}
   end
 end

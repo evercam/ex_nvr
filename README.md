@@ -103,7 +103,6 @@ If you want to configure some aspects of `ex_nvr`, you can set the following env
 | EXNVR_SSL_KEY_PATH | The path to the SSL key. |
 | EXNVR_SSL_CERT_PATH | The path to the SSL certificate. |
 | EXNVR_JSON_LOGGER | Enable json logging, defaults to: `true` |
-| ENABLE_REVERSE_PROXY | Enable reverse proxy. All endpoint calls to a path that starts with `/service/{ipv4}` will be proxied to `http://{ipv4}`. `ipv4` is a valid private ip address. Defaults to: `false` |
 | EXNVR_REMOTE_SERVER_URI | The remote server where to send system status. It should be a websocket uri `ws://` or `wss://` |
 | EXNVR_REMOTE_SERVER_TOKEN | A token that will be used for authentication for the websocket connection, it'll be send as a query params with `token` name |
 

@@ -23,11 +23,6 @@ defmodule ExNVRWeb.Router do
     plug :require_authenticated_user, api: true
   end
 
-  pipeline :reverse_proxy do
-    plug ExNVRWeb.Plug.ProxyAllow
-    plug ExNVRWeb.Plug.ProxyPathRewriter
-  end
-
   scope "/api", ExNVRWeb do
     pipe_through [:api, :require_webhook_token, ExNVRWeb.Plug.Device]
 
@@ -163,14 +158,5 @@ defmodule ExNVRWeb.Router do
       live "/users", UserListLive, :list
       live "/users/:id", UserLive, :edit
     end
-  end
-
-  scope "/service" do
-    pipe_through [:reverse_proxy]
-
-    forward "/", ReverseProxyPlug,
-      upstream: &ExNVRWeb.ReverseProxy.reverse_proxy/1,
-      error_callback: &ExNVRWeb.ReverseProxy.handle_error/2,
-      preserve_host_header: true
   end
 end

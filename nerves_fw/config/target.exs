@@ -12,8 +12,6 @@ config :ex_nvr,
   admin_password: System.get_env("EXNVR_ADMIN_PASSWORD", "P@ssw0rd"),
   download_dir: System.get_env("EXNVR_DOWNLOAD_DIR", "/data/ex_nvr/downloads")
 
-config :ex_nvr, enable_reverse_proxy: true
-
 config :ex_nvr, ice_servers: System.get_env("EXNVR_ICE_SERVERS", "[]")
 
 # Remote connection via websocket
