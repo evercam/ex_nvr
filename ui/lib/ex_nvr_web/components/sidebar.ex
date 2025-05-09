@@ -3,6 +3,7 @@ defmodule ExNVRWeb.Components.Sidebar do
 
   attr :current_user, :map, required: true
   attr :current_path, :string, default: nil
+
   def sidebar(assigns) do
     ~H"""
     <aside
@@ -37,10 +38,11 @@ defmodule ExNVRWeb.Components.Sidebar do
   attr :border, :boolean, default: false
 
   defp sidebar_group(assigns) do
-    class = case assigns[:border] do
-      true -> "pt-4 mt-4 border-t border-white dark:border-gray-700"
-      _ -> ""
-    end
+    class =
+      case assigns[:border] do
+        true -> "pt-4 mt-4 border-t border-white dark:border-gray-700"
+        _ -> ""
+      end
 
     assigns = assign(assigns, :class, class)
 
@@ -86,8 +88,8 @@ defmodule ExNVRWeb.Components.Sidebar do
     ~H"""
     <li :if={is_nil(@role) or (@current_user && @current_user.role == @role)}>
       <button
-        type="button"
         :if={@children != []}
+        type="button"
         class="flex items-center justify-between w-full p-2 text-white rounded-lg hover:bg-gray-500 dark:hover:bg-gray-700"
         aria-controls={"dropdown-#{@label}"}
         data-collapse-toggle={"dropdown-#{@label}"}
@@ -95,14 +97,11 @@ defmodule ExNVRWeb.Components.Sidebar do
       >
         <div class="flex items-center">
           <.icon name={@icon} class="w-6 h-6 dark:text-gray-400" />
-          <span class="flex-1 ml-3 whitespace-nowrap"><%= @label %></span>
+          <span class="flex-1 ml-3 whitespace-nowrap">{@label}</span>
         </div>
         <.icon name="hero-chevron-down-solid" class="w-6 h-6 dark:text-gray-400" />
       </button>
-      <ul
-        id={"dropdown-#{@label}"}
-        class={@menu_classes}
-      >
+      <ul id={"dropdown-#{@label}"} class={@menu_classes}>
         <.sidebar_item
           :for={child <- @children}
           label={child[:label]}
@@ -115,14 +114,9 @@ defmodule ExNVRWeb.Components.Sidebar do
           role={child[:role]}
         />
       </ul>
-      <.link
-        :if={@children == []}
-        href={@href}
-        target={@target}
-        class={@link_classes}
-      >
+      <.link :if={@children == []} href={@href} target={@target} class={@link_classes}>
         <.icon name={@icon} class={@icon_classes} />
-        <span class="ml-3"><%= @label %></span>
+        <span class="ml-3">{@label}</span>
       </.link>
     </li>
     """
@@ -193,8 +187,12 @@ defmodule ExNVRWeb.Components.Sidebar do
     end)
   end
 
-  defp link_classes(true = _active), do: "flex items-center p-2 text-white rounded-lg bg-opacity-10 dark:bg-opacity-10 bg-blue-600 dark:bg-blue-500 text-blue-600 dark:text-blue-500"
-  defp link_classes(false = _active), do: "flex items-center p-2 text-white rounded-lg hover:bg-gray-500 dark:hover:bg-gray-700"
+  defp link_classes(true = _active),
+    do:
+      "flex items-center p-2 text-white rounded-lg bg-opacity-10 dark:bg-opacity-10 bg-blue-600 dark:bg-blue-500 text-blue-600 dark:text-blue-500"
+
+  defp link_classes(false = _active),
+    do: "flex items-center p-2 text-white rounded-lg hover:bg-gray-500 dark:hover:bg-gray-700"
 
   defp icon_classes(true = _active), do: "w-6 h-6 text-blue-600 dark:text-blue-500"
   defp icon_classes(false = _active), do: "w-6 h-6 text-gray-400 dark:text-gray-400"
