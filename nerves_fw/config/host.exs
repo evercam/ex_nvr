@@ -22,6 +22,28 @@ config :nerves_runtime,
 
 config :circuits_gpio, default_backend: {Circuits.GPIO.CDev, test: true}
 
+config :ex_nvr, ExNVRWeb.Endpoint,
+  http: [ip: {0, 0, 0, 0}, port: 4000],
+  url: [host: "localhost"],
+  render_errors: [
+    formats: [html: ExNVRWeb.ErrorHTML, json: ExNVRWeb.ErrorJSON],
+    layout: false
+  ],
+  pubsub_server: ExNVR.PubSub,
+  live_view: [signing_salt: "ASTBdstw"],
+  check_origin: false,
+  code_reloader: true,
+  debug_errors: true,
+  secret_key_base: "N3BcJ3uTqFM8etN2w9NAYYYjqaGQTGwLL1qM2vXt7yF5VqXnas30RBqci94ZLKvB",
+  watchers: [
+    npm: ["--silent", "run", "dev", cd: Path.expand("../../ui/assets", __DIR__)]
+  ]
+
+config :live_vue,
+  vite_host: "http://localhost:5173",
+  ssr_module: LiveVue.SSR.ViteJS,
+  ssr: false
+
 if Mix.env() == :test do
   import_config "test.exs"
 end
