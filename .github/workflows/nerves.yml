@@ -61,6 +61,7 @@ jobs:
       NERVES_FIRMWARE_SIGNING_KEY: ${{ secrets.NERVES_FIRMWARE_SIGNING_KEY }}
       EXNVR_REMOTE_SERVER_URI: ${{ vars.EXNVR_REMOTE_SERVER_URI }}
       EXNVR_REMOTE_SERVER_TOKEN: ${{ secrets.EXNVR_REMOTE_SERVER_TOKEN }}
+      EXNVR_ICE_SERVERS: ${{ secrets.ICE_SERVERS }}
       SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
     steps:
       - uses: actions/checkout@v3
@@ -70,7 +71,7 @@ jobs:
       - uses: erlef/setup-beam@v1.18
         with:
           otp-version: 27.3.3
-          elixir-version: 1.17.3
+          elixir-version: 1.18.3
 
       - name: Set platform env variable
         run: echo "NERVES_FW_PLATFORM=giraffe" >> $GITHUB_ENV
