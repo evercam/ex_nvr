@@ -143,9 +143,8 @@ defmodule ExNVR.Devices do
     |> Task.async_stream(
       fn device ->
         Map.take(device, [:id, :name, :state, :type])
-        |> Map.put(:onvif_profiles, Onvif.stream_profiles(device))
         |> Map.put(:stream_stats, stream_stats(device))
-        |> Map.put(:local_recordings, get_local_recording(device))
+        |> Map.merge(Onvif.all_config(device))
       end,
       timeout: :infinity
     )
@@ -260,12 +259,4 @@ defmodule ExNVR.Devices do
   end
 
   defp run_pipeline?(), do: ExNVR.Utils.run_main_pipeline?()
-
-  # Get IP cameras local recordings summary
-  defp get_local_recording(device) do
-    case Onvif.get_recordings(device) do
-      {:ok, recordings} -> recordings
-      _error -> []
-    end
-  end
 end

@@ -234,6 +234,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
     case Media2.get_profiles(details.onvif_device) do
       {:ok, profiles} ->
         profiles
+        |> Enum.reject(&is_nil(&1.video_encoder_configuration))
         |> Enum.map(&%MediaProfile{profile: &1})
         |> then(&%CameraDetails{details | media_profiles: &1})
 
