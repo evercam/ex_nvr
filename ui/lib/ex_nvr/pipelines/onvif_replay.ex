@@ -100,7 +100,7 @@ defmodule ExNVR.Pipelines.OnvifReplay do
         device: state.device,
         onvif_replay: true,
         stream: :high,
-        correct_timestamp: false
+        correct_timestamp: true
       }),
       get_child(:source)
       |> via_out(Pad.ref(:output, id))
@@ -113,6 +113,7 @@ defmodule ExNVR.Pipelines.OnvifReplay do
 
   @impl true
   def handle_child_notification(:end_of_stream, :filter, _ctx, state) do
+    Membrane.Logger.info("[OnvifReplay] Reached end of stream, terminating pipeline")
     {[terminate: :normal], state}
   end
 

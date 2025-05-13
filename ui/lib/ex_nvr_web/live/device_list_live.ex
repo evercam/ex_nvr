@@ -21,6 +21,7 @@ defmodule ExNVRWeb.DeviceListLive do
         <:col :let={device} label="Id">{device.id}</:col>
         <:col :let={device} label="Type">{get_type_label(device.type)}</:col>
         <:col :let={device} label="Name">{device.name}</:col>
+        <:col :let={device} label="Vendor">{device.vendor || "N/A"}</:col>
         <:col :let={device} label="Timezone">{device.timezone}</:col>
         <:col :let={device} label="State">
           <div class="flex items-center">
