@@ -44,7 +44,15 @@ defmodule ExNVR.Nerves.RemoteConfigHandler do
 
   defp add_one_minute(schedule) do
     Map.new(schedule, fn {day, time_intervals} ->
-      intervals = Enum.map(time_intervals, &%{&1 | end_time: Time.add(&1.end_time, 1, :minute)})
+      intervals =
+        Enum.map(time_intervals, fn
+          %{end_time: ~T(23:59:59)} = interval ->
+            interval
+
+          %{end_time: _} = interval ->
+            %{interval | end_time: Time.add(interval.end_time, 1, :minute)}
+        end)
+
       {day, intervals}
     end)
   end

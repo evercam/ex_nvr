@@ -89,7 +89,7 @@ defmodule ExNVRWeb.RemoteStorageListLive do
     remote_storage = RemoteStorages.get!(remote_storage_id)
 
     case RemoteStorages.delete(remote_storage) do
-      {:ok, _remote_storage} ->
+      :ok ->
         socket
         |> assign(remote_storages: RemoteStorages.list())
         |> put_flash(:info, "Remote storage #{remote_storage.name} deleted")
