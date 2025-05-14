@@ -85,7 +85,6 @@ defmodule ExNVR.MixProject do
       {:flop_phoenix, "~> 0.24"},
       {:prom_ex, "~> 1.11.0"},
       {:circuits_uart, "~> 1.5"},
-      {:onvif, github: "gBillal/onvif", ref: "ae888f8"},
       {:slipstream, "~> 1.2.0"},
       {:live_vue, "~> 0.5.7"},
       {:sentry, "~> 10.9"},

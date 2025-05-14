@@ -31,6 +31,7 @@ defmodule ExNvrRtsp.MixProject do
       {:ex_rtcp, "~> 0.4.0"},
       {:membrane_rtsp, "~> 0.10.0"},
       {:membrane_h26x_plugin, "~> 0.10.0"},
+      {:onvif, github: "gBillal/onvif", ref: "ed280fd"},
       {:dialyxir, ">= 0.0.0", only: :dev, runtime: false},
       {:credo, ">= 0.0.0", only: :dev, runtime: false},
       {:mimic, "~> 1.7", only: :test}

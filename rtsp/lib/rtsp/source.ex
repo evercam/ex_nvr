@@ -7,8 +7,9 @@ defmodule ExNVR.RTSP.Source do
 
   import __MODULE__.PacketSplitter
 
-  alias ExNVR.RTSP.Source.{ConnectionManager, StreamHandler}
+  alias ExNVR.RTSP.OnvifMetadata
   alias ExNVR.RTSP.Parser
+  alias ExNVR.RTSP.Source.{ConnectionManager, StreamHandler}
   alias Membrane.{H264, H265, Time}
 
   @initial_recv_buffer 1_000_000
@@ -54,7 +55,7 @@ defmodule ExNVR.RTSP.Source do
               ]
 
   def_output_pad :output,
-    accepted_format: any_of(H264, H265),
+    accepted_format: any_of(H264, H265, OnvifMetadata),
     flow_control: :push,
     availability: :on_request
 
@@ -251,6 +252,11 @@ defmodule ExNVR.RTSP.Source do
       )
 
     {Parser.H265, parser_state}
+  end
+
+  defp parser(:"vnd.onvif.metadata", _fmtp) do
+    parser_state = Parser.OnvifMetadata.init([])
+    {Parser.OnvifMetadata, parser_state}
   end
 
   defp map_buffers_into_actions(buffers, ssrc) do
