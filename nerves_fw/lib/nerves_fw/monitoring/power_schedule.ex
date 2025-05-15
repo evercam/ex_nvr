@@ -71,12 +71,11 @@ defmodule ExNVR.Nerves.Monitoring.PowerSchedule do
   end
 
   defp get_settings() do
-    settings = SystemSettings.get_settings()
+    power_config = SystemSettings.get_settings().power_schedule
 
     %{
-      schedule: settings.power_schedule && Schedule.parse!(settings.power_schedule),
-      timezone: settings.schedule_timezone,
-      action: settings.schedule_action
+      power_config
+      | schedule: power_config.schedule && Schedule.parse!(power_config.power_schedule)
     }
   end
 end

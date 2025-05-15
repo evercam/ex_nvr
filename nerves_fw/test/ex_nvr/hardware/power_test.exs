@@ -2,11 +2,14 @@ defmodule ExNVR.Nerves.Hardware.PowerTest do
   use ExNVR.DataCase, async: false
 
   alias ExNVR.Nerves.Hardware.Power
+  alias ExNVR.Nerves.SystemSettings
 
   @moduletag :tmp_dir
 
   setup %{tmp_dir: tmp_dir} do
     Application.put_env(:ex_nvr_fw, :system_settings_path, Path.join(tmp_dir, "settings.json"))
+    start_supervised!(SystemSettings, [])
+    :ok
   end
 
   test "Power state" do
@@ -30,7 +33,7 @@ defmodule ExNVR.Nerves.Hardware.PowerTest do
     Process.sleep(to_timeout(second: 2))
 
     assert %{ac_ok?: false, low_battery?: true} = Power.state(false, pid)
-    assert ExNVR.Nerves.SystemSettings.get_settings().monitor_power
+    assert SystemSettings.get_settings().ups.enabled
 
     assert {:ok, {[event], _flop}} =
              ExNVR.Events.list_events(%Flop{filters: Flop.Filter.new(type: "power")})
