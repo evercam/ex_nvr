@@ -1,7 +1,7 @@
-defmodule ExNVR.Nerves.Hardware.PowerTest do
+defmodule ExNVR.Nerves.Monitoring.UPSTest do
   use ExNVR.DataCase, async: false
 
-  alias ExNVR.Nerves.Hardware.Power
+  alias ExNVR.Nerves.Monitoring.UPS
   alias ExNVR.Nerves.SystemSettings
 
   @moduletag :tmp_dir
@@ -19,9 +19,9 @@ defmodule ExNVR.Nerves.Hardware.PowerTest do
 
     Circuits.GPIO.write(ac_power, 1)
 
-    assert {:ok, pid} = Power.start_link(ac_pin: {"gpiochip0", 1}, battery_pin: {"gpiochip0", 5})
-    refute Power.state(false, pid)
-    assert %{ac_ok?: true, low_battery?: false} = Power.state(true, pid)
+    assert {:ok, pid} = UPS.start_link(ac_pin: {"gpiochip0", 1}, battery_pin: {"gpiochip0", 5})
+    refute UPS.state(false, pid)
+    assert %{ac_ok?: true, low_battery?: false} = UPS.state(true, pid)
 
     # Simulate switch bouncing
     ac_series = [1, 1, 0, 1, 0, 0, 0, 0]
@@ -32,7 +32,7 @@ defmodule ExNVR.Nerves.Hardware.PowerTest do
 
     Process.sleep(to_timeout(second: 2))
 
-    assert %{ac_ok?: false, low_battery?: true} = Power.state(false, pid)
+    assert %{ac_ok?: false, low_battery?: true} = UPS.state(false, pid)
     assert SystemSettings.get_settings().ups.enabled
 
     assert {:ok, {[event], _flop}} =
