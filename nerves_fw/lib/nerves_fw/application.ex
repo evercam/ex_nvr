@@ -28,7 +28,6 @@ defmodule ExNVR.Nerves.Application do
   end
 
   def children(_target) do
-    DynamicSupervisor.start_child(ExNVR.Hardware.Supervisor, {ExNVR.Nerves.Hardware.Power, []})
     common_config()
   end
 
@@ -54,6 +53,7 @@ defmodule ExNVR.Nerves.Application do
       {ExNVR.Nerves.RemoteConfigurer, Application.get_env(:ex_nvr_fw, :remote_configurer)},
       {ExNVR.Nerves.SystemStatus, []},
       {ExNVR.Nerves.Monitoring.PowerSchedule, []},
+      {ExNVR.Nerves.Monitoring.UPS, []},
       {ExNVR.Nerves.RUT.Auth, []}
     ]
   end
