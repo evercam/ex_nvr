@@ -28,10 +28,10 @@ defmodule ExNVR.Nerves.Hardware.Power do
 
   @impl true
   def init(options) do
-    system_settings = SystemSettings.get_settings()
+    ups = SystemSettings.get_settings().ups
 
-    ac_pin = Keyword.get(options, :ac_pin, "GPIO23")
-    bat_pin = Keyword.get(options, :battery_pin, "GPIO16")
+    ac_pin = Keyword.get(options, :ac_pin, ups.ac_pin)
+    bat_pin = Keyword.get(options, :battery_pin, ups.battery_pin)
 
     {:ok, ac_gpio} = GPIO.open(ac_pin, :input, pull_mode: :pulldown)
     {:ok, bat_gpio} = GPIO.open(bat_pin, :input, pull_mode: :pulldown)
@@ -49,7 +49,7 @@ defmodule ExNVR.Nerves.Hardware.Power do
       bat_timer: nil,
       ac_ok?: GPIO.read(ac_gpio),
       low_battery?: GPIO.read(bat_gpio),
-      publish?: system_settings.monitor_power == true
+      ups: ups
     }
 
     {:ok, state}
@@ -58,7 +58,7 @@ defmodule ExNVR.Nerves.Hardware.Power do
   @impl true
   def handle_call({:state, force_read?}, _from, state) do
     reply =
-      if state.publish? or force_read? do
+      if state.ups.enabled or force_read? do
         %{ac_ok?: to_bool(state.ac_ok?), low_battery?: to_bool(state.low_battery?)}
       end
 
@@ -67,7 +67,7 @@ defmodule ExNVR.Nerves.Hardware.Power do
 
   @impl true
   def handle_cast(:reload, state) do
-    {:noreply, %{state | publish?: SystemSettings.get_settings().monitor_power == true}}
+    {:noreply, %{state | ups: SystemSettings.get_settings().ups}}
   end
 
   @impl true
@@ -99,8 +99,8 @@ defmodule ExNVR.Nerves.Hardware.Power do
       Logger.error("Failed to save event: #{inspect(changeset)}")
     end
 
-    SystemSettings.update_setting(:monitor_power, true)
-    {:noreply, %{state | publish?: true}}
+    settings = SystemSettings.update_ups_settings(%{enabled: true})
+    {:noreply, %{state | ups: settings.ups}}
   end
 
   @impl true
