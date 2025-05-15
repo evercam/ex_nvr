@@ -10,6 +10,7 @@ defmodule ExNVR.Nerves.SystemSettings do
   require Logger
 
   @default_path "/data/settings.json"
+  @system_settings_topic "system_settings"
 
   defmodule State do
     use Ecto.Schema
@@ -106,6 +107,10 @@ defmodule ExNVR.Nerves.SystemSettings do
     GenServer.call(pid, {:update_ups_settings, params})
   end
 
+  def subscribe() do
+    Phoenix.PubSub.subscribe(ExNVR.Nerves.PubSub, @system_settings_topic)
+  end
+
   @impl true
   def init(_opts) do
     path = settings_path()
@@ -149,6 +154,15 @@ defmodule ExNVR.Nerves.SystemSettings do
   defp do_update_settings(state, params) do
     with {:ok, new_settings} <- State.to_struct(state.settings, params),
          :ok <- File.write(state.path, JSON.encode!(new_settings)) do
+
+      if state.settings != new_settings do
+        Phoenix.PubSub.broadcast!(
+          ExNVR.Nerves.PubSub,
+          @system_settings_topic,
+          {:system_settings, :update}
+        )
+      end
+
       %{state | settings: new_settings}
     else
       {:error, reason} ->

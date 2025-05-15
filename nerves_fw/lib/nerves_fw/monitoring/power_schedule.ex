@@ -16,20 +16,12 @@ defmodule ExNVR.Nerves.Monitoring.PowerSchedule do
     GenServer.start_link(__MODULE__, opts, name: __MODULE__)
   end
 
-  def reload() do
-    GenServer.cast(__MODULE__, :reload)
-  end
-
   @impl true
   def init(_opts) do
     Logger.info("Starting power schedule monitoring")
     Process.send_after(self(), :check_schedule, to_timeout(minute: 5))
+    SystemSettings.subscribe()
     {:ok, get_settings()}
-  end
-
-  @impl true
-  def handle_cast(:reload, _state) do
-    {:noreply, get_settings()}
   end
 
   @impl true
@@ -52,6 +44,11 @@ defmodule ExNVR.Nerves.Monitoring.PowerSchedule do
     end
 
     {:noreply, state}
+  end
+
+  @impl true
+  def handle_info({:system_settings, :update}, _state) do
+    {:noreply, get_settings()}
   end
 
   defp trigger_action("poweroff") do
