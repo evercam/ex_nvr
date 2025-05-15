@@ -4,6 +4,8 @@ defmodule ExNVR.Nerves.RUT.Auth do
 
   use GenServer
 
+  alias ExNVR.Nerves.SystemSettings
+
   @login_path "/api/login"
 
   def start_link(opts) do
@@ -14,13 +16,9 @@ defmodule ExNVR.Nerves.RUT.Auth do
     GenServer.call(__MODULE__, :get_client, timeout)
   end
 
-  def reload() do
-    GenServer.cast(__MODULE__, :reload)
-  end
-
   @impl true
   def init(_opts) do
-    router_config = ExNVR.Nerves.SystemSettings.get_settings().router
+    router_config = SystemSettings.get_settings().router
 
     state = %{
       username: router_config.username,
@@ -28,6 +26,8 @@ defmodule ExNVR.Nerves.RUT.Auth do
       client: nil,
       refresh_timer: nil
     }
+
+    SystemSettings.subscribe()
 
     {:ok, state}
   end
@@ -54,9 +54,9 @@ defmodule ExNVR.Nerves.RUT.Auth do
   end
 
   @impl true
-  def handle_cast(:reload, state) do
-    settings = ExNVR.Nerves.SystemSettings.get_settings()
-    {:noreply, %{state | username: settings.router_username, password: settings.router_password}}
+  def handle_info({:system_settings, :update}, state) do
+    router = SystemSettings.get_settings().router
+    {:noreply, %{state | username: router.username, password: router.password}}
   end
 
   @impl true

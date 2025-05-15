@@ -5,8 +5,6 @@ defmodule ExNVR.Nerves.RUT do
 
   alias __MODULE__.{Auth, Scheduler, SystemInformation}
 
-  def reload(), do: Auth.reload()
-
   def system_information() do
     with {:ok, client} <- Auth.get_client() do
       do_request(client, "/system/device/status", fn data ->

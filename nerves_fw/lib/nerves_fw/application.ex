@@ -11,7 +11,9 @@ defmodule ExNVR.Nerves.Application do
   def start(_type, _args) do
     opts = [strategy: :one_for_one, name: ExNVR.Nerves.Supervisor]
 
-    children = [] ++ children(target())
+    children =
+      [{Phoenix.PubSub, name: ExNVR.Nerves.PubSub}, {ExNVR.Nerves.SystemSettings, []}] ++
+        children(target())
 
     ExNVR.Release.migrate()
 

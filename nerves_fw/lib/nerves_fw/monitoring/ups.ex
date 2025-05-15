@@ -22,10 +22,6 @@ defmodule ExNVR.Nerves.Monitoring.UPS do
     GenServer.call(pid, {:state, force_read?})
   end
 
-  def reload(pid \\ __MODULE__) do
-    GenServer.cast(pid, :reload)
-  end
-
   @impl true
   def init(options) do
     ups = SystemSettings.get_settings().ups
@@ -52,6 +48,8 @@ defmodule ExNVR.Nerves.Monitoring.UPS do
       ups: ups
     }
 
+    SystemSettings.subscribe()
+
     {:ok, state}
   end
 
@@ -66,7 +64,7 @@ defmodule ExNVR.Nerves.Monitoring.UPS do
   end
 
   @impl true
-  def handle_cast(:reload, state) do
+  def handle_info({:system_settings, :update}, state) do
     {:noreply, %{state | ups: SystemSettings.get_settings().ups}}
   end
 

@@ -33,7 +33,7 @@ defmodule ExNVR.SystemSettingsTest do
   end
 
   test "system settings" do
-    assert pid = start_link_supervised!(SystemSettings, [])
+    assert pid = start_link_supervised!({SystemSettings, [name: SystemSettingsTest]})
 
     assert SystemSettings.get_settings(pid) == @default_settings
 
@@ -75,7 +75,7 @@ defmodule ExNVR.SystemSettingsTest do
   end
 
   test "ignore wrong settings" do
-    assert pid = start_link_supervised!(SystemSettings, [])
+    assert pid = start_link_supervised!({SystemSettings, [name: SystemStatusTest]})
 
     log =
       capture_log(fn ->
