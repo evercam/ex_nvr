@@ -72,7 +72,7 @@ defmodule ExNVR.Nerves.Monitoring.PowerSchedule do
 
     %{
       power_config
-      | schedule: power_config.schedule && Schedule.parse!(power_config.power_schedule)
+      | schedule: power_config.schedule && Schedule.parse!(power_config.schedule)
     }
   end
 end
