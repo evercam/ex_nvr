@@ -158,7 +158,7 @@ defmodule ExNVR.Nerves.Monitoring.UPS do
 
   defp start_recording() do
     Logger.info("[UPS] start recording")
-    Enum.each(Devices.list(), &Devices.Supervisor.start/1)
+    Devices.start_all()
   end
 
   defp event_name(:ac_ok?), do: "power"
