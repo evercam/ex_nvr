@@ -41,9 +41,10 @@ defmodule NervesFw.MixProject do
       {:toolshed, "~> 0.3.0"},
       {:nerves_hub_link, "~> 2.7"},
       {:nerves_hub_cli, "~> 2.0"},
-      {:ex_nvr, path: "../ui", env: :dev},
+      {:ex_nvr, path: "../ui"},
       {:circuits_gpio, "~> 2.1"},
       {:circuits_i2c, "~> 2.0"},
+      {:phoenix_live_reload, "~> 1.2", only: :dev},
 
       # Allow Nerves.Runtime on host to support development, testing and CI.
       # See config/host.exs for usage.
