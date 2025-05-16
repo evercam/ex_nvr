@@ -16,8 +16,6 @@ config :ex_nvr, ExNVRWeb.Endpoint,
   server: false,
   code_reloader: false
 
-config :logger, level: :warning
-
 # In test we don't send emails.
 config :ex_nvr, ExNVR.Mailer, adapter: Swoosh.Adapters.Test
 

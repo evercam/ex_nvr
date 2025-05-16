@@ -49,6 +49,8 @@ defmodule ExNVR.Nerves.SystemSettings do
         field :low_battery_action, Ecto.Enum,
           values: ~w(power_off stop_recording nothing)a,
           default: :stop_recording
+
+        field :trigger_after, :integer, default: 120
       end
     end
 
@@ -75,13 +77,16 @@ defmodule ExNVR.Nerves.SystemSettings do
     end
 
     defp ups_changeset(changeset, params) do
-      cast(changeset, params, [
+      changeset
+      |> cast(params, [
         :enabled,
         :ac_pin,
         :battery_pin,
         :ac_failure_action,
-        :low_battery_action
+        :low_battery_action,
+        :trigger_after
       ])
+      |> validate_number(:trigger_after, greater_than_or_equal_to: 0, less_than_or_equal_to: 300)
     end
   end
 
@@ -154,7 +159,6 @@ defmodule ExNVR.Nerves.SystemSettings do
   defp do_update_settings(state, params) do
     with {:ok, new_settings} <- State.to_struct(state.settings, params),
          :ok <- File.write(state.path, JSON.encode!(new_settings)) do
-
       if state.settings != new_settings do
         Phoenix.PubSub.broadcast!(
           ExNVR.Nerves.PubSub,
