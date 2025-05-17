@@ -34,16 +34,10 @@ defmodule ExNVR.Elements.CVSBufferer do
     codec =
       case stream_format do
         %H264{} -> :h264
-        %H265{} -> :h265
+        %H265{} -> :hevc
       end
 
-    {[],
-     %{
-       state
-       | decoder: ExNVR.Decoder.new!(codec),
-         width: stream_format.width,
-         height: stream_format.height
-     }}
+    {[], %{state | decoder: Xav.Decoder.new(codec)}}
   end
 
   @impl true
@@ -62,8 +56,7 @@ defmodule ExNVR.Elements.CVSBufferer do
       state.cvs
       |> Enum.reverse()
       |> ExNVR.MediaUtils.decode_last(state.decoder)
-      |> Map.get(:payload)
-      |> Turbojpeg.yuv_to_jpeg(state.width, state.height, 75, :I420)
+      |> then(&Turbojpeg.yuv_to_jpeg(&1.data, &1.width, &1.height, 75, :I420))
 
     {[notify_parent: {:snapshot, snapshot}], state}
   end

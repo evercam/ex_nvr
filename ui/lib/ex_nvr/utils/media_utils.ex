@@ -41,14 +41,21 @@ defmodule ExNVR.MediaUtils do
     |> Enum.join()
   end
 
-  @spec decode_last(Enumerable.t(Buffer.t()), ExNVR.Decoder.t()) :: Buffer.t()
+  @spec decode_last(Enumerable.t(Buffer.t() | ExMP4.Sample.t()), Xav.Decoder.t()) :: Buffer.t()
   def decode_last(buffers, decoder) do
     buffers
-    |> Stream.map(&ExNVR.Decoder.decode!(decoder, &1))
-    |> Enum.to_list()
-    |> Kernel.++(ExNVR.Decoder.flush!(decoder))
-    |> List.flatten()
-    |> List.last()
+    |> Stream.transform(
+      fn -> decoder end,
+      fn packet, decoder ->
+        case Xav.Decoder.decode(decoder, packet.payload, pts: packet.pts) do
+          {:ok, frame} -> {[frame], decoder}
+          _other -> {[], decoder}
+        end
+      end,
+      &Xav.Decoder.flush!/1
+    )
+    |> Enum.reverse()
+    |> hd()
   end
 
   defp pss?(:h264, <<_prefix::3, type::5, _rest::binary>>) when type == 7 or type == 8, do: true

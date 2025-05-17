@@ -90,6 +90,7 @@ defmodule ExNVR.MixProject do
       {:slipstream, "~> 1.2.0"},
       {:live_vue, "~> 0.5.7"},
       {:sentry, "~> 10.9"},
+      {:xav, "~> 0.10.0"},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:mimic, "~> 1.11.0", only: :test},
       {:faker, "~> 0.17", only: :test},
