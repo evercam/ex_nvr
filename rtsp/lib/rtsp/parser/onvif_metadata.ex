@@ -44,7 +44,7 @@ defmodule ExNVR.RTSP.Parser.OnvifMetadata do
     |> MetadataStream.to_struct()
     |> case do
       {:ok, metadata} ->
-        [%Buffer{payload: payload, pts: timestamp}]
+        [%Buffer{payload: metadata, pts: timestamp}]
 
       {:error, _changeset} ->
         Logger.error("""
