@@ -16,20 +16,12 @@ defmodule ExNVR.Nerves.Monitoring.PowerSchedule do
     GenServer.start_link(__MODULE__, opts, name: __MODULE__)
   end
 
-  def reload() do
-    GenServer.cast(__MODULE__, :reload)
-  end
-
   @impl true
   def init(_opts) do
     Logger.info("Starting power schedule monitoring")
     Process.send_after(self(), :check_schedule, to_timeout(minute: 5))
+    SystemSettings.subscribe()
     {:ok, get_settings()}
-  end
-
-  @impl true
-  def handle_cast(:reload, _state) do
-    {:noreply, get_settings()}
   end
 
   @impl true
@@ -54,14 +46,19 @@ defmodule ExNVR.Nerves.Monitoring.PowerSchedule do
     {:noreply, state}
   end
 
-  defp trigger_action("poweroff") do
+  @impl true
+  def handle_info({:system_settings, :update}, _state) do
+    {:noreply, get_settings()}
+  end
+
+  defp trigger_action(:power_off) do
     Logger.info("[Power schedule]: powering off the device")
     ExNVR.Events.create_event(%{type: "shutdown"})
     Enum.each(Devices.list(), &Devices.Supervisor.stop/1)
     Nerves.Runtime.poweroff()
   end
 
-  defp trigger_action("stop_pipeline") do
+  defp trigger_action(:stop_recording) do
     Logger.info("[Power schedule]: stopping all devices")
     Enum.each(Devices.list(), &Devices.Supervisor.stop/1)
   end
@@ -71,12 +68,11 @@ defmodule ExNVR.Nerves.Monitoring.PowerSchedule do
   end
 
   defp get_settings() do
-    settings = SystemSettings.get_settings()
+    power_config = SystemSettings.get_settings().power_schedule
 
     %{
-      schedule: settings.power_schedule && Schedule.parse!(settings.power_schedule),
-      timezone: settings.schedule_timezone,
-      action: settings.schedule_action
+      power_config
+      | schedule: power_config.schedule && Schedule.parse!(power_config.schedule)
     }
   end
 end

@@ -3,7 +3,6 @@ defmodule ExNVR.Nerves.RemoteConfigHandler do
 
   require Logger
 
-  alias ExNVR.Nerves.Monitoring.PowerSchedule
   alias ExNVR.Nerves.{RUT, SystemSettings}
 
   def handle_message("config", config) do
@@ -11,24 +10,17 @@ defmodule ExNVR.Nerves.RemoteConfigHandler do
 
     settings = SystemSettings.get_settings()
 
-    new_settings = %{
-      settings
-      | power_schedule: config["power_schedule"],
-        schedule_timezone: config["schedule_timezone"],
-        schedule_action: config["schedule_action"] || settings.schedule_action,
-        router_username: config["router_username"],
-        router_password: config["router_password"]
-    }
+    _new_settings = SystemSettings.update_router_settings(config["router"])
+    new_settings = SystemSettings.update_power_schedule_settings(config["power_schedule"])
 
-    :ok = SystemSettings.update_settings(new_settings)
-    :ok = PowerSchedule.reload()
-    :ok = RUT.reload()
-
-    if settings.power_schedule != new_settings.power_schedule do
+    if power_schedule_updated?(settings.power_schedule, new_settings.power_schedule) do
       Logger.info("[RemoteConfigHandler] Updating router schedule")
       update_router_schedule(new_settings.power_schedule)
     end
   end
+
+  defp power_schedule_updated?(%{schedule: s}, %{schedule: s}), do: false
+  defp power_schedule_updated?(_, _), do: true
 
   defp update_router_schedule(schedule) do
     schedule = schedule && ExNVR.Model.Schedule.parse!(schedule)

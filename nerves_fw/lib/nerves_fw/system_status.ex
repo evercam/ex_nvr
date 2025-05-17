@@ -6,7 +6,7 @@ defmodule ExNVR.Nerves.SystemStatus do
 
   use GenServer
 
-  alias ExNVR.Nerves.Hardware.Power
+  alias ExNVR.Nerves.Monitoring.UPS
   alias ExNVR.Nerves.RUT
 
   def start_link(_options) do
@@ -27,8 +27,8 @@ defmodule ExNVR.Nerves.SystemStatus do
     :ok = ExNVR.SystemStatus.set(:nerves, true)
     :ok = ExNVR.SystemStatus.set(:device_model, Nerves.Runtime.KV.get("a.nerves_fw_platform"))
 
-    if data = power_data() do
-      :ok = ExNVR.SystemStatus.set(:power, data)
+    if data = ups_data() do
+      :ok = ExNVR.SystemStatus.set(:ups, data)
     end
 
     Process.send_after(self(), :collect_system_metrics, to_timeout(second: 30))
@@ -61,9 +61,9 @@ defmodule ExNVR.Nerves.SystemStatus do
     end
   end
 
-  defp power_data() do
-    case Process.whereis(Power) do
-      pid when is_pid(pid) -> Power.state(false)
+  defp ups_data() do
+    case Process.whereis(UPS) do
+      pid when is_pid(pid) -> UPS.state(false)
       _other -> nil
     end
   end
