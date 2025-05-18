@@ -69,8 +69,10 @@ defmodule ExNVR.Pipeline.Output.SocketPipelineTest do
     defp start_pipeline do
       spec = [
         child(:source, ExNVR.Support.TestSource)
-        |> child(:parser, Membrane.H264.Parser)
-        |> child(:sink, %ExNVR.Pipeline.Output.Socket{encoding: :h264})
+        |> child(:parser, %Membrane.H264.Parser{
+          generate_best_effort_timestamps: %{framerate: {1, 30}}
+        })
+        |> child(:sink, ExNVR.Pipeline.Output.Socket)
       ]
 
       Pipeline.start_supervised!(spec: spec)

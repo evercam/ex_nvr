@@ -253,17 +253,12 @@ defmodule ExNVR.Pipelines.Main do
     if Enum.member?(childs, :unix_socket) do
       {notify_action, state}
     else
-      {source, track} =
-        if Enum.member?(childs, {:tee, :sub_stream}) do
-          {get_child({:tee, :sub_stream}), state.sub_stream_video_track}
-        else
-          {get_child(:tee), state.main_stream_video_track}
-        end
+      source = childs |> Enum.find(:tee, &(&1 == {:tee, :sub_stream})) |> get_child()
 
       spec = [
         source
         |> via_out(:push_output)
-        |> child(:unix_socket, %ExNVR.Pipeline.Output.Socket{encoding: track.encoding})
+        |> child(:unix_socket, ExNVR.Pipeline.Output.Socket)
       ]
 
       {[spec: spec] ++ notify_action, state}

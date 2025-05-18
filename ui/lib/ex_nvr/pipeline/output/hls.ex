@@ -76,7 +76,7 @@ defmodule ExNVR.Pipeline.Output.HLS do
 
     spec = [
       bin_input(pad)
-      |> add_transcoding_spec(ctx.pad_options[:encoding], ref, ctx.pad_options[:resolution])
+      |> add_transcoding_spec(ref, ctx.pad_options[:resolution])
       |> child({:adjuster, ref}, TimestampAdjuster)
       |> via_in(Pad.ref(:input, ref),
         options: [
@@ -114,9 +114,9 @@ defmodule ExNVR.Pipeline.Output.HLS do
     {[], state}
   end
 
-  defp add_transcoding_spec(link_builder, _encoding, _ref, nil), do: link_builder
+  defp add_transcoding_spec(link_builder, _ref, nil), do: link_builder
 
-  defp add_transcoding_spec(link_builder, encoding, ref, resolution) do
+  defp add_transcoding_spec(link_builder, ref, resolution) do
     link_builder
     |> child({:transcoder, ref}, %ExNVR.Elements.Transcoder{height: resolution})
     |> child({:parser, ref}, Membrane.H264.Parser)
