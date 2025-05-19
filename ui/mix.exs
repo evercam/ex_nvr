@@ -157,6 +157,7 @@ defmodule ExNVR.MixProject do
 
     ffmpeg_libs =
       [
+        "libavdevice.so*",
         "libavcodec.so*",
         "libavformat.so*",
         "libavutil.so*",
