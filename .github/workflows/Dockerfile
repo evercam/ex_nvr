@@ -18,7 +18,7 @@ RUN \
   libsrtp2-dev \
   libturbojpeg-dev \
   && mkdir /opt/ffmpeg \
-  && wget -O ffmpeg.tar.xz "https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2025-04-30-13-13/ffmpeg-n6.1.2-27-ge16ff06adb-linux64-gpl-shared-6.1.tar.xz" \
+  && wget -O ffmpeg.tar.xz "https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2025-04-30-13-13/ffmpeg-n6.1.2-27-ge16ff06adb-linuxarm64-gpl-shared-6.1.tar.xz" \
   && tar -xvf ffmpeg.tar.xz -C /opt/ffmpeg --strip-components=1 \
   && rm -rf ffmpeg.tar.xz /var/lib/apt/lists/*
 
