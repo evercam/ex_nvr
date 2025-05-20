@@ -92,6 +92,17 @@ defmodule ExNVR.Pipelines.Main do
     Pipeline.call(pipeline_pid(device), :tracks)
   end
 
+  # manually start and stop recording
+  # if recording stopped with this functions
+  # it'll remain on that state until start_recording is called.
+  def start_recording(device) do
+    Pipeline.call(pipeline_pid(device), {:record?, true})
+  end
+
+  def stop_recording(device) do
+    Pipeline.call(pipeline_pid(device), {:record?, false})
+  end
+
   # Pipeline callbacks
   @impl true
   def handle_init(_ctx, options) do
@@ -132,7 +143,8 @@ defmodule ExNVR.Pipelines.Main do
         })
       ] ++ build_device_spec(device)
 
-    StorageMonitor.start_link(device: device)
+    {:ok, pid} = StorageMonitor.start_link(device: device)
+    state = %{state | storage_monitor: pid}
 
     # Set device state and make last active run inactive
     # may happens on application crash
@@ -363,6 +375,18 @@ defmodule ExNVR.Pipelines.Main do
       |> Map.new()
 
     {[reply: tracks], state}
+  end
+
+  def handle_call({:record?, record?}, _ctx, state) do
+    if record? do
+      Membrane.Logger.info("Pipeline told to resume recording")
+      :ok = StorageMonitor.resume(state.storage_monitor)
+    else
+      Membrane.Logger.info("Pipeline told to stop recording")
+      :ok = StorageMonitor.pause(state.storage_monitor)
+    end
+
+    {[reply: :ok], state}
   end
 
   @impl true
