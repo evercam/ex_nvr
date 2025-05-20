@@ -53,16 +53,18 @@ defmodule NervesFw.MixProject do
       # Dependencies for all targets except :host
       {:nerves_pack, "~> 0.7.0", targets: @all_targets},
 
+      {:mimic, "~> 1.11.0", only: :test},
+
       # Dependencies for specific targets
       # NOTE: It's generally low risk and recommended to follow minor version
       # bumps to Nerves systems. Since these include Linux kernel and Erlang
       # version updates, please review their release notes in case
       # changes to your application are needed.
       {:ex_nvr_system_rpi4,
-       github: "evercam/ex_nvr_system_rpi4", tag: "v1.30.1", runtime: false, targets: :ex_nvr_rpi4},
+       github: "evercam/ex_nvr_system_rpi4", tag: "v1.31.0", runtime: false, targets: :ex_nvr_rpi4},
       {:ex_nvr_system_rpi5,
        github: "evercam/ex_nvr_system_rpi5",
-       tag: "v0.5.1",
+       tag: "v0.6.0",
        runtime: false,
        targets: [:ex_nvr_rpi5, :giraffe]}
     ]
