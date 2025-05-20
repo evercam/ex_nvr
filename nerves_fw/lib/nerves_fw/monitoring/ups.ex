@@ -13,7 +13,7 @@ defmodule ExNVR.Nerves.Monitoring.UPS do
 
   alias Circuits.GPIO
   alias ExNVR.Devices
-  alias ExNVR.Nerves.SystemSettings
+  alias ExNVR.Nerves.{DiskMounter, SystemSettings}
 
   def start_link(options) do
     GenServer.start_link(__MODULE__, options, name: __MODULE__)
@@ -128,7 +128,7 @@ defmodule ExNVR.Nerves.Monitoring.UPS do
   @impl true
   def handle_info({:trigger_action, :ac_ok?}, %{config: config} = state) do
     do_trigger_action(:ac_ok?, config.ac_failure_action, state.ac_ok?)
-    {:noreply,%{state | action_timer: nil}}
+    {:noreply, %{state | action_timer: nil}}
   end
 
   @impl true
@@ -160,13 +160,21 @@ defmodule ExNVR.Nerves.Monitoring.UPS do
 
   defp stop_recording() do
     Logger.info("[UPS] stop recording")
+
     Devices.list()
     |> Enum.filter(&ExNVR.Model.Device.recording?/1)
     |> Enum.each(&ExNVR.Pipelines.Main.stop_recording/1)
+
+    # avoid unmouting filesystem before the pipeline flush
+    # the current recording.
+    :timer.apply_after(to_timeout(second: 2), fn -> DiskMounter.umount() end)
   end
 
   defp start_recording() do
     Logger.info("[UPS] start recording")
+
+    :ok = DiskMounter.mount()
+
     Devices.list()
     |> Enum.filter(&ExNVR.Model.Device.recording?/1)
     |> Enum.each(&ExNVR.Pipelines.Main.start_recording/1)
