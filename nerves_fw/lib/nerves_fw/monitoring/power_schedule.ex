@@ -79,6 +79,8 @@ defmodule ExNVR.Nerves.Monitoring.PowerSchedule do
   defp stop_recording() do
     Devices.list()
     |> Enum.filter(&ExNVR.Model.Device.recording?/1)
-    |> Enum.each(&Devices.Supervisor.stop/1)
+    |> Enum.each(&ExNVR.Pipelines.Main.stop_recording/1)
+
+    :timer.apply_after(to_timeout(second: 2), fn -> DiskMounter.umount() end)
   end
 end
