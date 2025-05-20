@@ -8,7 +8,6 @@ defmodule ExNVR.Pipeline.Output.Thumbnailer do
   require ExNVR.Utils
   require Membrane.Logger
 
-  alias ExNVR.{Decoder, Image}
   alias Membrane.{Buffer, H264, H265}
 
   def_input_pad :input,
@@ -44,8 +43,6 @@ defmodule ExNVR.Pipeline.Output.Thumbnailer do
       |> Map.merge(%{
         thumbnail_height: nil,
         decoder: nil,
-        decoder_state: nil,
-        scaler: nil,
         last_buffer_pts: nil
       })
 
@@ -59,20 +56,18 @@ defmodule ExNVR.Pipeline.Output.Thumbnailer do
     old_stream_format = ctx.pads.input.stream_format
 
     if is_nil(old_stream_format) or old_stream_format != format do
-      codec = if is_struct(format, H264), do: :h264, else: :h265
+      codec = if is_struct(format, H264), do: :h264, else: :hevc
 
       out_height = div(state.thumbnail_width * format.height, format.width)
       out_height = out_height - rem(out_height, 2)
 
-      decoder = Decoder.new!(codec)
-      scaler = Image.Scaler.new!(format.width, format.height, state.thumbnail_width, out_height)
+      decoder = Xav.Decoder.new(codec, out_height: out_height, out_width: state.thumbnail_width)
 
       {[],
        %{
          state
          | thumbnail_height: out_height,
-           decoder: decoder,
-           scaler: scaler
+           decoder: decoder
        }}
     else
       {[], state}
@@ -93,9 +88,8 @@ defmodule ExNVR.Pipeline.Output.Thumbnailer do
   def handle_buffer(:input, _buffer, _ctx, state), do: {[], state}
 
   defp do_decode(buffer, state) do
-    with {:ok, decoded} <- Decoder.decode(state.decoder, buffer),
-         {:ok, scaled} <- scale(decoded, state),
-         {:ok, jpeg_image} <- to_jpeg(scaled, state),
+    with {:ok, decoded} <- Xav.Decoder.decode(state.decoder, buffer.payload),
+         {:ok, jpeg_image} <- to_jpeg(decoded.data, state),
          :ok <- File.write(image_path(state.dest, buffer), jpeg_image) do
       {[], %{state | last_buffer_pts: buffer.pts}}
     else
@@ -104,9 +98,6 @@ defmodule ExNVR.Pipeline.Output.Thumbnailer do
         {[], state}
     end
   end
-
-  defp scale([], _state), do: {:error, nil}
-  defp scale([buffer], state), do: Image.Scaler.scale(state.scaler, buffer.payload)
 
   defp to_jpeg(raw_image, state) do
     Turbojpeg.yuv_to_jpeg(raw_image, state.thumbnail_width, state.thumbnail_height, 75, :I420)
