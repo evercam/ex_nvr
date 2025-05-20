@@ -54,13 +54,13 @@ defmodule ExNVR.Nerves.Monitoring.PowerSchedule do
   defp trigger_action(:power_off) do
     Logger.info("[Power schedule]: powering off the device")
     ExNVR.Events.create_event(%{type: "shutdown"})
-    Enum.each(Devices.list(), &Devices.Supervisor.stop/1)
+    stop_recording()
     Nerves.Runtime.poweroff()
   end
 
   defp trigger_action(:stop_recording) do
     Logger.info("[Power schedule]: stopping all devices")
-    Enum.each(Devices.list(), &Devices.Supervisor.stop/1)
+    stop_recording()
   end
 
   defp trigger_action(action) do
@@ -74,5 +74,11 @@ defmodule ExNVR.Nerves.Monitoring.PowerSchedule do
       power_config
       | schedule: power_config.schedule && Schedule.parse!(power_config.schedule)
     }
+  end
+
+  defp stop_recording() do
+    Devices.list()
+    |> Enum.filter(&ExNVR.Model.Device.recording?/1)
+    |> Enum.each(&Devices.Supervisor.stop/1)
   end
 end

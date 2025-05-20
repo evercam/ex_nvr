@@ -37,7 +37,6 @@ defmodule ExNVR.Nerves.Monitoring.UPS do
     :ok = GPIO.set_interrupts(bat_gpio, :both)
     :ok = GPIO.set_interrupts(ac_gpio, :both)
 
-    # publish? is set to true if system is wired for monitoring power.
     state = %{
       ac_pin: ac_pin,
       bat_pin: bat_pin,
@@ -53,7 +52,14 @@ defmodule ExNVR.Nerves.Monitoring.UPS do
 
     SystemSettings.subscribe()
 
-    {:ok, state}
+    {:ok, state, {:continue, :trigger_action}}
+  end
+
+  @impl true
+  def handle_continue(:trigger_action, state) do
+    do_trigger_action(:ac_ok?, state.config.ac_failure_action, state.ac_ok?)
+    do_trigger_action(:low_battery?, state.config.low_battery_action, state.low_battery?)
+    {:noreply, state}
   end
 
   @impl true
@@ -148,17 +154,22 @@ defmodule ExNVR.Nerves.Monitoring.UPS do
 
   defp power_off() do
     Logger.info("[UPS] shutodwn system")
+    stop_recording()
     Nerves.Runtime.poweroff()
   end
 
   defp stop_recording() do
     Logger.info("[UPS] stop recording")
-    Enum.each(Devices.list(), &Devices.Supervisor.stop/1)
+    Devices.list()
+    |> Enum.filter(&ExNVR.Model.Device.recording?/1)
+    |> Enum.each(&ExNVR.Pipelines.Main.stop_recording/1)
   end
 
   defp start_recording() do
     Logger.info("[UPS] start recording")
-    Devices.start_all()
+    Devices.list()
+    |> Enum.filter(&ExNVR.Model.Device.recording?/1)
+    |> Enum.each(&ExNVR.Pipelines.Main.start_recording/1)
   end
 
   defp event_name(:ac_ok?), do: "power"

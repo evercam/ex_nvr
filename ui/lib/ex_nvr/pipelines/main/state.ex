@@ -19,6 +19,7 @@ defmodule ExNVR.Pipelines.Main.State do
   `sub_stream_video_track` - The sub stream video track.
   `record_main_stream?` - Whether to record the main stream or not.
   `ice_servers` - The list of ICE or/and TURN servers to use for WebRTC.
+  `storage_monitor` - pid of the process responsible for monitoring recording
   """
   @type t :: %__MODULE__{
           device: Device.t(),
@@ -28,7 +29,8 @@ defmodule ExNVR.Pipelines.Main.State do
           main_stream_video_track: Track.t(),
           sub_stream_video_track: Track.t() | nil,
           record_main_stream?: boolean(),
-          ice_servers: list(map())
+          ice_servers: list(map()),
+          storage_monitor: pid()
         }
 
   @enforce_keys [:device]
@@ -41,6 +43,7 @@ defmodule ExNVR.Pipelines.Main.State do
                 main_stream_video_track: nil,
                 sub_stream_video_track: nil,
                 record_main_stream?: false,
-                ice_servers: []
+                ice_servers: [],
+                storage_monitor: nil
               ]
 end

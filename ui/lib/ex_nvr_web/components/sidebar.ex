@@ -74,15 +74,15 @@ defmodule ExNVRWeb.Components.Sidebar do
   attr :role, :atom, default: nil
 
   defp sidebar_item(assigns) do
-    is_active = is_active?(assigns.href, assigns.current_path)
+    active? = active?(assigns.href, assigns.current_path)
     has_active_child = has_active_child?(assigns.children, assigns.current_path)
 
     assigns =
       assigns
-      |> assign(:is_active, is_active)
+      |> assign(:is_active, active?)
       |> assign(:has_active_child, has_active_child)
-      |> assign(:link_classes, link_classes(is_active))
-      |> assign(:icon_classes, icon_classes(is_active))
+      |> assign(:link_classes, link_classes(active?))
+      |> assign(:icon_classes, icon_classes(active?))
       |> assign(:menu_classes, menu_classes(has_active_child))
 
     ~H"""
@@ -177,13 +177,13 @@ defmodule ExNVRWeb.Components.Sidebar do
     ]
   end
 
-  defp is_active?(nil, _), do: false
-  defp is_active?(_, nil), do: false
-  defp is_active?(href, current_path), do: String.starts_with?(current_path, href)
+  defp active?(nil, _), do: false
+  defp active?(_, nil), do: false
+  defp active?(href, current_path), do: String.starts_with?(current_path, href)
 
   defp has_active_child?(children, current_path) do
     Enum.any?(children, fn child ->
-      is_active?(child[:href], current_path)
+      active?(child[:href], current_path)
     end)
   end
 
