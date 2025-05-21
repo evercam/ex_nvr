@@ -92,7 +92,9 @@ defmodule ExNVR.MixProject do
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:mimic, "~> 1.11.0", only: :test},
       {:faker, "~> 0.17", only: :test},
-      {:bypass, "~> 2.1", only: :test}
+      {:bypass, "~> 2.1", only: :test},
+      {:kino, "~> 0.14.0"},
+      {:kino_vega_lite, "~> 0.1.13"}
     ]
   end
 
