@@ -2,6 +2,7 @@ defmodule ExNVR.Nerves.Monitoring.UPSTest do
   use ExNVR.DataCase, async: false
 
   import ExUnit.CaptureLog
+  import Mimic
 
   alias ExNVR.Nerves.Monitoring.UPS
   alias ExNVR.Nerves.SystemSettings
@@ -9,11 +10,21 @@ defmodule ExNVR.Nerves.Monitoring.UPSTest do
   @moduletag :tmp_dir
   @moduletag capture_log: true
 
+  setup :set_mimic_global
+  setup :verify_on_exit!
+
+  setup_all do
+    Mimic.copy(ExNVR.Nerves.DiskMounter)
+  end
+
   setup %{tmp_dir: tmp_dir} do
     Application.put_env(:ex_nvr_fw, :system_settings_path, Path.join(tmp_dir, "settings.json"))
     # make system settings process pick the path
     # in the config above
     Process.exit(Process.whereis(SystemSettings), :kill)
+
+    expect(ExNVR.Nerves.DiskMounter, :mount, 3, fn -> :ok end)
+
     :ok
   end
 
