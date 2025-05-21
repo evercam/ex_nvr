@@ -64,7 +64,7 @@ defmodule ExNVR.Disk do
   @type list_opts :: [major_number: [integer()]]
 
   @derive Jason.Encoder
-  defstruct [:name, :vendor, :model, :serial, :path, :size, :fs, :hotplug, :tran, :parts]
+  defstruct [:name, :vendor, :model, :serial, :path, :size, :fs, :hotplug, :tran, :parts, :form_factor]
 
   @doc """
   List available hard drives.
@@ -114,7 +114,7 @@ defmodule ExNVR.Disk do
 
     case cmd do
       {output, 0} ->
-        {:ok, output |> Jason.decode!() |> map()}
+        {:ok, output |> JSON.decode!() |> map()}
 
       {output, _} ->
         {:error, output}
@@ -123,17 +123,21 @@ defmodule ExNVR.Disk do
 
   defp map(%{"blockdevices" => devices}) do
     Enum.map(devices, fn device ->
+      disk_info = smartctl_get_disk_info(device["path"])
+      model = disk_info["model_name"] || String.trim(device["model"])
+
       %__MODULE__{
         name: device["name"],
         path: device["path"],
-        vendor: get_vendor(device["vendor"], device["model"]),
-        model: device["model"] && String.trim(device["model"]),
-        serial: device["serial"] && String.trim(device["serial"]),
+        vendor: get_vendor(device["vendor"], model),
+        model: model,
+        serial: disk_info["serial_number"] || (device["serial"] && String.trim(device["serial"])),
         size: device["size"],
         hotplug: device["hotplug"],
         tran: device["tran"],
         parts: Enum.map(device["children"] || [], &map_part/1),
-        fs: map_fs(device)
+        fs: map_fs(device),
+        form_factor: get_in(disk_info, ["form_factor", "name"]),
       }
     end)
   end
@@ -166,6 +170,16 @@ defmodule ExNVR.Disk do
     Enum.find_value(@manufacturers, default_value, fn {pattern, manufacturer} ->
       if String.match?(model, pattern), do: manufacturer
     end)
+  end
+
+  # get disk info using smartctl if available
+  defp smartctl_get_disk_info(drive) do
+    with path when not is_nil(path) <- System.find_executable("smartctl"),
+         {output, 0} <- System.cmd("smartctl", ["-ji", drive], stderr_to_stdout: true) do
+      JSON.decode!(output)
+    else
+      _other -> %{}
+    end
   end
 
   defp to_integer(nil), do: nil
