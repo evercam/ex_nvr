@@ -69,6 +69,8 @@ defmodule ExNVR.Devices.Onvif do
   @spec auto_configure(Onvif.Device.t()) :: AutoConfig.t()
   def auto_configure(%{manufacturer: vendor} = onvif_device)
       when vendor in ["HIKVISION", "Milesight Technology Co.,Ltd."] do
+    Logger.info("Auto configure #{vendor} camera")
+
     %AutoConfig{}
     |> do_configure_profiles(onvif_device)
   end
@@ -128,6 +130,8 @@ defmodule ExNVR.Devices.Onvif do
   end
 
   defp do_configure_profiles(auto_config, onvif_device) do
+    Logger.info("[Onvif] Configure profiles")
+
     case Onvif.Media2.get_profiles(onvif_device) do
       {:ok, profiles} ->
         auto_config
@@ -141,15 +145,15 @@ defmodule ExNVR.Devices.Onvif do
 
   defp do_configure_profile(auto_config, _onvif_device, nil, _profile_type), do: auto_config
 
-  defp do_configure_profile(auto_config, onvif_device, profile, profile_type) do
+  defp do_configure_profile(auto_config, onvif_device, profile, stream_type) do
     config_options_result =
       Onvif.Media2.get_video_encoder_configuration_options(onvif_device,
         profile_token: profile.reference_token
       )
 
     with {:ok, configs} <- config_options_result,
-         :ok <- set_video_encoder_config(onvif_device, profile, configs, profile_type) do
-      Map.put(auto_config, profile_type, true)
+         :ok <- set_video_encoder_config(onvif_device, profile, configs, stream_type) do
+      Map.put(auto_config, stream_type, true)
     else
       {:error, reason} ->
         Logger.error("[Onvif] could not configure profile: #{inspect(reason)}")
@@ -157,9 +161,9 @@ defmodule ExNVR.Devices.Onvif do
     end
   end
 
-  defp set_video_encoder_config(onvif_device, profile, configs, profile_type) do
+  defp set_video_encoder_config(onvif_device, profile, configs, stream_type) do
     {codec, bit_rate, gov_length_coeff} =
-      case profile_type do
+      case stream_type do
         :main_stream -> {:h265, 3072, 4}
         :sub_stream -> {:h264, 572, 2}
       end
@@ -180,7 +184,7 @@ defmodule ExNVR.Devices.Onvif do
           constant_bitrate: false,
           frame_rate_limit: frame_rate
         },
-        resolution: select_resolution(config.resolutions_available)
+        resolution: select_resolution(config.resolutions_available, stream_type)
     }
 
     Onvif.Media2.set_video_encoder_configuration(onvif_device, video_encoder)
@@ -238,11 +242,13 @@ defmodule ExNVR.Devices.Onvif do
     |> hd()
   end
 
-  defp select_resolution(resolutions) do
-    resolutions
-    |> Enum.sort_by(& &1.height, :desc)
-    |> Enum.drop_while(&(&1.height > 1000 and &1.width > 1000))
-    |> hd()
+  defp select_resolution(resolutions, stream) do
+    resolutions = Enum.sort_by(resolutions, & &1.height, :desc)
+
+    case stream do
+      :main_stream -> hd(resolutions)
+      _other -> Enum.drop_while(resolutions, &(&1.height > 1000 or &1.width > 1000)) |> hd()
+    end
   end
 
   defp select_quality(%{manufacturer: "AXIS"}, _quality), do: 70
