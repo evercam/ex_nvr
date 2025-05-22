@@ -6,6 +6,7 @@ defmodule ExNVR.Devices.Onvif do
   alias __MODULE__.AutoConfig
   alias ExNVR.Model.Device
   alias Onvif.Devices.SystemDateAndTime
+  alias Onvif.Media2
   alias Onvif.Media2.Profile.VideoEncoder
   alias Onvif.Search
   alias Onvif.Search.{FindRecordings, GetRecordingSearchResults}
@@ -72,7 +73,59 @@ defmodule ExNVR.Devices.Onvif do
     |> do_configure_profiles(onvif_device)
   end
 
+  def auto_configure(%{manufacturer: "AXIS"} = onvif_device) do
+    Logger.info("Auto configure AXIS camera")
+
+    %AutoConfig{}
+    |> create_profiles(onvif_device)
+  end
+
   def auto_configure(_onvif_device), do: %AutoConfig{}
+
+  defp create_profiles(auto_config, device) do
+    Logger.info("Create main and sub profiles")
+
+    with {:ok, sources} <- Media2.get_video_source_configurations(device),
+         {:ok, configs} <- Media2.get_video_encoder_configurations(device) do
+      configs = Enum.filter(configs, &(&1.use_count == 0)) |> Enum.take(2)
+
+      main_profile = do_create_profile(device, "ex_nvr_main", hd(sources), Enum.at(configs, 0))
+      sub_profile = do_create_profile(device, "ex_nvr_sub", hd(sources), Enum.at(configs, 1))
+
+      auto_config
+      |> do_configure_profile(device, main_profile, :main_stream)
+      |> do_configure_profile(device, sub_profile, :sub_stream)
+    else
+      {:error, reason} ->
+        Logger.error("[Onvif] error while trying to create profile: #{inspect(reason)}")
+        auto_config
+    end
+  end
+
+  defp do_create_profile(_onvif_device, name, _video_source, nil) do
+    Logger.error("[Onvif] could not create profile with name: #{name}, no video encoder config")
+    nil
+  end
+
+  defp do_create_profile(onvif_device, name, video_source, video_encoder) do
+    configs = [
+      %{type: "VideoSource", token: video_source.reference_token},
+      %{type: "VideoEncoder", token: video_encoder.reference_token}
+    ]
+
+    with {:ok, profile_token} <- Media2.create_profile(onvif_device, name, configs),
+         {:ok, [profile]} <- Media2.get_profiles(onvif_device, token: profile_token) do
+      profile
+    else
+      {:error, reason} ->
+        Logger.error("""
+        [Onvif} could not create profile with name: #{name}
+        Reason: #{inspect(reason)}
+        """)
+
+        nil
+    end
+  end
 
   defp do_configure_profiles(auto_config, onvif_device) do
     case Onvif.Media2.get_profiles(onvif_device) do
@@ -121,7 +174,7 @@ defmodule ExNVR.Devices.Onvif do
       profile.video_encoder_configuration
       | encoding: config.encoding,
         gov_length: trunc(frame_rate * gov_length_coeff),
-        quality: Float.ceil((config.quality_range.max + config.quality_range.min) / 2),
+        quality: select_quality(onvif_device, config.quality_range),
         rate_control: %VideoEncoder.RateControl{
           bitrate_limit: bit_rate,
           constant_bitrate: false,
@@ -188,6 +241,10 @@ defmodule ExNVR.Devices.Onvif do
   defp select_resolution(resolutions) do
     resolutions
     |> Enum.sort_by(& &1.height, :desc)
+    |> Enum.drop_while(&(&1.height > 1000 and &1.width > 1000))
     |> hd()
   end
+
+  defp select_quality(%{manufacturer: "AXIS"}, _quality), do: 70
+  defp select_quality(_device, quality), do: Float.ceil((quality.max + quality.min) / 2)
 end
