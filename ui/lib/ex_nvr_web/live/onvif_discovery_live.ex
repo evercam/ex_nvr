@@ -134,6 +134,19 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
     |> then(&{:noreply, assign(socket, device_details: &1)})
   end
 
+  def handle_event("auto-configure", _params, socket) do
+    device = socket.assigns.selected_device
+    _auto_config_result = ExNVR.Devices.Onvif.auto_configure(device)
+    device_details = fetch_onvif_details(device)
+
+    {:noreply,
+     assign(socket,
+       device_details: device_details,
+       device_details_cache:
+         Map.put(socket.assigns.device_details_cache, device.address, device_details)
+     )}
+  end
+
   def handle_info({:profile_updated, reference_token}, socket) do
     device_details = socket.assigns.device_details
     onvif_device = socket.assigns.selected_device
@@ -235,6 +248,13 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
       {:ok, profiles} ->
         profiles
         |> Enum.reject(&is_nil(&1.video_encoder_configuration))
+        |> Enum.sort_by(& &1.name, fn
+          "ex_nvr_main", _elem2 -> true
+          _elem1, "ex_nvr_main" -> false
+          "ex_nvr_sub", _elem2 -> true
+          _elem1, "ex_nvr_sub" -> false
+          _elem1, _elem2 -> true
+        end)
         |> Enum.map(&%MediaProfile{profile: &1})
         |> then(&%CameraDetails{details | media_profiles: &1})
 

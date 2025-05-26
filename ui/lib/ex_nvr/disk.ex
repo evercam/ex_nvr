@@ -64,7 +64,19 @@ defmodule ExNVR.Disk do
   @type list_opts :: [major_number: [integer()]]
 
   @derive Jason.Encoder
-  defstruct [:name, :vendor, :model, :serial, :path, :size, :fs, :hotplug, :tran, :parts, :form_factor]
+  defstruct [
+    :name,
+    :vendor,
+    :model,
+    :serial,
+    :path,
+    :size,
+    :fs,
+    :hotplug,
+    :tran,
+    :parts,
+    :form_factor
+  ]
 
   @doc """
   List available hard drives.
@@ -137,7 +149,7 @@ defmodule ExNVR.Disk do
         tran: device["tran"],
         parts: Enum.map(device["children"] || [], &map_part/1),
         fs: map_fs(device),
-        form_factor: get_in(disk_info, ["form_factor", "name"]),
+        form_factor: get_in(disk_info, ["form_factor", "name"])
       }
     end)
   end
