@@ -79,34 +79,63 @@ defmodule ExNVR.Devices.Onvif do
     Logger.info("Auto configure AXIS camera")
 
     %AutoConfig{}
-    |> create_profiles(onvif_device)
+    |> maybe_create_and_configure_profiles(onvif_device)
   end
 
   def auto_configure(_onvif_device), do: %AutoConfig{}
 
-  defp create_profiles(auto_config, device) do
-    Logger.info("Create main and sub profiles")
+  defp maybe_create_and_configure_profiles(auto_config, device) do
+    case fetch_profiles(device) do
+      {:ok, {main_profile, sub_profile}} ->
+        Logger.info("[Onvif] Found main and sub profiles, start configuration")
 
-    with {:ok, sources} <- Media2.get_video_source_configurations(device),
-         {:ok, configs} <- Media2.get_video_encoder_configurations(device) do
-      configs = Enum.filter(configs, &(&1.use_count == 0)) |> Enum.take(2)
-
-      main_profile = do_create_profile(device, "ex_nvr_main", hd(sources), Enum.at(configs, 0))
-      sub_profile = do_create_profile(device, "ex_nvr_sub", hd(sources), Enum.at(configs, 1))
-
-      auto_config
-      |> do_configure_profile(device, main_profile, :main_stream)
-      |> do_configure_profile(device, sub_profile, :sub_stream)
-    else
-      {:error, reason} ->
-        Logger.error("[Onvif] error while trying to create profile: #{inspect(reason)}")
         auto_config
+        |> do_configure_profile(device, main_profile, :main_stream)
+        |> do_configure_profile(device, sub_profile, :sub_stream)
+
+      :ok ->
+        Logger.info("[Onvif] Create main and sub profiles")
+
+        case create_profiles(device) do
+          {:ok, {main_profile, sub_profile}} ->
+            auto_config
+            |> do_configure_profile(device, main_profile, :main_stream)
+            |> do_configure_profile(device, sub_profile, :sub_stream)
+
+          {:error, reason} ->
+            Logger.error("[Onvif] error while trying to create profiles: #{inspect(reason)}")
+            auto_config
+        end
+
+      {:error, reason} ->
+        Logger.error("[Onvif] error while trying to fetch profiles: #{inspect(reason)}")
+        auto_config
+    end
+  end
+
+  defp fetch_profiles(onvif_device) do
+    with {:ok, profiles} <- Media2.get_profiles(onvif_device) do
+      main_profile = Enum.find(profiles, &(&1.name == "ex_nvr_main"))
+      sub_profile = Enum.find(profiles, &(&1.name == "ex_nvr_sub"))
+
+      if main_profile, do: {:ok, {main_profile, sub_profile}}, else: :ok
+    end
+  end
+
+  defp create_profiles(device) do
+    with {:ok, sources} <- Media2.get_video_source_configurations(device),
+         {:ok, configs} <- Media2.get_video_encoder_configurations(device),
+         configs <- Enum.filter(configs, &(&1.use_count == 0)) |> Enum.take(2),
+         {:ok, main} <-
+           do_create_profile(device, "ex_nvr_main", hd(sources), Enum.at(configs, 0)),
+         {:ok, sub} <- do_create_profile(device, "ex_nvr_sub", hd(sources), Enum.at(configs, 1)) do
+      {:ok, {main, sub}}
     end
   end
 
   defp do_create_profile(_onvif_device, name, _video_source, nil) do
     Logger.error("[Onvif] could not create profile with name: #{name}, no video encoder config")
-    nil
+    {:ok, nil}
   end
 
   defp do_create_profile(onvif_device, name, video_source, video_encoder) do
@@ -117,15 +146,7 @@ defmodule ExNVR.Devices.Onvif do
 
     with {:ok, profile_token} <- Media2.create_profile(onvif_device, name, configs),
          {:ok, [profile]} <- Media2.get_profiles(onvif_device, token: profile_token) do
-      profile
-    else
-      {:error, reason} ->
-        Logger.error("""
-        [Onvif} could not create profile with name: #{name}
-        Reason: #{inspect(reason)}
-        """)
-
-        nil
+      {:ok, profile}
     end
   end
 
