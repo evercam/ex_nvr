@@ -63,7 +63,7 @@ defmodule ExNVR.Nerves.SystemStatus do
 
   defp ups_data() do
     case Process.whereis(UPS) do
-      pid when is_pid(pid) -> UPS.state(false)
+      pid when is_pid(pid) -> UPS.state(pid)
       _other -> nil
     end
   end

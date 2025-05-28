@@ -52,7 +52,6 @@ defmodule NervesFw.MixProject do
 
       # Dependencies for all targets except :host
       {:nerves_pack, "~> 0.7.0", targets: @all_targets},
-
       {:mimic, "~> 1.11.0", only: :test},
 
       # Dependencies for specific targets

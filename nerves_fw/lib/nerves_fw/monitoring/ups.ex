@@ -1,10 +1,6 @@
 defmodule ExNVR.Nerves.Monitoring.UPS do
   @moduledoc """
   Monitor AC and battery alarms.
-
-  We'll use the following GPIO pins to monitor the power supply:
-    * GPIO16 (input) - `1` low battery level
-    * GPIO23 (input) - `0` AC failure.
   """
 
   use GenServer
@@ -19,53 +15,42 @@ defmodule ExNVR.Nerves.Monitoring.UPS do
     GenServer.start_link(__MODULE__, options, name: __MODULE__)
   end
 
-  # force_read? read state even if publish? is false
-  def state(force_read? \\ false, pid \\ __MODULE__) do
-    GenServer.call(pid, {:state, force_read?})
+  def state(pid \\ __MODULE__) do
+    GenServer.call(pid, :state)
   end
 
   @impl true
   def init(options) do
     ups_config = SystemSettings.get_settings().ups
 
-    ac_pin = Keyword.get(options, :ac_pin, ups_config.ac_pin)
-    bat_pin = Keyword.get(options, :battery_pin, ups_config.battery_pin)
-
-    {:ok, ac_gpio} = GPIO.open(ac_pin, :input, pull_mode: :pulldown)
-    {:ok, bat_gpio} = GPIO.open(bat_pin, :input, pull_mode: :pulldown)
-
-    :ok = GPIO.set_interrupts(bat_gpio, :both)
-    :ok = GPIO.set_interrupts(ac_gpio, :both)
-
-    state = %{
-      ac_pin: ac_pin,
-      bat_pin: bat_pin,
-      ac_gpio: ac_gpio,
-      bat_gpio: bat_gpio,
-      ac_timer: nil,
-      bat_timer: nil,
-      action_timer: nil,
-      ac_ok?: GPIO.read(ac_gpio),
-      low_battery?: GPIO.read(bat_gpio),
-      config: ups_config
-    }
+    state =
+      ups_config
+      |> do_start_monitor(options)
+      |> Map.put(:config, ups_config)
 
     SystemSettings.subscribe()
 
-    {:ok, state, {:continue, :trigger_action}}
+    if ups_config.enabled do
+      {:ok, state, {:continue, :trigger_action}}
+    else
+      {:ok, state}
+    end
   end
 
   @impl true
   def handle_continue(:trigger_action, state) do
-    do_trigger_action(:ac_ok?, state.config.ac_failure_action, state.ac_ok?)
-    do_trigger_action(:low_battery?, state.config.low_battery_action, state.low_battery?)
+    {ac_state, low_battery_state} =
+      if state.config.enabled, do: {state.ac_ok?, state.low_battery?}, else: {1, 0}
+
+    do_trigger_action(:ac_ok?, state.config.ac_failure_action, ac_state)
+    do_trigger_action(:low_battery?, state.config.low_battery_action, low_battery_state)
     {:noreply, state}
   end
 
   @impl true
-  def handle_call({:state, force_read?}, _from, state) do
+  def handle_call(:state, _from, state) do
     reply =
-      if state.config.enabled or force_read? do
+      if state.config.enabled do
         %{ac_ok?: to_bool(state.ac_ok?), low_battery?: to_bool(state.low_battery?)}
       end
 
@@ -74,7 +59,12 @@ defmodule ExNVR.Nerves.Monitoring.UPS do
 
   @impl true
   def handle_info({:system_settings, :update}, state) do
-    {:noreply, %{state | config: SystemSettings.get_settings().ups}}
+    ups_settings = SystemSettings.get_settings().ups
+
+    :ok = clean_state(state)
+    new_state = ups_settings |> do_start_monitor([]) |> Map.put(:config, ups_settings)
+
+    {:noreply, new_state, {:continue, :trigger_action}}
   end
 
   @impl true
@@ -121,8 +111,7 @@ defmodule ExNVR.Nerves.Monitoring.UPS do
 
     if state.action_timer, do: Process.cancel_timer(state.action_timer)
 
-    settings = SystemSettings.update_ups_settings(%{enabled: true})
-    {:noreply, %{state | config: settings.ups, action_timer: ref}}
+    {:noreply, %{state | action_timer: ref}}
   end
 
   @impl true
@@ -141,6 +130,40 @@ defmodule ExNVR.Nerves.Monitoring.UPS do
   def handle_info(message, state) do
     Logger.warning("Received unexpected message: #{inspect(message)}")
     {:noreply, state}
+  end
+
+  defp do_start_monitor(%{enabled: false}, _opts), do: %{}
+
+  defp do_start_monitor(ups_config, opts) do
+    ac_pin = Keyword.get(opts, :ac_pin, ups_config.ac_pin)
+    bat_pin = Keyword.get(opts, :battery_pin, ups_config.battery_pin)
+
+    {:ok, ac_gpio} = GPIO.open(ac_pin, :input, pull_mode: :pulldown)
+    {:ok, bat_gpio} = GPIO.open(bat_pin, :input, pull_mode: :pulldown)
+
+    :ok = GPIO.set_interrupts(bat_gpio, :both)
+    :ok = GPIO.set_interrupts(ac_gpio, :both)
+
+    %{
+      ac_pin: ac_pin,
+      bat_pin: bat_pin,
+      ac_gpio: ac_gpio,
+      bat_gpio: bat_gpio,
+      ac_timer: nil,
+      bat_timer: nil,
+      action_timer: nil,
+      ac_ok?: GPIO.read(ac_gpio),
+      low_battery?: GPIO.read(bat_gpio)
+    }
+  end
+
+  defp clean_state(state) do
+    if state[:ac_gpio], do: GPIO.close(state.ac_gpio)
+    if state[:bat_gpio], do: GPIO.close(state.bat_gpio)
+    if state[:ac_timer], do: :timer.cancel(state.ac_timer)
+    if state[:bat_timer], do: :timer.cancel(state.bat_timer)
+    if state[:action_timer], do: Process.cancel_timer(state.action_timer)
+    :ok
   end
 
   defp do_trigger_action(:ac_ok?, :power_off, 0), do: power_off()

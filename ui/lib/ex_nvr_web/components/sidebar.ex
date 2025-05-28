@@ -122,59 +122,124 @@ defmodule ExNVRWeb.Components.Sidebar do
     """
   end
 
-  defp groups do
-    [
+  if Application.compile_env(:ex_nvr, :nerves_routes) do
+    defp groups do
       [
-        %{label: "Dashboard", icon: "hero-tv-solid", href: ~p"/dashboard"},
-        %{label: "Recordings", icon: "hero-film-solid", href: ~p"/recordings"},
-        %{
-          label: "Events",
-          icon: "hero-camera-solid",
-          children: [
-            %{label: "Generic Events", icon: "hero-code-bracket", href: ~p"/events/generic"},
-            %{label: "Vehicle Plates", icon: "hero-truck-solid", href: ~p"/events/lpr"}
-          ]
-        }
-      ],
-      [
-        %{label: "Devices", icon: "hero-video-camera-solid", href: ~p"/devices"},
-        %{label: "Users", icon: "hero-users-solid", href: ~p"/users", role: :admin},
-        %{
-          label: "Onvif Discovery",
-          icon: "hero-magnifying-glass-circle",
-          href: ~p"/onvif-discovery",
-          role: :admin
-        }
-      ],
-      [
-        %{
-          label: "Remote Storages",
-          icon: "hero-circle-stack-solid",
-          href: ~p"/remote-storages",
-          role: :admin
-        }
-      ],
-      [
-        %{
-          label: "Live Dashboard",
-          icon: "hero-chart-bar-solid",
-          href: ~p"/live-dashboard",
-          target: "_blank"
-        },
-        %{
-          label: "API Documentation",
-          icon: "hero-document-solid",
-          href: ~p"/swagger/index.html",
-          target: "_blank"
-        },
-        %{
-          label: "GitHub",
-          icon: "svg-github",
-          href: "https://github.com/evercam/ex_nvr",
-          target: "_blank"
-        }
+        [
+          %{label: "Dashboard", icon: "hero-tv-solid", href: ~p"/dashboard"},
+          %{label: "Recordings", icon: "hero-film-solid", href: ~p"/recordings"},
+          %{
+            label: "Events",
+            icon: "hero-camera-solid",
+            children: [
+              %{label: "Generic Events", icon: "hero-code-bracket", href: ~p"/events/generic"},
+              %{label: "Vehicle Plates", icon: "hero-truck-solid", href: ~p"/events/lpr"}
+            ]
+          }
+        ],
+        [
+          %{label: "Devices", icon: "hero-video-camera-solid", href: ~p"/devices"},
+          %{label: "Users", icon: "hero-users-solid", href: ~p"/users", role: :admin},
+          %{
+            label: "Onvif Discovery",
+            icon: "hero-magnifying-glass-circle",
+            href: ~p"/onvif-discovery",
+            role: :admin
+          }
+        ],
+        [
+          %{
+            label: "Remote Storages",
+            icon: "hero-circle-stack-solid",
+            href: ~p"/remote-storages",
+            role: :admin
+          }
+        ],
+        [
+          %{
+            label: "System Settings",
+            icon: "hero-cog-6-tooth-solid",
+            href: ~p"/nerves/system-settings",
+            role: :admin
+          }
+        ],
+        [
+          %{
+            label: "Live Dashboard",
+            icon: "hero-chart-bar-solid",
+            href: ~p"/live-dashboard",
+            target: "_blank"
+          },
+          %{
+            label: "API Documentation",
+            icon: "hero-document-solid",
+            href: ~p"/swagger/index.html",
+            target: "_blank"
+          },
+          %{
+            label: "GitHub",
+            icon: "svg-github",
+            href: "https://github.com/evercam/ex_nvr",
+            target: "_blank"
+          }
+        ]
       ]
-    ]
+    end
+  else
+    defp groups do
+      [
+        [
+          %{label: "Dashboard", icon: "hero-tv-solid", href: ~p"/dashboard"},
+          %{label: "Recordings", icon: "hero-film-solid", href: ~p"/recordings"},
+          %{
+            label: "Events",
+            icon: "hero-camera-solid",
+            children: [
+              %{label: "Generic Events", icon: "hero-code-bracket", href: ~p"/events/generic"},
+              %{label: "Vehicle Plates", icon: "hero-truck-solid", href: ~p"/events/lpr"}
+            ]
+          }
+        ],
+        [
+          %{label: "Devices", icon: "hero-video-camera-solid", href: ~p"/devices"},
+          %{label: "Users", icon: "hero-users-solid", href: ~p"/users", role: :admin},
+          %{
+            label: "Onvif Discovery",
+            icon: "hero-magnifying-glass-circle",
+            href: ~p"/onvif-discovery",
+            role: :admin
+          }
+        ],
+        [
+          %{
+            label: "Remote Storages",
+            icon: "hero-circle-stack-solid",
+            href: ~p"/remote-storages",
+            role: :admin
+          }
+        ],
+        [
+          %{
+            label: "Live Dashboard",
+            icon: "hero-chart-bar-solid",
+            href: ~p"/live-dashboard",
+            target: "_blank"
+          },
+          %{
+            label: "API Documentation",
+            icon: "hero-document-solid",
+            href: ~p"/swagger/index.html",
+            target: "_blank"
+          },
+          %{
+            label: "GitHub",
+            icon: "svg-github",
+            href: "https://github.com/evercam/ex_nvr",
+            target: "_blank"
+          }
+        ]
+      ]
+    end
   end
 
   defp active?(nil, _), do: false

@@ -39,8 +39,8 @@ defmodule ExNVR.Nerves.SystemSettings do
       embeds_one :ups, UPS, primary_key: false, on_replace: :update do
         @derive JSON.Encoder
         field :enabled, :boolean, default: false
-        field :ac_pin, :string, default: "GPIO23"
-        field :battery_pin, :string, default: "GPIO16"
+        field :ac_pin, :string, default: "GPIO27"
+        field :battery_pin, :string, default: "GPIO22"
 
         field :ac_failure_action, Ecto.Enum,
           values: ~w(power_off stop_recording nothing)a,
@@ -68,15 +68,7 @@ defmodule ExNVR.Nerves.SystemSettings do
       |> cast_embed(:ups, with: &ups_changeset/2)
     end
 
-    defp power_schedule_changeset(changeset, params) do
-      cast(changeset, params, [:schedule, :timezone, :action])
-    end
-
-    defp router_changeset(changeset, params) do
-      cast(changeset, params, [:username, :password])
-    end
-
-    defp ups_changeset(changeset, params) do
+    def ups_changeset(changeset, params \\ %{}) do
       changeset
       |> cast(params, [
         :enabled,
@@ -87,6 +79,38 @@ defmodule ExNVR.Nerves.SystemSettings do
         :trigger_after
       ])
       |> validate_number(:trigger_after, greater_than_or_equal_to: 0, less_than_or_equal_to: 300)
+      |> validate_pins_not_equal()
+      |> validate_ups_actions()
+    end
+
+    defp power_schedule_changeset(changeset, params) do
+      cast(changeset, params, [:schedule, :timezone, :action])
+    end
+
+    defp router_changeset(changeset, params) do
+      cast(changeset, params, [:username, :password])
+    end
+
+    defp validate_pins_not_equal(%{valid?: false} = changeset), do: changeset
+
+    defp validate_pins_not_equal(changeset) do
+      ac_pin = fetch_field!(changeset, :ac_pin)
+      battery_pin = fetch_field!(changeset, :battery_pin)
+
+      if ac_pin == battery_pin,
+        do: add_error(changeset, :battery_pin, "AC Pin and Battery Pin should not be the same"),
+        else: changeset
+    end
+
+    defp validate_ups_actions(%{valid?: false} = changeset), do: changeset
+
+    defp validate_ups_actions(changeset) do
+      ac_action = fetch_field!(changeset, :ac_failure_action)
+      battery_action = fetch_field!(changeset, :low_battery_action)
+
+      if ac_action == :stop_recording and battery_action == :stop_recording,
+        do: add_error(changeset, :low_battery_action, "Both actions cannot be 'stop_recording'"),
+        else: changeset
     end
   end
 
@@ -140,20 +164,26 @@ defmodule ExNVR.Nerves.SystemSettings do
 
   @impl true
   def handle_call({:update_router_settings, params}, _from, state) do
-    state = do_update_settings(state, %{router: params})
-    {:reply, state.settings, state}
+    case do_update_settings(state, %{router: params}) do
+      {:ok, state} -> {:reply, {:ok, state.settings}, state}
+      error -> {:reply, error, state}
+    end
   end
 
   @impl true
   def handle_call({:update_power_schedule_settings, params}, _from, state) do
-    state = do_update_settings(state, %{power_schedule: params})
-    {:reply, state.settings, state}
+    case do_update_settings(state, %{power_schedule: params}) do
+      {:ok, state} -> {:reply, {:ok, state.settings}, state}
+      error -> {:reply, error, state}
+    end
   end
 
   @impl true
   def handle_call({:update_ups_settings, params}, _from, state) do
-    state = do_update_settings(state, %{ups: params})
-    {:reply, state.settings, state}
+    case do_update_settings(state, %{ups: params}) do
+      {:ok, state} -> {:reply, {:ok, state.settings}, state}
+      error -> {:reply, error, state}
+    end
   end
 
   defp do_update_settings(state, params) do
@@ -167,11 +197,7 @@ defmodule ExNVR.Nerves.SystemSettings do
         )
       end
 
-      %{state | settings: new_settings}
-    else
-      {:error, reason} ->
-        Logger.error("Failed to update settings: #{inspect(reason)}")
-        state
+      {:ok, %{state | settings: new_settings}}
     end
   end
 
