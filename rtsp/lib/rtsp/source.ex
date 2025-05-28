@@ -156,8 +156,8 @@ defmodule ExNVR.RTSP.Source do
 
             ssrc = rtp_packet.ssrc
 
+            # credo:disable-for-lines:2
             datetime =
-              # credo:disable-for-next-line
               case state do
                 %State{onvif_replay: true} ->
                   rtp_packet.extensions && rtp_packet.extensions.timestamp

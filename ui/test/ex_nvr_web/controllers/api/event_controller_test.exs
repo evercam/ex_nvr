@@ -4,6 +4,8 @@ defmodule ExNVRWeb.Api.EventControllerTest do
 
   import ExNVR.{AccountsFixtures, DevicesFixtures, EventsFixtures}
 
+  alias ExNVR.Model.Device
+
   @moduletag :tmp_dir
 
   @plate_image "test/fixtures/license-plate.jpg"
