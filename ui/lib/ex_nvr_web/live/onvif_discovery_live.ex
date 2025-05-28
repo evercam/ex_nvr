@@ -45,6 +45,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
             ip_address: params[:ip_addr]
           )
           |> Enum.map_reduce(socket, fn probe, socket ->
+            # credo:disable-for-next-line
             case get_onvif_device(probe, params.username, params.password) do
               {:ok, device} ->
                 {device, socket}

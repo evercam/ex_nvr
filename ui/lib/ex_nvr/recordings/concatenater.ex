@@ -182,6 +182,7 @@ defmodule ExNVR.Recordings.Concatenater do
           state.reader
           |> Reader.stream(tracks: [track.id])
           |> Enum.reduce_while(0, fn metadata, acc ->
+            # credo:disable-for-next-line
             cond do
               metadata.sync? -> {:cont, metadata.dts}
               metadata.dts >= offset -> {:halt, acc}
