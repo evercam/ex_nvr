@@ -25,7 +25,7 @@ jobs:
 
       - name: Install deps
         run: |
-          apt-get update && sudo apt-get install -y libmnl-dev \
+          sudo apt-get update && sudo apt-get install -y libmnl-dev \
             libsrtp2-dev \
             libturbojpeg-dev \
             libavcodec-dev \
