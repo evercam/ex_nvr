@@ -26,7 +26,7 @@ defmodule ExNVR.RTSP.Source do
               ],
               timeout: [
                 spec: non_neg_integer(),
-                default: Time.seconds(15),
+                default: to_timeout(second: 5),
                 description: "Set RTSP response timeout"
               ],
               keep_alive_interval: [
@@ -64,7 +64,7 @@ defmodule ExNVR.RTSP.Source do
             stream_uri: binary(),
             allowed_media_types: ConnectionManager.media_types(),
             transport: Source.transport(),
-            timeout: Time.t(),
+            timeout: non_neg_integer(),
             keep_alive_interval: Time.t(),
             tracks: [ConnectionManager.track()],
             rtsp_session: Membrane.RTSP.t() | nil,
@@ -139,45 +139,9 @@ defmodule ExNVR.RTSP.Source do
   def handle_info(:recv, ctx, state) do
     Membrane.Logger.debug("Receiving data from socket")
 
-    case :gen_tcp.recv(state.socket, 0, Time.as_milliseconds(state.timeout, :round)) do
-      {:ok, message} ->
-        datetime = DateTime.utc_now()
-
-        {rtp_packets, _rtcp_packets, unprocessed_data} =
-          split_packets(state.unprocessed_data <> message, state.rtsp_session, {[], []})
-
-        {actions, stream_handlers} =
-          rtp_packets
-          |> Stream.map(&decode_rtp!/1)
-          |> Stream.map(&decode_onvif_replay_extension/1)
-          |> Enum.flat_map_reduce(state.stream_handlers, fn rtp_packet, handlers ->
-            {notifcation_action, handlers} =
-              maybe_init_stream_handler(state, handlers, rtp_packet)
-
-            ssrc = rtp_packet.ssrc
-
-            # credo:disable-for-lines:2
-            datetime =
-              case state do
-                %State{onvif_replay: true} ->
-                  rtp_packet.extensions && rtp_packet.extensions.timestamp
-
-                _state ->
-                  datetime
-              end
-
-            {buffers, handler} = StreamHandler.handle_packet(handlers[ssrc], rtp_packet, datetime)
-
-            {actions, handler} =
-              buffers
-              |> map_buffers_into_actions(ssrc)
-              |> maybe_buffer_actions(handler, ssrc, ctx)
-
-            {notifcation_action ++ actions, Map.put(handlers, ssrc, handler)}
-          end)
-
-        Process.send_after(self(), :recv, 5)
-        {actions, %{state | stream_handlers: stream_handlers, unprocessed_data: unprocessed_data}}
+    case :gen_tcp.recv(state.socket, 0, state.timeout) do
+      {:ok, data} ->
+        do_handle_packets(data, state, ctx)
 
       {:error, reason} ->
         raise "cannot read data from socket: #{inspect(reason)}"
@@ -194,6 +158,45 @@ defmodule ExNVR.RTSP.Source do
   @impl true
   def handle_info(_message, _ctx, state) do
     {[], state}
+  end
+
+  defp do_handle_packets(data, state, ctx) do
+    datetime = DateTime.utc_now()
+
+    {rtp_packets, _rtcp_packets, unprocessed_data} =
+      split_packets(state.unprocessed_data <> data, state.rtsp_session, {[], []})
+
+    {actions, stream_handlers} =
+      rtp_packets
+      |> Stream.map(&decode_rtp!/1)
+      |> Stream.map(&decode_onvif_replay_extension/1)
+      |> Enum.flat_map_reduce(state.stream_handlers, fn rtp_packet, handlers ->
+        {notifcation_action, handlers} =
+          maybe_init_stream_handler(state, handlers, rtp_packet)
+
+        ssrc = rtp_packet.ssrc
+
+        datetime =
+          case state do
+            %State{onvif_replay: true} ->
+              rtp_packet.extensions && rtp_packet.extensions.timestamp
+
+            _state ->
+              datetime
+          end
+
+        {buffers, handler} = StreamHandler.handle_packet(handlers[ssrc], rtp_packet, datetime)
+
+        {actions, handler} =
+          buffers
+          |> map_buffers_into_actions(ssrc)
+          |> maybe_buffer_actions(handler, ssrc, ctx)
+
+        {notifcation_action ++ actions, Map.put(handlers, ssrc, handler)}
+      end)
+
+    Process.send_after(self(), :recv, 5)
+    {actions, %{state | stream_handlers: stream_handlers, unprocessed_data: unprocessed_data}}
   end
 
   defp decode_rtp!(packet) do
