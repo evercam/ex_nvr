@@ -85,9 +85,7 @@ defmodule ExNVR.RTSP.Source.ConnectionManager do
 
   @spec start_rtsp_connection(State.t()) :: connection_establishment_phase_return()
   defp start_rtsp_connection(state) do
-    case RTSP.start_link(state.stream_uri,
-           response_timeout: Membrane.Time.as_milliseconds(state.timeout, :round)
-         ) do
+    case RTSP.start_link(state.stream_uri, response_timeout: state.timeout) do
       {:ok, session} ->
         {:ok, %{state | rtsp_session: session}}
 
