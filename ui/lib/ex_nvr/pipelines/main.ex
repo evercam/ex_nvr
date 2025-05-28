@@ -39,11 +39,11 @@ defmodule ExNVR.Pipelines.Main do
 
   require Membrane.Logger
 
+  alias __MODULE__.State
   alias ExNVR.{Devices, Recordings, Utils}
   alias ExNVR.Elements.VideoStreamStatReporter
   alias ExNVR.Model.Device
   alias ExNVR.Pipeline.{Output, Source, StorageMonitor}
-  alias __MODULE__.State
 
   @type encoding :: :H264 | :H265
 
@@ -541,7 +541,7 @@ defmodule ExNVR.Pipelines.Main do
     }
   end
 
-  defp ice_servers() do
+  defp ice_servers do
     Application.get_env(:ex_nvr, :ice_servers, "[]") |> Jason.decode(keys: :atoms)
   end
 end

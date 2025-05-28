@@ -1,4 +1,6 @@
 defmodule ExNVR.Devices.LPREventPuller do
+  @moduledoc false
+
   use GenServer
 
   require Logger

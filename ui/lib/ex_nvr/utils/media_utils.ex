@@ -1,6 +1,7 @@
 defmodule ExNVR.MediaUtils do
   @moduledoc false
 
+  alias ExMP4.Box
   alias Membrane.Buffer
   alias Membrane.H265.NALuParser
 
@@ -28,7 +29,7 @@ defmodule ExNVR.MediaUtils do
       end)
 
     if codec == :h264,
-      do: ExMP4.Box.Avcc.new(spss, ppss),
+      do: Box.Avcc.new(spss, ppss),
       else: get_hevc_dcr(vpss, spss, ppss)
   end
 

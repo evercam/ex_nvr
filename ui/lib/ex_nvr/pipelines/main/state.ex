@@ -3,8 +3,8 @@ defmodule ExNVR.Pipelines.Main.State do
 
   use Bunch.Access
 
-  alias ExNVR.Pipeline.Track
   alias ExNVR.Model.Device
+  alias ExNVR.Pipeline.Track
 
   @default_segment_duration Membrane.Time.seconds(60)
 

@@ -28,7 +28,7 @@ defmodule ExNVR.Decoder do
       @behaviour ExNVR.Decoder
 
       @doc false
-      def init!() do
+      def init! do
         case init() do
           {:ok, decoder} -> decoder
           {:error, reason} -> raise "failed to create a decoder: #{inspect(reason)}"

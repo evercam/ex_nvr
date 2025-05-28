@@ -3,7 +3,7 @@ defmodule ExNVR.RTP.Payloader.H265 do
 
   @behaviour ExWebRTC.RTP.Payloader.Behaviour
 
-  alias ExNVR.RTSP.Depayloader.H265.{FU, AP}
+  alias ExNVR.RTSP.Depayloader.H265.{AP, FU}
   alias ExRTP.Packet
 
   @nalu_prefixes [<<1::24>>, <<1::32>>]

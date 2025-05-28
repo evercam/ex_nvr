@@ -4,6 +4,7 @@ defmodule ExNVRWeb.PromEx.Device do
   use PromEx.Plugin
 
   alias ExNVR.Devices
+  alias ExNVR.Model.Device
   alias PromEx.MetricTypes.Polling
 
   @device_status_event [:ex_nvr, :device, :state]
@@ -78,19 +79,19 @@ defmodule ExNVRWeb.PromEx.Device do
   end
 
   @doc false
-  def device_status() do
-    Enum.each(ExNVR.Devices.list(), &execute/1)
+  def device_status do
+    Enum.each(Devices.list(), &execute/1)
   end
 
   @doc false
-  def device_stream_config() do
-    ip_cameras = ExNVR.Devices.ip_cameras()
+  def device_stream_config do
+    ip_cameras = Devices.ip_cameras()
     Enum.each(ip_cameras, &execute_device_info/1)
     Enum.each(ip_cameras, &execute_stream_config/1)
   end
 
   defp execute(device) do
-    Enum.each(ExNVR.Model.Device.states(), fn state ->
+    Enum.each(Device.states(), fn state ->
       value = if device.state == state, do: 1, else: 0
 
       :telemetry.execute(@device_status_event, %{value: value}, %{

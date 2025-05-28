@@ -26,10 +26,11 @@ defmodule ExNVR.Pipeline.Output.Socket do
   use Membrane.Bin
 
   alias __MODULE__
+  alias ExNVR.Pipelines
   alias Membrane.{H264, H265}
 
   def_options encoding: [
-                spec: ExNVR.Pipelines.Main.encoding(),
+                spec: Pipelines.Main.encoding(),
                 description: "The video encoding"
               ]
 

@@ -128,7 +128,7 @@ defmodule ExNVR.Elements.VideoStreamStatReporter do
     {[notify_parent: {:stats, stats}], state}
   end
 
-  defp init_state() do
+  defp init_state do
     %{
       start_time: Time.monotonic_time(),
       codec: nil,

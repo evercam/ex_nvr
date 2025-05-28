@@ -135,7 +135,7 @@ defmodule ExNVR.Pipeline.Output.HLS do
 
   # arm architecture use a precompiled ffmpeg with OpenH264 encoder which supports constrained_baseline profile
   # x264 support baseline profile
-  defp encoder_profile() do
+  defp encoder_profile do
     case ExNVR.Utils.system_architecture() do
       {"arm", _os, _abi} -> :constrained_baseline
       _other -> :baseline

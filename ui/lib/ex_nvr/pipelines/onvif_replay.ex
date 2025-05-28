@@ -6,6 +6,8 @@ defmodule ExNVR.Pipelines.OnvifReplay do
   require Membrane.Logger
 
   defmodule TimestampFilter do
+    @moduledoc false
+
     use Membrane.Filter
 
     def_input_pad :input, accepted_format: _any, flow_control: :auto

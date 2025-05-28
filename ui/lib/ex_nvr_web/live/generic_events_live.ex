@@ -3,7 +3,7 @@ defmodule ExNVRWeb.GenericEventsLive do
 
   alias ExNVR.Devices
   alias ExNVRWeb.Router.Helpers, as: Routes
-  alias ExNVRWeb.GenericEventsLive.{WebhookConfig, EventsList}
+  alias ExNVRWeb.GenericEventsLive.{EventsList, WebhookConfig}
 
   @impl true
   def render(assigns) do

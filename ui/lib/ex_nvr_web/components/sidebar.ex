@@ -1,4 +1,6 @@
 defmodule ExNVRWeb.Components.Sidebar do
+  @moduledoc false
+
   use ExNVRWeb, :live_component
 
   attr :current_user, :map, required: true

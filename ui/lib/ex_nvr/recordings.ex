@@ -4,12 +4,12 @@ defmodule ExNVR.Recordings do
   """
   import Ecto.Query
 
+  alias __MODULE__.VideoAssembler
   alias Ecto.Multi
   alias ExMP4.{BitStreamFilter, Reader}
   alias ExNVR.Model.{Device, Recording, Run}
   alias ExNVR.Repo
   alias Phoenix.PubSub
-  alias __MODULE__.VideoAssembler
 
   @recordings_topic "recordings"
   @default_end_date ~U(2099-01-01 00:00:00Z)
@@ -293,7 +293,7 @@ defmodule ExNVR.Recordings do
     end)
   end
 
-  def subscribe_to_recording_events() do
+  def subscribe_to_recording_events do
     PubSub.subscribe(ExNVR.PubSub, @recordings_topic)
   end
 

@@ -86,7 +86,7 @@ defmodule ExNVR.Events do
 
   @spec lpr_event_thumbnail(LPR.t()) :: binary() | nil
   def lpr_event_thumbnail(lpr_event) do
-    ExNVR.Model.Device.lpr_thumbnails_dir(lpr_event.device)
+    Device.lpr_thumbnails_dir(lpr_event.device)
     |> Path.join(LPR.plate_name(lpr_event))
     |> File.read()
     |> case do

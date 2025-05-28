@@ -9,7 +9,7 @@ defmodule ExNVR.Decoder.H264 do
   alias Membrane.H264.FFmpeg.Decoder
 
   @impl true
-  def init(), do: Decoder.Native.create()
+  def init, do: Decoder.Native.create()
 
   @impl true
   def decode(decoder, buffer) do

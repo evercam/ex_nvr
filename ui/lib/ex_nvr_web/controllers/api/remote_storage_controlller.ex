@@ -11,8 +11,8 @@ defmodule ExNVRWeb.API.RemoteStorageController do
   import ExNVRWeb.Controller.Helpers
   import ExNVR.Authorization
 
-  alias ExNVR.RemoteStorages
   alias ExNVR.RemoteStorage
+  alias ExNVR.RemoteStorages
   alias Plug.Conn
 
   def authorization_plug(%Conn{} = conn, _opts) do

@@ -1,4 +1,6 @@
 defmodule ExNVR.Devices.SnapshotUploader do
+  @moduledoc false
+
   use GenServer, restart: :transient
 
   require Logger
