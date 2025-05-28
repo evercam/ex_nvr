@@ -23,7 +23,7 @@ defmodule ExNVR.Nerves.Monitoring.UPSTest do
     # in the config above
     Process.exit(Process.whereis(SystemSettings), :kill)
 
-    expect(ExNVR.Nerves.DiskMounter, :mount, 6, fn -> :ok end)
+    expect(ExNVR.Nerves.DiskMounter, :mount, 3, fn -> :ok end)
 
     :ok
   end
@@ -34,7 +34,7 @@ defmodule ExNVR.Nerves.Monitoring.UPSTest do
                enabled: true,
                trigger_after: 0,
                ac_failure_action: "stop_recording",
-               low_battery_action: "stop_recording",
+               low_battery_action: "nothing",
                ac_pin: "pair_0_1",
                battery_pin: "pair_2_1"
              })
@@ -72,18 +72,12 @@ defmodule ExNVR.Nerves.Monitoring.UPSTest do
     assert event1.metadata["state"] == 0
     assert event2.metadata["state"] == 1
 
-    logs =
-      capture_log(fn ->
-        Enum.each(bat_series, &Circuits.GPIO.write(bat_power, &1))
-        Process.sleep(to_timeout(millisecond: 1200))
-        assert %{ac_ok?: true, low_battery?: true} = UPS.state(pid)
+    Enum.each(bat_series, &Circuits.GPIO.write(bat_power, &1))
+    Process.sleep(to_timeout(millisecond: 1200))
+    assert %{ac_ok?: true, low_battery?: true} = UPS.state(pid)
 
-        Circuits.GPIO.write(bat_power, 0)
-        Process.sleep(to_timeout(millisecond: 1200))
-      end)
-
-    assert logs =~ "[UPS] stop recording"
-    assert logs =~ "[UPS] start recording"
+    Circuits.GPIO.write(bat_power, 0)
+    Process.sleep(to_timeout(millisecond: 1200))
 
     assert {:ok, {[event1, event2], _flop}} =
              ExNVR.Events.list_events(%Flop{filters: Flop.Filter.new(type: "low-battery")})

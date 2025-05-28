@@ -5,7 +5,7 @@ defmodule ExNVR.Recordings.Concatenater do
 
   import ExMP4.Helper, only: [timescalify: 3]
 
-  alias ExMP4.{Reader, Track}
+  alias ExMP4.{BitStreamFilter, Reader, Track}
   alias ExNVR.Model.Device
   alias ExNVR.Recordings
 
@@ -182,6 +182,7 @@ defmodule ExNVR.Recordings.Concatenater do
           state.reader
           |> Reader.stream(tracks: [track.id])
           |> Enum.reduce_while(0, fn metadata, acc ->
+            # credo:disable-for-next-line
             cond do
               metadata.sync? -> {:cont, metadata.dts}
               metadata.dts >= offset -> {:halt, acc}
@@ -233,7 +234,7 @@ defmodule ExNVR.Recordings.Concatenater do
     {sample, _bit_stream_filter} =
       reader
       |> Reader.read_sample(sample_metadata)
-      |> then(&ExMP4.BitStreamFilter.MP4ToAnnexb.filter(filter, &1))
+      |> then(&BitStreamFilter.MP4ToAnnexb.filter(filter, &1))
 
     sample
   end

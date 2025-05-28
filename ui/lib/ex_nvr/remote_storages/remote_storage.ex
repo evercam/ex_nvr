@@ -1,4 +1,6 @@
 defmodule ExNVR.RemoteStorage do
+  @moduledoc false
+
   use Ecto.Schema
 
   alias Ecto.Changeset
@@ -13,6 +15,8 @@ defmodule ExNVR.RemoteStorage do
         }
 
   defmodule S3Config do
+    @moduledoc false
+
     use Ecto.Schema
 
     alias Ecto.Changeset
@@ -44,6 +48,7 @@ defmodule ExNVR.RemoteStorage do
   end
 
   defmodule HttpConfig do
+    @moduledoc false
     use Ecto.Schema
 
     alias Ecto.Changeset

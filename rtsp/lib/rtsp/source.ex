@@ -7,8 +7,8 @@ defmodule ExNVR.RTSP.Source do
 
   import __MODULE__.PacketSplitter
 
+  alias ExNVR.RTSP.{OnvifReplayExtension, Parser}
   alias ExNVR.RTSP.Source.{ConnectionManager, StreamHandler}
-  alias ExNVR.RTSP.Parser
   alias Membrane.{H264, H265, Time}
 
   @initial_recv_buffer 1_000_000
@@ -156,6 +156,7 @@ defmodule ExNVR.RTSP.Source do
 
             ssrc = rtp_packet.ssrc
 
+            # credo:disable-for-lines:2
             datetime =
               case state do
                 %State{onvif_replay: true} ->
@@ -209,7 +210,7 @@ defmodule ExNVR.RTSP.Source do
   end
 
   defp decode_onvif_replay_extension(%ExRTP.Packet{extension_profile: 0xABAC} = packet) do
-    extension = ExNVR.RTSP.OnvifReplayExtension.decode(packet.extensions)
+    extension = OnvifReplayExtension.decode(packet.extensions)
     %{packet | extensions: extension}
   end
 

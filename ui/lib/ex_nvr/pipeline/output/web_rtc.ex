@@ -9,8 +9,8 @@ defmodule ExNVR.Pipeline.Output.WebRTC do
 
   import Bitwise
 
-  alias ExNVR.RTP.Payloader
   alias ExNVR.Pipeline.Event.StreamClosed
+  alias ExNVR.RTP.Payloader
   alias ExWebRTC.{MediaStreamTrack, PeerConnection, RTPCodecParameters, SessionDescription}
   alias Membrane.{H264, H265, Time}
 

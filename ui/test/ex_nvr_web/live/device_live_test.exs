@@ -6,7 +6,7 @@ defmodule ExNVRWeb.DeviceLiveTest do
   import ExNVR.{AccountsFixtures, DevicesFixtures}
   import Phoenix.LiveViewTest
 
-  alias ExNVR.{Devices}
+  alias ExNVR.Devices
   alias ExNVR.Model.Device
 
   @moduletag :tmp_dir

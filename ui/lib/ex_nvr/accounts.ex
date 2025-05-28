@@ -5,7 +5,7 @@ defmodule ExNVR.Accounts do
 
   import Ecto.Query, warn: false
 
-  alias ExNVR.Accounts.{User, UserToken, UserNotifier}
+  alias ExNVR.Accounts.{User, UserNotifier, UserToken}
   alias ExNVR.Repo
 
   def get_user_by_email(email) when is_binary(email) do
@@ -52,7 +52,7 @@ defmodule ExNVR.Accounts do
     User.update_changeset(user, attrs, validate_email: false)
   end
 
-  def count_users(), do: Repo.aggregate(User, :count)
+  def count_users, do: Repo.aggregate(User, :count)
 
   ## Settings
   def change_user_info(user, attrs \\ %{}, opts \\ []) do
@@ -240,7 +240,7 @@ defmodule ExNVR.Accounts do
     Repo.one(query)
   end
 
-  def delete_all_expired_tokens() do
+  def delete_all_expired_tokens do
     UserToken.get_expired_tokens()
     |> Repo.delete_all()
   end

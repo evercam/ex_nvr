@@ -11,8 +11,8 @@ defmodule ExNVR.Utils do
     if device_id, do: Path.join(dir, device_id), else: dir
   end
 
-  @spec unix_socket_dir() :: Path.t()
-  def unix_socket_dir(), do: @unix_socket_dir
+  @spec unix_socket_dir :: Path.t()
+  def unix_socket_dir, do: @unix_socket_dir
 
   @spec unix_socket_path(Device.id()) :: Path.t()
   def unix_socket_path(device_id) do
@@ -22,8 +22,8 @@ defmodule ExNVR.Utils do
   @spec pipeline_name(Device.t()) :: atom()
   def pipeline_name(device), do: :"pipeline_#{device.id}"
 
-  @spec run_main_pipeline?() :: boolean()
-  def run_main_pipeline?(), do: Application.get_env(:ex_nvr, :run_pipelines, true)
+  @spec run_main_pipeline? :: boolean()
+  def run_main_pipeline?, do: Application.get_env(:ex_nvr, :run_pipelines, true)
 
   @spec generate_token(non_neg_integer()) :: binary()
   def generate_token(token_len \\ 16),
@@ -61,8 +61,8 @@ defmodule ExNVR.Utils do
   @doc """
   Get the system architecture
   """
-  @spec system_architecture() :: {binary(), binary(), binary()}
-  def system_architecture() do
+  @spec system_architecture :: {binary(), binary(), binary()}
+  def system_architecture do
     :erlang.system_info(:system_architecture)
     |> List.to_string()
     |> String.split("-")

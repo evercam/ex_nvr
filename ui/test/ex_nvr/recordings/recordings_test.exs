@@ -6,7 +6,7 @@ defmodule ExNVR.RecordingTest do
   import ExNVR.DevicesFixtures
   import ExNVR.RecordingsFixtures
 
-  alias ExNVR.Model.{Run, Recording}
+  alias ExNVR.Model.{Recording, Run}
   alias ExNVR.Recordings
 
   @moduletag :tmp_dir

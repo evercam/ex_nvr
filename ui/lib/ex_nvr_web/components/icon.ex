@@ -1,4 +1,6 @@
 defmodule ExNVRWeb.Components.Icon do
+  @moduledoc false
+
   use Phoenix.Component
 
   attr :name, :string, required: true, doc: "Name of the icon (e.g., 'hero-home', 'svg-github')"

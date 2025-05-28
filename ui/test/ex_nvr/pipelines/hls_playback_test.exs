@@ -7,6 +7,7 @@ defmodule ExNVR.Pipelines.HlsPlaybackTest do
   import ExNVR.HLS.Assertions
   import Membrane.Testing.Assertions
 
+  alias ExNVR.Pipelines.HlsPlayback
   alias Membrane.Testing
 
   @moduletag :tmp_dir
@@ -31,19 +32,19 @@ defmodule ExNVR.Pipelines.HlsPlaybackTest do
     test "playback recording", %{device: device, tmp_dir: out_dir} do
       pid = prepare_pipeline(device, directory: out_dir, stream: :high)
 
-      ExNVR.Pipelines.HlsPlayback.start_streaming(pid)
+      HlsPlayback.start_streaming(pid)
 
       assert_pipeline_notified(pid, :sink, {:track_playable, :playback})
 
       check_hls_playlist(out_dir, 2)
 
-      ExNVR.Pipelines.HlsPlayback.stop_streaming(pid)
+      HlsPlayback.stop_streaming(pid)
     end
   end
 
   defp prepare_pipeline(device, options) do
     options = [
-      module: ExNVR.Pipelines.HlsPlayback,
+      module: HlsPlayback,
       custom_args:
         [device: device, start_date: ~U(2023-06-23 10:00:02Z), duration: 0]
         |> Keyword.merge(options)

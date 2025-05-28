@@ -52,7 +52,7 @@ defmodule ExNVR.Pipeline.Output.SocketPipelineTest do
       Pipeline.terminate(pid)
     end
 
-    defp start_pipeline() do
+    defp start_pipeline do
       spec = [
         child(:source, ExNVR.Support.TestSource)
         |> child(:parser, Membrane.H264.Parser)

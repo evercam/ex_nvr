@@ -180,7 +180,7 @@ defmodule ExNVRWeb.DeviceLive do
     end
   end
 
-  defp list_remote_storages() do
+  defp list_remote_storages do
     RemoteStorages.list() |> Enum.map(& &1.name)
   end
 
@@ -192,7 +192,7 @@ defmodule ExNVRWeb.DeviceLive do
     end
   end
 
-  defp get_disks_data() do
+  defp get_disks_data do
     if Application.get_env(:ex_nvr, :env) == :test do
       [{"/tmp", {1_000_000, 1}}]
     else

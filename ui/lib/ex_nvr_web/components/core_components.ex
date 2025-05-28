@@ -17,8 +17,9 @@ defmodule ExNVRWeb.CoreComponents do
   use Gettext, backend: ExNVRWeb.Gettext
   use Phoenix.Component
 
-  alias Phoenix.LiveView.JS
   alias ExNVRWeb.Components
+  alias Phoenix.HTML
+  alias Phoenix.LiveView.JS
 
   @doc """
   Renders a modal.
@@ -269,7 +270,7 @@ defmodule ExNVRWeb.CoreComponents do
 
   slot :inner_block
 
-  def input(%{field: %Phoenix.HTML.FormField{} = field} = assigns) do
+  def input(%{field: %HTML.FormField{} = field} = assigns) do
     assigns
     |> assign(field: nil, id: assigns.id || field.id)
     |> assign(:errors, Enum.map(field.errors, &translate_error(&1)))
@@ -280,7 +281,7 @@ defmodule ExNVRWeb.CoreComponents do
 
   def input(%{type: "toggle", value: value} = assigns) do
     assigns =
-      assign_new(assigns, :checked, fn -> Phoenix.HTML.Form.normalize_value("checkbox", value) end)
+      assign_new(assigns, :checked, fn -> HTML.Form.normalize_value("checkbox", value) end)
 
     ~H"""
     <div phx-feedback-for={@name}>
@@ -305,7 +306,7 @@ defmodule ExNVRWeb.CoreComponents do
 
   def input(%{type: "checkbox", value: value} = assigns) do
     assigns =
-      assign_new(assigns, :checked, fn -> Phoenix.HTML.Form.normalize_value("checkbox", value) end)
+      assign_new(assigns, :checked, fn -> HTML.Form.normalize_value("checkbox", value) end)
 
     ~H"""
     <div phx-feedback-for={@name}>

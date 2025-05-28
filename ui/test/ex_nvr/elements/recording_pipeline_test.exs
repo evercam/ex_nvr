@@ -102,22 +102,17 @@ defmodule ExNVR.Elements.RecordingPipelineTest do
         start_date: ~U(2023-09-05 10:00:03Z)
       }
 
-      pid =
-        Membrane.Testing.Pipeline.start_link_supervised!(
-          spec: [child(:source, struct(Recording, params))]
-        )
+      pid = Pipeline.start_link_supervised!(spec: [child(:source, struct(Recording, params))])
 
       refute_pipeline_notified(pid, :source, {:new_track, _track_id, _track}, 500)
 
-      Membrane.Testing.Pipeline.terminate(pid)
+      Pipeline.terminate(pid)
     end
   end
 
   defp perform_test(encoding, out_path, ref_path, source_params) do
     pid =
-      Membrane.Testing.Pipeline.start_link_supervised!(
-        spec: [child(:source, struct(Recording, source_params))]
-      )
+      Pipeline.start_link_supervised!(spec: [child(:source, struct(Recording, source_params))])
 
     assert_pipeline_notified(
       pid,

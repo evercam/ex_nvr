@@ -110,9 +110,6 @@ defmodule ExNVR.Pipelines.MainPipelineTest do
     assert File.exists?(hls_dir)
     assert Path.join(hls_dir, "*.mp4") |> Path.wildcard() |> length() == 1
 
-    # TODO: test rtsp sources and add tests for storage.
-    # by default file sources are not stored on the filesystem.
-
     assert :ok = Testing.Pipeline.terminate(pid)
   end
 

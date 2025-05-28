@@ -4,6 +4,8 @@ defmodule ExNVRWeb.Api.EventControllerTest do
 
   import ExNVR.{AccountsFixtures, DevicesFixtures, EventsFixtures}
 
+  alias ExNVR.Model.Device
+
   @moduletag :tmp_dir
 
   @plate_image "test/fixtures/license-plate.jpg"
@@ -50,7 +52,7 @@ defmodule ExNVRWeb.Api.EventControllerTest do
       )
       |> response(201)
 
-      assert {:ok, [_plate]} = File.ls(ExNVR.Model.Device.lpr_thumbnails_dir(device))
+      assert {:ok, [_plate]} = File.ls(Device.lpr_thumbnails_dir(device))
     end
 
     test "create a new generic event", %{conn: conn, device: device, token: token} do

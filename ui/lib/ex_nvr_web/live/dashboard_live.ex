@@ -3,8 +3,8 @@ defmodule ExNVRWeb.DashboardLive do
 
   alias Ecto.Changeset
   alias ExNVR.Devices
-  alias ExNVR.Recordings
   alias ExNVR.Model.Device
+  alias ExNVR.Recordings
   alias ExNVRWeb.Router.Helpers, as: Routes
 
   @durations [
@@ -332,7 +332,7 @@ defmodule ExNVRWeb.DashboardLive do
   defp format_date(nil), do: nil
   defp format_date(datetime), do: DateTime.to_iso8601(datetime)
 
-  defp durations(), do: @durations
+  defp durations, do: @durations
 
   def validate_footage_req_params(params, timezone) do
     types = %{

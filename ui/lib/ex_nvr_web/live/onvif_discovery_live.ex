@@ -6,8 +6,9 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
   require Logger
 
   alias Ecto.Changeset
-  alias Onvif.{Devices, Media2}
+  alias ExNVR.Devices
   alias Onvif.Devices.NetworkInterface
+  alias Onvif.Media2
 
   @scope_regex ~r[^onvif://www.onvif.org/(name|hardware)/(.*)]
 
@@ -39,11 +40,12 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
     case validate_discover_params(params) do
       {:ok, params} ->
         {onvif_devices, socket} =
-          ExNVR.Devices.Onvif.discover(
+          Devices.Onvif.discover(
             probe_timeout: to_timeout(second: params[:timeout]),
             ip_address: params[:ip_addr]
           )
           |> Enum.map_reduce(socket, fn probe, socket ->
+            # credo:disable-for-next-line
             case get_onvif_device(probe, params.username, params.password) do
               {:ok, device} ->
                 {device, socket}
@@ -136,7 +138,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
 
   def handle_event("auto-configure", _params, socket) do
     device = socket.assigns.selected_device
-    _auto_config_result = ExNVR.Devices.Onvif.auto_configure(device)
+    _auto_config_result = Devices.Onvif.auto_configure(device)
     device_details = fetch_onvif_details(device)
 
     {:noreply,
@@ -235,7 +237,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
   end
 
   defp get_network_interface(%CameraDetails{} = details) do
-    case Devices.get_network_interfaces(details.onvif_device) do
+    case Onvif.Devices.get_network_interfaces(details.onvif_device) do
       {:ok, interfaces} -> %CameraDetails{details | network_interface: List.first(interfaces)}
       _error -> details
     end
@@ -267,7 +269,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
 
   defp get_devices(%{network_interface: net_interface} = details) do
     mac_addr = net_interface.info.hw_address
-    %{details | devices: ExNVR.Devices.list(mac: mac_addr)}
+    %{details | devices: Devices.list(mac: mac_addr)}
   end
 
   defp do_reorder_profiles([], _token, _direction), do: []
@@ -317,7 +319,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
     if ipv4.config.dhcp, do: ipv4.config.from_dhcp.address, else: ipv4.config.manual.address
   end
 
-  defp ip_addresses() do
+  defp ip_addresses do
     case :inet.getifaddrs() do
       {:ok, if_addrs} ->
         if_addrs

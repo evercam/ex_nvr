@@ -11,7 +11,7 @@ defmodule ExNVR.RemoteStorages.Store.S3 do
   @spec save_recording(Device.t(), Recording.t(), opts :: Keyword.t()) :: :ok | {:error, any()}
   def save_recording(device, recording, opts) do
     recording_path = Recordings.recording_path(device, recording)
-    s3_path = String.trim(recording_path, ExNVR.Model.Device.base_dir(device))
+    s3_path = String.trim(recording_path, Device.base_dir(device))
 
     recording_path
     |> S3.Upload.stream_file()

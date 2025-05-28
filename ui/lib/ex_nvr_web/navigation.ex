@@ -1,4 +1,6 @@
 defmodule ExNVRWeb.Navigation do
+  @moduledoc false
+
   use ExNVRWeb, :live_view
 
   def on_mount(:set_current_path, _params, _session, socket) do

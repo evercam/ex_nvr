@@ -1,4 +1,6 @@
 defmodule ExNVR.Events.LPR do
+  @moduledoc false
+
   use Ecto.Schema
 
   alias Ecto.Changeset
@@ -34,6 +36,8 @@ defmodule ExNVR.Events.LPR do
   @type t :: %__MODULE__{}
 
   defmodule Metadata do
+    @moduledoc false
+
     use Ecto.Schema
 
     alias Ecto.Changeset

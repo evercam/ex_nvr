@@ -3,7 +3,7 @@ defmodule ExNVRWeb.UserLive do
 
   use ExNVRWeb, :live_view
 
-  alias ExNVR.{Accounts}
+  alias ExNVR.Accounts
   alias ExNVR.Accounts.User
 
   def mount(%{"id" => "new"}, _session, socket) do

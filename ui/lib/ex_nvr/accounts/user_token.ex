@@ -1,4 +1,6 @@
 defmodule ExNVR.Accounts.UserToken do
+  @moduledoc false
+
   use Ecto.Schema
   import Ecto.Query
   alias ExNVR.Accounts.UserToken
@@ -205,7 +207,7 @@ defmodule ExNVR.Accounts.UserToken do
 
   The query returns the user_tokens for all possible contexts.
   """
-  def get_expired_tokens() do
+  def get_expired_tokens do
     tokens_validity = [
       {"session", @session_validity_in_days},
       {"access", @access_token_validity_in_days},
