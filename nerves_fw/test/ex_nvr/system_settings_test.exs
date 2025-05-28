@@ -18,8 +18,8 @@ defmodule ExNVR.SystemSettingsTest do
     },
     ups: %SystemSettings.State.UPS{
       enabled: false,
-      ac_pin: "GPIO23",
-      battery_pin: "GPIO16",
+      ac_pin: "GPIO27",
+      battery_pin: "GPIO22",
       ac_failure_action: :nothing,
       low_battery_action: :stop_recording
     }

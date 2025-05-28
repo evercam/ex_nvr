@@ -22,7 +22,7 @@ defmodule ExNVR.RTSP.StreamHandlerTest do
                packet
              end)
              |> Enum.reduce({[], stream_handler}, fn packet, {buffers, handler} ->
-               {new_buffers, handler} = StreamHandler.handle_packet(handler, packet)
+               {new_buffers, handler} = StreamHandler.handle_packet(handler, packet, DateTime.utc_now())
                {buffers ++ new_buffers, handler}
              end)
 
