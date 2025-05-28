@@ -85,7 +85,7 @@ defmodule ExNVR.NervesWeb.SystemSettingsLive do
                     options={gpio_pins()}
                   />
                   <.input
-                    field={@ups_form[:low_battery_pin]}
+                    field={@ups_form[:battery_pin]}
                     label="Low Battery GPIO Pin"
                     type="select"
                     options={gpio_pins()}
@@ -95,6 +95,7 @@ defmodule ExNVR.NervesWeb.SystemSettingsLive do
               <.separator />
               <div class="flex justify-end">
                 <button
+                  id="ups-submit-button"
                   type="submit"
                   phx-disable-with="Updating..."
                   class="phx-submit-loading:opacity-75 focus:outline-none text-white bg-green-700 hover:bg-green-800 focus:ring-4 focus:ring-green-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800"
@@ -111,9 +112,12 @@ defmodule ExNVR.NervesWeb.SystemSettingsLive do
   end
 
   def mount(_params, _session, socket) do
-    ups_settings = SystemSettings.get_settings().ups
-    ups_form = SystemSettings.State.ups_changeset(ups_settings) |> to_form()
-    {:ok, assign(socket, ups_form: ups_form, ups_enabled: ups_settings.enabled)}
+    socket =
+      socket
+      |> assign_ups_settings()
+      |> assign_ups_form()
+
+    {:ok, socket}
   end
 
   def handle_event("enable-ups", %{"ups" => %{"enabled" => enabled}}, socket) do
@@ -123,15 +127,14 @@ defmodule ExNVR.NervesWeb.SystemSettingsLive do
   def handle_event("submit", %{"ups" => ups}, socket) do
     case SystemSettings.update_ups_settings(ups) do
       {:ok, %{ups: ups_settings}} ->
-        ups_form = SystemSettings.State.ups_changeset(ups_settings) |> to_form()
-
         socket
-        |> assign(ups_form: ups_form, ups_enabled: ups_settings.enabled)
+        |> assign_ups_settings(ups_settings)
+        |> assign_ups_form()
         |> put_flash(:info, "Successfully updated UPS settings")
         |> then(&{:noreply, &1})
 
       {:error, %Ecto.Changeset{} = changeset} ->
-        {:noreply, assign(socket, ups_form: to_form(changeset))}
+        {:noreply, assign_ups_form(socket, changeset.changes[:ups])}
 
       {:error, reason} ->
         {:noreply,
@@ -139,6 +142,21 @@ defmodule ExNVR.NervesWeb.SystemSettingsLive do
     end
   end
 
+  def handle_event(event, _params, socket) do
+    {:noreply, put_flash(socket, :error, "unexpected event: #{inspect(event)}")}
+  end
+
+  defp assign_ups_settings(socket, settings \\ nil) do
+    ups_settings = settings || SystemSettings.get_settings().ups
+    assign(socket, ups_settings: ups_settings, ups_enabled: ups_settings.enabled)
+  end
+
+  defp assign_ups_form(socket, changeset \\ nil) do
+    changeset = changeset || SystemSettings.State.ups_changeset(socket.assigns.ups_settings)
+    assign(socket, ups_form: to_form(changeset))
+  end
+
+  # View functions
   defp disabled_class(false), do: ["pointer-events-none opacity-50"]
   defp disabled_class(true), do: []
 

@@ -79,6 +79,8 @@ defmodule ExNVR.Nerves.SystemSettings do
         :trigger_after
       ])
       |> validate_number(:trigger_after, greater_than_or_equal_to: 0, less_than_or_equal_to: 300)
+      |> validate_pins_not_equal()
+      |> validate_ups_actions()
     end
 
     defp power_schedule_changeset(changeset, params) do
@@ -87,6 +89,28 @@ defmodule ExNVR.Nerves.SystemSettings do
 
     defp router_changeset(changeset, params) do
       cast(changeset, params, [:username, :password])
+    end
+
+    defp validate_pins_not_equal(%{valid?: false} = changeset), do: changeset
+
+    defp validate_pins_not_equal(changeset) do
+      ac_pin = fetch_field!(changeset, :ac_pin)
+      battery_pin = fetch_field!(changeset, :battery_pin)
+
+      if ac_pin == battery_pin,
+        do: add_error(changeset, :battery_pin, "AC Pin and Battery Pin should not be the same"),
+        else: changeset
+    end
+
+    defp validate_ups_actions(%{valid?: false} = changeset), do: changeset
+
+    defp validate_ups_actions(changeset) do
+      ac_action = fetch_field!(changeset, :ac_failure_action)
+      battery_action = fetch_field!(changeset, :low_battery_action)
+
+      if ac_action == :stop_recording and battery_action == :stop_recording,
+        do: add_error(changeset, :low_battery_action, "Both actions cannot be 'stop_recording'"),
+        else: changeset
     end
   end
 

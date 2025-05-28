@@ -1,6 +1,6 @@
 defmodule ExNVR.SystemSettingsTest do
   @moduledoc false
-  use ExUnit.Case, async: true
+  use ExNVR.DataCase, async: true
 
   @moduletag :tmp_dir
 
@@ -87,5 +87,24 @@ defmodule ExNVR.SystemSettingsTest do
              username: nil,
              password: nil
            }
+  end
+
+  test "ups: ac and battery pins should not be the same" do
+    assert {:error, changeset} =
+             SystemSettings.update_ups_settings(%{ac_pin: "GPIO10", battery_pin: "GPIO10"})
+
+    assert %{ups: %{battery_pin: ["AC Pin and Battery Pin should not be the same"]}} =
+             errors_on(changeset)
+  end
+
+  test "ups: ac and battery actions should not be both 'stop_recording'" do
+    assert {:error, changeset} =
+             SystemSettings.update_ups_settings(%{
+               ac_failure_action: "stop_recording",
+               low_battery_action: "stop_recording"
+             })
+
+    assert %{ups: %{low_battery_action: ["Both actions cannot be 'stop_recording'"]}} =
+             errors_on(changeset)
   end
 end
