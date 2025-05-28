@@ -7,9 +7,11 @@ defmodule ExNVRWeb.Components.Sidebar do
   attr :current_path, :string, default: nil
 
   def sidebar(assigns) do
+    role = assigns.current_user && assigns.current_user.role
+
     assigns =
       groups()
-      |> Enum.map(&filter_group_by_role(&1, assigns.current_user.role))
+      |> Enum.map(&filter_group_by_role(&1, role))
       |> Enum.reject(&(&1 == []))
       |> Enum.with_index()
       |> then(&Map.put(assigns, :groups, &1))
