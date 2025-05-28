@@ -23,27 +23,30 @@ defmodule ExNVR.Nerves.Monitoring.UPSTest do
     # in the config above
     Process.exit(Process.whereis(SystemSettings), :kill)
 
-    expect(ExNVR.Nerves.DiskMounter, :mount, 3, fn -> :ok end)
+    expect(ExNVR.Nerves.DiskMounter, :mount, 6, fn -> :ok end)
 
     :ok
   end
 
   test "Power state" do
+    assert {:ok, _settings} =
+             SystemSettings.update_ups_settings(%{
+               enabled: true,
+               trigger_after: 0,
+               ac_failure_action: "stop_recording",
+               low_battery_action: "stop_recording",
+               ac_pin: "pair_0_1",
+               battery_pin: "pair_2_1"
+             })
+
     # Power pins (3.3v)
-    assert {:ok, ac_power} = Circuits.GPIO.open({"gpiochip0", 0}, :output)
-    assert {:ok, bat_power} = Circuits.GPIO.open({"gpiochip0", 4}, :output)
+    assert {:ok, ac_power} = Circuits.GPIO.open("pair_0_0", :output)
+    assert {:ok, bat_power} = Circuits.GPIO.open("pair_2_0", :output)
 
     Circuits.GPIO.write(ac_power, 1)
 
-    pid = start_link_supervised!({UPS, [ac_pin: {"gpiochip0", 1}, battery_pin: {"gpiochip0", 5}]})
-    refute UPS.state(false, pid)
-    assert %{ac_ok?: true, low_battery?: false} = UPS.state(true, pid)
-
-    SystemSettings.update_ups_settings(%{
-      trigger_after: 0,
-      ac_failure_action: "stop_recording",
-      low_battery_action: "stop_recording"
-    })
+    pid = start_link_supervised!({UPS, []})
+    assert %{ac_ok?: true, low_battery?: false} = UPS.state(pid)
 
     # Simulate switch bouncing
     ac_series = [1, 1, 0, 1, 0, 0, 0, 0]
@@ -53,10 +56,11 @@ defmodule ExNVR.Nerves.Monitoring.UPSTest do
       capture_log(fn ->
         Enum.each(ac_series, &Circuits.GPIO.write(ac_power, &1))
         Process.sleep(to_timeout(millisecond: 1200))
-        assert %{ac_ok?: false, low_battery?: false} = UPS.state(false, pid)
+        assert %{ac_ok?: false, low_battery?: false} = UPS.state(pid)
 
         Circuits.GPIO.write(ac_power, 1)
         Process.sleep(to_timeout(millisecond: 1200))
+        assert %{ac_ok?: true, low_battery?: false} = UPS.state(pid)
       end)
 
     assert logs =~ "[UPS] stop recording"
@@ -72,7 +76,7 @@ defmodule ExNVR.Nerves.Monitoring.UPSTest do
       capture_log(fn ->
         Enum.each(bat_series, &Circuits.GPIO.write(bat_power, &1))
         Process.sleep(to_timeout(millisecond: 1200))
-        assert %{ac_ok?: true, low_battery?: true} = UPS.state(false, pid)
+        assert %{ac_ok?: true, low_battery?: true} = UPS.state(pid)
 
         Circuits.GPIO.write(bat_power, 0)
         Process.sleep(to_timeout(millisecond: 1200))
@@ -87,6 +91,7 @@ defmodule ExNVR.Nerves.Monitoring.UPSTest do
     assert event1.metadata["state"] == 1
     assert event2.metadata["state"] == 0
 
-    assert SystemSettings.get_settings().ups.enabled
+    assert {:ok, _settings} = SystemSettings.update_ups_settings(%{enabled: false})
+    refute UPS.state(pid)
   end
 end

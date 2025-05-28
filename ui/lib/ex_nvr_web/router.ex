@@ -112,6 +112,7 @@ defmodule ExNVRWeb.Router do
     live_session :require_authenticated_user,
       on_mount: [
         {ExNVRWeb.UserAuth, :ensure_authenticated},
+        {ExNVRWeb.UserAuth, :ensure_user_is_admin},
         {ExNVRWeb.Navigation, :attach_hook}
       ] do
       live "/dashboard", DashboardLive, :new
@@ -140,9 +141,9 @@ defmodule ExNVRWeb.Router do
   end
 
   scope "/", ExNVRWeb do
-    pipe_through [:browser, :require_authenticated_user, :require_admin_user]
+    pipe_through [:browser]
 
-    live_session :require_admin_user,
+    live_session :admin_routes,
       on_mount: [
         {ExNVRWeb.UserAuth, :ensure_authenticated},
         {ExNVRWeb.UserAuth, :ensure_user_is_admin},
@@ -164,5 +165,17 @@ defmodule ExNVRWeb.Router do
   # only when running the nerves image
   if Application.compile_env(:ex_nvr, :nerves_routes) do
     # nerves live routes, controllers and API endpoints goes here
+    scope "/", ExNVR.NervesWeb do
+      pipe_through [:browser]
+
+      live_session :nerves_system_settings,
+        on_mount: [
+          {ExNVRWeb.UserAuth, :ensure_authenticated},
+          {ExNVRWeb.UserAuth, :ensure_user_is_admin},
+          {ExNVRWeb.Navigation, :attach_hook}
+        ] do
+        live "/nerves/system-settings", SystemSettingsLive, :index
+      end
+    end
   end
 end

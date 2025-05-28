@@ -68,15 +68,7 @@ defmodule ExNVR.Nerves.SystemSettings do
       |> cast_embed(:ups, with: &ups_changeset/2)
     end
 
-    defp power_schedule_changeset(changeset, params) do
-      cast(changeset, params, [:schedule, :timezone, :action])
-    end
-
-    defp router_changeset(changeset, params) do
-      cast(changeset, params, [:username, :password])
-    end
-
-    defp ups_changeset(changeset, params) do
+    def ups_changeset(changeset, params \\ %{}) do
       changeset
       |> cast(params, [
         :enabled,
@@ -87,6 +79,14 @@ defmodule ExNVR.Nerves.SystemSettings do
         :trigger_after
       ])
       |> validate_number(:trigger_after, greater_than_or_equal_to: 0, less_than_or_equal_to: 300)
+    end
+
+    defp power_schedule_changeset(changeset, params) do
+      cast(changeset, params, [:schedule, :timezone, :action])
+    end
+
+    defp router_changeset(changeset, params) do
+      cast(changeset, params, [:username, :password])
     end
   end
 
@@ -140,20 +140,26 @@ defmodule ExNVR.Nerves.SystemSettings do
 
   @impl true
   def handle_call({:update_router_settings, params}, _from, state) do
-    state = do_update_settings(state, %{router: params})
-    {:reply, state.settings, state}
+    case do_update_settings(state, %{router: params}) do
+      {:ok, state} -> {:reply, {:ok, state.settings}, state}
+      error -> {:reply, error, state}
+    end
   end
 
   @impl true
   def handle_call({:update_power_schedule_settings, params}, _from, state) do
-    state = do_update_settings(state, %{power_schedule: params})
-    {:reply, state.settings, state}
+    case do_update_settings(state, %{power_schedule: params}) do
+      {:ok, state} -> {:reply, {:ok, state.settings}, state}
+      error -> {:reply, error, state}
+    end
   end
 
   @impl true
   def handle_call({:update_ups_settings, params}, _from, state) do
-    state = do_update_settings(state, %{ups: params})
-    {:reply, state.settings, state}
+    case do_update_settings(state, %{ups: params}) do
+      {:ok, state} -> {:reply, {:ok, state.settings}, state}
+      error -> {:reply, error, state}
+    end
   end
 
   defp do_update_settings(state, params) do
@@ -167,11 +173,7 @@ defmodule ExNVR.Nerves.SystemSettings do
         )
       end
 
-      %{state | settings: new_settings}
-    else
-      {:error, reason} ->
-        Logger.error("Failed to update settings: #{inspect(reason)}")
-        state
+      {:ok, %{state | settings: new_settings}}
     end
   end
 
