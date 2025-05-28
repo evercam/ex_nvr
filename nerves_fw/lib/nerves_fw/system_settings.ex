@@ -39,8 +39,8 @@ defmodule ExNVR.Nerves.SystemSettings do
       embeds_one :ups, UPS, primary_key: false, on_replace: :update do
         @derive JSON.Encoder
         field :enabled, :boolean, default: false
-        field :ac_pin, :string, default: "GPIO23"
-        field :battery_pin, :string, default: "GPIO16"
+        field :ac_pin, :string, default: "GPIO27"
+        field :battery_pin, :string, default: "GPIO22"
 
         field :ac_failure_action, Ecto.Enum,
           values: ~w(power_off stop_recording nothing)a,

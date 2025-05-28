@@ -11,7 +11,8 @@ defmodule ExNVR.Nerves.RemoteConfigHandler do
     settings = SystemSettings.get_settings()
 
     with {:ok, _new_settings} <- SystemSettings.update_router_settings(config["router"]),
-         {:ok, new_settings} <- SystemSettings.update_ups_settings(config["ups"]) do
+         {:ok, new_settings} <-
+           SystemSettings.update_power_schedule_settings(config["power_schedule"]) do
       if power_schedule_updated?(settings.power_schedule, new_settings.power_schedule) do
         Logger.info("[RemoteConfigHandler] Updating router schedule")
         update_router_schedule(new_settings.power_schedule)
@@ -19,7 +20,7 @@ defmodule ExNVR.Nerves.RemoteConfigHandler do
     else
       {:error, reason} ->
         Logger.error(
-          "[RemoteConfigHandler] Failed to update router or UPS settings: #{inspect(reason)}"
+          "[RemoteConfigHandler] Failed to update router or power schedule settings: #{inspect(reason)}"
         )
     end
   end
