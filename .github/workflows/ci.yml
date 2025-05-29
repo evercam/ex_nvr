@@ -15,6 +15,7 @@ jobs:
     strategy:
       matrix:
         folder: [rtsp, ui, nerves_fw]
+      fail-fast: false
 
     defaults:
       run:
