@@ -17,19 +17,19 @@ defmodule ExNVR.RTSP.Source.StreamHandler do
           clock_rate: pos_integer(),
           parser_mod: module(),
           parser_state: any(),
-          buffered_actions: [],
           wallclock_timestamp: DateTime.t(),
           previous_seq_num: integer() | nil,
-          last_replay_timestamp: DateTime.t()
+          last_replay_timestamp: DateTime.t(),
+          control_path: String.t()
         }
 
   defstruct [
     :parser_mod,
     :parser_state,
+    :control_path,
     timestamps: nil,
     wallclock_timestamp: nil,
     clock_rate: 90_000,
-    buffered_actions: [],
     previous_seq_num: nil,
     last_replay_timestamp: ~U(1970-01-01 00:00:00Z)
   ]

@@ -50,27 +50,27 @@ defmodule ExNVR.Pipeline.Source.RTSP do
   end
 
   @impl true
-  def handle_child_notification({:new_track, ssrc, track}, :main_stream, _ctx, state) do
-    track = Track.new(track.type, track.rtpmap.encoding)
+  def handle_child_notification({:tracks, tracks}, :main_stream, _ctx, state) do
+    tracks = Enum.map(tracks, &{&1.control_path, Track.new(&1.type, &1.rtpmap.encoding)})
     state = %{state | main_stream_reconnect_attempt: 0}
-    {[notify_parent: {:main_stream, ssrc, track}], state}
+    {[notify_parent: {:main_stream, tracks}], state}
   end
 
   @impl true
-  def handle_child_notification({:new_track, ssrc, track}, :sub_stream, _ctx, state) do
-    track = Track.new(track.type, track.rtpmap.encoding)
+  def handle_child_notification({:tracks, tracks}, :sub_stream, _ctx, state) do
+    tracks = Enum.map(tracks, &{&1.control_path, Track.new(&1.type, &1.rtpmap.encoding)})
     state = %{state | sub_stream_reconnect_attempt: 0}
-    {[notify_parent: {:sub_stream, ssrc, track}], state}
+    {[notify_parent: {:sub_stream, tracks}], state}
   end
 
   @impl true
-  def handle_pad_added(Pad.ref(:main_stream_output, ssrc) = ref, _ctx, state) do
-    {[spec: [link_pads(:main_stream, ssrc, ref)]], state}
+  def handle_pad_added(Pad.ref(:main_stream_output, control_path) = ref, _ctx, state) do
+    {[spec: [link_pads(:main_stream, control_path, ref)]], state}
   end
 
   @impl true
-  def handle_pad_added(Pad.ref(:sub_stream_output, ssrc) = ref, _ctx, state) do
-    {[spec: [link_pads(:sub_stream, ssrc, ref)]], state}
+  def handle_pad_added(Pad.ref(:sub_stream_output, control_path) = ref, _ctx, state) do
+    {[spec: [link_pads(:sub_stream, control_path, ref)]], state}
   end
 
   @impl true
@@ -111,9 +111,9 @@ defmodule ExNVR.Pipeline.Source.RTSP do
     ]
   end
 
-  defp link_pads(child_name, ssrc, pad) do
+  defp link_pads(child_name, control_path, pad) do
     get_child(child_name)
-    |> via_out(Pad.ref(:output, ssrc))
+    |> via_out(Pad.ref(:output, control_path))
     |> bin_output(pad)
   end
 
