@@ -2,7 +2,7 @@ defmodule ExNVR.MixProject do
   use Mix.Project
 
   @app :ex_nvr
-  @version "0.20.0"
+  @version "0.21.0"
 
   def project do
     [
@@ -85,7 +85,7 @@ defmodule ExNVR.MixProject do
       {:flop_phoenix, "~> 0.24"},
       {:prom_ex, "~> 1.11.0"},
       {:circuits_uart, "~> 1.5"},
-      {:onvif, github: "gBillal/onvif", ref: "e2b620b"},
+      {:onvif, github: "gBillal/onvif", tag: "v0.7.0"},
       {:slipstream, "~> 1.2.0"},
       {:live_vue, "~> 0.5.7"},
       {:sentry, "~> 10.9"},

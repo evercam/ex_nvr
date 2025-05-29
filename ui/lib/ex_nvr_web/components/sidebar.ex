@@ -3,10 +3,19 @@ defmodule ExNVRWeb.Components.Sidebar do
 
   use ExNVRWeb, :live_component
 
-  attr :current_user, :map, required: true
+  attr :current_user, :map, required: false
   attr :current_path, :string, default: nil
 
   def sidebar(assigns) do
+    role = assigns.current_user && assigns.current_user.role
+
+    assigns =
+      groups()
+      |> Enum.map(&filter_group_by_role(&1, role))
+      |> Enum.reject(&(&1 == []))
+      |> Enum.with_index()
+      |> then(&Map.put(assigns, :groups, &1))
+
     ~H"""
     <aside
       id="logo-sidebar"
@@ -16,9 +25,8 @@ defmodule ExNVRWeb.Components.Sidebar do
       <div class="flex flex-col justify-between h-full px-3 pb-4 overflow-y-auto bg-zinc-900 dark:bg-gray-800">
         <div>
           <.sidebar_group
-            :for={{group, index} <- Enum.with_index(groups())}
+            :for={{group, index} <- @groups}
             items={group}
-            current_user={@current_user}
             current_path={@current_path}
             border={index > 0}
           />
@@ -35,7 +43,6 @@ defmodule ExNVRWeb.Components.Sidebar do
   end
 
   attr :items, :list, required: true
-  attr :current_user, :map, required: true
   attr :current_path, :string, default: nil
   attr :border, :boolean, default: false
 
@@ -58,7 +65,6 @@ defmodule ExNVRWeb.Components.Sidebar do
         target={item[:target]}
         children={item[:children] || []}
         role={item[:role]}
-        current_user={@current_user}
         current_path={@current_path}
       />
     </ul>
@@ -70,7 +76,6 @@ defmodule ExNVRWeb.Components.Sidebar do
   attr :href, :string, default: nil
   attr :target, :string, default: nil
   attr :children, :list, default: []
-  attr :current_user, :map, default: nil
   attr :current_path, :string, default: nil
   attr :is_active, :boolean, default: false
   attr :role, :atom, default: nil
@@ -88,7 +93,7 @@ defmodule ExNVRWeb.Components.Sidebar do
       |> assign(:menu_classes, menu_classes(has_active_child))
 
     ~H"""
-    <li :if={is_nil(@role) or (@current_user && @current_user.role == @role)}>
+    <li>
       <button
         :if={@children != []}
         type="button"
@@ -111,7 +116,6 @@ defmodule ExNVRWeb.Components.Sidebar do
           href={child[:href]}
           target={child[:target]}
           children={child[:children] || []}
-          current_user={@current_user}
           current_path={@current_path}
           role={child[:role]}
         />
@@ -242,6 +246,13 @@ defmodule ExNVRWeb.Components.Sidebar do
         ]
       ]
     end
+  end
+
+  defp filter_group_by_role(group, role) do
+    Enum.reject(group, fn
+      %{children: children} -> filter_group_by_role(children, role) == []
+      item -> not is_nil(item[:role]) and item[:role] != role
+    end)
   end
 
   defp active?(nil, _), do: false

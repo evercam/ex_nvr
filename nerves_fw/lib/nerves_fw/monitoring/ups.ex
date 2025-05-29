@@ -51,7 +51,7 @@ defmodule ExNVR.Nerves.Monitoring.UPS do
   def handle_call(:state, _from, state) do
     reply =
       if state.config.enabled do
-        %{ac_ok?: to_bool(state.ac_ok?), low_battery?: to_bool(state.low_battery?)}
+        %{ac_ok: to_bool(state.ac_ok?), low_battery: to_bool(state.low_battery?)}
       end
 
     {:reply, reply, state}

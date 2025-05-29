@@ -46,7 +46,7 @@ defmodule ExNVR.Nerves.Monitoring.UPSTest do
     Circuits.GPIO.write(ac_power, 1)
 
     pid = start_link_supervised!({UPS, []})
-    assert %{ac_ok?: true, low_battery?: false} = UPS.state(pid)
+    assert %{ac_ok: true, low_battery: false} = UPS.state(pid)
 
     # Simulate switch bouncing
     ac_series = [1, 1, 0, 1, 0, 0, 0, 0]
@@ -56,11 +56,11 @@ defmodule ExNVR.Nerves.Monitoring.UPSTest do
       capture_log(fn ->
         Enum.each(ac_series, &Circuits.GPIO.write(ac_power, &1))
         Process.sleep(to_timeout(millisecond: 1200))
-        assert %{ac_ok?: false, low_battery?: false} = UPS.state(pid)
+        assert %{ac_ok: false, low_battery: false} = UPS.state(pid)
 
         Circuits.GPIO.write(ac_power, 1)
         Process.sleep(to_timeout(millisecond: 1200))
-        assert %{ac_ok?: true, low_battery?: false} = UPS.state(pid)
+        assert %{ac_ok: true, low_battery: false} = UPS.state(pid)
       end)
 
     assert logs =~ "[UPS] stop recording"
@@ -74,7 +74,7 @@ defmodule ExNVR.Nerves.Monitoring.UPSTest do
 
     Enum.each(bat_series, &Circuits.GPIO.write(bat_power, &1))
     Process.sleep(to_timeout(millisecond: 1200))
-    assert %{ac_ok?: true, low_battery?: true} = UPS.state(pid)
+    assert %{ac_ok: true, low_battery: true} = UPS.state(pid)
 
     Circuits.GPIO.write(bat_power, 0)
     Process.sleep(to_timeout(millisecond: 1200))
