@@ -136,14 +136,14 @@ defmodule ExNVR.Disk do
   defp map(%{"blockdevices" => devices}) do
     Enum.map(devices, fn device ->
       disk_info = smartctl_get_disk_info(device["path"])
-      model = disk_info["model_name"] || String.trim(device["model"])
+      model = disk_info["model_name"] || String.trim(to_string(device["model"]))
 
       %__MODULE__{
         name: device["name"],
         path: device["path"],
         vendor: get_vendor(device["vendor"], model),
         model: model,
-        serial: disk_info["serial_number"] || (device["serial"] && String.trim(device["serial"])),
+        serial: disk_info["serial_number"] || String.trim(to_string(device["serial"])),
         size: device["size"],
         hotplug: device["hotplug"],
         tran: device["tran"],
