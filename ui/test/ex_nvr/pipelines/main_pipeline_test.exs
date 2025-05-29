@@ -32,7 +32,7 @@ defmodule ExNVR.Pipelines.MainPipelineTest do
     assert_pipeline_notified(
       pid,
       :file_source,
-      {:main_stream, 1, %Track{type: :video, encoding: :H264}}
+      {:main_stream, [{1, %Track{type: :video, encoding: :H264}}]}
     )
 
     assert Devices.get!(device.id).state == :streaming

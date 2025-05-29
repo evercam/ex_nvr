@@ -45,7 +45,7 @@ defmodule ExNVR.Pipeline.Source.File do
           end
 
         media_track = ExNVR.Pipeline.Track.new(track.type, codec)
-        {:notify_parent, {:main_stream, track_id, media_track}}
+        {:notify_parent, {:main_stream, [{track_id, media_track}]}}
       end)
 
     {actions, state}
