@@ -23,8 +23,7 @@ defmodule ExNVR.Pipeline.Output.SocketPipelineTest do
 
       pid = start_pipeline()
 
-      {:ok, client_socket} =
-        :gen_tcp.connect({:local, Utils.unix_socket_path(device.id)}, 0, [:binary, active: false])
+      client_socket = open_client_socket(device, 3)
 
       assert_receive {:new_socket, server_socket}
 
@@ -50,6 +49,21 @@ defmodule ExNVR.Pipeline.Output.SocketPipelineTest do
       :gen_tcp.close(client_socket)
 
       Pipeline.terminate(pid)
+    end
+
+    defp open_client_socket(_device, 0), do: raise("socket doesn't exists")
+
+    defp open_client_socket(device, rety) do
+      path = Utils.unix_socket_path(device.id)
+
+      case :gen_tcp.connect({:local, path}, 0, [:binary, active: false]) do
+        {:ok, socket} ->
+          socket
+
+        {:error, _reason} ->
+          Process.sleep(200)
+          open_client_socket(device, rety - 1)
+      end
     end
 
     defp start_pipeline do

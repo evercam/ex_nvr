@@ -73,7 +73,8 @@ defmodule ExNVR.RTSP.Source do
             unprocessed_data: <<>>,
             onvif_replay: boolean(),
             start_date: DateTime.t(),
-            end_date: DateTime.t()
+            end_date: DateTime.t(),
+            all_pads_connected?: boolean()
           }
 
     @enforce_keys [:stream_uri, :allowed_media_types, :timeout, :keep_alive_interval]
@@ -88,7 +89,8 @@ defmodule ExNVR.RTSP.Source do
                   stream_handlers: %{},
                   onvif_replay: false,
                   start_date: nil,
-                  end_date: nil
+                  end_date: nil,
+                  all_pads_connected?: false
                 ]
   end
 
@@ -102,8 +104,11 @@ defmodule ExNVR.RTSP.Source do
   @impl true
   def handle_setup(_ctx, state) do
     state = ConnectionManager.establish_connection(state)
+    tracks = Enum.map(state.tracks, &Map.delete(&1, :transport))
     {:tcp, socket} = List.first(state.tracks).transport
-    {[start_timer: {:check_recbuf, Time.seconds(10)}], %{state | socket: socket}}
+
+    {[notify_parent: {:tracks, tracks}, start_timer: {:check_recbuf, Time.seconds(10)}],
+     %{state | socket: socket}}
   end
 
   @impl true
@@ -127,21 +132,25 @@ defmodule ExNVR.RTSP.Source do
   end
 
   @impl true
-  def handle_pad_added(Pad.ref(:output, ssrc), _ctx, state) do
-    stream_handler = Map.get(state.stream_handlers, ssrc)
-    actions = Enum.reverse(stream_handler.buffered_actions) |> List.flatten()
+  def handle_pad_added(Pad.ref(:output, control_path), ctx, state) do
+    case Enum.find(state.tracks, &(&1.control_path == control_path)) do
+      nil ->
+        raise "unknown control path: #{inspect(control_path)}"
 
-    stream_handlers = Map.update!(state.stream_handlers, ssrc, &%{&1 | buffered_actions: []})
-    {actions, %{state | stream_handlers: stream_handlers}}
+      _track ->
+        {[], %{state | all_pads_connected?: map_size(ctx.pads) == length(state.tracks)}}
+    end
   end
 
   @impl true
-  def handle_info(:recv, ctx, state) do
+  def handle_info(:recv, _ctx, state) do
     Membrane.Logger.debug("Receiving data from socket")
 
     case :gen_tcp.recv(state.socket, 0, state.timeout) do
       {:ok, data} ->
-        do_handle_packets(data, state, ctx)
+        {actions, state} = do_handle_packets(data, state)
+        Process.send_after(self(), :recv, 5)
+        {actions, state}
 
       {:error, reason} ->
         raise "cannot read data from socket: #{inspect(reason)}"
@@ -160,7 +169,11 @@ defmodule ExNVR.RTSP.Source do
     {[], state}
   end
 
-  defp do_handle_packets(data, state, ctx) do
+  defp do_handle_packets(data, %{all_pads_connected?: false} = state) do
+    {[], %{state | unprocessed_data: state.unprocessed_data <> data}}
+  end
+
+  defp do_handle_packets(data, state) do
     datetime = DateTime.utc_now()
 
     {rtp_packets, _rtcp_packets, unprocessed_data} =
@@ -170,11 +183,8 @@ defmodule ExNVR.RTSP.Source do
       rtp_packets
       |> Stream.map(&decode_rtp!/1)
       |> Stream.map(&decode_onvif_replay_extension/1)
-      |> Enum.flat_map_reduce(state.stream_handlers, fn rtp_packet, handlers ->
-        {notifcation_action, handlers} =
-          maybe_init_stream_handler(state, handlers, rtp_packet)
-
-        ssrc = rtp_packet.ssrc
+      |> Enum.flat_map_reduce(state.stream_handlers, fn %{ssrc: ssrc} = rtp_packet, handlers ->
+        handlers = maybe_init_stream_handler(state, handlers, rtp_packet)
 
         datetime =
           case state do
@@ -186,16 +196,11 @@ defmodule ExNVR.RTSP.Source do
           end
 
         {buffers, handler} = StreamHandler.handle_packet(handlers[ssrc], rtp_packet, datetime)
+        actions = map_buffers_into_actions(buffers, handler.control_path)
 
-        {actions, handler} =
-          buffers
-          |> map_buffers_into_actions(ssrc)
-          |> maybe_buffer_actions(handler, ssrc, ctx)
-
-        {notifcation_action ++ actions, Map.put(handlers, ssrc, handler)}
+        {actions, Map.put(handlers, ssrc, handler)}
       end)
 
-    Process.send_after(self(), :recv, 5)
     {actions, %{state | stream_handlers: stream_handlers, unprocessed_data: unprocessed_data}}
   end
 
@@ -220,23 +225,22 @@ defmodule ExNVR.RTSP.Source do
   defp decode_onvif_replay_extension(packet), do: packet
 
   defp maybe_init_stream_handler(_state, handlers, %{ssrc: ssrc}) when is_map_key(handlers, ssrc),
-    do: {[], handlers}
+    do: handlers
 
   defp maybe_init_stream_handler(state, handlers, packet) do
-    %{rtpmap: rtpmap, fmtp: fmtp} =
-      track = Enum.find(state.tracks, &(&1.rtpmap.payload_type == packet.payload_type))
+    track = Enum.find(state.tracks, &(&1.rtpmap.payload_type == packet.payload_type))
 
-    encoding = String.to_atom(rtpmap.encoding)
-    {parser_mod, parser_state} = parser(encoding, fmtp)
+    encoding = String.to_atom(track.rtpmap.encoding)
+    {parser_mod, parser_state} = parser(encoding, track.fmtp)
 
     stream_handler = %StreamHandler{
-      clock_rate: rtpmap.clock_rate,
+      clock_rate: track.rtpmap.clock_rate,
       parser_mod: parser_mod,
-      parser_state: parser_state
+      parser_state: parser_state,
+      control_path: track.control_path
     }
 
-    actions = [notify_parent: {:new_track, packet.ssrc, Map.delete(track, :transport)}]
-    {actions, Map.put(handlers, packet.ssrc, stream_handler)}
+    Map.put(handlers, packet.ssrc, stream_handler)
   end
 
   defp parser(:H264, fmtp) do
@@ -269,16 +273,6 @@ defmodule ExNVR.RTSP.Source do
         {:stream_format, {Pad.ref(:output, ssrc), stream_format}}
     end)
   end
-
-  defp maybe_buffer_actions(actions, handler, ssrc, ctx) do
-    if linked?(ssrc, ctx) do
-      {actions, handler}
-    else
-      {[], Map.update!(handler, :buffered_actions, &[actions | &1])}
-    end
-  end
-
-  defp linked?(ssrc, ctx), do: Map.has_key?(ctx.pads, Pad.ref(:output, ssrc))
 
   # An issue with one of Milesight camera where the parameter sets have
   # <<0, 0, 0, 1>> at the end

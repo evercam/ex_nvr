@@ -155,7 +155,7 @@ defmodule ExNVR.Pipelines.Main do
 
   @impl true
   def handle_child_notification(
-        {:main_stream, ssrc, track},
+        {:main_stream, [{id, track}]},
         child_name,
         _ctx,
         %State{} = state
@@ -165,7 +165,7 @@ defmodule ExNVR.Pipelines.Main do
 
     spec = [
       get_child(child_name)
-      |> via_out(Pad.ref(:main_stream_output, ssrc))
+      |> via_out(Pad.ref(:main_stream_output, id))
       |> via_in(Pad.ref(:video, make_ref()))
       |> get_child(:tee)
     ]
@@ -177,7 +177,7 @@ defmodule ExNVR.Pipelines.Main do
 
   @impl true
   def handle_child_notification(
-        {:sub_stream, ssrc, track},
+        {:sub_stream, [{id, track}]},
         child_name,
         _ctx,
         %State{} = state
@@ -189,7 +189,7 @@ defmodule ExNVR.Pipelines.Main do
       spec ++
         [
           get_child(child_name)
-          |> via_out(Pad.ref(:sub_stream_output, ssrc))
+          |> via_out(Pad.ref(:sub_stream_output, id))
           |> via_in(Pad.ref(:video, make_ref()))
           |> get_child({:tee, :sub_stream})
         ]
