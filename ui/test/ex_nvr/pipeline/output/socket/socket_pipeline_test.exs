@@ -51,7 +51,7 @@ defmodule ExNVR.Pipeline.Output.SocketPipelineTest do
       Pipeline.terminate(pid)
     end
 
-    defp open_client_socket(_device, 0), do: raise "socket doesn't exists"
+    defp open_client_socket(_device, 0), do: raise("socket doesn't exists")
 
     defp open_client_socket(device, rety) do
       path = Utils.unix_socket_path(device.id)
