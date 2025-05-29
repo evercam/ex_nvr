@@ -1,0 +1,101 @@
+<nav
+  id="main-nav"
+  class="fixed top-0 z-50 w-full bg-red-800 border-b border-white dark:bg-gray-800 dark:border-gray-700"
+>
+  <div class="px-3 py-3 lg:px-5 lg:pl-3">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center justify-start">
+        <button
+          data-drawer-target="logo-sidebar"
+          data-drawer-toggle="logo-sidebar"
+          aria-controls="logo-sidebar"
+          type="button"
+          class="inline-flex items-center p-2 text-sm text-gray-500 rounded-lg sm:hidden hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-200 dark:text-gray-400 dark:hover:bg-gray-700 dark:focus:ring-gray-600"
+        >
+          <span class="sr-only">Open sidebar</span>
+          <.icon name="hero-bars-3" class="w-6 h-6 dark:text-gray-400" />
+        </button>
+        <a href="https://evercam.io" class="flex ml-2 md:mr-24">
+          <img
+            src="https://evercam.io/wp-content/themes/evercam/img/white-logo.svg"
+            class="h-8 mr-3"
+            alt="Evercam Logo"
+          />
+        </a>
+      </div>
+
+      <div class="flex items-center">
+        <div class="flex flex-col justify-center mr-6">
+          <input
+            id="light-switch"
+            type="checkbox"
+            name="light-switch"
+            class="light-switch sr-only"
+            phx-hook="SwitchDarkMode"
+          />
+          <label class="relative cursor-pointer p-2" for="light-switch">
+            <.icon name="hero-sun" class="dark:hidden w-6 h-6 dark:text-gray-400" />
+            <.icon name="hero-moon" class="hidden dark:block w-5 h-5 dark:text-gray-400" />
+            <span class="sr-only">Switch to light / dark version</span>
+          </label>
+        </div>
+        <div class="flex items-center ml-3">
+          <div>
+            <button
+              type="button"
+              class="flex text-sm bg-gray-800 rounded-full focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-600"
+              aria-expanded="false"
+              data-dropdown-toggle="dropdown-user"
+            >
+              <span class="sr-only">Open user menu</span>
+              <img
+                class="w-8 h-8 rounded-full"
+                src="https://media.npr.org/assets/img/2021/08/11/gettyimages-1279899488_wide-f3860ceb0ef19643c335cb34df3fa1de166e2761-s1100-c50.jpg"
+                alt="user photo"
+              />
+            </button>
+          </div>
+          <div
+            class="z-50 hidden my-4 text-base list-none bg-gray-200 divide-y divide-gray-100 rounded shadow dark:bg-gray-700 dark:divide-gray-600"
+            id="dropdown-user"
+          >
+            <div class="px-4 py-3" role="none">
+              <p class="text-sm text-gray-900 dark:text-white" role="none">
+                {if @current_user, do: "#{@current_user.first_name} #{@current_user.last_name}"}
+              </p>
+              <p
+                class="text-sm font-medium text-gray-900 truncate dark:text-gray-300 mr-4"
+                role="none"
+              >
+                {if @current_user, do: @current_user.email}
+              </p>
+            </div>
+            <ul class="py-1" role="none">
+              <li>
+                <.link
+                  href={~p"/users/settings"}
+                  class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-600
+                  dark:hover:text-white"
+                  role="menuitem"
+                >
+                  Settings
+                </.link>
+              </li>
+              <li>
+                <.link
+                  href={~p"/users/logout"}
+                  method="delete"
+                  class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-600
+                  dark:hover:text-white"
+                  role="menuitem"
+                >
+                  Sign out
+                </.link>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</nav>
