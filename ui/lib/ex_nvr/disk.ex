@@ -186,11 +186,19 @@ defmodule ExNVR.Disk do
 
   # get disk info using smartctl if available
   defp smartctl_get_disk_info(drive) do
-    with path when not is_nil(path) <- System.find_executable("smartctl"),
-         {output, 0} <- System.cmd("smartctl", ["-ji", drive], stderr_to_stdout: true) do
-      JSON.decode!(output)
+    if path = System.find_executable("smartctl") do
+      opts = [stderr_to_stdout: true]
+      args = ["-ji", drive]
+
+      with {_error, exit_code} when exit_code != 0 <- System.cmd(path, args, opts),
+           {_error, exit_code} when exit_code != 0 <- System.cmd(path, ["-d", "sat" | args], opts) do
+        %{}
+      else
+        {output, 0} ->
+          JSON.decode!(output)
+      end
     else
-      _other -> %{}
+      %{}
     end
   end
 

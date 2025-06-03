@@ -106,7 +106,8 @@ defmodule ExNVR.Nerves.RUT.Auth do
     url = base_url <> @login_path
 
     case Req.post(url, json: %{username: username, password: password}) do
-      {:ok, %Req.Response{status: 200, body: %{"data" => data}}} ->
+      {:ok, %Req.Response{status: 200, body: %{"data" => data}}}
+      when is_map_key(data, "expires") ->
         req = Req.new(base_url: base_url <> "/api", auth: {:bearer, data["token"]})
         {:ok, req, data["expires"]}
 
