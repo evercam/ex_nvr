@@ -76,7 +76,7 @@ defmodule ExNVR.Pipeline.Output.HLS do
 
     spec = [
       bin_input(pad)
-      |> add_transcoding_spec(ctx.pad_options[:encoding], ref, ctx.pad_options[:resolution])
+      |> add_transcoding_spec(ref, ctx.pad_options[:resolution])
       |> child({:adjuster, ref}, TimestampAdjuster)
       |> via_in(Pad.ref(:input, ref),
         options: [
@@ -114,31 +114,13 @@ defmodule ExNVR.Pipeline.Output.HLS do
     {[], state}
   end
 
-  defp add_transcoding_spec(link_builder, _encoding, _ref, nil), do: link_builder
+  defp add_transcoding_spec(link_builder, _ref, nil), do: link_builder
 
-  defp add_transcoding_spec(link_builder, encoding, ref, resolution) do
+  defp add_transcoding_spec(link_builder, ref, resolution) do
     link_builder
-    |> child({:decoder, ref}, get_decoder(encoding))
-    |> child({:scaler, ref}, %Membrane.FFmpeg.SWScale.Scaler{output_height: resolution})
-    |> child({:encoder, ref}, %Membrane.H264.FFmpeg.Encoder{
-      profile: encoder_profile(),
-      tune: :zerolatency,
-      gop_size: 50
-    })
+    |> child({:transcoder, ref}, %ExNVR.Elements.Transcoder{height: resolution})
     |> child({:parser, ref}, Membrane.H264.Parser)
   end
 
   defp track_name(prefix, ref), do: "#{prefix}_#{ref}"
-
-  defp get_decoder(:H264), do: %Membrane.H264.FFmpeg.Decoder{use_shm?: true}
-  defp get_decoder(:H265), do: %Membrane.H265.FFmpeg.Decoder{use_shm?: true}
-
-  # arm architecture use a precompiled ffmpeg with OpenH264 encoder which supports constrained_baseline profile
-  # x264 support baseline profile
-  defp encoder_profile do
-    case ExNVR.Utils.system_architecture() do
-      {"arm", _os, _abi} -> :constrained_baseline
-      _other -> :baseline
-    end
-  end
 end
