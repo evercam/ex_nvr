@@ -30,9 +30,9 @@ jobs:
       - name: Install FFmpeg
         run: | 
           mkdir ffmpeg &&
-            cd ffmpeg && 
-            wget -O ffmpeg.tar ${{ env.FFMPEG_URL }} && 
-            tar -xvf ffmpeg.tar --strip-components=1 && 
+            cd ffmpeg &&
+            wget -O ffmpeg.tar ${{ env.FFMPEG_URL }} &&
+            tar -xvf ffmpeg.tar --strip-components=1 &&
             rm -rf ffmpeg.tar
    
       - name: Set FFmpeg env variables
