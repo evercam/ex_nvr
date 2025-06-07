@@ -49,7 +49,7 @@ defmodule ExNVR.RTSP.Source.StreamHandler do
       |> set_wallclock_timestamp(wallclock_timestamp)
       |> set_last_replay_timestamp(packet)
       |> convert_timestamp(packet)
-      |> parse()
+      |> parse(wallclock_timestamp)
 
     {event ++ buffers, handler}
   end
@@ -95,7 +95,7 @@ defmodule ExNVR.RTSP.Source.StreamHandler do
     {%{handler | timestamps: {timestamp_base, rtp_timestamp}}, %{packet | timestamp: timestamp}}
   end
 
-  defp parse({handler, packet}) do
+  defp parse({handler, packet}, wall_timestamp) do
     case handler.parser_mod.handle_packet(packet, handler.parser_state) do
       {:ok, {[], state}} ->
         {[], %{handler | parser_state: state}}
@@ -111,7 +111,7 @@ defmodule ExNVR.RTSP.Source.StreamHandler do
               other
           end)
 
-        {buffers, %{handler | parser_state: state, wallclock_timestamp: nil}}
+        {buffers, %{handler | parser_state: state, wallclock_timestamp: wall_timestamp}}
 
       {:error, reason, state} ->
         Logger.warning("""

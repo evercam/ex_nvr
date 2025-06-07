@@ -5,39 +5,32 @@ defmodule ExNVR.RTSP.Parser.H265 do
 
   @behaviour ExNVR.RTSP.Parser
 
-  require Membrane.H265.NALuTypes
-
   alias ExNVR.RTSP.Depayloader.H265.{AP, FU, NAL}
+  alias ExNVR.RTSP.Parser.HEVC.SPS
   alias Membrane.{Buffer, H265}
-  alias Membrane.H265.{AUSplitter, NALuParser, NALuTypes}
 
   @frame_prefix <<1::32>>
 
   defmodule State do
     @moduledoc false
 
-    alias Membrane.H265.{AUSplitter, NALuParser}
-
-    defstruct nalu_parser: NALuParser.new(),
-              au_splitter: AUSplitter.new(),
-              vps: %{},
-              sps: %{},
-              pps: %{},
+    defstruct vps: [],
+              sps: [],
+              pps: [],
               fu_acc: nil,
               sprop_max_don_diff: 0,
-              seen_key_frame?: false
+              seen_key_frame?: false,
+              access_unit: [],
+              timestamp: nil
   end
 
   @impl true
   def init(opts) do
-    vpss = Keyword.get(opts, :vpss, []) |> Enum.map(&maybe_add_prefix/1)
-    spss = Keyword.get(opts, :spss, []) |> Enum.map(&maybe_add_prefix/1)
-    ppss = Keyword.get(opts, :ppss, []) |> Enum.map(&maybe_add_prefix/1)
+    vpss = Keyword.get(opts, :vpss, []) |> Enum.map(&maybe_strip_prefix/1)
+    spss = Keyword.get(opts, :spss, []) |> Enum.map(&maybe_strip_prefix/1)
+    ppss = Keyword.get(opts, :ppss, []) |> Enum.map(&maybe_strip_prefix/1)
 
-    %State{}
-    |> parse_parameter_sets(:vps, vpss)
-    |> parse_parameter_sets(:sps, spss)
-    |> parse_parameter_sets(:pps, ppss)
+    %State{vps: vpss, sps: spss, pps: ppss}
   end
 
   @impl true
@@ -49,15 +42,15 @@ defmodule ExNVR.RTSP.Parser.H265 do
 
   @impl true
   def handle_discontinuity(%State{} = state) do
-    %State{state | au_splitter: AUSplitter.new(), nalu_parser: NALuParser.new(), fu_acc: nil}
+    %State{state | fu_acc: nil, access_unit: [], timestamp: nil}
   end
 
   # depayloader
   def depayload(packet, state) do
     with {:ok, {header, _payload} = nal} <- NAL.Header.parse_unit_header(packet.payload),
          unit_type = NAL.Header.decode_type(header),
-         {:ok, {nalus, state}} <- handle_unit_type(unit_type, nal, packet, state) do
-      {:ok, List.wrap(nalus), state}
+         {:ok, nalus, state} <- handle_unit_type(unit_type, nal, packet, state) do
+      {:ok, nalus, state}
     else
       {:error, reason} ->
         {:error, reason, %{state | fu_acc: nil}}
@@ -65,8 +58,7 @@ defmodule ExNVR.RTSP.Parser.H265 do
   end
 
   defp handle_unit_type(:single_nalu, _nalu, packet, state) do
-    result = buffer_output(packet.payload, packet, state)
-    {:ok, result}
+    {:ok, {[packet.payload], packet.timestamp}, state}
   end
 
   defp handle_unit_type(:fu, {header, data}, packet, state) do
@@ -77,12 +69,10 @@ defmodule ExNVR.RTSP.Parser.H265 do
         data =
           NAL.Header.add_header(data, 0, type, header.nuh_layer_id, header.nuh_temporal_id_plus1)
 
-        result = buffer_output(data, packet, %State{state | fu_acc: nil})
-        {:ok, result}
+        {:ok, {[data], packet.timestamp}, %State{state | fu_acc: nil}}
 
       {:incomplete, fu} ->
-        result = {[], %State{state | fu_acc: fu}}
-        {:ok, result}
+        {:ok, {[], packet.timestamp}, %State{state | fu_acc: fu}}
 
       {:error, _reason} = error ->
         error
@@ -91,153 +81,96 @@ defmodule ExNVR.RTSP.Parser.H265 do
 
   defp handle_unit_type(:ap, {_header, data}, packet, state) do
     with {:ok, nalus} <- AP.parse(data, state.sprop_max_don_diff > 0) do
-      nalus = Enum.map(nalus, fn {nalu, _don} -> {add_prefix(nalu), packet.timestamp} end)
-      {:ok, {nalus, state}}
+      {:ok, {nalus, packet.timestamp}, state}
     end
   end
-
-  defp buffer_output(data, packet, state) do
-    {{add_prefix(data), packet.timestamp}, state}
-  end
-
-  defp add_prefix(data), do: @frame_prefix <> data
 
   defp map_state_to_fu(%State{fu_acc: %FU{} = fu}), do: fu
   defp map_state_to_fu(state), do: %FU{donl?: state.sprop_max_don_diff > 0}
 
   # Parser
-  defp parse(nalus, state) do
-    {nalus, nalu_parser} =
-      Enum.map_reduce(
-        nalus,
-        state.nalu_parser,
-        &NALuParser.parse(elem(&1, 0), {nil, elem(&1, 1)}, &2)
-      )
+  defp parse({[], _timestamp}, state), do: {[], state}
 
-    {access_units, au_splitter} = AUSplitter.split(nalus, state.au_splitter)
-
-    state = %{state | nalu_parser: nalu_parser, au_splitter: au_splitter}
-    Enum.flat_map_reduce(access_units, state, &process_au(&1, &2))
+  defp parse({nalus, timestamp}, state) do
+    if timestamp != state.timestamp do
+      {buffers, state} = process_au(state)
+      {buffers, %{state | timestamp: timestamp, access_unit: nalus}}
+    else
+      {[], %{state | access_unit: state.access_unit ++ nalus}}
+    end
   end
 
-  defp process_au(au, state) do
-    key_frame? = key_frame?(au)
+  defp process_au(state) do
+    key_frame? = key_frame?(state.access_unit)
 
     cond do
       key_frame? ->
-        au = add_parameter_sets(au, state)
-        {stream_format, state} = get_stream_format(au, state)
-        {[stream_format, wrap_into_buffer(au)], %{state | seen_key_frame?: true}}
+        state =
+          state
+          |> get_parameter_sets()
+          |> add_parameter_sets()
+
+        {stream_format, state} = get_stream_format(state)
+        {[stream_format, wrap_into_buffer(state)], %{state | seen_key_frame?: true}}
 
       state.seen_key_frame? ->
-        {[wrap_into_buffer(au)], state}
+        {[wrap_into_buffer(state)], state}
 
       true ->
         {[], state}
     end
   end
 
-  defp parse_parameter_sets(state, _parameter_set_type, []), do: state
+  defp get_parameter_sets(%{access_unit: au} = state) do
+    Enum.reduce(au, state, fn
+      <<_::1, 32::6, _rest::bitstring>> = vps, state ->
+        %{state | vps: Enum.uniq([vps | state.vps])}
 
-  defp parse_parameter_sets(state, :vps, vpss) do
-    {vpss, nalu_parser} = NALuParser.parse_nalus(vpss, state.nalu_parser)
+      <<_::1, 33::6, _rest::bitstring>> = sps, state ->
+        %{state | sps: Enum.uniq([sps | state.sps])}
 
-    %{
-      state
-      | vps: Map.new(vpss, &{&1.parsed_fields.video_parameter_set_id, &1}),
-        nalu_parser: nalu_parser
-    }
+      <<_::1, 34::6, _rest::bitstring>> = pps, state ->
+        %{state | pps: Enum.uniq([pps | state.pps])}
+
+      _nalu, state ->
+        state
+    end)
   end
 
-  defp parse_parameter_sets(state, :sps, spss) do
-    {spss, nalu_parser} = NALuParser.parse_nalus(spss, state.nalu_parser)
+  defp maybe_strip_prefix(<<0, 0, 1, nalu::binary>>), do: nalu
+  defp maybe_strip_prefix(<<0, 0, 0, 1, nalu::binary>>), do: nalu
+  defp maybe_strip_prefix(nalu), do: nalu
 
-    %{
-      state
-      | sps: Map.new(spss, &{&1.parsed_fields.seq_parameter_set_id, &1}),
-        nalu_parser: nalu_parser
-    }
+  defp add_parameter_sets(state) do
+    [state.vps, state.sps, state.pps, state.access_unit]
+    |> Enum.concat()
+    |> then(&%{state | access_unit: &1})
   end
 
-  defp parse_parameter_sets(state, :pps, ppss) do
-    {ppss, nalu_parser} = NALuParser.parse_nalus(ppss, state.nalu_parser)
-
-    %{
-      state
-      | pps: Map.new(ppss, &{&1.parsed_fields.pic_parameter_set_id, &1}),
-        nalu_parser: nalu_parser
-    }
-  end
-
-  defp maybe_add_prefix(nalu) do
-    case nalu do
-      <<0, 0, 1, _rest::binary>> -> nalu
-      <<0, 0, 0, 1, _rest::binary>> -> nalu
-      nalu -> <<0, 0, 0, 1, nalu::binary>>
-    end
-  end
-
-  defp add_parameter_sets(au, state) do
-    au = Map.values(state.vps) ++ Map.values(state.sps) ++ Map.values(state.pps) ++ au
-    Enum.uniq_by(au, & &1.payload)
-  end
-
-  defp get_stream_format(au, state) do
-    parameter_sets =
-      au
-      |> Enum.filter(&(&1.type in [:vps, :sps, :pps]))
-      |> Enum.reduce(%{vps: [], sps: [], pps: []}, fn nalu, pss ->
-        Map.update!(pss, nalu.type, &[nalu | &1])
-      end)
-
-    sps = List.last(parameter_sets[:sps])
+  defp get_stream_format(state) do
+    sps = state.sps |> List.first() |> SPS.parse()
+    {width, height} = SPS.video_resolution(sps)
 
     stream_format = %H265{
-      width: sps.parsed_fields.width,
-      height: sps.parsed_fields.height,
-      profile: sps.parsed_fields.profile,
+      width: width,
+      height: height,
+      profile: SPS.profile(sps),
       alignment: :au,
-      nalu_in_metadata?: true,
       stream_structure: :annexb
     }
-
-    state =
-      Enum.reduce(parameter_sets, state, fn
-        {:vps, nalus}, state ->
-          nalus = Map.new(nalus, &{&1.parsed_fields.video_parameter_set_id, &1})
-          %{state | vps: Map.merge(nalus, state.vps)}
-
-        {:sps, nalus}, state ->
-          nalus = Map.new(nalus, &{&1.parsed_fields.seq_parameter_set_id, &1})
-          %{state | sps: Map.merge(nalus, state.sps)}
-
-        {:pps, nalus}, state ->
-          nalus = Map.new(nalus, &{&1.parsed_fields.pic_parameter_set_id, &1})
-          %{state | pps: Map.merge(nalus, state.pps)}
-      end)
 
     {stream_format, state}
   end
 
-  defp wrap_into_buffer(au) do
-    {dts, pts} = List.last(au).timestamps
-
-    Enum.reduce(au, <<>>, fn nalu, acc ->
-      acc <> NALuParser.get_prefixed_nalu_payload(nalu, :annexb)
-    end)
-    |> then(fn payload ->
-      %Buffer{
-        dts: dts,
-        pts: pts,
-        payload: payload,
-        metadata: prepare_au_metadata(au, key_frame?(au))
-      }
-    end)
+  defp wrap_into_buffer(state) do
+    %Buffer{
+      dts: state.timestamp,
+      pts: state.timestamp,
+      payload: Enum.map_join(state.access_unit, &(@frame_prefix <> &1)),
+      metadata: %{h265: %{key_frame?: key_frame?(state.access_unit)}}
+    }
   end
 
-  defp key_frame?(au), do: Enum.any?(au, &NALuTypes.is_irap_nalu_type(&1.type))
-
-  defp prepare_au_metadata(nalus, is_keyframe?) do
-    %{h265: %{key_frame?: is_keyframe?, nalus: Enum.map(nalus, & &1.type)}}
-  end
+  defp key_frame?(au),
+    do: Enum.any?(au, fn <<_::1, type::6, _rest::bitstring>> -> type in 16..21 end)
 end
