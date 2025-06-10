@@ -32,7 +32,7 @@ defmodule ExNVRWeb.OnvifDiscovery2Live do
   defmodule CameraDetails do
     @moduledoc false
 
-    defstruct [:name, :probe, :device, :auth_form]
+    defstruct [:name, :probe, :device, :auth_form, tab: "system"]
   end
 
   def render(assigns) do
@@ -119,9 +119,74 @@ defmodule ExNVRWeb.OnvifDiscovery2Live do
             >
               <.icon name="hero-lock-closed" class="w-4 h-4" />Authenticate
             </.button>
-            <.button :if={not is_nil(device.device)}>
+            <.button
+              :if={not is_nil(device.device)}
+              phx-click="show-details"
+              phx-value-id={device.probe.device_ip}
+            >
               <.icon name="hero-check-circle" class="w-4 h-4" />View Details
             </.button>
+          </div>
+        </div>
+      </div>
+
+      <.separator :if={@selected_device} class="w-3/4 mr-5" />
+
+      <div :if={@selected_device} class="w-3/4 flex flex-col space-y-2 mr-5">
+        <div class="flex justify-between items-center border rounded-lg bg-white dark:border-gray-600 dark:bg-gray-950 dark:text-white p-5">
+          <div class="flex items-center">
+            <div class="boder-1 rounded-lg bg-gray-200 dark:bg-gray-600 p-2 mr-2">
+              <.icon name="hero-camera" class="w-7 h-7" />
+            </div>
+            <div class="flex flex-col">
+              <span class="text-lg font-bold">{@selected_device.name}</span>
+              <div class="text-sm text-gray-500">
+                <span class="mr-3">{@selected_device.probe.device_ip}</span>
+                <span class="mr-3">{@selected_device.device.manufacturer}</span>
+              </div>
+            </div>
+          </div>
+          <.button>
+            <.icon name="hero-plus" class="w-4 h-4" />Add to NVR
+          </.button>
+        </div>
+
+        <div class="grid grid-cols-4 content-center rounded-lg bg-white dark:border-gray-600 dark:bg-gray-700 dark:text-white p-1">
+          <div class={["flex justify-center", selected_tab("system", @selected_device.tab)]}>
+            <span
+              class="text-sm font-bold p-1 hover:cursor-pointer"
+              phx-click="switch-tab"
+              phx-value-tab="system"
+            >
+              <.icon name="hero-information-circle" class="w-5 h-5 mr-1" />System
+            </span>
+          </div>
+          <div class={["flex justify-center", selected_tab("network", @selected_device.tab)]}>
+            <span
+              class="text-sm font-bold p-1 hover:cursor-pointer"
+              phx-click="switch-tab"
+              phx-value-tab="network"
+            >
+              <.icon name="network" class="w-4 h-4 mr-1 text-black dark:text-white inline" />Network
+            </span>
+          </div>
+          <div class={["flex justify-center", selected_tab("datetime", @selected_device.tab)]}>
+            <span
+              class="text-sm font-bold p-1 hover:cursor-pointer"
+              phx-click="switch-tab"
+              phx-value-tab="datetime"
+            >
+              <.icon name="hero-clock" class="w-4 h-4 mr-1" />Date & Time
+            </span>
+          </div>
+          <div class={["flex justify-center", selected_tab("streams", @selected_device.tab)]}>
+            <span
+              class="text-sm font-bold p-1 hover:cursor-pointer"
+              phx-click="switch-tab"
+              phx-value-tab="streams"
+            >
+              <.icon name="hero-tv" class="w-4 h-4 mr-1" />Streams
+            </span>
           </div>
         </div>
       </div>
@@ -150,7 +215,7 @@ defmodule ExNVRWeb.OnvifDiscovery2Live do
         />
         <div class="flex items-center space-x-5">
           <.button
-              type="button"
+            type="button"
             class="w-full bg-white dark:bg-gray-800 border dark:border-gray-600"
             phx-click={hide_modal2("camera-authentication")}
           >
@@ -168,6 +233,7 @@ defmodule ExNVRWeb.OnvifDiscovery2Live do
       socket
       |> assign_discover_settings(%DiscoverSettings{timeout: 2})
       |> assign(devices: [], auth_form: to_form(%{"username" => nil, "password" => nil}))
+      |> assign(selected_device: nil)
 
     {:ok, socket}
   end
@@ -192,12 +258,21 @@ defmodule ExNVRWeb.OnvifDiscovery2Live do
       )
       |> Enum.map(&%CameraDetails{probe: &1, name: scope_value(&1.scopes, "name")})
 
+    # devices = [
+    #   %CameraDetails{
+    #     probe: %Onvif.Discovery.Probe{
+    #       scopes: ["onvif://www.onvif.org/name/Camera1", "onvif://www.onvif.org/hardware/Camera1"],
+    #       device_ip: "192.168.8.120"
+    #     },
+    #     name: "Camera1"
+    #   }
+    # ]
+
     {:noreply, assign(socket, devices: devices)}
   end
 
   def handle_event("authenticate-device", params, socket) do
     devices = socket.assigns.devices
-    IO.inspect(params)
 
     if idx = Enum.find_index(devices, &(&1.probe.device_ip == params["id"])) do
       camera_details = Enum.at(devices, idx)
@@ -219,6 +294,21 @@ defmodule ExNVRWeb.OnvifDiscovery2Live do
     else
       {:noreply, put_flash(socket, :error, "could not find device with id: #{params["id"]}")}
     end
+  end
+
+  def handle_event("show-details", params, socket) do
+    devices = socket.assigns.devices
+
+    if device = Enum.find(devices, &(&1.probe.device_ip == params["id"])) do
+      {:noreply, assign(socket, selected_device: device)}
+    else
+      {:noreply, socket}
+    end
+  end
+
+  def handle_event("switch-tab", %{"tab" => tab}, socket) do
+    device = %{socket.assigns.selected_device | tab: tab}
+    {:noreply, assign(socket, selected_device: device)}
   end
 
   defp assign_discover_settings(socket, settings) do
@@ -253,4 +343,7 @@ defmodule ExNVRWeb.OnvifDiscovery2Live do
       _other -> nil
     end
   end
+
+  defp selected_tab(tab, tab), do: ["rounded-sm", "bg-gray-300", "dark:bg-gray-950"]
+  defp selected_tab(_, _), do: []
 end
