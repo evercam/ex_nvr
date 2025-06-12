@@ -1,4 +1,4 @@
-<div class="grow mx-auto max-w-2xl e-my-6">
+<div class="grow mx-auto max-w-3xl e-my-6">
   <div class="px-6 lg:px-8 bg-gray-300 dark:bg-gray-800">
     <h3
       :if={@device.id == nil}
@@ -245,7 +245,22 @@
                 />
               </div>
             </div>
+
+            <div class="relative flex flex-col py-5">
+              <span class="col-span-2 font-bold">Schedule:</span>
+              <div class="-ml-4">
+                <.vue
+                  v-component="Schedule"
+                  class="e-h-full"
+                  schedule={@device.storage_config.schedule}
+                  v-socket={@socket}
+                  v-on:change={JS.push("update_storage_schedule")}
+                />
+              </div>
+            </div>
           </.inputs_for>
+
+
         </div>
         <div :if={@device_type == "ip"} id="snapshot-config" class="flex flex-col">
           <div class="relative flex py-5 items-center">
@@ -283,6 +298,19 @@
                   options={@remote_storages}
                   required
                 />
+
+                <div class="relative flex flex-col py-5 w-full col-span-3">
+                  <span class="col-span-2">Schedule:</span>
+                  <div class="-ml-4">
+                    <.vue
+                      v-component="Schedule"
+                      class="e-h-full"
+                      schedule={@device.snapshot_config.schedule}
+                      v-socket={@socket}
+                      v-on:change={JS.push("update_snapshot_schedule")}
+                    />
+                  </div>
+                </div>
               </div>
             </.inputs_for>
           </div>
