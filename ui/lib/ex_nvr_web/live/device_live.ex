@@ -31,7 +31,7 @@ defmodule ExNVRWeb.DeviceLive do
   def mount(%{"id" => device_id}, _session, socket) do
     device = Devices.get!(device_id)
     device_params = get_device_params(socket.assigns.flash) |> Map.delete(:name)
-
+IO.inspect(device)
     {:ok,
      assign(socket,
        device: device,
@@ -60,12 +60,23 @@ defmodule ExNVRWeb.DeviceLive do
     |> then(&{:noreply, &1})
   end
 
+  def handle_event("update_storage_schedule", new_schedule, socket) do
+    {:noreply, assign(socket, storage_schedule: new_schedule)}
+  end
+
+  def handle_event("update_snapshot_schedule", new_schedule, socket) do
+    {:noreply, assign(socket, snapshot_schedule: new_schedule)}
+  end
+
   def handle_event("save_device", %{"device" => device_params}, socket) do
     device = socket.assigns.device
     device_type = socket.assigns.device_type
 
-    device_params = put_default_schedule(device_params, device_type)
+    device_params = device_params
+      |> put_snapshot_schedule(socket.assigns.snapshot_schedule, device_type)
+      |> put_storage_schedule(socket.assigns.storage_schedule)
 
+    IO.inspect(device_params)
     if device.id,
       do: do_update_device(socket, device, device_params),
       else: do_save_device(socket, device_params)
@@ -97,27 +108,45 @@ defmodule ExNVRWeb.DeviceLive do
     {device_type, changeset}
   end
 
-  defp put_default_schedule(device_config, "file"), do: device_config
+  defp put_snapshot_schedule(params, _schedule, "file"), do: params
 
-  defp put_default_schedule(
-         %{"snapshot_config" => %{"enabled" => false}} = device_config,
-         _device_type
+  defp put_snapshot_schedule(
+         %{"snapshot_config" => %{"enabled" => false}} = params,
+        _schedule,
+         "ip"
        ),
-       do: device_config
+       do: params
 
-  defp put_default_schedule(%{"snapshot_config" => snapshot_config} = device_config, _device_type) do
-    snapshot_config =
-      Map.put(snapshot_config, "schedule", %{
-        "1" => ["00:00-23:59"],
-        "2" => ["00:00-23:59"],
-        "3" => ["00:00-23:59"],
-        "4" => ["00:00-23:59"],
-        "5" => ["00:00-23:59"],
-        "6" => ["00:00-23:59"],
-        "7" => ["00:00-23:59"]
-      })
+  defp put_snapshot_schedule(
+         %{"snapshot_config" => snapshot} = params,
+          nil,
+         "ip"
+       ) do
+    Map.put(params, "snapshot_config", Map.put(snapshot, "schedule", default_schedule()))
+  end
 
-    Map.put(device_config, "snapshot_config", snapshot_config)
+  defp put_snapshot_schedule(
+         %{"snapshot_config" => snapshot} = params,
+          schedule,
+         "ip"
+       ) do
+    Map.put(params, "snapshot_config", Map.put(snapshot, "schedule", schedule))
+  end
+
+
+  defp put_storage_schedule(%{"storage_config" => storage} = params, nil) do
+    Map.put(params, "storage_config", Map.put(storage, "schedule", default_schedule()))
+  end
+
+  defp put_storage_schedule(%{"storage_config" => storage} = params, schedule) do
+    Map.put(params, "storage_config", Map.put(storage, "schedule", schedule))
+  end
+
+
+  defp default_schedule do
+    for day <- 1..7, into: %{} do
+      {Integer.to_string(day), ["00:00-23:59"]}
+    end
   end
 
   defp do_save_device(socket, device_params) do
