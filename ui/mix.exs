@@ -91,7 +91,8 @@ defmodule ExNVR.MixProject do
       {:membrane_h26x_plugin, "~> 0.10", only: :test},
       {:mimic, "~> 1.12.0", only: :test},
       {:faker, "~> 0.17", only: :test},
-      {:bypass, "~> 2.1", only: :test}
+      {:bypass, "~> 2.1", only: :test},
+      {:live_debugger, "~> 0.2.0", only: :dev}
     ]
   end
 
