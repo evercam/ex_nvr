@@ -3,6 +3,10 @@ defmodule ExNVRWeb.OnvifDiscovery2Live do
 
   use ExNVRWeb, :live_view
 
+  require Logger
+
+  alias ExNVR.Devices.Cameras.NetworkInterface
+
   defmodule DiscoverSettings do
     @moduledoc false
 
@@ -32,7 +36,7 @@ defmodule ExNVRWeb.OnvifDiscovery2Live do
   defmodule CameraDetails do
     @moduledoc false
 
-    defstruct [:name, :probe, :device, :auth_form, tab: "system"]
+    defstruct [:name, :probe, :device, :network_interface, :auth_form, tab: "system"]
   end
 
   def render(assigns) do
@@ -95,7 +99,7 @@ defmodule ExNVRWeb.OnvifDiscovery2Live do
           <.icon name="hero-wifi" class="w-5 h-5 mr-1" /> Found {length(@devices)} Device(s)
         </span>
         <div :for={device <- @devices} id={device.probe.device_ip} class="flex flex-col space-y-2">
-          <div class="flex justify-between border-2 rounded-lg dark:border-gray-500 p-5">
+          <div class="flex justify-between border rounded-lg dark:border-gray-200 p-5">
             <div class="flex items-center">
               <div class="boder-1 rounded-lg bg-gray-200 dark:bg-gray-600 p-2 mr-2">
                 <.icon name="hero-camera" class="w-6 h-6" />
@@ -189,6 +193,60 @@ defmodule ExNVRWeb.OnvifDiscovery2Live do
             </span>
           </div>
         </div>
+
+        <div
+          :if={@selected_device.tab == "system"}
+          class="w-1/2 flex flex-col border rounded-lg bg-white dark:border-gray-600 dark:bg-gray-950 dark:text-white"
+        >
+          <h2 class="text-lg font-bold p-3">Hardware Information</h2>
+          <div class="space-y-2 p-5 pt-0 text-sm">
+            <div class="flex justify-between">
+              <span class="text-gray-600">Manufacturer:</span>
+              <span class="font-mono">{@selected_device.device.manufacturer}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-600">Model:</span>
+              <span class="font-mono">{@selected_device.device.model}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-600">Firmware:</span>
+              <span class="font-mono">{@selected_device.device.firmware_version}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-600">Hardware ID:</span>
+              <span class="font-mono">{@selected_device.device.hardware_id}</span>
+            </div>
+          </div>
+        </div>
+
+        <div
+          :if={@selected_device.tab == "network"}
+          class="flex flex-col border rounded-lg bg-white dark:border-gray-600 dark:bg-gray-950 dark:text-white"
+        >
+          <h2 class="text-lg font-bold p-3">Network Configuration</h2>
+          <div class="space-y-2 p-5 pt-0 text-sm">
+            <div class="grid grid-cols-2 gap-x-6 gap-y-2">
+              <div class="flex justify-between">
+                <span class="text-gray-600">Name:</span>
+                <span class="font-mono">{@selected_device.network_interface.name}</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-gray-600">IP Address:</span>
+                <span class="font-mono">{@selected_device.network_interface.ipv4.address}</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-gray-600">MAC Address:</span>
+                <span class="font-mono">{@selected_device.network_interface.hw_address}</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-gray-600">DHCP:</span>
+                <span class="inline-flex items-center dark:bg-gray-200 rounded-full border px-2.5 py-0.5 font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-gray-200 hover:bg-primary/80 text-xs dark:text-black">
+                  {format_dhcp(@selected_device.network_interface.ipv4.dhcp)}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -258,16 +316,6 @@ defmodule ExNVRWeb.OnvifDiscovery2Live do
       )
       |> Enum.map(&%CameraDetails{probe: &1, name: scope_value(&1.scopes, "name")})
 
-    # devices = [
-    #   %CameraDetails{
-    #     probe: %Onvif.Discovery.Probe{
-    #       scopes: ["onvif://www.onvif.org/name/Camera1", "onvif://www.onvif.org/hardware/Camera1"],
-    #       device_ip: "192.168.8.120"
-    #     },
-    #     name: "Camera1"
-    #   }
-    # ]
-
     {:noreply, assign(socket, devices: devices)}
   end
 
@@ -279,7 +327,9 @@ defmodule ExNVRWeb.OnvifDiscovery2Live do
 
       case Onvif.Device.init(camera_details.probe, params["username"], params["password"]) do
         {:ok, onvif_device} ->
-          camera_details = %CameraDetails{camera_details | device: onvif_device}
+          camera_details =
+            %CameraDetails{camera_details | device: onvif_device}
+            |> get_network_interface()
 
           socket =
             socket
@@ -316,6 +366,17 @@ defmodule ExNVRWeb.OnvifDiscovery2Live do
     assign(socket, discover_settings: settings, discover_form: discover_form)
   end
 
+  defp get_network_interface(camera_details) do
+    case Onvif.Devices.get_network_interfaces(camera_details.device) do
+      {:ok, interfaces} ->
+        %{camera_details | network_interface: NetworkInterface.from_onvif(List.first(interfaces))}
+
+      {:error, reason} ->
+        Logger.error("Failed to get network interfaces for camera #{inspect(reason)}")
+        camera_details
+    end
+  end
+
   # view functions
   defp ip_addresses do
     case :inet.getifaddrs() do
@@ -346,4 +407,7 @@ defmodule ExNVRWeb.OnvifDiscovery2Live do
 
   defp selected_tab(tab, tab), do: ["rounded-sm", "bg-gray-300", "dark:bg-gray-950"]
   defp selected_tab(_, _), do: []
+
+  defp format_dhcp(true), do: "Enabled"
+  defp format_dhcp(false), do: "Disabled"
 end

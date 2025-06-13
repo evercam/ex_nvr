@@ -825,7 +825,7 @@ defmodule ExNVRWeb.CoreComponents do
 
   def separator(assigns) do
     ~H"""
-    <hr class={["bg-gray-400 my-12 h-0.5 border-t-0 dark:bg-white/10", @class]} />
+    <hr class={["h-px my-8 bg-gray-200 border-0 dark:bg-gray-700", @class]} />
     """
   end
 
