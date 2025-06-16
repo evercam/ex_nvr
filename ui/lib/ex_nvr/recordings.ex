@@ -125,7 +125,7 @@ defmodule ExNVR.Recordings do
           )
 
         {:ok, snapshot} =
-          Turbojpeg.yuv_to_jpeg(frame.data, track.width, track.height, 75, :I420)
+          Turbojpeg.yuv_to_jpeg(frame.data, frame.width, frame.height, 75, :I420)
 
         {:ok, datetime, snapshot}
       end)
