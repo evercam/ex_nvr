@@ -91,7 +91,7 @@ defmodule ExNVR.MixProject do
       {:live_vue, "~> 0.5.7"},
       {:sentry, "~> 10.9"},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
-      {:mimic, "~> 1.11.0", only: :test},
+      {:mimic, "~> 1.12.0", only: :test},
       {:faker, "~> 0.17", only: :test},
       {:bypass, "~> 2.1", only: :test}
     ]
