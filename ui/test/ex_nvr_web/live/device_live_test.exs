@@ -126,6 +126,37 @@ defmodule ExNVRWeb.DeviceLiveTest do
       assert Phoenix.Flash.get(conn.assigns.flash, :info) == "Device created successfully"
     end
 
+     test "create a new IP device with custom schedules", %{conn: conn} do
+      {:ok, lv, _} = live(conn, ~p"/devices/new")
+
+      custom_storage = %{"1" => ["08:00-12:00"]}
+      custom_snapshot = %{"2" => ["09:00-10:00"]}
+
+      lv = render_change(lv, "update_storage_schedule", custom_storage)
+      lv = render_change(lv, "update_snapshot_schedule", custom_snapshot)
+
+      {:ok, conn} =
+        lv
+        |> form("#device_form", %{
+          "device" => %{
+            "name" => "Scheduled IP Device",
+            "type" => "ip",
+            "vendor" => "HIKVISION",
+            "credentials" => %{ "username" => "user", "password" => "pass" },
+            "stream_config" => %{ "stream_uri" => "rtsp://localhost:554" },
+            "storage_config" => %{ "address" => "/tmp" }
+          }
+        })
+        |> render_submit()
+        |> follow_redirect(conn, ~p"/devices")
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) == "Device created successfully"
+
+      [created] = Devices.list()
+      assert created.storage_config.schedule == custom_storage
+      assert created.snapshot_config.schedule == custom_snapshot
+    end
+
     test "renders errors on form submission", %{conn: conn} do
       {:ok, lv, _} = live(conn, ~p"/devices/new")
 
@@ -159,6 +190,12 @@ defmodule ExNVRWeb.DeviceLiveTest do
     test "update an IP Camera device", %{conn: conn, device: device} do
       {:ok, lv, _} = live(conn, ~p"/devices/#{device.id}")
 
+      new_storage_schedule = %{"3" => ["06:00-18:00"]}
+      lv = render_event(lv, :change, "update_storage_schedule", new_storage_schedule)
+
+      new_snapshot_schedule = %{"1" => ["06:00-18:00", "19:00-21:30"]}
+      lv = render_event(lv, :change, "update_snapshot_schedule", new_snapshot_schedule)
+
       {:ok, conn} =
         lv
         |> form("#device_form", %{
@@ -177,6 +214,8 @@ defmodule ExNVRWeb.DeviceLiveTest do
       assert updated_device = Devices.get(device.id)
       assert updated_device.name == "My Updated Device"
       assert updated_device.stream_config.stream_uri == "rtsp://localhost:554"
+      assert updated_device.storage_config.schedule == new_storage_schedule
+      assert updated_device.snapshot_config.schedule == new_snapshot_schedule
     end
 
     test "renders errors on invalid update params for an IP Device", %{conn: conn, device: device} do
