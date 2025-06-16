@@ -37,7 +37,7 @@ defmodule NervesFw.MixProject do
       # Dependencies for all targets
       {:nerves, "~> 1.10", runtime: false},
       {:shoehorn, "~> 0.9.1"},
-      {:ring_logger, "~> 0.10.0"},
+      {:ring_logger, "~> 0.11.3"},
       {:toolshed, "~> 0.3.0"},
       {:nerves_hub_link, "~> 2.7"},
       {:nerves_hub_cli, "~> 2.0"},
