@@ -123,4 +123,7 @@ defmodule ExNVR.Pipeline.Output.HLS do
   end
 
   defp track_name(prefix, ref), do: "#{prefix}_#{ref}"
+
+  defp map_encoding(:h264), do: :H264
+  defp map_encoding(:h265), do: :H265
 end
