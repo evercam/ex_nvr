@@ -53,7 +53,7 @@ defmodule ExNVR.Elements.RecordingPipelineTest do
         strategy: :keyframe_before
       }
 
-      perform_test(:H264, out_path, ref_path, source_params)
+      perform_test(:h264, out_path, ref_path, source_params)
     end
   end
 
@@ -91,7 +91,7 @@ defmodule ExNVR.Elements.RecordingPipelineTest do
         strategy: :keyframe_before
       }
 
-      perform_test(:H265, out_path, ref_path, source_params)
+      perform_test(:h265, out_path, ref_path, source_params)
     end
   end
 

@@ -17,11 +17,10 @@ defmodule ExNVR.Pipeline.Source.FileTest do
     assert {[], state} = Source.File.handle_init(@ctx, %Source.File{device: device})
     assert map_size(state.tracks) == 1
 
-    assert {[notify_parent: {:main_stream, [{track_id, media_track}]}], _state} =
+    assert {[notify_parent: {:main_stream, %{1 => media_track}}], _state} =
              Source.File.handle_setup(@ctx, state)
 
-    assert track_id == 1
-    assert %ExNVR.Pipeline.Track{encoding: :H264, type: :video} = media_track
+    assert %ExNVR.Pipeline.Track{encoding: :h264, type: :video} = media_track
   end
 
   test "read sample", %{device: device} do
