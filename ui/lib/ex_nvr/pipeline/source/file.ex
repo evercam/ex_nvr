@@ -38,14 +38,8 @@ defmodule ExNVR.Pipeline.Source.File do
   def handle_setup(_ctx, state) do
     actions =
       Enum.map(state.tracks, fn {track_id, %{track: track}} ->
-        codec =
-          case track.media do
-            :h264 -> :H264
-            :h265 -> :H265
-          end
-
-        media_track = ExNVR.Pipeline.Track.new(track.type, codec)
-        {:notify_parent, {:main_stream, [{track_id, media_track}]}}
+        media_track = ExNVR.Pipeline.Track.new(track.type, track.media)
+        {:notify_parent, {:main_stream, %{track_id => media_track}}}
       end)
 
     {actions, state}

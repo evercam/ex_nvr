@@ -72,7 +72,7 @@ defmodule ExNVR.Pipeline.Output.HLS do
 
   @impl true
   def handle_pad_added(Pad.ref(:video, ref) = pad, ctx, state) do
-    encoding = if ctx.pad_options[:resolution], do: :H264, else: ctx.pad_options[:encoding]
+    encoding = if ctx.pad_options[:resolution], do: :h264, else: ctx.pad_options[:encoding]
 
     spec = [
       bin_input(pad)
@@ -80,7 +80,7 @@ defmodule ExNVR.Pipeline.Output.HLS do
       |> child({:adjuster, ref}, TimestampAdjuster)
       |> via_in(Pad.ref(:input, ref),
         options: [
-          encoding: encoding,
+          encoding: map_encoding(encoding),
           track_name: track_name(state.segment_prefix, ref),
           segment_duration: @segment_duration
         ]
@@ -130,8 +130,8 @@ defmodule ExNVR.Pipeline.Output.HLS do
 
   defp track_name(prefix, ref), do: "#{prefix}_#{ref}"
 
-  defp get_decoder(:H264), do: %Membrane.H264.FFmpeg.Decoder{use_shm?: true}
-  defp get_decoder(:H265), do: %Membrane.H265.FFmpeg.Decoder{use_shm?: true}
+  defp get_decoder(:h264), do: %Membrane.H264.FFmpeg.Decoder{use_shm?: true}
+  defp get_decoder(:h265), do: %Membrane.H265.FFmpeg.Decoder{use_shm?: true}
 
   # arm architecture use a precompiled ffmpeg with OpenH264 encoder which supports constrained_baseline profile
   # x264 support baseline profile
@@ -141,4 +141,7 @@ defmodule ExNVR.Pipeline.Output.HLS do
       _other -> :baseline
     end
   end
+
+  defp map_encoding(:h264), do: :H264
+  defp map_encoding(:h265), do: :H265
 end

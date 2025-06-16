@@ -80,7 +80,7 @@ defmodule ExNVR.Elements.VideoStreamStatReporter do
 
   @impl true
   def handle_buffer(:input, buffer, _ctx, state) do
-    elapsed_time = Time.as_milliseconds(Time.monotonic_time() - state.start_time, :round)
+    elapsed_time = max(Time.as_milliseconds(Time.monotonic_time() - state.start_time, :round), 1)
     total_bytes = state.total_bytes + byte_size(buffer.payload)
     total_frames = state.total_frames + 1
 
