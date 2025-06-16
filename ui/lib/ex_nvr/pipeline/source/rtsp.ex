@@ -10,6 +10,7 @@ defmodule ExNVR.Pipeline.Source.RTSP do
 
   @base_back_off_in_ms 10
   @max_back_off_in_ms :timer.minutes(2)
+  @timeout :timer.seconds(10)
 
   def_output_pad :main_stream_output,
     accepted_format: _any,
@@ -184,7 +185,12 @@ defmodule ExNVR.Pipeline.Source.RTSP do
 
   defp start_stream(stream_uri, type) do
     {:ok, pid} =
-      RTSP.start_link(stream_uri: stream_uri, allowed_media_types: [:video], name: type)
+      RTSP.start_link(
+        stream_uri: stream_uri,
+        allowed_media_types: [:video],
+        name: type,
+        timeout: @timeout
+      )
 
     %Stream{type: type, stream_uri: stream_uri, pid: pid}
   end
@@ -192,8 +198,8 @@ defmodule ExNVR.Pipeline.Source.RTSP do
   defp connect_stream(nil), do: {[], nil}
 
   defp connect_stream(stream) do
-    with {:ok, tracks} <- RTSP.connect(stream.pid),
-         :ok <- RTSP.play(stream.pid) do
+    with {:ok, tracks} <- RTSP.connect(stream.pid, @timeout + 1000),
+         :ok <- RTSP.play(stream.pid, @timeout + 1000) do
       # Add sanity check: make sure that the tracks and their control path are the same between disconnection
       tracks = Map.new(tracks, &{&1.control_path, Track.new(&1.type, &1.rtpmap.encoding)})
       stream = %{stream | reconnect_attempt: 0, tracks: tracks}

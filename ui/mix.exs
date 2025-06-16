@@ -36,8 +36,8 @@ defmodule ExNVR.MixProject do
   # Type `mix help deps` for examples and options.
   defp deps do
     [
-      {:rtsp, path: "/home/ghilas/p/OpenSourceProjects/elixir/rtsp"},
-      {:media_codecs, path: "/home/ghilas/p/OpenSourceProjects/elixir/media_codecs"},
+      {:rtsp, "~> 0.1.0"},
+      {:media_codecs, "~> 0.1.0"},
       {:ex_sdp, "~> 1.0"},
       {:bundlex, "~> 1.5", override: true},
       {:bcrypt_elixir, "~> 3.0"},
