@@ -54,7 +54,12 @@ defmodule ExNVR.Pipeline.Source.RTSP do
       sub_stream: start_stream(sub_stream_uri, :sub_stream)
     }
 
-    {[], %{device: options.device, streams: streams}}
+    pids =
+      streams
+      |> Enum.reject(&(elem(&1, 1) == nil))
+      |> Map.new(fn {type, stream} -> {stream.pid, type} end)
+
+    {[], %{device: options.device, streams: streams, pids: pids}}
   end
 
   @impl true
@@ -85,13 +90,13 @@ defmodule ExNVR.Pipeline.Source.RTSP do
 
   @impl true
   def handle_info(
-        {stream_type, control_path, {sample, rtp_timestamp, keyframe?, timestamp}},
+        {pid, control_path, {sample, rtp_timestamp, keyframe?, timestamp}},
         _ctx,
         state
       ) do
-    stream = state.streams[stream_type]
+    stream = state.streams[state.pids[pid]]
     track = Map.fetch!(stream.tracks, control_path)
-    pad = pad_from_stream_type(stream_type, control_path)
+    pad = pad_from_stream_type(stream.type, control_path)
 
     buffer = %Membrane.Buffer{
       payload: sample,
@@ -114,7 +119,7 @@ defmodule ExNVR.Pipeline.Source.RTSP do
       {actions, state}
     else
       state =
-        update_in(state, [:streams, stream_type], fn stream ->
+        update_in(state, [:streams, stream.type], fn stream ->
           %{stream | buffered_actions: [actions | stream.buffered_actions]}
         end)
 
@@ -123,30 +128,30 @@ defmodule ExNVR.Pipeline.Source.RTSP do
   end
 
   @impl true
-  def handle_info({stream_type, :discontinuity}, _ctx, state) do
-    stream = state.streams[stream_type]
+  def handle_info({pid, :discontinuity}, _ctx, state) do
+    stream = state.streams[state.pids[pid]]
 
     actions =
       Enum.map(stream.tracks, fn {control_path, _track} ->
         {:event,
-         {pad_from_stream_type(stream_type, control_path), %Membrane.Event.Discontinuity{}}}
+         {pad_from_stream_type(stream.type, control_path), %Membrane.Event.Discontinuity{}}}
       end)
 
     {actions, state}
   end
 
   @impl true
-  def handle_info({stream_type, :session_closed}, _ctx, state) do
-    stream = state.streams[stream_type]
+  def handle_info({pid, :session_closed}, _ctx, state) do
+    stream = state.streams[state.pids[pid]]
 
     actions =
       Enum.map(stream.tracks, fn {control_path, _track} ->
         {:event,
-         {pad_from_stream_type(stream_type, control_path), %ExNVR.Pipeline.Event.StreamClosed{}}}
+         {pad_from_stream_type(stream.type, control_path), %ExNVR.Pipeline.Event.StreamClosed{}}}
       end)
 
-    {reconnect_actions, stream} = reconnect(state.streams[stream_type], :session_closed)
-    {actions ++ reconnect_actions, put_in(state, [:streams, stream_type], stream)}
+    {reconnect_actions, stream} = reconnect(state.streams[stream.type], :session_closed)
+    {actions ++ reconnect_actions, put_in(state, [:streams, stream.type], stream)}
   end
 
   @impl true
@@ -188,7 +193,6 @@ defmodule ExNVR.Pipeline.Source.RTSP do
       RTSP.start_link(
         stream_uri: stream_uri,
         allowed_media_types: [:video],
-        name: type,
         timeout: @timeout
       )
 
