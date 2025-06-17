@@ -8,7 +8,7 @@ defmodule ExNVR.Elements.Transcoder do
   import ExMP4.Helper
 
   alias Membrane.{H264, H265}
-  alias Xav.{Encoder, Decoder}
+  alias Xav.{Decoder, Encoder}
 
   @original_time_base Membrane.Time.seconds(1)
   @dest_time_base 90_000
@@ -95,7 +95,7 @@ defmodule ExNVR.Elements.Transcoder do
 
   # arm architecture use a precompiled ffmpeg with OpenH264 encoder which supports constrained_baseline profile
   # x264 support baseline profile
-  defp encoder_profile() do
+  defp encoder_profile do
     case ExNVR.Utils.system_architecture() do
       {"arm", _os, _abi} -> :constrained_baseline
       _other -> :baseline
