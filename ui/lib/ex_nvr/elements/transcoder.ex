@@ -97,8 +97,8 @@ defmodule ExNVR.Elements.Transcoder do
   # x264 support baseline profile
   defp encoder_profile do
     case ExNVR.Utils.system_architecture() do
-      {"arm", _os, _abi} -> :constrained_baseline
-      _other -> :baseline
+      {"arm", _os, _abi} -> "Constrained Baseline"
+      _other -> "Baseline"
     end
   end
 end
