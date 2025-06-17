@@ -33,7 +33,8 @@ jobs:
             libavcodec-dev \
             libavformat-dev \
             libavutil-dev \
-            libswscale-dev
+            libswscale-dev \
+            libavdevice-dev
 
       - name: Set up Elixir
         uses: erlef/setup-elixir@v1
