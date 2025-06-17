@@ -97,6 +97,8 @@ RUN apt-get install -y \
 # Download ffmpeg
 RUN wget https://a7u4.c16.e2-3.dev/public/ffmpeg-armhf.tar.xz && tar -xf ffmpeg-armhf.tar.xz -C /opt
 ENV PKG_CONFIG_PATH="/opt/ffmpeg/lib/pkgconfig:$PKG_CONFIG_PATH"
+ENV CPATH=/opt/ffmpeg/include
+ENV LIBRARY_PATH=/opt/ffmpeg/lib
 
 ARG ERL_FLAGS
 ENV ERL_FLAGS=$ERL_FLAGS
@@ -111,7 +113,6 @@ RUN mix local.hex --force && \
   mix local.rebar --force
 
 # install mix dependencies
-COPY rtsp rtsp
 COPY ui ui
 
 WORKDIR /app/ui

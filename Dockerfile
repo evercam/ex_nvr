@@ -33,7 +33,6 @@ RUN mix local.hex --force && \
 ENV MIX_ENV=prod
 
 # install mix dependencies
-COPY rtsp rtsp
 COPY ui ui
 
 WORKDIR /app/ui

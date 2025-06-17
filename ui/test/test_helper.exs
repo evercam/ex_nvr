@@ -1,4 +1,4 @@
-ExUnit.start(capture_log: true)
+ExUnit.start()
 Ecto.Adapters.SQL.Sandbox.mode(ExNVR.Repo, :manual)
 
 Mimic.copy(Onvif.Discovery)

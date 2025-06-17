@@ -37,8 +37,8 @@ defmodule NervesFw.MixProject do
       # Dependencies for all targets
       {:nerves, "~> 1.10", runtime: false},
       {:shoehorn, "~> 0.9.1"},
-      {:ring_logger, "~> 0.10.0"},
-      {:toolshed, "~> 0.3.0"},
+      {:ring_logger, "~> 0.11.0"},
+      {:toolshed, "~> 0.4.0"},
       {:nerves_hub_link, "~> 2.7"},
       {:nerves_hub_cli, "~> 2.0"},
       {:ex_nvr, path: "../ui"},
@@ -52,7 +52,7 @@ defmodule NervesFw.MixProject do
 
       # Dependencies for all targets except :host
       {:nerves_pack, "~> 0.7.0", targets: @all_targets},
-      {:mimic, "~> 1.11.0", only: :test},
+      {:mimic, "~> 1.12.0", only: :test},
 
       # Dependencies for specific targets
       # NOTE: It's generally low risk and recommended to follow minor version
