@@ -113,7 +113,6 @@ RUN mix local.hex --force && \
   mix local.rebar --force
 
 # install mix dependencies
-COPY rtsp rtsp
 COPY ui ui
 
 WORKDIR /app/ui

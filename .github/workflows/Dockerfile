@@ -40,7 +40,6 @@ RUN mix local.hex --force && \
   mix local.rebar --force
 
 # install mix dependencies
-COPY rtsp rtsp
 COPY ui ui
 RUN rm -rf ui/priv/bundlex ui/assets/node_modules
 
