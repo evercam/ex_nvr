@@ -267,11 +267,20 @@ defmodule ExNVR.Devices.Onvif do
     resolutions = Enum.sort_by(resolutions, & &1.height, :desc)
 
     case stream do
-      :main_stream -> hd(resolutions)
+      :main_stream -> find_best_resolution(resolutions)
       _other -> Enum.drop_while(resolutions, &(&1.height > 1000 or &1.width > 1000)) |> hd()
     end
   end
 
   defp select_quality(%{manufacturer: "AXIS"}, _quality), do: 70
   defp select_quality(_device, quality), do: Float.ceil((quality.max + quality.min) / 2)
+
+  # prefer 4K resolutions with 16:9 aspect ratio
+  defp find_best_resolution(resolutions) do
+    Enum.reduce_while(resolutions, hd(resolutions), fn
+      %{width: 3840, height: 2160} = res, _acc -> {:halt, res}
+      %{height: 2160} = res, _acc -> {:cont, res}
+      _res, acc -> {:cont, acc}
+    end)
+  end
 end
