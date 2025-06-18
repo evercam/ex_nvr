@@ -177,12 +177,4 @@ defmodule ExNVRWeb.Router do
       end
     end
   end
-
-  # Kit-Y25T1161 a4EYe1n6
-  # Kit-Y25T1164 Jv41Ykw5
-  # Kit-Y25T1262 B+w4&d3C
-  # Kit-Y25T1258 Wy8k1LMi
-  # Kit-Y25T1251 h0SPp3k4
-  # Kit-Y25T1183 Az7f9K8R
-  # Kit-Y25T1291 9z&V=6Zy
 end
