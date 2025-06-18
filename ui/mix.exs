@@ -53,7 +53,7 @@ defmodule ExNVR.MixProject do
       {:membrane_mp4_plugin, "~> 0.35.0"},
       {:membrane_http_adaptive_stream_plugin, "~> 0.18.0"},
       {:membrane_realtimer_plugin, "~> 0.10.0"},
-      {:ex_webrtc, "~> 0.8.0"},
+      {:ex_webrtc, "~> 0.14.0"},
       {:ex_libsrtp, "~> 0.7.0"},
       {:ex_m3u8, "~> 0.15.0"},
       {:connection, "~> 1.1.0"},
