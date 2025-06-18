@@ -5,7 +5,7 @@ defmodule ExNVRWeb.OnvifDiscovery2Live do
 
   require Logger
 
-  alias ExNVR.Devices.Cameras.NetworkInterface
+  alias ExNVR.Devices.Cameras.{NetworkInterface, NTP}
 
   defmodule DiscoverSettings do
     @moduledoc false
@@ -36,7 +36,7 @@ defmodule ExNVRWeb.OnvifDiscovery2Live do
   defmodule CameraDetails do
     @moduledoc false
 
-    defstruct [:name, :probe, :device, :network_interface, :auth_form, tab: "system"]
+    defstruct [:name, :probe, :device, :network_interface, :ntp, :auth_form, tab: "system"]
   end
 
   def render(assigns) do
@@ -247,6 +247,39 @@ defmodule ExNVRWeb.OnvifDiscovery2Live do
             </div>
           </div>
         </div>
+
+        <div
+          :if={@selected_device.tab == "datetime"}
+          class="flex flex-col border rounded-lg bg-white dark:border-gray-600 dark:bg-gray-950 dark:text-white"
+        >
+          <h2 class="text-lg font-bold p-3">Date & Time Settings</h2>
+          <div class="space-y-2 p-5 pt-0 text-sm">
+            <div class="grid grid-cols-2 gap-x-6 gap-y-2">
+              <div class="flex justify-between">
+                <span class="text-gray-600">Timezone:</span>
+                <span class="font-mono">{@selected_device.device.system_date_time.time_zone.tz}</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-gray-600">NTP Enabled</span>
+                <span class="inline-flex items-center dark:bg-gray-200 rounded-full border px-2.5 py-0.5 font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-gray-200 hover:bg-primary/80 text-xs dark:text-black">
+                  {yes_no(@selected_device.ntp)}
+                </span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-gray-600">Dayligth Saving</span>
+                <span class="inline-flex items-center dark:bg-gray-200 rounded-full border px-2.5 py-0.5 font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-gray-200 hover:bg-primary/80 text-xs dark:text-black">
+                  {yes_no(@selected_device.device.system_date_time.daylight_savings)}
+                </span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-gray-600">NTP Server</span>
+                <span class="font-mono">
+                  {@selected_device.ntp && @selected_device.ntp.server}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -316,7 +349,7 @@ defmodule ExNVRWeb.OnvifDiscovery2Live do
       )
       |> Enum.map(&%CameraDetails{probe: &1, name: scope_value(&1.scopes, "name")})
 
-    {:noreply, assign(socket, devices: devices)}
+    {:noreply, assign(socket, devices: devices, selected_device: nil)}
   end
 
   def handle_event("authenticate-device", params, socket) do
@@ -330,6 +363,7 @@ defmodule ExNVRWeb.OnvifDiscovery2Live do
           camera_details =
             %CameraDetails{camera_details | device: onvif_device}
             |> get_network_interface()
+            |> get_ntp()
 
           socket =
             socket
@@ -377,6 +411,19 @@ defmodule ExNVRWeb.OnvifDiscovery2Live do
     end
   end
 
+  defp get_ntp(%{device: %{system_date_time: %{date_time_type: :ntp}}} = camera_details) do
+    case Onvif.Devices.get_ntp(camera_details.device) do
+      {:ok, ntp} ->
+        %{camera_details | ntp: NTP.from_onvif(ntp)}
+
+      {:error, reason} ->
+        Logger.error("Failed to get ntp settings for camera #{inspect(reason)}")
+        camera_details
+    end
+  end
+
+  defp get_ntp(camera_details), do: camera_details
+
   # view functions
   defp ip_addresses do
     case :inet.getifaddrs() do
@@ -410,4 +457,8 @@ defmodule ExNVRWeb.OnvifDiscovery2Live do
 
   defp format_dhcp(true), do: "Enabled"
   defp format_dhcp(false), do: "Disabled"
+
+  defp yes_no(nil), do: "No"
+  defp yes_no(false), do: "No"
+  defp yes_no(_other), do: "Yes"
 end
