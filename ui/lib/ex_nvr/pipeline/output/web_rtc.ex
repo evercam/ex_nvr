@@ -167,22 +167,23 @@ defmodule ExNVR.Pipeline.Output.WebRTC do
 
   @impl true
   def handle_info({:ex_webrtc, pc, {:connection_state_change, conn_state}}, _ctx, state) do
-    case conn_state do
-      :connected ->
-        %{state | peers_state: Map.put(state.peers_state, pc, :connected)}
+    state =
+      case conn_state do
+        :connected ->
+          %{state | peers_state: Map.put(state.peers_state, pc, :connected)}
 
-      :failed ->
-        PeerConnection.close(pc)
+        :failed ->
+          PeerConnection.close(pc)
 
-        %{
+          %{
+            state
+            | peers: Map.delete(state.peers, pc),
+              peers_state: Map.delete(state.peers_state, pc)
+          }
+
+        _other ->
           state
-          | peers: Map.delete(state.peers, pc),
-            peers_state: Map.delete(state.peers_state, pc)
-        }
-
-      _other ->
-        state
-    end
+      end
 
     {[], state}
   end
