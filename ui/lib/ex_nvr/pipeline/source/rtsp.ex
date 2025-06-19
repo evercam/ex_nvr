@@ -89,17 +89,14 @@ defmodule ExNVR.Pipeline.Source.RTSP do
   end
 
   @impl true
-  def handle_info(
-        {pid, control_path, {sample, rtp_timestamp, keyframe?, timestamp}},
-        _ctx,
-        state
-      ) do
+  def handle_info({:rtsp, pid, {control_path, sample}}, _ctx, state) do
+    {payload, rtp_timestamp, keyframe?, timestamp} = sample
     stream = state.streams[state.pids[pid]]
     track = Map.fetch!(stream.tracks, control_path)
     pad = pad_from_stream_type(stream.type, control_path)
 
     buffer = %Membrane.Buffer{
-      payload: sample,
+      payload: payload,
       dts: rtp_timestamp,
       pts: rtp_timestamp,
       metadata: %{
@@ -109,7 +106,7 @@ defmodule ExNVR.Pipeline.Source.RTSP do
     }
 
     actions =
-      if stream_format = get_stream_format(track.encoding, sample, keyframe?),
+      if stream_format = get_stream_format(track.encoding, payload, keyframe?),
         do: [stream_format: {pad, stream_format}],
         else: []
 
@@ -128,7 +125,7 @@ defmodule ExNVR.Pipeline.Source.RTSP do
   end
 
   @impl true
-  def handle_info({pid, :discontinuity}, _ctx, state) do
+  def handle_info({:rtsp, pid, :discontinuity}, _ctx, state) do
     stream = state.streams[state.pids[pid]]
 
     actions =
@@ -141,7 +138,7 @@ defmodule ExNVR.Pipeline.Source.RTSP do
   end
 
   @impl true
-  def handle_info({pid, :session_closed}, _ctx, state) do
+  def handle_info({:rtsp, pid, :session_closed}, _ctx, state) do
     stream = state.streams[state.pids[pid]]
 
     actions =
@@ -150,7 +147,7 @@ defmodule ExNVR.Pipeline.Source.RTSP do
          {pad_from_stream_type(stream.type, control_path), %ExNVR.Pipeline.Event.StreamClosed{}}}
       end)
 
-    {reconnect_actions, stream} = reconnect(state.streams[stream.type], :session_closed)
+    {reconnect_actions, stream} = reconnect(stream, :session_closed)
     {actions ++ reconnect_actions, put_in(state, [:streams, stream.type], stream)}
   end
 
@@ -225,7 +222,7 @@ defmodule ExNVR.Pipeline.Source.RTSP do
     actions = [start_timer: {{:reconnect, stream.type}, Membrane.Time.milliseconds(delay)}]
     stream = %{stream | reconnect_attempt: stream.reconnect_attempt + 1}
 
-    if stream.reconnect_attempt == 0 do
+    if stream.reconnect_attempt == 1 do
       {actions ++ [notify_parent: {:connection_lost, stream.type}], stream}
     else
       {actions, stream}

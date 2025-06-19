@@ -36,7 +36,7 @@ defmodule ExNVR.MixProject do
   # Type `mix help deps` for examples and options.
   defp deps do
     [
-      {:rtsp, "~> 0.1.0"},
+      {:rtsp, "~> 0.2.0"},
       {:media_codecs, "~> 0.1.0"},
       {:ex_sdp, "~> 1.0"},
       {:bundlex, "~> 1.5", override: true},
@@ -53,7 +53,7 @@ defmodule ExNVR.MixProject do
       {:membrane_mp4_plugin, "~> 0.35.0"},
       {:membrane_http_adaptive_stream_plugin, "~> 0.18.0"},
       {:membrane_realtimer_plugin, "~> 0.10.0"},
-      {:ex_webrtc, "~> 0.8.0"},
+      {:ex_webrtc, "~> 0.14.0"},
       {:ex_libsrtp, "~> 0.7.0"},
       {:ex_m3u8, "~> 0.15.0"},
       {:connection, "~> 1.1.0"},
