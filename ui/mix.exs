@@ -37,7 +37,7 @@ defmodule ExNVR.MixProject do
   defp deps do
     [
       {:rtsp, "~> 0.2.0"},
-      {:media_codecs, "~> 0.1.0"},
+      {:media_codecs, "~> 0.2.0"},
       {:ex_sdp, "~> 1.0"},
       {:bundlex, "~> 1.5", override: true},
       {:bcrypt_elixir, "~> 3.0"},
