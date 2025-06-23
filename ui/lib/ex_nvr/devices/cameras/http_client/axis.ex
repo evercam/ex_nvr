@@ -125,15 +125,17 @@ defmodule ExNVR.Devices.Cameras.HttpClient.Axis do
         id: entry["name"],
         name: entry["name"],
         enabled: true,
-        codec: Map.get(params, "videocodec", "h264"),
-        profile: nil,
-        frame_rate: Map.get(params, "fps", "0") |> String.to_integer(),
-        width: width,
-        height: height,
-        gop: Map.get(params, "videokeyframeinterval", "32") |> String.to_integer(),
-        bitrate: 0,
-        bitrate_mode: Map.get(params, "videobitratemode", "abr"),
-        smart_codec: false
+        video_config: %StreamProfile.VideoConfig{
+          codec: Map.get(params, "videocodec", "h264") |> String.to_atom(),
+          codec_profile: nil,
+          frame_rate: Map.get(params, "fps", "0") |> String.to_integer(),
+          width: width,
+          height: height,
+          gop: Map.get(params, "videokeyframeinterval", "32") |> String.to_integer(),
+          bitrate: 0,
+          bitrate_mode: Map.get(params, "videobitratemode", "abr") |> String.to_atom(),
+          smart_codec: false
+        }
       }
     end)
   end
