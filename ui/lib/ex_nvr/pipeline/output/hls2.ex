@@ -98,21 +98,23 @@ defmodule ExNVR.Pipeline.Output.HLS2 do
     manifest = state.manifest
     stream_type = stream.type
 
-    stream =
+    {stream, sps} =
       case stream.track.media do
         :h264 ->
           {{sps, pps}, _au} = MediaCodecs.H264.pop_parameter_sets(buffer.payload)
-          %{stream | track: %{stream.track | priv_data: Box.Avcc.new(sps, pps)}}
+          stream = %{stream | track: %{stream.track | priv_data: Box.Avcc.new(sps, pps)}}
+          {stream, MediaCodecs.H264.parse_nalu(List.first(sps))}
 
         :h265 ->
           {{vps, sps, pps}, _au} = MediaCodecs.H265.pop_parameter_sets(buffer.payload)
-          %{stream | track: %{stream.track | priv_data: get_hevc_dcr(vps, sps, pps)}}
+          stream = %{stream | track: %{stream.track | priv_data: get_hevc_dcr(vps, sps, pps)}}
+          {stream, MediaCodecs.H265.parse_nalu(List.first(sps))}
       end
 
     :ok =
       M3U8Writer.update_playlist_settings(state.manifest, stream_type,
         resolution: resolution(stream.track),
-        codecs: codecs(stream.track)
+        codecs: codecs(stream.track, sps.content)
       )
 
     writer_opts = [
@@ -193,10 +195,20 @@ defmodule ExNVR.Pipeline.Output.HLS2 do
 
   defp resolution(track), do: {track.width, track.height}
 
-  defp codecs(track) do
+  defp codecs(track, sps) do
     case track.media do
-      :h264 -> "avc1.42E01E"
-      :h265 -> "hvc1.1.4.L150.B0"
+      :h264 ->
+        compatibility =
+          <<sps.constraint_set0::1, sps.constraint_set1::1, sps.constraint_set2::1,
+            sps.constraint_set3::1, sps.constraint_set4::1, sps.constraint_set5::1, 0::2>>
+
+        "avc1." <> Base.encode16(<<sps.profile_idc, compatibility::binary, sps.level_idc>>)
+
+      :h265 ->
+        "hvc1.#{sps.profile_idc}.4.#{tier(sps.tier_flag)}#{sps.level_idc}.B0"
     end
   end
+
+  defp tier(0), do: "L"
+  defp tier(1), do: "H"
 end

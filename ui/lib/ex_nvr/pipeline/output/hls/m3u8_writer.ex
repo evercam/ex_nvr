@@ -34,7 +34,7 @@ defmodule ExNVR.Pipeline.Output.HLS.M3U8Writer do
       playlists: %{},
       streams: %{},
       location: opts[:location],
-      target_window_duration: opts[:target_window_duration] || 60,
+      target_window_duration: opts[:target_window_duration] || 60
     }
 
     case playlist_type do
