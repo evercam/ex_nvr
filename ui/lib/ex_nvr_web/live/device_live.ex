@@ -36,7 +36,8 @@ defmodule ExNVRWeb.DeviceLive do
     device = Devices.get!(device_id)
     device_params = get_device_params(socket.assigns.flash) |> Map.delete(:name)
 
-     {:ok, assign(socket,
+    {:ok,
+     assign(socket,
        device: device,
        disks_data: get_disks_data(),
        device_form: to_form(Devices.change_device_update(device, device_params)),
@@ -79,7 +80,8 @@ defmodule ExNVRWeb.DeviceLive do
     device = socket.assigns.device
     device_type = socket.assigns.device_type
 
-    device_params = device_params
+    device_params =
+      device_params
       |> put_snapshot_schedule(socket.assigns.snapshot_schedule, device_type)
       |> put_storage_schedule(socket.assigns.storage_schedule)
 
@@ -126,14 +128,14 @@ defmodule ExNVRWeb.DeviceLive do
 
   defp put_snapshot_schedule(
          %{"snapshot_config" => %{"enabled" => false}} = params,
-        _schedule,
+         _schedule,
          "ip"
        ),
        do: params
 
   defp put_snapshot_schedule(
          %{"snapshot_config" => snapshot} = params,
-          nil,
+         nil,
          "ip"
        ) do
     Map.put(params, "snapshot_config", Map.put(snapshot, "schedule", default_schedule()))
@@ -141,12 +143,11 @@ defmodule ExNVRWeb.DeviceLive do
 
   defp put_snapshot_schedule(
          %{"snapshot_config" => snapshot} = params,
-          schedule,
+         schedule,
          "ip"
        ) do
     Map.put(params, "snapshot_config", Map.put(snapshot, "schedule", schedule))
   end
-
 
   defp put_storage_schedule(%{"storage_config" => storage} = params, nil) do
     Map.put(params, "storage_config", Map.put(storage, "schedule", default_schedule()))
@@ -155,7 +156,6 @@ defmodule ExNVRWeb.DeviceLive do
   defp put_storage_schedule(%{"storage_config" => storage} = params, schedule) do
     Map.put(params, "storage_config", Map.put(storage, "schedule", schedule))
   end
-
 
   defp default_schedule do
     for day <- 1..7, into: %{} do

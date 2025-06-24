@@ -3,7 +3,7 @@ defmodule ExNVRWeb.DeviceLiveTest do
 
   use ExNVRWeb.ConnCase
 
-  import ExNVR.{AccountsFixtures, DevicesFixtures}
+  import ExNVR.{AccountsFixtures, DevicesFixtures, RemoteStoragesFixtures}
   import Phoenix.LiveViewTest
 
   alias ExNVR.Devices
@@ -12,7 +12,28 @@ defmodule ExNVRWeb.DeviceLiveTest do
   @moduletag :tmp_dir
 
   setup %{conn: conn} do
-    %{conn: log_in_user(conn, user_fixture())}
+    %{
+      conn: log_in_user(conn, user_fixture()),
+      remote_storage: remote_storage_fixture(),
+      custom_storage_schedule: %{
+        "1" => ["08:00-12:00"],
+        "2" => [],
+        "3" => [],
+        "4" => [],
+        "5" => [],
+        "6" => [],
+        "7" => []
+      },
+      custom_snapshot_schedule: %{
+        "1" => [],
+        "2" => ["09:00-10:00"],
+        "3" => [],
+        "4" => [],
+        "5" => [],
+        "6" => [],
+        "7" => []
+      }
+    }
   end
 
   describe "Device page" do
@@ -126,35 +147,61 @@ defmodule ExNVRWeb.DeviceLiveTest do
       assert Phoenix.Flash.get(conn.assigns.flash, :info) == "Device created successfully"
     end
 
-     test "create a new IP device with custom schedules", %{conn: conn} do
+    test "create a new IP device with custom schedules", %{
+      conn: conn,
+      remote_storage: remote_storage,
+      custom_storage_schedule: custom_storage_schedule,
+      custom_snapshot_schedule: custom_snapshot_schedule
+    } do
       {:ok, lv, _} = live(conn, ~p"/devices/new")
 
-      custom_storage = %{"1" => ["08:00-12:00"]}
-      custom_snapshot = %{"2" => ["09:00-10:00"]}
+      lv
+      |> form("#device_form", %{
+        "device" => %{
+          "name" => "Scheduled IP Device",
+          "type" => "ip",
+          "vendor" => "HIKVISION",
+          "snapshot_config" => %{"enabled" => "true"}
+        }
+      })
+      |> render_change()
 
-      lv = render_change(lv, "update_storage_schedule", custom_storage)
-      lv = render_change(lv, "update_snapshot_schedule", custom_snapshot)
+      lv
+      |> form("#device_form", %{
+        "snapshot_schedule_mode" => "custom",
+        "storage_schedule_mode" => "custom"
+      })
+      |> render_change()
 
-      {:ok, conn} =
-        lv
-        |> form("#device_form", %{
-          "device" => %{
-            "name" => "Scheduled IP Device",
-            "type" => "ip",
-            "vendor" => "HIKVISION",
-            "credentials" => %{ "username" => "user", "password" => "pass" },
-            "stream_config" => %{ "stream_uri" => "rtsp://localhost:554" },
-            "storage_config" => %{ "address" => "/tmp" }
+      render_hook(lv, "update_storage_schedule", custom_storage_schedule)
+      render_hook(lv, "update_snapshot_schedule", custom_snapshot_schedule)
+
+      lv
+      |> form("#device_form", %{
+        "device" => %{
+          "name" => "Scheduled IP Device",
+          "type" => "ip",
+          "vendor" => "HIKVISION",
+          "credentials" => %{"username" => "user", "password" => "pass"},
+          "stream_config" => %{"stream_uri" => "rtsp://localhost:554"},
+          "storage_config" => %{
+            "address" => "/tmp",
+            "full_drive_threshold" => "90",
+            "full_drive_action" => "nothing",
+            "record_sub_stream" => "never"
+          },
+          "snapshot_config" => %{
+            "enabled" => "true",
+            "upload_interval" => "60",
+            "remote_storage" => remote_storage.name
           }
-        })
-        |> render_submit()
-        |> follow_redirect(conn, ~p"/devices")
-
-      assert Phoenix.Flash.get(conn.assigns.flash, :info) == "Device created successfully"
+        }
+      })
+      |> render_submit()
 
       [created] = Devices.list()
-      assert created.storage_config.schedule == custom_storage
-      assert created.snapshot_config.schedule == custom_snapshot
+      assert created.storage_config.schedule == custom_storage_schedule
+      assert created.snapshot_config.schedule == custom_snapshot_schedule
     end
 
     test "renders errors on form submission", %{conn: conn} do
@@ -183,18 +230,55 @@ defmodule ExNVRWeb.DeviceLiveTest do
     setup ctx do
       %{
         device: camera_device_fixture(ctx.tmp_dir),
-        file_device: file_device_fixture()
+        file_device: file_device_fixture(),
+        remote_storage: remote_storage_fixture(),
+        custom_storage_schedule: %{
+          "1" => ["08:00-12:00"],
+          "2" => [],
+          "3" => [],
+          "4" => [],
+          "5" => [],
+          "6" => [],
+          "7" => []
+        },
+        custom_snapshot_schedule: %{
+          "1" => [],
+          "2" => ["09:00-10:00"],
+          "3" => [],
+          "4" => [],
+          "5" => [],
+          "6" => [],
+          "7" => []
+        }
       }
     end
 
-    test "update an IP Camera device", %{conn: conn, device: device} do
+    test "update an IP Camera device", %{
+      conn: conn,
+      device: device,
+      remote_storage: remote_storage,
+      custom_storage_schedule: custom_storage_schedule,
+      custom_snapshot_schedule: custom_snapshot_schedule
+    } do
       {:ok, lv, _} = live(conn, ~p"/devices/#{device.id}")
 
-      new_storage_schedule = %{"3" => ["06:00-18:00"]}
-      lv = render_event(lv, :change, "update_storage_schedule", new_storage_schedule)
+      lv
+      |> form("#device_form", %{
+        "device" => %{
+          "snapshot_config" => %{"enabled" => "true"}
+        }
+      })
+      |> render_change()
 
-      new_snapshot_schedule = %{"1" => ["06:00-18:00", "19:00-21:30"]}
-      lv = render_event(lv, :change, "update_snapshot_schedule", new_snapshot_schedule)
+      lv
+      |> form("#device_form", %{
+        "snapshot_schedule_mode" => "custom",
+        "storage_schedule_mode" => "custom"
+      })
+      |> render_change()
+
+      render_hook(lv, "update_storage_schedule", custom_storage_schedule)
+      render_hook(lv, "update_snapshot_schedule", custom_snapshot_schedule)
 
       {:ok, conn} =
         lv
@@ -214,8 +298,8 @@ defmodule ExNVRWeb.DeviceLiveTest do
       assert updated_device = Devices.get(device.id)
       assert updated_device.name == "My Updated Device"
       assert updated_device.stream_config.stream_uri == "rtsp://localhost:554"
-      assert updated_device.storage_config.schedule == new_storage_schedule
-      assert updated_device.snapshot_config.schedule == new_snapshot_schedule
+      assert updated_device.storage_config.schedule == custom_storage_schedule
+      assert updated_device.snapshot_config.schedule == custom_snapshot_schedule
     end
 
     test "renders errors on invalid update params for an IP Device", %{conn: conn, device: device} do
