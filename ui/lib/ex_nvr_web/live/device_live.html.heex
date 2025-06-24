@@ -246,7 +246,6 @@
               </div>
             </div>
 
-
             <div class="flex items-center gap-4 mb-2">
               <label class="block font-medium text-black dark:text-white mt-1">Schedule</label>
               <div class="flex gap-4 mt-1">
@@ -286,8 +285,6 @@
               />
             </div>
           </.inputs_for>
-
-
         </div>
         <div :if={@device_type == "ip"} id="snapshot-config" class="flex flex-col">
           <div class="relative flex py-5 items-center">
@@ -325,35 +322,34 @@
                   options={@remote_storages}
                   required
                 />
-
               </div>
               <div :if={snapshot_config[:enabled].value}>
-                  <label class="block font-medium text-black dark:text-white mt-1">Schedule</label>
-                  <div class="flex gap-4 mt-1">
-                    <label class="inline-flex items-center">
-                      <input
-                        type="radio"
-                        name="snapshot_schedule_mode"
-                        value="default"
-                        class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
-                        checked={@snapshot_schedule_mode == :default}
-                        phx-change="update_schedule_mode"
-                      />
-                      <span class="ml-2 text-black dark:text-white">Default</span>
-                    </label>
+                <label class="block font-medium text-black dark:text-white mt-1">Schedule</label>
+                <div class="flex gap-4 mt-1">
+                  <label class="inline-flex items-center">
+                    <input
+                      type="radio"
+                      name="snapshot_schedule_mode"
+                      value="default"
+                      class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                      checked={@snapshot_schedule_mode == :default}
+                      phx-change="update_schedule_mode"
+                    />
+                    <span class="ml-2 text-black dark:text-white">Default</span>
+                  </label>
 
-                    <label class="inline-flex items-center">
-                      <input
-                        type="radio"
-                        name="snapshot_schedule_mode"
-                        value="custom"
-                        class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
-                        checked={@snapshot_schedule_mode == :custom}
-                        phx-change="update_schedule_mode"
-                      />
-                      <span class="ml-2 text-black dark:text-white">Custom</span>
-                    </label>
-                  </div>
+                  <label class="inline-flex items-center">
+                    <input
+                      type="radio"
+                      name="snapshot_schedule_mode"
+                      value="custom"
+                      class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                      checked={@snapshot_schedule_mode == :custom}
+                      phx-change="update_schedule_mode"
+                    />
+                    <span class="ml-2 text-black dark:text-white">Custom</span>
+                  </label>
+                </div>
 
                 <div :if={@snapshot_schedule_mode == :custom} class="-ml-4">
                   <.vue
@@ -365,8 +361,6 @@
                   />
                 </div>
               </div>
-
-                
             </.inputs_for>
           </div>
         </div>
@@ -382,11 +376,16 @@
         </div>
       </div>
       <:actions>
-        <.button :if={is_nil(@device.id)} class="w-full" phx-disable-with="Creating...">
+        <.button
+          :if={is_nil(@device.id)}
+          id="submit-btn"
+          class="w-full"
+          phx-disable-with="Creating..."
+        >
           Create
         </.button>
 
-        <.button :if={@device.id} class="w-full" phx-disable-with="Updating...">
+        <.button :if={@device.id} id="submit-btn" class="w-full" phx-disable-with="Updating...">
           Update
         </.button>
       </:actions>
