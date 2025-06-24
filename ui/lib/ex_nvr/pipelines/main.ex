@@ -137,9 +137,8 @@ defmodule ExNVR.Pipelines.Main do
   def handle_setup(_ctx, %{device: device} = state) do
     spec =
       [
-        child(:hls_sink, %Output.HLS{
-          location: Path.join(Utils.hls_dir(device.id), "live"),
-          segment_name_prefix: "live"
+        child(:hls_sink, %Output.HLS2{
+          location: Path.join(Utils.hls_dir(device.id), "live")
         })
       ] ++ build_device_spec(device)
 
@@ -402,7 +401,7 @@ defmodule ExNVR.Pipelines.Main do
       [
         get_child(:tee)
         |> via_out(:push_output)
-        |> via_in(Pad.ref(:video, :main_stream), options: [encoding: encoding])
+        |> via_in(Pad.ref(:main_stream, :video))
         |> get_child(:hls_sink),
         get_child(:tee)
         |> via_out(:push_output)
@@ -419,11 +418,11 @@ defmodule ExNVR.Pipelines.Main do
       ]
   end
 
-  defp build_sub_stream_spec(%{device: device} = state, encoding) do
+  defp build_sub_stream_spec(%{device: device} = state, _encoding) do
     [
       get_child({:tee, :sub_stream})
       |> via_out(:push_output)
-      |> via_in(Pad.ref(:video, :sub_stream), options: [encoding: encoding])
+      |> via_in(Pad.ref(:sub_stream, :video))
       |> get_child(:hls_sink),
       get_child({:tee, :sub_stream})
       |> via_out(:push_output)
@@ -437,7 +436,7 @@ defmodule ExNVR.Pipelines.Main do
       build_sub_stream_bif_spec(state)
   end
 
-  defp build_main_stream_storage_spec(%{record_main_stream?: false}), do: []
+  defp build_main_stream_storage_spec(%{record_main_stream?: true}), do: []
 
   defp build_main_stream_storage_spec(state) do
     [
