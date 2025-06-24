@@ -11,9 +11,10 @@ defmodule ExNVR.Pipeline.Output.HLS2 do
   import ExNVR.MediaUtils
 
   alias ExMP4.{Box, FWriter}
+  alias ExNVR.Pipeline.Event.StreamClosed
   alias ExNVR.Pipeline.Output.HLS.{M3U8Writer, MultiFileWriter}
   alias ExNVR.Utils
-  alias Membrane.{Buffer, H264, H265, ResourceGuard}
+  alias Membrane.{Buffer, Event, H264, H265, ResourceGuard}
 
   @segment_duration 2 * 90_000
   @timescale 90_000
@@ -71,8 +72,7 @@ defmodule ExNVR.Pipeline.Output.HLS2 do
   @impl true
   def handle_pad_added(Pad.ref(stream_type, _ref), _ctx, state) do
     :ok = M3U8Writer.add_playlist(state.manifest, stream_type)
-    stream = %{type: stream_type, writer: nil, last_buffer: nil, track: nil, segment_duration: 0}
-    {[], put_in(state, [:streams, stream_type], stream)}
+    {[], put_in(state, [:streams, stream_type], init_stream(stream_type))}
   end
 
   # @impl true
@@ -85,6 +85,16 @@ defmodule ExNVR.Pipeline.Output.HLS2 do
     old_stream_format = ctx.pads[pad].stream_format
     stream = do_handle_stream_format(state.streams[stream_type], old_stream_format, stream_format)
     {[], put_in(state, [:streams, stream_type], stream)}
+  end
+
+  @impl true
+  def handle_event(Pad.ref(stream_type, _ref), %Event.Discontinuity{}, _ctx, state) do
+    {[], handle_discontinuity(state, stream_type)}
+  end
+
+  @impl true
+  def handle_event(Pad.ref(stream_type, _ref), %StreamClosed{}, _ctx, state) do
+    {[], handle_discontinuity(state, stream_type)}
   end
 
   @impl true
@@ -121,7 +131,8 @@ defmodule ExNVR.Pipeline.Output.HLS2 do
       dir: state.location,
       init_write: &M3U8Writer.add_init_header(manifest, stream_type, &1),
       segment_write: &M3U8Writer.add_segment(manifest, stream_type, {&1, &2, &3}),
-      segment_name_prefix: stream_type
+      segment_name_prefix: stream_type,
+      start_segment_number: M3U8Writer.total_segments(manifest, stream_type)
     ]
 
     writer =
@@ -175,6 +186,27 @@ defmodule ExNVR.Pipeline.Output.HLS2 do
     else
       stream
     end
+  end
+
+  defp handle_discontinuity(state, stream_type) do
+    stream = state.streams[stream_type]
+
+    if writer = stream.writer do
+      writer |> FWriter.flush_fragment() |> FWriter.close()
+    end
+
+    :ok = M3U8Writer.add_discontinuity(state.manifest, stream_type)
+    put_in(state, [:streams, stream_type], %{init_stream(stream_type) | track: stream.track})
+  end
+
+  defp init_stream(stream_type) do
+    %{
+      type: stream_type,
+      writer: nil,
+      last_buffer: nil,
+      track: nil,
+      segment_duration: 0
+    }
   end
 
   defp new_track(stream_format) do

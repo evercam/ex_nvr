@@ -20,7 +20,7 @@ defmodule ExNVR.Pipeline.Output.HLS.MultiFileWriter do
       init_callback: params[:init_write],
       segment_callback: params[:segment_write],
       segment_name_prefix: params[:segment_name_prefix] || "",
-      seg_num: 0
+      seg_num: params[:start_segment_number] || 0
     }
 
     {:ok, state}
