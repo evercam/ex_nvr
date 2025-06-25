@@ -31,7 +31,7 @@ defmodule ExNVR.Nerves.Monitoring.UPSTest do
   test "Power state" do
     assert {:ok, _settings} =
              SystemSettings.update_ups_settings(%{
-               enabled: true,
+               enabled: false,
                trigger_after: 0,
                ac_failure_action: "stop_recording",
                low_battery_action: "nothing",
