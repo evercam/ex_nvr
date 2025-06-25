@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="csrf-token" content={get_csrf_token()} />
     <head>
-      <%= Application.get_env(:live_debugger, :live_debugger_tags) %>
+      {Application.get_env(:live_debugger, :live_debugger_tags)}
     </head>
     <script>
       // Init dark mode, having this script here so the initial page flicker from light to dark won't be noticeable
