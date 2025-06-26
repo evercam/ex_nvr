@@ -11,8 +11,9 @@ defmodule ExNVR.Pipeline.Output.HLS2 do
   import ExNVR.MediaUtils
 
   alias ExMP4.{Box, FWriter}
+  alias ExNVR.HLS.MultivariantPlaylist
   alias ExNVR.Pipeline.Event.StreamClosed
-  alias ExNVR.Pipeline.Output.HLS.{M3U8Writer, MultiFileWriter}
+  alias ExNVR.Pipeline.Output.HLS.MultiFileWriter
   alias ExNVR.Utils
   alias Membrane.{Buffer, Event, H264, H265, ResourceGuard}
 
@@ -50,12 +51,6 @@ defmodule ExNVR.Pipeline.Output.HLS2 do
     File.rm_rf(options.location)
     File.mkdir_p!(options.location)
 
-    {:ok, pid} =
-      M3U8Writer.start_link(
-        location: options.location,
-        playlist_type: :multivariant
-      )
-
     ResourceGuard.register(ctx.resource_guard, fn ->
       File.rm_rf!(options.location)
     end)
@@ -63,7 +58,7 @@ defmodule ExNVR.Pipeline.Output.HLS2 do
     state = %{
       streams: %{},
       location: options.location,
-      manifest: pid
+      playlist: MultivariantPlaylist.new([])
     }
 
     {[], state}
@@ -71,8 +66,9 @@ defmodule ExNVR.Pipeline.Output.HLS2 do
 
   @impl true
   def handle_pad_added(Pad.ref(stream_type, _ref), _ctx, state) do
-    :ok = M3U8Writer.add_playlist(state.manifest, stream_type)
-    {[], put_in(state, [:streams, stream_type], init_stream(stream_type))}
+    playlist = MultivariantPlaylist.add_variant(state.playlist, stream_type)
+    streams = Map.put(state.streams, stream_type, init_stream(stream_type))
+    {[], %{state | streams: streams, playlist: playlist}}
   end
 
   # @impl true
@@ -99,13 +95,42 @@ defmodule ExNVR.Pipeline.Output.HLS2 do
 
   @impl true
   def handle_buffer(Pad.ref(stream_type, _ref), buffer, _ctx, state) do
-    stream = do_handle_buffer(state, state.streams[stream_type], buffer)
-    {[], put_in(state, [:streams, stream_type], stream)}
+    state = do_handle_buffer(state, state.streams[stream_type], buffer)
+    {[], state}
+  end
+
+  @impl true
+  def handle_info({:init_header, variant, uri}, _ctx, state) do
+    playlist = MultivariantPlaylist.add_init_header(state.playlist, variant, uri)
+    {[], %{state | playlist: playlist}}
+  end
+
+  @impl true
+  def handle_info({:segment, variant, segment}, _ctx, state) do
+    {playlist, discarded} = MultivariantPlaylist.add_segment(state.playlist, variant, segment)
+    {master, variants} = MultivariantPlaylist.serialize(playlist)
+
+    File.write!(Path.join(state.location, "index.m3u8"), master)
+
+    Enum.each(variants, fn {name, content} ->
+      File.write!(Path.join(state.location, "#{name}.m3u8"), content)
+    end)
+
+    Enum.each(discarded, fn
+      %ExM3U8.Tags.Segment{uri: uri} -> File.rm!(Path.join(state.location, uri))
+      _other -> :ok
+    end)
+
+    {[], %{state | playlist: playlist}}
+  end
+
+  @impl true
+  def handle_info(_message, _ctx, state) do
+    {[], state}
   end
 
   defp do_handle_buffer(state, %{last_buffer: nil} = stream, buffer)
        when Utils.keyframe(buffer) do
-    manifest = state.manifest
     stream_type = stream.type
 
     {stream, sps} =
@@ -121,18 +146,18 @@ defmodule ExNVR.Pipeline.Output.HLS2 do
           {stream, MediaCodecs.H265.parse_nalu(List.first(sps))}
       end
 
-    :ok =
-      M3U8Writer.update_playlist_settings(state.manifest, stream_type,
+    playlist =
+      MultivariantPlaylist.update_settings(state.playlist, stream_type,
         resolution: resolution(stream.track),
         codecs: codecs(stream.track, sps.content)
       )
 
     writer_opts = [
       dir: state.location,
-      init_write: &M3U8Writer.add_init_header(manifest, stream_type, &1),
-      segment_write: &M3U8Writer.add_segment(manifest, stream_type, {&1, &2, &3}),
+      init_write: &send(self(), {:init_header, stream_type, &1}),
+      segment_write: &send(self(), {:segment, stream_type, &1}),
       segment_name_prefix: stream_type,
-      start_segment_number: M3U8Writer.total_segments(manifest, stream_type)
+      start_segment_number: MultivariantPlaylist.count_segments(playlist, stream_type)
     ]
 
     writer =
@@ -141,14 +166,15 @@ defmodule ExNVR.Pipeline.Output.HLS2 do
       |> FWriter.create_segment()
       |> FWriter.create_fragment()
 
-    %{stream | writer: writer, last_buffer: buffer, track: FWriter.track(writer, :video)}
+    stream = %{stream | writer: writer, last_buffer: buffer, track: FWriter.track(writer, :video)}
+    %{state | streams: Map.put(state.streams, stream.type, stream), playlist: playlist}
   end
 
-  defp do_handle_buffer(_state, %{last_buffer: nil} = stream, _buffer) do
-    stream
+  defp do_handle_buffer(state, %{last_buffer: nil}, _buffer) do
+    state
   end
 
-  defp do_handle_buffer(_state, %{last_buffer: last_buffer} = stream, buffer) do
+  defp do_handle_buffer(state, %{last_buffer: last_buffer} = stream, buffer) do
     duration = Buffer.get_dts_or_pts(buffer) - Buffer.get_dts_or_pts(last_buffer)
     keyframe? = Utils.keyframe(last_buffer)
     timescale = stream.track.timescale
@@ -177,14 +203,31 @@ defmodule ExNVR.Pipeline.Output.HLS2 do
         %{stream | writer: writer, segment_duration: stream.segment_duration + sample.duration}
       end
 
-    %{stream | last_buffer: buffer}
+    put_in(state, [:streams, stream.type], %{stream | last_buffer: buffer})
   end
 
   defp do_handle_stream_format(stream, old_stream_format, stream_format) do
-    if is_nil(old_stream_format) do
-      %{stream | track: new_track(stream_format)}
-    else
-      stream
+    cond do
+      is_nil(old_stream_format) ->
+        %{stream | track: new_track(stream_format)}
+
+      codec_changed?(old_stream_format, stream_format) ->
+        # reset everything
+        stream
+
+      old_stream_format != stream_format ->
+        :ok = stream.writer |> FWriter.flush_fragment() |> FWriter.close()
+
+        %{
+          stream
+          | track: new_track(stream_format),
+            writer: nil,
+            last_buffer: nil,
+            segment_duration: 0
+        }
+
+      true ->
+        stream
     end
   end
 
@@ -195,8 +238,12 @@ defmodule ExNVR.Pipeline.Output.HLS2 do
       writer |> FWriter.flush_fragment() |> FWriter.close()
     end
 
-    :ok = M3U8Writer.add_discontinuity(state.manifest, stream_type)
-    put_in(state, [:streams, stream_type], %{init_stream(stream_type) | track: stream.track})
+    playlist = MultivariantPlaylist.add_discontinuity(state.playlist, stream_type)
+
+    streams =
+      Map.put(state.streams, stream_type, %{init_stream(stream_type) | track: stream.track})
+
+    %{state | streams: streams, playlist: playlist}
   end
 
   defp init_stream(stream_type) do
@@ -224,6 +271,9 @@ defmodule ExNVR.Pipeline.Output.HLS2 do
       timescale: @timescale
     }
   end
+
+  defp codec_changed?(%module{}, %module{}), do: false
+  defp codec_changed?(_old, _new), do: true
 
   defp resolution(track), do: {track.width, track.height}
 

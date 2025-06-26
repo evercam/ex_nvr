@@ -45,11 +45,11 @@ defmodule ExNVR.Pipeline.Output.HLS.MultiFileWriter do
 
     File.write!(segment_path, ExMP4.Box.serialize([@styp | segment]))
 
-    state.segment_callback.(
-      Path.basename(segment_path),
-      segment_duration,
-      segment_bitrate(segment)
-    )
+    state.segment_callback.(%{
+      uri: Path.basename(segment_path),
+      duration: segment_duration,
+      bitrate: segment_bitrate(segment)
+    })
 
     %{state | seg_num: state.seg_num + 1}
   end
