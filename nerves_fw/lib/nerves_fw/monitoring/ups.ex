@@ -7,9 +7,9 @@ defmodule ExNVR.Nerves.Monitoring.UPS do
 
   require Logger
 
-  alias Circuits.GPIO
   alias ExNVR.Devices
   alias ExNVR.Nerves.{DiskMounter, SystemSettings}
+  alias ExNVR.Nerves.GPIO
 
   def start_link(options) do
     GenServer.start_link(__MODULE__, options, name: __MODULE__)
@@ -38,8 +38,7 @@ defmodule ExNVR.Nerves.Monitoring.UPS do
 
   @impl true
   def handle_continue(:trigger_action, state) do
-    {ac_state, low_battery_state} =
-      if state.config.enabled, do: {state.ac_ok?, state.low_battery?}, else: {1, 0}
+    {ac_state, low_battery_state} = if state.config.enabled, do: pin_state(state), else: {1, 0}
 
     do_trigger_action(:ac_ok?, state.config.ac_failure_action, ac_state)
     do_trigger_action(:low_battery?, state.config.low_battery_action, low_battery_state)
@@ -47,13 +46,14 @@ defmodule ExNVR.Nerves.Monitoring.UPS do
   end
 
   @impl true
-  def handle_call(:state, _from, state) do
-    reply =
-      if state.config.enabled do
-        %{ac_ok: state.ac_ok? == 1, low_battery: state.low_battery? == 1}
-      end
+  def handle_call(:state, _from, %{config: %{enabled: true}} = state) do
+    {ac_ok?, low_battery?} = pin_state(state)
+    {:reply, %{ac_ok: ac_ok? == 1, low_battery: low_battery? == 1}, state}
+  end
 
-    {:reply, reply, state}
+  @impl true
+  def handle_call(:state, _from, state) do
+    {:reply, nil, state}
   end
 
   @impl true
@@ -67,29 +67,7 @@ defmodule ExNVR.Nerves.Monitoring.UPS do
   end
 
   @impl true
-  def handle_info({:circuits_gpio, pin, _timestamp, value}, state) do
-    {timer_field, field} =
-      case state do
-        %{ac_pin: ^pin} -> {:ac_timer, :ac_ok?}
-        %{bat_pin: ^pin} -> {:bat_timer, :low_battery?}
-      end
-
-    # Timer used for debounce
-    # We need to wait for the signal to stabilize before reading it.
-    :timer.cancel(state[timer_field])
-    {:ok, ref} = :timer.send_after(to_timeout(second: 1), {:update, field, value})
-    {:noreply, Map.put(state, timer_field, ref)}
-  end
-
-  @impl true
-  def handle_info({:update, :ac_ok?, value}, %{ac_ok?: value} = state), do: {:noreply, state}
-
-  @impl true
-  def handle_info({:update, :low_battery?, value}, %{low_battery?: value} = state),
-    do: {:noreply, state}
-
-  @impl true
-  def handle_info({:update, _key, _value}, %{config: %{enabled: false}} = state) do
+  def handle_info({pid, _value}, %{config: %{enabled: false}} = state) when is_pid(pid) do
     # After updating the ups settings, this module will receive a notification and
     # will trigger the actions
     {:ok, %{ups: ups}} = SystemSettings.update_ups_settings(%{enabled: true})
@@ -97,28 +75,13 @@ defmodule ExNVR.Nerves.Monitoring.UPS do
   end
 
   @impl true
-  def handle_info({:update, key, value}, state) do
-    Logger.info("[UPS] #{key} changed to #{value}")
-    state = Map.put(state, key, value)
-    event = %{type: event_name(key), metadata: %{state: value}}
+  def handle_info({ac_pid, value}, %{ac_pid: ac_pid} = state) do
+    do_handle_pin_state_change(:ac_ok?, value, state)
+  end
 
-    with {:error, changeset} <- ExNVR.Events.create_event(event) do
-      Logger.error("Failed to save event: #{inspect(changeset)}")
-    end
-
-    ref =
-      if (key == :ac_ok? and state.config.ac_failure_action != :nothing) or
-           (key == :low_battery? and state.config.low_battery_action != :nothing) do
-        Process.send_after(
-          self(),
-          {:trigger_action, key},
-          to_timeout(second: state.config.trigger_after)
-        )
-      end
-
-    if state.action_timer, do: Process.cancel_timer(state.action_timer)
-
-    {:noreply, %{state | action_timer: ref}}
+  @impl true
+  def handle_info({bat_pid, value}, %{bat_pid: bat_pid} = state) do
+    do_handle_pin_state_change(:low_battery?, value, state)
   end
 
   @impl true
@@ -143,48 +106,62 @@ defmodule ExNVR.Nerves.Monitoring.UPS do
     ac_pin = Keyword.get(opts, :ac_pin, ups_config.ac_pin)
     bat_pin = Keyword.get(opts, :battery_pin, ups_config.battery_pin)
 
-    {:ok, ac_gpio} = GPIO.open(ac_pin, :input, pull_mode: :pulldown)
-    {:ok, bat_gpio} = GPIO.open(bat_pin, :input, pull_mode: :pulldown)
-
-    :ok = GPIO.set_interrupts(bat_gpio, :both)
-    :ok = GPIO.set_interrupts(ac_gpio, :both)
-
-    ac_ok? = GPIO.read(ac_gpio)
-    low_battery? = GPIO.read(bat_gpio)
+    {:ok, ac_pid} = GPIO.start_link(pin: ac_pin)
+    {:ok, bat_pid} = GPIO.start_link(pin: bat_pin)
 
     %{
       config: ups_config,
       ac_pin: ac_pin,
       bat_pin: bat_pin,
-      ac_gpio: ac_gpio,
-      bat_gpio: bat_gpio,
-      ac_timer: nil,
-      bat_timer: nil,
-      action_timer: nil,
-      ac_ok?: ac_ok?,
-      low_battery?: low_battery?
+      ac_pid: ac_pid,
+      bat_pid: bat_pid,
+      action_timer: nil
     }
   end
 
+  defp do_handle_pin_state_change(key, value, state) do
+    Logger.info("[UPS] #{key} changed to #{value}")
+    state = Map.put(state, key, value)
+    event = %{type: event_name(key), metadata: %{state: value}}
+
+    with {:error, changeset} <- ExNVR.Events.create_event(event) do
+      Logger.error("Failed to save event: #{inspect(changeset)}")
+    end
+
+    ref =
+      if (key == :ac_ok? and state.config.ac_failure_action != :nothing) or
+           (key == :low_battery? and state.config.low_battery_action != :nothing) do
+        Process.send_after(
+          self(),
+          {:trigger_action, key},
+          to_timeout(second: state.config.trigger_after)
+        )
+      end
+
+    if state.action_timer, do: Process.cancel_timer(state.action_timer)
+
+    {:noreply, %{state | action_timer: ref}}
+  end
+
   defp maybe_enable_ups(state) do
-    if not state.config.enabled and (state.ac_ok? == 1 or state.low_battery? == 1) do
-      {:ok, %{ups: ups}} = SystemSettings.update_ups_settings(%{enabled: true})
-      %{state | config: ups}
-    else
-      state
+    cond do
+      state.config.enabled ->
+        state
+
+      GPIO.value(state.ac_pid) == 1 or GPIO.value(state.bat_pid) == 1 ->
+        Logger.info("[UPS] auto enable UPS monitoring")
+        {:ok, %{ups: ups}} = SystemSettings.update_ups_settings(%{enabled: true})
+        %{state | config: ups}
+
+      true ->
+        state
     end
   end
 
   defp clean_state(state) do
-    :ok = GPIO.set_interrupts(state.ac_gpio, :none)
-    :ok = GPIO.set_interrupts(state.bat_gpio, :none)
-
-    GPIO.close(state.ac_gpio)
-    GPIO.close(state.bat_gpio)
-
-    if state[:ac_timer], do: :timer.cancel(state.ac_timer)
-    if state[:bat_timer], do: :timer.cancel(state.bat_timer)
     if state[:action_timer], do: Process.cancel_timer(state.action_timer)
+    :ok = GenServer.stop(state.ac_pid)
+    :ok = GenServer.stop(state.bat_pid)
     :ok
   end
 
@@ -226,4 +203,8 @@ defmodule ExNVR.Nerves.Monitoring.UPS do
 
   defp event_name(:ac_ok?), do: "power"
   defp event_name(:low_battery?), do: "low-battery"
+
+  defp pin_state(state) do
+    {GPIO.value(state.ac_pid), GPIO.value(state.bat_pid)}
+  end
 end
