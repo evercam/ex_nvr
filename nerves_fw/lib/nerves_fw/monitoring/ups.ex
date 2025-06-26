@@ -86,13 +86,13 @@ defmodule ExNVR.Nerves.Monitoring.UPS do
 
   @impl true
   def handle_info({:trigger_action, :ac_ok?}, %{config: config} = state) do
-    do_trigger_action(:ac_ok?, config.ac_failure_action, state.ac_ok?)
+    do_trigger_action(:ac_ok?, config.ac_failure_action, GPIO.value(state.ac_pid))
     {:noreply, %{state | action_timer: nil}}
   end
 
   @impl true
   def handle_info({:trigger_action, :low_battery?}, %{config: config} = state) do
-    do_trigger_action(:low_battery?, config.low_battery_action, state.low_battery?)
+    do_trigger_action(:low_battery?, config.low_battery_action, GPIO.value(state.bat_pid))
     {:noreply, %{state | action_timer: nil}}
   end
 
@@ -121,7 +121,6 @@ defmodule ExNVR.Nerves.Monitoring.UPS do
 
   defp do_handle_pin_state_change(key, value, state) do
     Logger.info("[UPS] #{key} changed to #{value}")
-    state = Map.put(state, key, value)
     event = %{type: event_name(key), metadata: %{state: value}}
 
     with {:error, changeset} <- ExNVR.Events.create_event(event) do
