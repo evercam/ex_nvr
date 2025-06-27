@@ -58,8 +58,7 @@ defmodule ExNVR.Pipeline.Output.HLS2 do
     state = %{
       streams: %{},
       location: options.location,
-      playlist: MultivariantPlaylist.new([]),
-      insert_discontinuity?: false
+      playlist: MultivariantPlaylist.new([])
     }
 
     {[], state}
@@ -89,16 +88,14 @@ defmodule ExNVR.Pipeline.Output.HLS2 do
           :ok = stream.writer |> FWriter.flush_fragment() |> FWriter.close()
 
           stream = %{
-            init_stream(stream)
+            init_stream(stream_type)
             | track: new_track(stream_format),
-              count_segments: stream.count_segments + 1
-          }
-
-          %{
-            state
-            | streams: Map.put(state.streams, stream_type, stream),
+              count_segments: stream.count_segments + 1,
+              count_media_init: stream.count_media_init,
               insert_discontinuity?: true
           }
+
+          %{state | streams: Map.put(state.streams, stream_type, stream)}
 
         true ->
           state
@@ -131,40 +128,27 @@ defmodule ExNVR.Pipeline.Output.HLS2 do
 
   @impl true
   def handle_info({:segment, variant, segment}, _ctx, state) do
+    stream = state.streams[variant]
     {playlist, discarded} = MultivariantPlaylist.add_segment(state.playlist, variant, segment)
 
     playlist =
-      if state.insert_discontinuity?,
+      if stream.insert_discontinuity?,
         do: MultivariantPlaylist.add_discontinuity(playlist, variant),
         else: playlist
-
-    {master, variants} = MultivariantPlaylist.serialize(playlist)
-
-    File.write!(Path.join(state.location, "index.m3u8"), master)
-
-    Enum.each(variants, fn {name, content} ->
-      File.write!(Path.join(state.location, "#{name}.m3u8"), content)
-    end)
-
-    Enum.each(discarded, fn
-      %ExM3U8.Tags.Segment{uri: uri} -> File.rm!(Path.join(state.location, uri))
-      %ExM3U8.Tags.MediaInit{uri: uri} -> File.rm!(Path.join(state.location, uri))
-      _other -> :ok
-    end)
-
-    stream = state.streams[variant]
 
     {actions, stream} =
       if stream.playable?,
         do: {[], stream},
         else: {[notify_parent: {:track_playable, variant}], %{stream | playable?: true}}
 
+    serialize(playlist, state.location)
+    delete_discarded_segments(discarded, state.location)
+
     {actions,
      %{
        state
        | playlist: playlist,
-         insert_discontinuity?: false,
-         streams: Map.put(state.streams, variant, stream)
+         streams: Map.put(state.streams, variant, %{stream | insert_discontinuity?: false})
      }}
   end
 
@@ -265,7 +249,6 @@ defmodule ExNVR.Pipeline.Output.HLS2 do
 
   defp handle_discontinuity(state, stream_type) do
     stream = state.streams[stream_type]
-    count_segments = stream.count_segments
 
     stream =
       if writer = stream.writer do
@@ -274,13 +257,14 @@ defmodule ExNVR.Pipeline.Output.HLS2 do
         %{
           init_stream(stream_type)
           | track: stream.track,
-            count_segments: stream.count_segments + 1
+            count_segments: stream.count_segments + 1,
+            insert_discontinuity?: true
         }
       else
         stream
       end
 
-    %{state | streams: Map.put(state.streams, stream_type, stream), insert_discontinuity?: true}
+    %{state | streams: Map.put(state.streams, stream_type, stream)}
   end
 
   defp init_stream(stream_type) do
@@ -292,7 +276,8 @@ defmodule ExNVR.Pipeline.Output.HLS2 do
       segment_duration: 0,
       playable?: false,
       count_segments: 0,
-      count_media_init: 0
+      count_media_init: 0,
+      insert_discontinuity?: false
     }
   end
 
@@ -310,6 +295,24 @@ defmodule ExNVR.Pipeline.Output.HLS2 do
       height: stream_format.height,
       timescale: @timescale
     }
+  end
+
+  defp serialize(playlist, location) do
+    {master, variants} = MultivariantPlaylist.serialize(playlist)
+
+    File.write!(Path.join(location, "index.m3u8"), master)
+
+    Enum.each(variants, fn {name, content} ->
+      File.write!(Path.join(location, "#{name}.m3u8"), content)
+    end)
+  end
+
+  defp delete_discarded_segments(discarded, location) do
+    Enum.each(discarded, fn
+      %ExM3U8.Tags.Segment{uri: uri} -> File.rm!(Path.join(location, uri))
+      %ExM3U8.Tags.MediaInit{uri: uri} -> File.rm!(Path.join(location, uri))
+      _other -> :ok
+    end)
   end
 
   defp codec_changed?(%module{}, %module{}), do: false
