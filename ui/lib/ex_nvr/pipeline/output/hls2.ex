@@ -58,7 +58,8 @@ defmodule ExNVR.Pipeline.Output.HLS2 do
     state = %{
       streams: %{},
       location: options.location,
-      playlist: MultivariantPlaylist.new([])
+      playlist: MultivariantPlaylist.new([]),
+      insert_discontinuity?: false
     }
 
     {[], state}
@@ -79,8 +80,39 @@ defmodule ExNVR.Pipeline.Output.HLS2 do
   @impl true
   def handle_stream_format(Pad.ref(stream_type, _ref) = pad, stream_format, ctx, state) do
     old_stream_format = ctx.pads[pad].stream_format
-    stream = do_handle_stream_format(state.streams[stream_type], old_stream_format, stream_format)
-    {[], put_in(state, [:streams, stream_type], stream)}
+    stream = state.streams[stream_type]
+
+    state =
+      cond do
+        is_nil(old_stream_format) ->
+          put_in(state, [:streams, stream.type], %{stream | track: new_track(stream_format)})
+
+        codec_changed?(old_stream_format, stream_format) ->
+          # reset everything
+          state
+
+        old_stream_format != stream_format ->
+          :ok = stream.writer |> FWriter.flush_fragment() |> FWriter.close()
+
+          stream = %{
+            stream
+            | track: new_track(stream_format),
+              writer: nil,
+              last_buffer: nil,
+              segment_duration: 0
+          }
+
+          %{
+            state
+            | streams: Map.put(state.streams, stream_type, stream),
+              insert_discontinuity?: true
+          }
+
+        true ->
+          state
+      end
+
+    {[], state}
   end
 
   @impl true
@@ -108,6 +140,12 @@ defmodule ExNVR.Pipeline.Output.HLS2 do
   @impl true
   def handle_info({:segment, variant, segment}, _ctx, state) do
     {playlist, discarded} = MultivariantPlaylist.add_segment(state.playlist, variant, segment)
+
+    playlist =
+      if state.insert_discontinuity?,
+        do: MultivariantPlaylist.add_discontinuity(playlist, variant),
+        else: playlist
+
     {master, variants} = MultivariantPlaylist.serialize(playlist)
 
     File.write!(Path.join(state.location, "index.m3u8"), master)
@@ -121,7 +159,12 @@ defmodule ExNVR.Pipeline.Output.HLS2 do
       _other -> :ok
     end)
 
-    {[], %{state | playlist: playlist}}
+    {actions, state} =
+      if state.playable?,
+        do: {[], state},
+        else: {[notify_parent: {:track_playable, variant}], %{state | playable?: true}}
+
+    {actions, %{state | playlist: playlist, insert_discontinuity?: false}}
   end
 
   @impl true
@@ -206,31 +249,6 @@ defmodule ExNVR.Pipeline.Output.HLS2 do
     put_in(state, [:streams, stream.type], %{stream | last_buffer: buffer})
   end
 
-  defp do_handle_stream_format(stream, old_stream_format, stream_format) do
-    cond do
-      is_nil(old_stream_format) ->
-        %{stream | track: new_track(stream_format)}
-
-      codec_changed?(old_stream_format, stream_format) ->
-        # reset everything
-        stream
-
-      old_stream_format != stream_format ->
-        :ok = stream.writer |> FWriter.flush_fragment() |> FWriter.close()
-
-        %{
-          stream
-          | track: new_track(stream_format),
-            writer: nil,
-            last_buffer: nil,
-            segment_duration: 0
-        }
-
-      true ->
-        stream
-    end
-  end
-
   defp handle_discontinuity(state, stream_type) do
     stream = state.streams[stream_type]
 
@@ -238,12 +256,10 @@ defmodule ExNVR.Pipeline.Output.HLS2 do
       writer |> FWriter.flush_fragment() |> FWriter.close()
     end
 
-    playlist = MultivariantPlaylist.add_discontinuity(state.playlist, stream_type)
-
     streams =
       Map.put(state.streams, stream_type, %{init_stream(stream_type) | track: stream.track})
 
-    %{state | streams: streams, playlist: playlist}
+    %{state | streams: streams, insert_discontinuity?: true}
   end
 
   defp init_stream(stream_type) do
@@ -252,7 +268,8 @@ defmodule ExNVR.Pipeline.Output.HLS2 do
       writer: nil,
       last_buffer: nil,
       track: nil,
-      segment_duration: 0
+      segment_duration: 0,
+      playable?: false
     }
   end
 
