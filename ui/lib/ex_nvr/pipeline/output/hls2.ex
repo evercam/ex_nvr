@@ -83,18 +83,14 @@ defmodule ExNVR.Pipeline.Output.HLS2 do
           put_in(state, [:streams, stream.type], %{stream | track: new_track(stream_format)})
 
         codec_changed?(old_stream_format, stream_format) ->
-          # reset everything
-          state
+          raise "HLS does not support codec change"
 
         old_stream_format != stream_format ->
           :ok = stream.writer |> FWriter.flush_fragment() |> FWriter.close()
 
           stream = %{
-            stream
+            init_stream(stream)
             | track: new_track(stream_format),
-              writer: nil,
-              last_buffer: nil,
-              segment_duration: 0,
               count_segments: stream.count_segments + 1
           }
 
