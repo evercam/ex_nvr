@@ -3,11 +3,10 @@ defmodule ExNVR.HLS.MediaPlaylist do
 
   @type t :: %__MODULE__{
           playlist: ExM3U8.MediaPlaylist.t(),
-          total_segments: non_neg_integer(),
           target_window_duration: non_neg_integer() | nil
         }
 
-  defstruct playlist: nil, total_segments: 0, target_window_duration: nil
+  defstruct playlist: nil, target_window_duration: nil
 
   alias ExM3U8.{MediaPlaylist, Tags}
 
@@ -50,7 +49,7 @@ defmodule ExNVR.HLS.MediaPlaylist do
       |> do_add_segment(segment)
       |> delete_old_segments(state.target_window_duration)
 
-    {%{state | playlist: playlist, total_segments: state.total_segments + 1}, discarded}
+    {%{state | playlist: playlist}, discarded}
   end
 
   @spec add_discontinuity(t()) :: t()

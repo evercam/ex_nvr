@@ -20,7 +20,8 @@ defmodule ExNVR.Pipeline.Output.HLS.MultiFileWriter do
       init_callback: params[:init_write],
       segment_callback: params[:segment_write],
       segment_name_prefix: params[:segment_name_prefix] || "",
-      seg_num: params[:start_segment_number] || 0
+      seg_num: params[:start_segment_number] || 0,
+      init_num: params[:start_init_number] || 0
     }
 
     {:ok, state}
@@ -28,14 +29,14 @@ defmodule ExNVR.Pipeline.Output.HLS.MultiFileWriter do
 
   @impl true
   def write_init_header(state, header) do
-    filename = "#{state.segment_name_prefix}_init.mp4"
+    filename = "#{state.segment_name_prefix}_init_#{state.init_num}.mp4"
 
     state.dir
     |> Path.join(filename)
     |> File.write!(ExMP4.Box.serialize(header))
 
     state.init_callback.(filename)
-    state
+    %{state | init_num: state.init_num + 1}
   end
 
   @impl true

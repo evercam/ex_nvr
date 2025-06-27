@@ -72,11 +72,6 @@ defmodule ExNVR.Pipeline.Output.HLS2 do
     {[], %{state | streams: streams, playlist: playlist}}
   end
 
-  # @impl true
-  # def handle_child_notification({:track_playable, track_id}, :sink, _ctx, state) do
-  #   {[notify_parent: {:track_playable, track_id}], state}
-  # end
-
   @impl true
   def handle_stream_format(Pad.ref(stream_type, _ref) = pad, stream_format, ctx, state) do
     old_stream_format = ctx.pads[pad].stream_format
@@ -99,7 +94,8 @@ defmodule ExNVR.Pipeline.Output.HLS2 do
             | track: new_track(stream_format),
               writer: nil,
               last_buffer: nil,
-              segment_duration: 0
+              segment_duration: 0,
+              count_segments: stream.count_segments + 1
           }
 
           %{
@@ -156,15 +152,24 @@ defmodule ExNVR.Pipeline.Output.HLS2 do
 
     Enum.each(discarded, fn
       %ExM3U8.Tags.Segment{uri: uri} -> File.rm!(Path.join(state.location, uri))
+      %ExM3U8.Tags.MediaInit{uri: uri} -> File.rm!(Path.join(state.location, uri))
       _other -> :ok
     end)
 
-    {actions, state} =
-      if state.playable?,
-        do: {[], state},
-        else: {[notify_parent: {:track_playable, variant}], %{state | playable?: true}}
+    stream = state.streams[variant]
 
-    {actions, %{state | playlist: playlist, insert_discontinuity?: false}}
+    {actions, stream} =
+      if stream.playable?,
+        do: {[], stream},
+        else: {[notify_parent: {:track_playable, variant}], %{stream | playable?: true}}
+
+    {actions,
+     %{
+       state
+       | playlist: playlist,
+         insert_discontinuity?: false,
+         streams: Map.put(state.streams, variant, stream)
+     }}
   end
 
   @impl true
@@ -200,7 +205,8 @@ defmodule ExNVR.Pipeline.Output.HLS2 do
       init_write: &send(self(), {:init_header, stream_type, &1}),
       segment_write: &send(self(), {:segment, stream_type, &1}),
       segment_name_prefix: stream_type,
-      start_segment_number: MultivariantPlaylist.count_segments(playlist, stream_type)
+      start_segment_number: stream.count_segments,
+      start_init_number: stream.count_media_init
     ]
 
     writer =
@@ -209,7 +215,14 @@ defmodule ExNVR.Pipeline.Output.HLS2 do
       |> FWriter.create_segment()
       |> FWriter.create_fragment()
 
-    stream = %{stream | writer: writer, last_buffer: buffer, track: FWriter.track(writer, :video)}
+    stream = %{
+      stream
+      | writer: writer,
+        last_buffer: buffer,
+        track: FWriter.track(writer, :video),
+        count_media_init: stream.count_media_init + 1
+    }
+
     %{state | streams: Map.put(state.streams, stream.type, stream), playlist: playlist}
   end
 
@@ -240,7 +253,12 @@ defmodule ExNVR.Pipeline.Output.HLS2 do
           |> FWriter.create_fragment()
           |> FWriter.write_sample(sample)
 
-        %{stream | writer: writer, segment_duration: sample.duration}
+        %{
+          stream
+          | writer: writer,
+            segment_duration: sample.duration,
+            count_segments: stream.count_segments + 1
+        }
       else
         writer = FWriter.write_sample(stream.writer, sample)
         %{stream | writer: writer, segment_duration: stream.segment_duration + sample.duration}
@@ -251,15 +269,22 @@ defmodule ExNVR.Pipeline.Output.HLS2 do
 
   defp handle_discontinuity(state, stream_type) do
     stream = state.streams[stream_type]
+    count_segments = stream.count_segments
 
-    if writer = stream.writer do
-      writer |> FWriter.flush_fragment() |> FWriter.close()
-    end
+    stream =
+      if writer = stream.writer do
+        writer |> FWriter.flush_fragment() |> FWriter.close()
 
-    streams =
-      Map.put(state.streams, stream_type, %{init_stream(stream_type) | track: stream.track})
+        %{
+          init_stream(stream_type)
+          | track: stream.track,
+            count_segments: stream.count_segments + 1
+        }
+      else
+        stream
+      end
 
-    %{state | streams: streams, insert_discontinuity?: true}
+    %{state | streams: Map.put(state.streams, stream_type, stream), insert_discontinuity?: true}
   end
 
   defp init_stream(stream_type) do
@@ -269,7 +294,9 @@ defmodule ExNVR.Pipeline.Output.HLS2 do
       last_buffer: nil,
       track: nil,
       segment_duration: 0,
-      playable?: false
+      playable?: false,
+      count_segments: 0,
+      count_media_init: 0
     }
   end
 

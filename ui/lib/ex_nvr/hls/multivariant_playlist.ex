@@ -39,11 +39,6 @@ defmodule ExNVR.HLS.MultivariantPlaylist do
     %{state | streams: Map.put(streams, variant, stream)}
   end
 
-  @spec count_segments(t(), variant()) :: non_neg_integer()
-  def count_segments(%__MODULE__{playlists: playlists}, variant) do
-    playlists[variant].total_segments
-  end
-
   @spec add_init_header(t(), variant(), String.t()) :: t()
   def add_init_header(%__MODULE__{} = state, variant, uri) do
     playlist = MediaPlaylist.add_init_header(state.playlists[variant], uri)
