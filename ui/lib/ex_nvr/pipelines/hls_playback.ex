@@ -70,13 +70,9 @@ defmodule ExNVR.Pipelines.HlsPlayback do
       get_child(:source)
       |> via_out(Pad.ref(:video, id))
       |> child(:realtimer, Elements.Realtimer)
-      |> via_in(Pad.ref(:video, :playback),
-        options: [resolution: state.resolution, encoding: track.encoding]
-      )
-      |> child(:sink, %Output.HLS{
-        location: state.directory,
-        segment_name_prefix: state.segment_name_prefix
-      })
+      |> add_transcoding_spec(id, state.resolution)
+      |> via_in(Pad.ref(:main_stream, track.type))
+      |> child(:sink, %Output.HLS2{location: state.directory})
     ]
 
     {[spec: spec], state}
@@ -111,5 +107,11 @@ defmodule ExNVR.Pipelines.HlsPlayback do
       restart: :temporary,
       type: :supervisor
     }
+  end
+
+  defp add_transcoding_spec(builder, _ref, nil), do: builder
+
+  defp add_transcoding_spec(builder, ref, resolution) do
+    child(builder, {:transcoder, ref}, %ExNVR.Elements.Transcoder{height: resolution})
   end
 end

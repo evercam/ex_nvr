@@ -22,7 +22,6 @@ defmodule ExNVR.Pipeline.Output.Storage do
 
   @time_error Time.milliseconds(30)
   @time_drift_threshold Time.seconds(30)
-  @timescale 90_000
 
   @recordings_event [:ex_nvr, :recordings, :stop]
 

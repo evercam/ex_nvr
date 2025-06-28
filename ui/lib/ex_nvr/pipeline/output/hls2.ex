@@ -18,7 +18,6 @@ defmodule ExNVR.Pipeline.Output.HLS2 do
   alias Membrane.{Buffer, Event, H264, H265, ResourceGuard}
 
   @segment_duration 2 * 90_000
-  @timescale 90_000
 
   def_input_pad :main_stream,
     accepted_format: any_of(%H264{alignment: :au}, %H265{alignment: :au}),
