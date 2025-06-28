@@ -21,18 +21,7 @@ defmodule ExNVR.Pipeline.Output.HLS do
 
   def_input_pad :main_stream,
     accepted_format: any_of(%H264{alignment: :au}, %H265{alignment: :au}),
-    availability: :on_request,
-    options: [
-      resolution: [
-        spec: non_neg_integer() | nil,
-        default: nil,
-        description: """
-        Transcode the video to the provided resolution.
-
-        The resolution denotes the height of the video. e.g. 720p
-        """
-      ]
-    ]
+    availability: :on_request
 
   def_input_pad :sub_stream,
     accepted_format: any_of(%H264{alignment: :au}, %H265{alignment: :au}),

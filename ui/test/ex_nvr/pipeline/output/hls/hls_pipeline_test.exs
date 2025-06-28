@@ -13,7 +13,7 @@ defmodule ExNVR.Pipeline.Output.HLSPipelineTest do
   @moduletag :tmp_dir
   @in_file "../../../../fixtures/video-30-10s.h264" |> Path.expand(__DIR__)
 
-  defp start_pipeline(in_file, out_dir, nb_streams \\ 1, resolution \\ nil) do
+  defp start_pipeline(in_file, out_dir, nb_streams \\ 1) do
     spec = [
       child(:sink, %ExNVR.Pipeline.Output.HLS{
         location: out_dir
@@ -22,7 +22,7 @@ defmodule ExNVR.Pipeline.Output.HLSPipelineTest do
       |> child(:parser, %Membrane.H264.Parser{
         generate_best_effort_timestamps: %{framerate: {30, 1}}
       })
-      |> via_in(Pad.ref(:main_stream, :video), options: [resolution: resolution])
+      |> via_in(Pad.ref(:main_stream, :video))
       |> get_child(:sink)
     ]
 
