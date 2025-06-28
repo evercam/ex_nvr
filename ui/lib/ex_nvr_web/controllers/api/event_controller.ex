@@ -1,11 +1,12 @@
 defmodule ExNVRWeb.API.EventController do
   use ExNVRWeb, :controller
 
-  action_fallback(ExNVRWeb.API.FallbackController)
+  action_fallback ExNVRWeb.API.FallbackController
 
   alias Ecto.Changeset
   alias ExNVR.Events
   alias ExNVR.Model.Device
+  alias ExNVRWeb.LPR.Parser, as: LPRParser
   alias Plug.Conn
 
   @spec create(Conn.t(), map()) :: Conn.t()
@@ -91,7 +92,7 @@ defmodule ExNVRWeb.API.EventController do
 
   defp get_lpr_event(device, params) do
     case Device.vendor(device) do
-      :milesight -> {:ok, ExNVRWeb.LPR.Parser.Milesight.parse(params, device.timezone)}
+      :milesight -> {:ok, LPRParser.Milesight.parse(params, device.timezone)}
       _other -> {:error, :not_found}
     end
   end

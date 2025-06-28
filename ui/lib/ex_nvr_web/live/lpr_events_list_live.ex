@@ -199,7 +199,7 @@ defmodule ExNVRWeb.LPREventsListLive do
     |> Calendar.strftime("%b %d, %Y %H:%M:%S %Z")
   end
 
-  defp default_plate_image() do
+  defp default_plate_image do
     Application.app_dir(:ex_nvr)
     |> Path.join(@default_plate_image_path)
     |> File.read!()
@@ -237,7 +237,7 @@ defmodule ExNVRWeb.LPREventsListLive do
     |> JS.dispatch("events:play-clip", to: "#event-clip", detail: %{src: url})
   end
 
-  defp close_clip_popup() do
+  defp close_clip_popup do
     JS.add_class("hidden", to: "#clip-popup-container")
     |> JS.set_attribute({"src", nil}, to: "#event-clip")
   end

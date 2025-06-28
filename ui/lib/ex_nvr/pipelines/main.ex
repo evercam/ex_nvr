@@ -39,11 +39,11 @@ defmodule ExNVR.Pipelines.Main do
 
   require Membrane.Logger
 
+  alias __MODULE__.State
   alias ExNVR.{Devices, Recordings, Utils}
   alias ExNVR.Elements.VideoStreamStatReporter
   alias ExNVR.Model.Device
   alias ExNVR.Pipeline.{Output, Source, StorageMonitor}
-  alias __MODULE__.State
 
   @type encoding :: :H264 | :H265
 
@@ -92,6 +92,17 @@ defmodule ExNVR.Pipelines.Main do
     Pipeline.call(pipeline_pid(device), :tracks)
   end
 
+  # manually start and stop recording
+  # if recording stopped with this functions
+  # it'll remain on that state until start_recording is called.
+  def start_recording(device) do
+    Pipeline.call(pipeline_pid(device), {:record?, true})
+  end
+
+  def stop_recording(device) do
+    Pipeline.call(pipeline_pid(device), {:record?, false})
+  end
+
   # Pipeline callbacks
   @impl true
   def handle_init(_ctx, options) do
@@ -126,13 +137,13 @@ defmodule ExNVR.Pipelines.Main do
   def handle_setup(_ctx, %{device: device} = state) do
     spec =
       [
-        child(:hls_sink, %Output.HLS{
-          location: Path.join(Utils.hls_dir(device.id), "live"),
-          segment_name_prefix: "live"
+        child(:hls_sink, %Output.HLS2{
+          location: Path.join(Utils.hls_dir(device.id), "live")
         })
       ] ++ build_device_spec(device)
 
-    StorageMonitor.start_link(device: device)
+    {:ok, pid} = StorageMonitor.start_link(device: device)
+    state = %{state | storage_monitor: pid}
 
     # Set device state and make last active run inactive
     # may happens on application crash
@@ -142,45 +153,41 @@ defmodule ExNVR.Pipelines.Main do
   end
 
   @impl true
-  def handle_child_notification(
-        {:main_stream, ssrc, track},
-        child_name,
-        _ctx,
-        %State{} = state
-      ) do
+  def handle_child_notification({:main_stream, tracks}, child_name, _ctx, state) do
+    [{id, track}] = Map.to_list(tracks)
     state = maybe_update_device_and_report(state, :streaming)
     old_track = state.main_stream_video_track
 
-    spec = [
-      get_child(child_name)
-      |> via_out(Pad.ref(:main_stream_output, ssrc))
-      |> via_in(Pad.ref(:video, make_ref()))
-      |> get_child(:tee)
-    ]
+    spec =
+      if is_nil(old_track) do
+        [
+          get_child(child_name)
+          |> via_out(Pad.ref(:main_stream_output, id))
+          |> child(:tee, Membrane.Tee)
+        ] ++
+          build_main_stream_spec(state)
+      else
+        []
+      end
 
-    main_spec = if is_nil(old_track), do: build_main_stream_spec(state, track.encoding), else: []
-
-    {[spec: main_spec ++ spec], %{state | main_stream_video_track: track}}
+    {[spec: spec], %{state | main_stream_video_track: track}}
   end
 
   @impl true
-  def handle_child_notification(
-        {:sub_stream, ssrc, track},
-        child_name,
-        _ctx,
-        %State{} = state
-      ) do
+  def handle_child_notification({:sub_stream, tracks}, child_name, _ctx, state) do
+    [{id, track}] = Map.to_list(tracks)
     old_track = state.sub_stream_video_track
-    spec = if is_nil(old_track), do: build_sub_stream_spec(state, track.encoding), else: []
 
     spec =
-      spec ++
+      if is_nil(old_track) do
         [
           get_child(child_name)
-          |> via_out(Pad.ref(:sub_stream_output, ssrc))
-          |> via_in(Pad.ref(:video, make_ref()))
-          |> get_child({:tee, :sub_stream})
-        ]
+          |> via_out(Pad.ref(:sub_stream_output, id))
+          |> child({:tee, :sub_stream}, Membrane.Tee)
+        ] ++ build_sub_stream_spec(state)
+      else
+        []
+      end
 
     {[spec: spec], %{state | sub_stream_video_track: track}}
   end
@@ -245,17 +252,12 @@ defmodule ExNVR.Pipelines.Main do
     if Enum.member?(childs, :unix_socket) do
       {notify_action, state}
     else
-      {source, track} =
-        if Enum.member?(childs, {:tee, :sub_stream}) do
-          {get_child({:tee, :sub_stream}), state.sub_stream_video_track}
-        else
-          {get_child(:tee), state.main_stream_video_track}
-        end
+      source = childs |> Enum.find(:tee, &(&1 == {:tee, :sub_stream})) |> get_child()
 
       spec = [
         source
-        |> via_out(:video_output)
-        |> child(:unix_socket, %ExNVR.Pipeline.Output.Socket{encoding: track.encoding})
+        |> via_out(:push_output)
+        |> child(:unix_socket, ExNVR.Pipeline.Output.Socket)
       ]
 
       {[spec: spec] ++ notify_action, state}
@@ -365,6 +367,18 @@ defmodule ExNVR.Pipelines.Main do
     {[reply: tracks], state}
   end
 
+  def handle_call({:record?, record?}, _ctx, state) do
+    if record? do
+      Membrane.Logger.info("Pipeline told to resume recording")
+      :ok = StorageMonitor.resume(state.storage_monitor)
+    else
+      Membrane.Logger.info("Pipeline told to stop recording")
+      :ok = StorageMonitor.pause(state.storage_monitor)
+    end
+
+    {[reply: :ok], state}
+  end
+
   @impl true
   def handle_terminate_request(_ctx, state) do
     :telemetry.execute(@event_prefix ++ [:terminate], %{system_time: System.system_time()}, %{
@@ -382,37 +396,36 @@ defmodule ExNVR.Pipelines.Main do
     [child(:rtsp_source, %Source.RTSP{device: device})]
   end
 
-  defp build_main_stream_spec(state, encoding) do
-    [child(:tee, ExNVR.Elements.FunnelTee)] ++
-      build_main_stream_storage_spec(state) ++
+  defp build_main_stream_spec(state) do
+    build_main_stream_storage_spec(state) ++
       [
         get_child(:tee)
-        |> via_out(:video_output)
-        |> via_in(Pad.ref(:video, :main_stream), options: [encoding: encoding])
+        |> via_out(:push_output)
+        |> via_in(Pad.ref(:main_stream, :video))
         |> get_child(:hls_sink),
         get_child(:tee)
-        |> via_out(:video_output)
+        |> via_out(:push_output)
         |> child({:snapshooter, :main_stream}, ExNVR.Elements.CVSBufferer),
         get_child(:tee)
-        |> via_out(:video_output)
+        |> via_out(:push_output)
         |> child({:stats_reporter, :main_stream}, %VideoStreamStatReporter{
           device_id: state.device.id
         }),
         get_child(:tee)
-        |> via_out(:video_output)
+        |> via_out(:push_output)
         |> via_in(:video)
         |> child(:webrtc, %Output.WebRTC{ice_servers: state.ice_servers})
       ]
   end
 
-  defp build_sub_stream_spec(%{device: device} = state, encoding) do
+  defp build_sub_stream_spec(%{device: device} = state) do
     [
-      child({:tee, :sub_stream}, ExNVR.Elements.FunnelTee)
-      |> via_out(:video_output)
-      |> via_in(Pad.ref(:video, :sub_stream), options: [encoding: encoding])
+      get_child({:tee, :sub_stream})
+      |> via_out(:push_output)
+      |> via_in(Pad.ref(:sub_stream, :video))
       |> get_child(:hls_sink),
       get_child({:tee, :sub_stream})
-      |> via_out(:video_output)
+      |> via_out(:push_output)
       |> child({:stats_reporter, :sub_stream}, %VideoStreamStatReporter{
         device_id: device.id,
         stream: :low
@@ -428,7 +441,7 @@ defmodule ExNVR.Pipelines.Main do
   defp build_main_stream_storage_spec(state) do
     [
       get_child(:tee)
-      |> via_out(:video_output)
+      |> via_out(:push_output)
       |> child({:storage, :main_stream}, %Output.Storage{
         device: state.device,
         target_segment_duration: state.segment_duration,
@@ -444,7 +457,7 @@ defmodule ExNVR.Pipelines.Main do
       :always ->
         [
           get_child({:tee, :sub_stream})
-          |> via_out(:video_output)
+          |> via_out(:push_output)
           |> child({:storage, :sub_stream}, %Output.Storage{
             device: device,
             stream: :low,
@@ -460,7 +473,7 @@ defmodule ExNVR.Pipelines.Main do
   defp build_sub_stream_webrtc_spec(state) do
     [
       get_child({:tee, :sub_stream})
-      |> via_out(:video_output)
+      |> via_out(:push_output)
       |> via_in(:video)
       |> child({:webrtc, :sub_stream}, %Output.WebRTC{ice_servers: state.ice_servers})
     ]
@@ -470,7 +483,7 @@ defmodule ExNVR.Pipelines.Main do
     if state.record_main_stream? and state.device.settings.generate_bif do
       [
         get_child({:tee, :sub_stream})
-        |> via_out(:video_output)
+        |> via_out(:push_output)
         |> child({:thumbnailer, :sub_stream}, %Output.Thumbnailer{
           dest: Device.bif_thumbnails_dir(state.device)
         })
@@ -517,7 +530,7 @@ defmodule ExNVR.Pipelines.Main do
     }
   end
 
-  defp ice_servers() do
+  defp ice_servers do
     Application.get_env(:ex_nvr, :ice_servers, "[]") |> Jason.decode(keys: :atoms)
   end
 end

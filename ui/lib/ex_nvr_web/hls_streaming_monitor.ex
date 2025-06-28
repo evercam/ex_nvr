@@ -45,11 +45,11 @@ defmodule ExNVRWeb.HlsStreamingMonitor do
     {:noreply, state}
   end
 
-  defp current_time_s() do
+  defp current_time_s do
     DateTime.utc_now() |> DateTime.to_unix()
   end
 
-  defp maybe_clean_up() do
+  defp maybe_clean_up do
     :ets.tab2list(__MODULE__)
     |> Enum.filter(fn {_, _, last_access_time} ->
       current_time_s() - last_access_time >= @stale_time

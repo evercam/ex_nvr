@@ -149,7 +149,17 @@
       </div>
     </div>
     <!-- Media Profiles -->
-    <h2 class="text-2xl font-bold mb-4 dark:text-white">Media Profiles</h2>
+    <div class="flex justify-between">
+      <h2 class="text-2xl font-bold mb-4 dark:text-white">Media Profiles</h2>
+      <.button
+        :if={@device_details && @device_details.media_profiles != []}
+        phx-disable-with="Configuring ..."
+        phx-click="auto-configure"
+        class="mr-4"
+      >
+        <.icon name="hero-wrench-solid" class="h-4 w-4 mr-1" />Auto Configure
+      </.button>
+    </div>
     <div :if={@device_details} class="w-full flex flex-wrap items-stretch p-4 dark:text-white">
       <div
         :for={%{profile: profile} <- @device_details.media_profiles}

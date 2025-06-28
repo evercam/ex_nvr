@@ -11,10 +11,10 @@ defmodule ExNVR.Elements.CVSBuffererTest do
   test "Buffer CVS (coded video sequence)" do
     assert {[], state} = CVSBufferer.handle_init(@ctx, nil)
 
-    assert {[], %{decoder: decoder, width: 1080, height: 720} = state} =
+    assert {[], %{decoder: decoder} = state} =
              CVSBufferer.handle_stream_format(:input, @stream_format, @ctx, state)
 
-    assert is_struct(decoder, ExNVR.Decoder)
+    assert is_reference(decoder)
 
     Enum.reduce(1..10, {state, []}, fn idx, {state, buffers} ->
       key_frame? = rem(idx, 4) == 0

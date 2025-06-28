@@ -85,7 +85,7 @@ defmodule ExNVR.BIF.GeneratorServer do
     Path.join(Device.bif_dir(device), filename)
   end
 
-  defp schedule_next_tick() do
+  defp schedule_next_tick do
     seconds_in_hour = DateTime.utc_now() |> DateTime.to_unix() |> rem(3600)
     seconds_to_next_hour = 3600 - seconds_in_hour + 5
     Process.send_after(self(), :tick, :timer.seconds(seconds_to_next_hour))

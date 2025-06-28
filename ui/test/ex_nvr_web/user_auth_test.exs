@@ -3,10 +3,11 @@ defmodule ExNVRWeb.UserAuthTest do
 
   use ExNVRWeb.ConnCase
 
-  alias Phoenix.LiveView
+  import ExNVR.AccountsFixtures
+
   alias ExNVR.Accounts
   alias ExNVRWeb.UserAuth
-  import ExNVR.AccountsFixtures
+  alias Phoenix.LiveView
 
   @remember_me_cookie "_ex_nvr_user_remember_me"
 

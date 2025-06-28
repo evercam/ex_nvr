@@ -6,8 +6,8 @@ defmodule ExNVRWeb.RecordingListLive do
 
   import ExNVRWeb.ViewUtils
 
+  alias ExNVR.{Devices, Recordings}
   alias ExNVRWeb.Router.Helpers, as: Routes
-  alias ExNVR.{Recordings, Devices}
 
   @impl true
   def render(assigns) do
@@ -280,7 +280,7 @@ defmodule ExNVRWeb.RecordingListLive do
     )
   end
 
-  defp close_popup() do
+  defp close_popup do
     JS.add_class("hidden", to: "#popup-container")
     |> JS.set_attribute({"src", nil}, to: "#recording-player")
   end

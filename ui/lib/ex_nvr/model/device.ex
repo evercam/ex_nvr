@@ -7,6 +7,7 @@ defmodule ExNVR.Model.Device do
 
   alias Ecto.Changeset
   alias ExNVR.Model.Device.{SnapshotConfig, StorageConfig}
+  alias ExNVR.Model.Schedule
 
   @states [:stopped, :streaming, :recording, :failed]
   @camera_vendors ["HIKVISION", "Milesight Technology Co.,Ltd.", "AXIS"]
@@ -170,8 +171,8 @@ defmodule ExNVR.Model.Device do
     timestamps(type: :utc_datetime_usec)
   end
 
-  @spec vendors() :: [binary()]
-  def vendors(), do: @camera_vendors
+  @spec vendors :: [binary()]
+  def vendors, do: @camera_vendors
 
   @spec vendor(t()) :: atom()
   def vendor(%__MODULE__{vendor: vendor}) do
@@ -269,7 +270,7 @@ defmodule ExNVR.Model.Device do
     config = Map.take(snapshot_config, [:enabled, :remote_storage, :upload_interval])
 
     if config.enabled do
-      schedule = ExNVR.Model.Schedule.parse!(snapshot_config.schedule)
+      schedule = Schedule.parse!(snapshot_config.schedule)
       Map.put(snapshot_config, :schedule, schedule)
     else
       config
@@ -286,8 +287,8 @@ defmodule ExNVR.Model.Device do
     end)
   end
 
-  @spec states() :: [state()]
-  def states(), do: @states
+  @spec states :: [state()]
+  def states, do: @states
 
   @spec onvif_device(t()) :: {:ok, Onvif.Device.t()} | {:error, any()}
   def onvif_device(%__MODULE__{type: :ip} = device) do

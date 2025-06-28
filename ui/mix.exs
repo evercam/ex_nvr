@@ -2,7 +2,7 @@ defmodule ExNVR.MixProject do
   use Mix.Project
 
   @app :ex_nvr
-  @version "0.20.0"
+  @version "0.21.0"
 
   def project do
     [
@@ -36,7 +36,8 @@ defmodule ExNVR.MixProject do
   # Type `mix help deps` for examples and options.
   defp deps do
     [
-      {:ex_nvr_rtsp, path: "../rtsp"},
+      {:rtsp, "~> 0.2.0"},
+      {:media_codecs, "~> 0.2.0"},
       {:ex_sdp, "~> 1.0"},
       {:bundlex, "~> 1.5", override: true},
       {:bcrypt_elixir, "~> 3.0"},
@@ -51,11 +52,8 @@ defmodule ExNVR.MixProject do
       {:membrane_file_plugin, "~> 0.17.0"},
       {:membrane_mp4_plugin, "~> 0.35.0"},
       {:membrane_http_adaptive_stream_plugin, "~> 0.18.0"},
-      {:membrane_h264_ffmpeg_plugin, "~> 0.32.0"},
-      {:membrane_h265_ffmpeg_plugin, "~> 0.4.0"},
-      {:membrane_ffmpeg_swscale_plugin, "~> 0.16.0"},
       {:membrane_realtimer_plugin, "~> 0.10.0"},
-      {:ex_webrtc, "~> 0.8.0"},
+      {:ex_webrtc, "~> 0.14.0"},
       {:ex_libsrtp, "~> 0.7.0"},
       {:ex_m3u8, "~> 0.15.0"},
       {:connection, "~> 1.1.0"},
@@ -66,12 +64,12 @@ defmodule ExNVR.MixProject do
       {:flop, "~> 0.26.0"},
       {:req, "~> 0.5.0"},
       {:multipart, "~> 0.4.0"},
-      {:ex_mp4, "~> 0.9.0"},
-      {:floki, "~> 0.37.0"},
+      {:ex_mp4, "~> 0.10.0"},
+      {:floki, "~> 0.38.0"},
       {:phoenix, "~> 1.7.2"},
       {:phoenix_ecto, "~> 4.4"},
       {:phoenix_html, "~> 4.0"},
-      {:phoenix_live_reload, "~> 1.2", only: :dev},
+      {:phoenix_live_reload, "~> 1.2", only: [:dev, :test]},
       {:phoenix_live_view, "~> 1.0"},
       {:phoenix_live_dashboard, "~> 0.8.1"},
       {:phoenix_html_helpers, "~> 1.0"},
@@ -85,12 +83,13 @@ defmodule ExNVR.MixProject do
       {:flop_phoenix, "~> 0.24"},
       {:prom_ex, "~> 1.11.0"},
       {:circuits_uart, "~> 1.5"},
-      {:onvif, github: "gBillal/onvif", ref: "ae888f8"},
+      {:onvif, github: "gBillal/onvif", tag: "v0.7.0"},
       {:slipstream, "~> 1.2.0"},
       {:live_vue, "~> 0.5.7"},
       {:sentry, "~> 10.9"},
+      {:xav, "~> 0.11.0"},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
-      {:mimic, "~> 1.11.0", only: :test},
+      {:mimic, "~> 1.12.0", only: :test},
       {:faker, "~> 0.17", only: :test},
       {:bypass, "~> 2.1", only: :test}
     ]
@@ -135,75 +134,16 @@ defmodule ExNVR.MixProject do
     end
   end
 
-  defp release_steps({arch, "linux", "gnu"}) do
-    [
-      &delete_wrong_symlink/1,
-      :assemble,
-      &copy_ffmpeg_deps/1,
-      &copy_external_libs(&1, {arch, "gnu"}),
-      &archive/1,
-      &generate_deb_package(&1, {arch, "gnu"})
-    ]
-  end
-
-  defp release_steps({"arm", "linux", "gnueabihf"}) do
-    arch = {"arm", "gnueabihf"}
-
+  defp release_steps({arch, "linux", abi}) do
     [
       :assemble,
-      &copy_external_libs(&1, arch),
+      &copy_external_libs(&1, {arch, abi}),
       &archive/1,
-      &generate_deb_package(&1, arch)
+      &generate_deb_package(&1, {arch, abi})
     ]
   end
 
   defp release_steps(_other), do: [:assemble]
-
-  defp delete_wrong_symlink(release) do
-    Path.join([Application.app_dir(:ex_nvr), "priv", "bundlex", "nif", "*"])
-    |> Path.wildcard()
-    |> Enum.reject(&File.exists?/1)
-    |> Enum.each(&File.rm!/1)
-
-    release
-  end
-
-  defp copy_ffmpeg_deps(release) do
-    libs_dest = Path.join(release.path, "external_lib")
-    File.mkdir_p!(libs_dest)
-
-    suffix_path = Path.join(["priv", "shared", "precompiled"])
-    src_bundlex_path = Path.join(Application.app_dir(:bundlex), suffix_path)
-
-    System.shell("cp -P #{Path.join([src_bundlex_path, "**", "lib", "*.so*"])} #{libs_dest}")
-
-    dest_bundlex_path =
-      Path.join([release.path, "lib", "bundlex*", suffix_path])
-      |> Path.wildcard()
-      |> List.first()
-
-    deps = File.ls!(src_bundlex_path)
-
-    Application.loaded_applications()
-    |> Enum.map(fn {name, _path, _version} -> name end)
-    |> Enum.map(fn dep ->
-      [release.path, "lib", "#{dep}-*", "priv", "bundlex", "nif"]
-      |> Path.join()
-      |> Path.wildcard()
-      |> List.first()
-    end)
-    |> Enum.reject(&is_nil/1)
-    |> Enum.each(fn dest ->
-      Enum.each(deps, fn dep ->
-        File.rm_rf(Path.join(dest, dep))
-        File.rm_rf(Path.join(dest, dep <> "_physical"))
-      end)
-    end)
-
-    File.rm_rf!(dest_bundlex_path)
-
-    release
-  end
 
   defp copy_external_libs(release, {arch, abi}) do
     libs_dest = Path.join(release.path, "external_lib")
@@ -211,6 +151,22 @@ defmodule ExNVR.MixProject do
     unless File.exists?(libs_dest) do
       File.mkdir_p!(libs_dest)
     end
+
+    {libdir, 0} =
+      System.cmd("pkg-config", ["--variable=libdir", "libavformat"], stderr_to_stdout: true)
+
+    ffmpeg_libs =
+      [
+        "libavdevice.so*",
+        "libavcodec.so*",
+        "libavformat.so*",
+        "libavutil.so*",
+        "libavfilter.so*",
+        "libswresample.so*",
+        "libswscale.so*",
+        "libpostproc.so*"
+      ]
+      |> Enum.map(&Path.join(String.trim(libdir), &1))
 
     # Tried to use `File.cp` to copy dependencies however links are not copied correctly
     # which made the size of the destination folder 3 times the original size.
@@ -221,28 +177,7 @@ defmodule ExNVR.MixProject do
       "/usr/lib/#{arch}-linux-#{abi}/libcrypto.so*"
     ]
 
-    libs =
-      case arch do
-        "arm" ->
-          {libdir, 0} =
-            System.cmd("pkg-config", ["--variable=libdir", "libavformat"], stderr_to_stdout: true)
-
-          [
-            "libavcodec.so*",
-            "libavformat.so*",
-            "libavutil.so*",
-            "libavfilter.so*",
-            "libswresample.so*",
-            "libswscale.so*"
-          ]
-          |> Enum.map(&Path.join(String.trim(libdir), &1))
-          |> Kernel.++(libs)
-
-        _other ->
-          libs
-      end
-
-    System.shell("cp -P #{Enum.join(libs, " ")} #{libs_dest}")
+    System.shell("cp -P #{Enum.join(libs ++ ffmpeg_libs, " ")} #{libs_dest}")
     release
   end
 

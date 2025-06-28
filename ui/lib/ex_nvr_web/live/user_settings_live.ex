@@ -5,85 +5,87 @@ defmodule ExNVRWeb.UserSettingsLive do
 
   def render(assigns) do
     ~H"""
-    <div class="grow e-mx-64 e-py-10">
-      <.header class="text-center">
-        Account Settings
-        <:subtitle>Manage your account email address and password settings</:subtitle>
-      </.header>
+    <div class="grow flex justify-center">
+      <div class="w-2/5">
+        <.header class="text-center">
+          Account Settings
+          <:subtitle>Manage your account email address and password settings</:subtitle>
+        </.header>
 
-      <div class="space-y-12 divide-y">
-        <div>
-          <.simple_form for={@info_form} id="info_form" phx-submit="update_personal_info">
-            <.input field={@info_form[:first_name]} type="text" label="First Name" required />
-            <.input field={@info_form[:last_name]} type="text" label="Last Name" required />
-            <.input
-              field={@info_form[:language]}
-              type="select"
-              label="Language"
-              options={[English: :en]}
-            />
-            <:actions>
-              <.button phx-disable-with="Changing...">Change User Information</.button>
-            </:actions>
-          </.simple_form>
-        </div>
-        <div>
-          <.simple_form
-            for={@email_form}
-            id="email_form"
-            phx-submit="update_email"
-            phx-change="validate_email"
-          >
-            <.input field={@email_form[:email]} type="email" label="Email" required />
-            <.input
-              field={@email_form[:current_password]}
-              name="current_password"
-              id="current_password_for_email"
-              type="password"
-              label="Current password"
-              value={@email_form_current_password}
-              required
-            />
-            <:actions>
-              <.button phx-disable-with="Changing...">Change Email</.button>
-            </:actions>
-          </.simple_form>
-        </div>
-        <div>
-          <.simple_form
-            for={@password_form}
-            id="password_form"
-            action={~p"/users/login?_action=password_updated"}
-            method="post"
-            phx-change="validate_password"
-            phx-submit="update_password"
-            phx-trigger-action={@trigger_submit}
-          >
-            <.input
-              field={@password_form[:email]}
-              type="hidden"
-              id="hidden_user_email"
-              value={@current_email}
-            />
-            <.input field={@password_form[:password]} type="password" label="New password" required />
-            <.input
-              field={@password_form[:password_confirmation]}
-              type="password"
-              label="Confirm new password"
-            />
-            <.input
-              field={@password_form[:current_password]}
-              name="current_password"
-              type="password"
-              label="Current password"
-              id="current_password_for_password"
-              value={@current_password}
-              required
-            />
-            <:actions>
-              <.button phx-disable-with="Changing...">Change Password</.button>
-            </:actions>
-          </.simple_form>
+        <div class="space-y-8 divide-y">
+          <div>
+            <.simple_form for={@info_form} id="info_form" phx-submit="update_personal_info">
+              <.input field={@info_form[:first_name]} type="text" label="First Name" required />
+              <.input field={@info_form[:last_name]} type="text" label="Last Name" required />
+              <.input
+                field={@info_form[:language]}
+                type="select"
+                label="Language"
+                options={[English: :en]}
+              />
+              <:actions>
+                <.button phx-disable-with="Changing...">Change User Information</.button>
+              </:actions>
+            </.simple_form>
+          </div>
+          <div>
+            <.simple_form
+              for={@email_form}
+              id="email_form"
+              phx-submit="update_email"
+              phx-change="validate_email"
+            >
+              <.input field={@email_form[:email]} type="email" label="Email" required />
+              <.input
+                field={@email_form[:current_password]}
+                name="current_password"
+                id="current_password_for_email"
+                type="password"
+                label="Current password"
+                value={@email_form_current_password}
+                required
+              />
+              <:actions>
+                <.button phx-disable-with="Changing...">Change Email</.button>
+              </:actions>
+            </.simple_form>
+          </div>
+          <div>
+            <.simple_form
+              for={@password_form}
+              id="password_form"
+              action={~p"/users/login?_action=password_updated"}
+              method="post"
+              phx-change="validate_password"
+              phx-submit="update_password"
+              phx-trigger-action={@trigger_submit}
+            >
+              <.input
+                field={@password_form[:email]}
+                type="hidden"
+                id="hidden_user_email"
+                value={@current_email}
+              />
+              <.input field={@password_form[:password]} type="password" label="New password" required />
+              <.input
+                field={@password_form[:password_confirmation]}
+                type="password"
+                label="Confirm new password"
+              />
+              <.input
+                field={@password_form[:current_password]}
+                name="current_password"
+                type="password"
+                label="Current password"
+                id="current_password_for_password"
+                value={@current_password}
+                required
+              />
+              <:actions>
+                <.button phx-disable-with="Changing...">Change Password</.button>
+              </:actions>
+            </.simple_form>
+          </div>
         </div>
       </div>
     </div>

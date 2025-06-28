@@ -11,6 +11,7 @@ jobs:
     env:
       MIX_ENV: prod
       GENERATE_DEB_PACKAGE: true
+      FFMPEG_URL: https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2025-04-30-13-13/ffmpeg-n6.1.2-27-ge16ff06adb-linux64-gpl-shared-6.1.tar.xz
     steps:
       - uses: actions/checkout@v3
 
@@ -25,7 +26,21 @@ jobs:
 
       - name: Install dependencies
         run: sudo apt-get update && sudo apt-get -y install libsrtp2-dev libturbojpeg-dev
+
+      - name: Install FFmpeg
+        run: | 
+          mkdir ffmpeg &&
+            cd ffmpeg &&
+            wget -O ffmpeg.tar ${{ env.FFMPEG_URL }} &&
+            tar -xvf ffmpeg.tar --strip-components=1 &&
+            rm -rf ffmpeg.tar
    
+      - name: Set FFmpeg env variables
+        run: |
+          echo "PKG_CONFIG_PATH=${{ env.GITHUB_WORKSPACE }}/ffmpeg/lib/pkgconfig" >> $GITHUB_ENV
+          echo "CPATH=${{ env.GITHUB_WORKSPACE }}/ffmpeg/include" >> $GITHUB_ENV
+          echo "LIBRARY_PATH=${{ env.GITHUB_WORKSPACE }}/ffmpeg/lib" >> $GITHUB_ENV
+
       - name: Get deps
         run: mix deps.get --only prod
         working-directory: ./ui

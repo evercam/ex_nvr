@@ -13,9 +13,8 @@ config :ex_nvr, ExNVR.Repo,
 config :ex_nvr, ExNVRWeb.Endpoint,
   http: [ip: {127, 0, 0, 1}, port: 4002],
   secret_key_base: "v98YSVCUiOPDgBqTeAgebEm5zT1KY+FS4rtFe9BVzFzeiK9Gu8m7JxGgUCnIcPj/",
-  server: false
-
-config :logger, level: :warning
+  server: false,
+  code_reloader: false
 
 # In test we don't send emails.
 config :ex_nvr, ExNVR.Mailer, adapter: Swoosh.Adapters.Test

@@ -120,7 +120,7 @@ defmodule ExNVR.HTTP do
     |> Base.encode16(case: :lower)
   end
 
-  defp http_poison_adapter() do
+  defp http_poison_adapter do
     fn req ->
       case HTTPoison.request(
              req.method,

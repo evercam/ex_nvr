@@ -17,8 +17,9 @@ defmodule ExNVRWeb.CoreComponents do
   use Gettext, backend: ExNVRWeb.Gettext
   use Phoenix.Component
 
-  alias Phoenix.LiveView.JS
   alias ExNVRWeb.Components
+  alias Phoenix.HTML
+  alias Phoenix.LiveView.JS
 
   @doc """
   Renders a modal.
@@ -191,7 +192,7 @@ defmodule ExNVRWeb.CoreComponents do
   def simple_form(assigns) do
     ~H"""
     <.form :let={f} for={@for} as={@as} {@rest}>
-      <div class="space-y-8">
+      <div class="space-y-4">
         {render_slot(@inner_block, f)}
         <div :for={action <- @actions} class={"mt-2 flex items-center gap-6 " <> @actions_class}>
           {render_slot(action, f)}
@@ -253,7 +254,7 @@ defmodule ExNVRWeb.CoreComponents do
   attr :type, :string,
     default: "text",
     values: ~w(checkbox color date datetime-local email file hidden month number password
-               range radio search select tel text textarea time url week)
+               range radio search select tel text textarea time url week toggle)
 
   attr :field, Phoenix.HTML.FormField,
     doc: "a form field struct retrieved from the form, for example: @form[:email]"
@@ -270,7 +271,7 @@ defmodule ExNVRWeb.CoreComponents do
 
   slot :inner_block
 
-  def input(%{field: %Phoenix.HTML.FormField{} = field} = assigns) do
+  def input(%{field: %HTML.FormField{} = field} = assigns) do
     assigns
     |> assign(field: nil, id: assigns.id || field.id)
     |> assign(:errors, Enum.map(field.errors, &translate_error(&1)))
@@ -279,9 +280,34 @@ defmodule ExNVRWeb.CoreComponents do
     |> input()
   end
 
+  def input(%{type: "toggle", value: value} = assigns) do
+    assigns =
+      assign_new(assigns, :checked, fn -> HTML.Form.normalize_value("checkbox", value) end)
+
+    ~H"""
+    <div phx-feedback-for={@name}>
+      <label class="inline-flex items-center mb-5 cursor-pointer">
+        <input type="hidden" name={@name} value="false" />
+        <input
+          id={@id}
+          type="checkbox"
+          name={@name}
+          value="true"
+          checked={@checked}
+          class="sr-only peer"
+          {@rest}
+        />
+        <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:w-5 after:h-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600">
+        </div>
+      </label>
+      <.error :for={msg <- @errors}>{msg}</.error>
+    </div>
+    """
+  end
+
   def input(%{type: "checkbox", value: value} = assigns) do
     assigns =
-      assign_new(assigns, :checked, fn -> Phoenix.HTML.Form.normalize_value("checkbox", value) end)
+      assign_new(assigns, :checked, fn -> HTML.Form.normalize_value("checkbox", value) end)
 
     ~H"""
     <div phx-feedback-for={@name}>
@@ -685,7 +711,7 @@ defmodule ExNVRWeb.CoreComponents do
           <span class="px-3 h-8 text-gray-500">...</span>
         </li>
         <li
-          :for={idx <- 3..(@meta.total_pages - 2)}
+          :for={idx <- 3..(@meta.total_pages - 2)//1}
           :if={@meta.total_pages > 6 && abs(@meta.current_page - idx) <= 1}
         >
           <.pagination_link current_page={@meta.current_page} page={idx} target={assigns[:target]} />
@@ -747,6 +773,14 @@ defmodule ExNVRWeb.CoreComponents do
     >
       {@page}
     </.link>
+    """
+  end
+
+  attr :class, :list, default: []
+
+  def separator(assigns) do
+    ~H"""
+    <hr class={["bg-gray-400 my-12 h-0.5 border-t-0 dark:bg-white/10"] ++ @class} />
     """
   end
 

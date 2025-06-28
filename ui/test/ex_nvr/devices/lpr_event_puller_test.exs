@@ -142,7 +142,7 @@ defmodule ExNVR.Devices.LPREventPullerTest do
     "http://localhost:#{port}"
   end
 
-  defp hik_response() do
+  defp hik_response do
     """
     <Plates>
       <Plate>
@@ -155,7 +155,7 @@ defmodule ExNVR.Devices.LPREventPullerTest do
     """
   end
 
-  defp milesight_response() do
+  defp milesight_response do
     """
     time_0=2024-04-27 12:50:06
     plate_0=ABC1234
@@ -170,7 +170,7 @@ defmodule ExNVR.Devices.LPREventPullerTest do
     """
   end
 
-  defp axis_response() do
+  defp axis_response do
     """
     <events>
     <event>

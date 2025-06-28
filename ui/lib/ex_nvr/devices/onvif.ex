@@ -1,8 +1,13 @@
 defmodule ExNVR.Devices.Onvif do
   @moduledoc false
 
+  require Logger
+
+  alias __MODULE__.AutoConfig
   alias ExNVR.Model.Device
   alias Onvif.Devices.SystemDateAndTime
+  alias Onvif.Media2
+  alias Onvif.Media2.Profile.VideoEncoder
   alias Onvif.Search
   alias Onvif.Search.{FindRecordings, GetRecordingSearchResults}
 
@@ -18,6 +23,7 @@ defmodule ExNVR.Devices.Onvif do
     end)
   end
 
+  @spec all_config(Device.t()) :: map()
   def all_config(%Device{type: :ip} = device) do
     case onvif_device(device) do
       {:ok, onvif_device} ->
@@ -57,6 +63,152 @@ defmodule ExNVR.Devices.Onvif do
   @spec get_recordings(Onvif.Device.t()) :: {:ok, [struct()]} | {:error, any()}
   def get_recordings(onvif_device) do
     do_get_recordings(onvif_device)
+  end
+
+  # Auto configure cameras
+  @spec auto_configure(Onvif.Device.t()) :: AutoConfig.t()
+  def auto_configure(%{manufacturer: vendor} = onvif_device)
+      when vendor in ["HIKVISION", "Milesight Technology Co.,Ltd."] do
+    Logger.info("Auto configure #{vendor} camera")
+
+    %AutoConfig{}
+    |> do_configure_profiles(onvif_device)
+  end
+
+  def auto_configure(%{manufacturer: "AXIS"} = onvif_device) do
+    Logger.info("Auto configure AXIS camera")
+
+    %AutoConfig{}
+    |> maybe_create_and_configure_profiles(onvif_device)
+  end
+
+  def auto_configure(_onvif_device), do: %AutoConfig{}
+
+  defp maybe_create_and_configure_profiles(auto_config, device) do
+    case fetch_profiles(device) do
+      {:ok, {main_profile, sub_profile}} ->
+        Logger.info("[Onvif] Found main and sub profiles, start configuration")
+
+        auto_config
+        |> do_configure_profile(device, main_profile, :main_stream)
+        |> do_configure_profile(device, sub_profile, :sub_stream)
+
+      :ok ->
+        Logger.info("[Onvif] Create main and sub profiles")
+
+        case create_profiles(device) do
+          {:ok, {main_profile, sub_profile}} ->
+            auto_config
+            |> do_configure_profile(device, main_profile, :main_stream)
+            |> do_configure_profile(device, sub_profile, :sub_stream)
+
+          {:error, reason} ->
+            Logger.error("[Onvif] error while trying to create profiles: #{inspect(reason)}")
+            auto_config
+        end
+
+      {:error, reason} ->
+        Logger.error("[Onvif] error while trying to fetch profiles: #{inspect(reason)}")
+        auto_config
+    end
+  end
+
+  defp fetch_profiles(onvif_device) do
+    with {:ok, profiles} <- Media2.get_profiles(onvif_device) do
+      main_profile = Enum.find(profiles, &(&1.name == "ex_nvr_main"))
+      sub_profile = Enum.find(profiles, &(&1.name == "ex_nvr_sub"))
+
+      if main_profile, do: {:ok, {main_profile, sub_profile}}, else: :ok
+    end
+  end
+
+  defp create_profiles(device) do
+    with {:ok, sources} <- Media2.get_video_source_configurations(device),
+         {:ok, configs} <- Media2.get_video_encoder_configurations(device),
+         configs <- Enum.filter(configs, &(&1.use_count == 0)) |> Enum.take(2),
+         {:ok, main} <-
+           do_create_profile(device, "ex_nvr_main", hd(sources), Enum.at(configs, 0)),
+         {:ok, sub} <- do_create_profile(device, "ex_nvr_sub", hd(sources), Enum.at(configs, 1)) do
+      {:ok, {main, sub}}
+    end
+  end
+
+  defp do_create_profile(_onvif_device, name, _video_source, nil) do
+    Logger.error("[Onvif] could not create profile with name: #{name}, no video encoder config")
+    {:ok, nil}
+  end
+
+  defp do_create_profile(onvif_device, name, video_source, video_encoder) do
+    configs = [
+      %{type: "VideoSource", token: video_source.reference_token},
+      %{type: "VideoEncoder", token: video_encoder.reference_token}
+    ]
+
+    with {:ok, profile_token} <- Media2.create_profile(onvif_device, name, configs),
+         {:ok, [profile]} <- Media2.get_profiles(onvif_device, token: profile_token) do
+      {:ok, profile}
+    end
+  end
+
+  defp do_configure_profiles(auto_config, onvif_device) do
+    Logger.info("[Onvif] Configure profiles")
+
+    case Onvif.Media2.get_profiles(onvif_device) do
+      {:ok, profiles} ->
+        auto_config
+        |> do_configure_profile(onvif_device, Enum.at(profiles, 0), :main_stream)
+        |> do_configure_profile(onvif_device, Enum.at(profiles, 1), :sub_stream)
+
+      _error ->
+        auto_config
+    end
+  end
+
+  defp do_configure_profile(auto_config, _onvif_device, nil, _profile_type), do: auto_config
+
+  defp do_configure_profile(auto_config, onvif_device, profile, stream_type) do
+    config_options_result =
+      Onvif.Media2.get_video_encoder_configuration_options(onvif_device,
+        profile_token: profile.reference_token
+      )
+
+    with {:ok, configs} <- config_options_result,
+         :ok <- set_video_encoder_config(onvif_device, profile, configs, stream_type) do
+      Map.put(auto_config, stream_type, true)
+    else
+      {:error, reason} ->
+        Logger.error("[Onvif] could not configure profile: #{inspect(reason)}")
+        auto_config
+    end
+  end
+
+  defp set_video_encoder_config(onvif_device, profile, configs, stream_type) do
+    {codec, bit_rate, gov_length_coeff} =
+      case stream_type do
+        :main_stream -> {:h265, 3072, 4}
+        :sub_stream -> {:h264, 572, 2}
+      end
+
+    config =
+      Enum.find(configs, &(&1.encoding == codec)) ||
+        Enum.find(configs, &(&1.encoding == :h264))
+
+    frame_rate = select_frame_rate(config.frame_rates_supported)
+
+    video_encoder = %VideoEncoder{
+      profile.video_encoder_configuration
+      | encoding: config.encoding,
+        gov_length: trunc(frame_rate * gov_length_coeff),
+        quality: select_quality(onvif_device, config.quality_range),
+        rate_control: %VideoEncoder.RateControl{
+          bitrate_limit: bit_rate,
+          constant_bitrate: false,
+          frame_rate_limit: frame_rate
+        },
+        resolution: select_resolution(config.resolutions_available, stream_type)
+    }
+
+    Onvif.Media2.set_video_encoder_configuration(onvif_device, video_encoder)
   end
 
   defp stream_profiles(onvif_device, device) do
@@ -102,5 +254,33 @@ defmodule ExNVR.Devices.Onvif do
       {:ok, recordings} -> recordings
       _error -> []
     end
+  end
+
+  defp select_frame_rate(frame_rates) do
+    frame_rates
+    |> Enum.sort()
+    |> Enum.drop_while(&(&1 < 8))
+    |> hd()
+  end
+
+  defp select_resolution(resolutions, stream) do
+    resolutions = Enum.sort_by(resolutions, & &1.height, :desc)
+
+    case stream do
+      :main_stream -> find_best_resolution(resolutions)
+      _other -> Enum.drop_while(resolutions, &(&1.height > 1000 or &1.width > 1000)) |> hd()
+    end
+  end
+
+  defp select_quality(%{manufacturer: "AXIS"}, _quality), do: 70
+  defp select_quality(_device, quality), do: Float.ceil((quality.max + quality.min) / 2)
+
+  # prefer 4K resolutions with 16:9 aspect ratio
+  defp find_best_resolution(resolutions) do
+    Enum.reduce_while(resolutions, hd(resolutions), fn
+      %{width: 3840, height: 2160} = res, _acc -> {:halt, res}
+      %{height: 2160} = res, _acc -> {:cont, res}
+      _res, acc -> {:cont, acc}
+    end)
   end
 end

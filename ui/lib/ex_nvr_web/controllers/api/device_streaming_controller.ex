@@ -8,6 +8,7 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
   require Logger
 
   alias Ecto.Changeset
+  alias ExNVR.Model.Device
   alias ExNVR.Pipelines.{HlsPlayback, Main}
   alias ExNVR.{Devices, HLS, Recordings, Utils}
 
@@ -150,7 +151,7 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
   def bif(conn, params) do
     with {:ok, params} <- validate_bif_req_params(params) do
       filename = Calendar.strftime(params.hour, "%Y%m%d%H.bif")
-      filepath = Path.join(ExNVR.Model.Device.bif_dir(conn.assigns.device), filename)
+      filepath = Path.join(Device.bif_dir(conn.assigns.device), filename)
 
       if File.exists?(filepath) do
         conn
@@ -299,14 +300,14 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
   defp remove_unused_stream(manifest_file, %{pos: pos}) when not is_nil(pos), do: manifest_file
 
   defp remove_unused_stream(manifest_file, %{stream: :high}),
-    do: HLS.Processor.delete_stream(manifest_file, "live_sub_stream")
+    do: HLS.Processor.delete_stream(manifest_file, "sub_stream")
 
   defp remove_unused_stream(manifest_file, %{stream: :low}),
-    do: HLS.Processor.delete_stream(manifest_file, "live_main_stream")
+    do: HLS.Processor.delete_stream(manifest_file, "main_stream")
 
   defp remove_unused_stream(manifest_file, _params), do: manifest_file
 
-  defp download_dir() do
+  defp download_dir do
     default_dir = Path.join(System.tmp_dir!(), "ex_nvr_downloads")
     Application.get_env(:ex_nvr, :download_dir) || default_dir
   end

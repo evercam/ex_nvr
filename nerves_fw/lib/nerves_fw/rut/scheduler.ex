@@ -141,7 +141,7 @@ defmodule ExNVR.Nerves.RUT.Scheduler do
     # if the last instance is not merged with the one before
     # delete it otherwise delete the first instance
     if first_instance == List.last(new_instances),
-      do: Enum.slice(new_instances, 1..-1),
+      do: Enum.slice(new_instances, 1..-1//1),
       else: tl(new_instances)
   end
 end

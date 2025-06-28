@@ -13,7 +13,7 @@ defmodule ExNVR do
   @doc """
   Start the main pipeline
   """
-  def start() do
+  def start do
     if Application.get_env(:ex_nvr, :env) != :test do
       create_directories()
       create_admin_user()
@@ -22,12 +22,12 @@ defmodule ExNVR do
   end
 
   # create recording & HLS directories
-  defp create_directories() do
+  defp create_directories do
     File.mkdir_p(hls_dir())
     File.mkdir_p(unix_socket_dir())
   end
 
-  defp create_admin_user() do
+  defp create_admin_user do
     # if no user create an admin
     if Accounts.count_users() == 0 do
       username = Application.get_env(:ex_nvr, :admin_username)

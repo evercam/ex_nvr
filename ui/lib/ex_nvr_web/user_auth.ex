@@ -1,4 +1,6 @@
 defmodule ExNVRWeb.UserAuth do
+  @moduledoc false
+
   use ExNVRWeb, :verified_routes
 
   require Logger

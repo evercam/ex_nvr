@@ -7,7 +7,7 @@ defmodule ExNVR.RemoteStoragesFixtures do
   alias ExNVR.RemoteStorage
 
   @spec valid_remote_storage_name() :: binary()
-  def valid_remote_storage_name(),
+  def valid_remote_storage_name,
     do: "RemoteStorage_#{System.unique_integer([:monotonic, :positive])}"
 
   @spec valid_remote_storage_attributes(map(), binary()) :: map()

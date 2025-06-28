@@ -1,10 +1,21 @@
 defmodule ExNVRWeb.Components.Sidebar do
+  @moduledoc false
+
   use ExNVRWeb, :live_component
 
-  attr :current_user, :map, required: true
+  attr :current_user, :map, required: false
   attr :current_path, :string, default: nil
 
   def sidebar(assigns) do
+    role = assigns.current_user && assigns.current_user.role
+
+    assigns =
+      groups()
+      |> Enum.map(&filter_group_by_role(&1, role))
+      |> Enum.reject(&(&1 == []))
+      |> Enum.with_index()
+      |> then(&Map.put(assigns, :groups, &1))
+
     ~H"""
     <aside
       id="logo-sidebar"
@@ -14,9 +25,8 @@ defmodule ExNVRWeb.Components.Sidebar do
       <div class="flex flex-col justify-between h-full px-3 pb-4 overflow-y-auto bg-zinc-900 dark:bg-gray-800">
         <div>
           <.sidebar_group
-            :for={{group, index} <- Enum.with_index(groups())}
+            :for={{group, index} <- @groups}
             items={group}
-            current_user={@current_user}
             current_path={@current_path}
             border={index > 0}
           />
@@ -33,7 +43,6 @@ defmodule ExNVRWeb.Components.Sidebar do
   end
 
   attr :items, :list, required: true
-  attr :current_user, :map, required: true
   attr :current_path, :string, default: nil
   attr :border, :boolean, default: false
 
@@ -56,7 +65,6 @@ defmodule ExNVRWeb.Components.Sidebar do
         target={item[:target]}
         children={item[:children] || []}
         role={item[:role]}
-        current_user={@current_user}
         current_path={@current_path}
       />
     </ul>
@@ -68,25 +76,24 @@ defmodule ExNVRWeb.Components.Sidebar do
   attr :href, :string, default: nil
   attr :target, :string, default: nil
   attr :children, :list, default: []
-  attr :current_user, :map, default: nil
   attr :current_path, :string, default: nil
   attr :is_active, :boolean, default: false
   attr :role, :atom, default: nil
 
   defp sidebar_item(assigns) do
-    is_active = is_active?(assigns.href, assigns.current_path)
+    active? = active?(assigns.href, assigns.current_path)
     has_active_child = has_active_child?(assigns.children, assigns.current_path)
 
     assigns =
       assigns
-      |> assign(:is_active, is_active)
+      |> assign(:is_active, active?)
       |> assign(:has_active_child, has_active_child)
-      |> assign(:link_classes, link_classes(is_active))
-      |> assign(:icon_classes, icon_classes(is_active))
+      |> assign(:link_classes, link_classes(active?))
+      |> assign(:icon_classes, icon_classes(active?))
       |> assign(:menu_classes, menu_classes(has_active_child))
 
     ~H"""
-    <li :if={is_nil(@role) or (@current_user && @current_user.role == @role)}>
+    <li>
       <button
         :if={@children != []}
         type="button"
@@ -109,7 +116,6 @@ defmodule ExNVRWeb.Components.Sidebar do
           href={child[:href]}
           target={child[:target]}
           children={child[:children] || []}
-          current_user={@current_user}
           current_path={@current_path}
           role={child[:role]}
         />
@@ -122,68 +128,140 @@ defmodule ExNVRWeb.Components.Sidebar do
     """
   end
 
-  defp groups do
-    [
+  if Application.compile_env(:ex_nvr, :nerves_routes) do
+    defp groups do
       [
-        %{label: "Dashboard", icon: "hero-tv-solid", href: ~p"/dashboard"},
-        %{label: "Recordings", icon: "hero-film-solid", href: ~p"/recordings"},
-        %{
-          label: "Events",
-          icon: "hero-camera-solid",
-          children: [
-            %{label: "Generic Events", icon: "hero-code-bracket", href: ~p"/events/generic"},
-            %{label: "Vehicle Plates", icon: "hero-truck-solid", href: ~p"/events/lpr"}
-          ]
-        }
-      ],
-      [
-        %{label: "Devices", icon: "hero-video-camera-solid", href: ~p"/devices"},
-        %{label: "Users", icon: "hero-users-solid", href: ~p"/users", role: :admin},
-        %{
-          label: "Onvif Discovery",
-          icon: "hero-magnifying-glass-circle",
-          href: ~p"/onvif-discovery",
-          role: :admin
-        }
-      ],
-      [
-        %{
-          label: "Remote Storages",
-          icon: "hero-circle-stack-solid",
-          href: ~p"/remote-storages",
-          role: :admin
-        }
-      ],
-      [
-        %{
-          label: "Live Dashboard",
-          icon: "hero-chart-bar-solid",
-          href: ~p"/live-dashboard",
-          target: "_blank"
-        },
-        %{
-          label: "API Documentation",
-          icon: "hero-document-solid",
-          href: ~p"/swagger/index.html",
-          target: "_blank"
-        },
-        %{
-          label: "GitHub",
-          icon: "svg-github",
-          href: "https://github.com/evercam/ex_nvr",
-          target: "_blank"
-        }
+        [
+          %{label: "Dashboard", icon: "hero-tv-solid", href: ~p"/dashboard"},
+          %{label: "Recordings", icon: "hero-film-solid", href: ~p"/recordings"},
+          %{
+            label: "Events",
+            icon: "hero-camera-solid",
+            children: [
+              %{label: "Generic Events", icon: "hero-code-bracket", href: ~p"/events/generic"},
+              %{label: "Vehicle Plates", icon: "hero-truck-solid", href: ~p"/events/lpr"}
+            ]
+          }
+        ],
+        [
+          %{label: "Devices", icon: "hero-video-camera-solid", href: ~p"/devices"},
+          %{label: "Users", icon: "hero-users-solid", href: ~p"/users", role: :admin},
+          %{
+            label: "Onvif Discovery",
+            icon: "hero-magnifying-glass-circle",
+            href: ~p"/onvif-discovery",
+            role: :admin
+          }
+        ],
+        [
+          %{
+            label: "Remote Storages",
+            icon: "hero-circle-stack-solid",
+            href: ~p"/remote-storages",
+            role: :admin
+          }
+        ],
+        [
+          %{
+            label: "System Settings",
+            icon: "hero-cog-6-tooth-solid",
+            href: ~p"/nerves/system-settings",
+            role: :admin
+          }
+        ],
+        [
+          %{
+            label: "Live Dashboard",
+            icon: "hero-chart-bar-solid",
+            href: ~p"/live-dashboard",
+            target: "_blank"
+          },
+          %{
+            label: "API Documentation",
+            icon: "hero-document-solid",
+            href: ~p"/swagger/index.html",
+            target: "_blank"
+          },
+          %{
+            label: "GitHub",
+            icon: "svg-github",
+            href: "https://github.com/evercam/ex_nvr",
+            target: "_blank"
+          }
+        ]
       ]
-    ]
+    end
+  else
+    defp groups do
+      [
+        [
+          %{label: "Dashboard", icon: "hero-tv-solid", href: ~p"/dashboard"},
+          %{label: "Recordings", icon: "hero-film-solid", href: ~p"/recordings"},
+          %{
+            label: "Events",
+            icon: "hero-camera-solid",
+            children: [
+              %{label: "Generic Events", icon: "hero-code-bracket", href: ~p"/events/generic"},
+              %{label: "Vehicle Plates", icon: "hero-truck-solid", href: ~p"/events/lpr"}
+            ]
+          }
+        ],
+        [
+          %{label: "Devices", icon: "hero-video-camera-solid", href: ~p"/devices"},
+          %{label: "Users", icon: "hero-users-solid", href: ~p"/users", role: :admin},
+          %{
+            label: "Onvif Discovery",
+            icon: "hero-magnifying-glass-circle",
+            href: ~p"/onvif-discovery",
+            role: :admin
+          }
+        ],
+        [
+          %{
+            label: "Remote Storages",
+            icon: "hero-circle-stack-solid",
+            href: ~p"/remote-storages",
+            role: :admin
+          }
+        ],
+        [
+          %{
+            label: "Live Dashboard",
+            icon: "hero-chart-bar-solid",
+            href: ~p"/live-dashboard",
+            target: "_blank"
+          },
+          %{
+            label: "API Documentation",
+            icon: "hero-document-solid",
+            href: ~p"/swagger/index.html",
+            target: "_blank"
+          },
+          %{
+            label: "GitHub",
+            icon: "svg-github",
+            href: "https://github.com/evercam/ex_nvr",
+            target: "_blank"
+          }
+        ]
+      ]
+    end
   end
 
-  defp is_active?(nil, _), do: false
-  defp is_active?(_, nil), do: false
-  defp is_active?(href, current_path), do: String.starts_with?(current_path, href)
+  defp filter_group_by_role(group, role) do
+    Enum.reject(group, fn
+      %{children: children} -> filter_group_by_role(children, role) == []
+      item -> not is_nil(item[:role]) and item[:role] != role
+    end)
+  end
+
+  defp active?(nil, _), do: false
+  defp active?(_, nil), do: false
+  defp active?(href, current_path), do: String.starts_with?(current_path, href)
 
   defp has_active_child?(children, current_path) do
     Enum.any?(children, fn child ->
-      is_active?(child[:href], current_path)
+      active?(child[:href], current_path)
     end)
   end
 

@@ -8,7 +8,7 @@ defmodule ExNVR.Pipeline.Output.Storage do
 
   import ExNVR.MediaUtils
 
-  alias ExMP4.Writer
+  alias ExMP4.{Box, Writer}
   alias ExNVR.Model.Device
   alias ExNVR.Model.Run
   alias ExNVR.Pipeline.Event.StreamClosed
@@ -130,7 +130,6 @@ defmodule ExNVR.Pipeline.Output.Storage do
           last_buffer: buffer,
           monotonic_start_time: System.monotonic_time()
       }
-      |> update_track_priv_data(buffer)
       |> open_file()
 
     {[notify_parent: :new_segment], state}
@@ -140,42 +139,37 @@ defmodule ExNVR.Pipeline.Output.Storage do
   def handle_buffer(:input, buffer, _ctx, %{current_segment: segment} = state) do
     state = write_data(state, buffer)
 
-    cond do
-      Utils.keyframe(buffer) and Segment.duration(segment) >= state.target_duration ->
-        {state, discontinuity} =
-          finalize_segment(
-            state,
-            buffer.metadata.timestamp,
-            state.correct_timestamp
-          )
+    if Utils.keyframe(buffer) and Segment.duration(segment) >= state.target_duration do
+      {state, discontinuity} =
+        finalize_segment(
+          state,
+          buffer.metadata.timestamp,
+          state.correct_timestamp
+        )
 
-        state =
+      state =
+        state
+        |> close_file(discontinuity)
+        |> rename_first_segment(segment)
+
+      # in case of time jump, we need to start a new segment
+      start_time =
+        if discontinuity,
+          do: state.current_segment.wallclock_end_date,
+          else: Segment.end_date(state.current_segment)
+
+      state =
+        %{
           state
-          |> close_file(discontinuity)
-          |> rename_first_segment(segment)
+          | current_segment: Segment.new(start_time),
+            first_segment?: false,
+            monotonic_start_time: System.monotonic_time()
+        }
+        |> open_file()
 
-        # in case of time jump, we need to start a new segment
-        start_time =
-          if discontinuity,
-            do: state.current_segment.wallclock_end_date,
-            else: Segment.end_date(state.current_segment)
-
-        state =
-          %{
-            state
-            | current_segment: Segment.new(start_time),
-              first_segment?: false,
-              monotonic_start_time: System.monotonic_time()
-          }
-          |> open_file()
-
-        {[notify_parent: :new_segment], state}
-
-      Utils.keyframe(buffer) ->
-        {[], state |> update_track_priv_data(buffer)}
-
-      true ->
-        {[], state}
+      {[notify_parent: :new_segment], state}
+    else
+      {[], state}
     end
   end
 
@@ -290,12 +284,6 @@ defmodule ExNVR.Pipeline.Output.Storage do
     {%{segment | start_date: start_date, end_date: end_date}, false}
   end
 
-  defp update_track_priv_data(state, %Buffer{} = buf) when Utils.keyframe(buf) do
-    %{state | track: %{state.track | priv_data: get_priv_data(buf)}}
-  end
-
-  defp update_track_priv_data(state, _buf), do: state
-
   defp open_file(%{current_segment: segment} = state) do
     Membrane.Logger.info("Start recording a new segment")
 
@@ -311,18 +299,36 @@ defmodule ExNVR.Pipeline.Output.Storage do
     %{state | writer: writer, track: Writer.tracks(writer) |> List.first()}
   end
 
-  defp write_data(state, buffer) do
+  defp write_data(%{track: track} = state, buffer) do
     last_buffer = state.last_buffer
     timescale = state.track.timescale
     duration = Buffer.get_dts_or_pts(buffer) - Buffer.get_dts_or_pts(last_buffer)
+
+    key_frame? = Utils.keyframe(last_buffer)
+
+    {state, au} =
+      cond do
+        not key_frame? ->
+          {state, last_buffer.payload}
+
+        track.media == :h264 ->
+          {{sps, pps}, au} = MediaCodecs.H264.pop_parameter_sets(last_buffer.payload)
+          state = %{state | track: %{state.track | priv_data: Box.Avcc.new(sps, pps)}}
+          {state, au}
+
+        track.media == :h265 ->
+          {{vps, sps, pps}, au} = MediaCodecs.H265.pop_parameter_sets(last_buffer.payload)
+          state = %{state | track: %{state.track | priv_data: get_hevc_dcr(vps, sps, pps)}}
+          {state, au}
+      end
 
     writer =
       Writer.write_sample(state.writer, %ExMP4.Sample{
         track_id: state.track.id,
         dts: ExMP4.Helper.timescalify(Buffer.get_dts_or_pts(last_buffer), :nanosecond, timescale),
         pts: ExMP4.Helper.timescalify(last_buffer.pts, :nanosecond, timescale),
-        sync?: Utils.keyframe(last_buffer),
-        payload: convert_annexb_to_elementary_stream(last_buffer, state.track.media),
+        sync?: key_frame?,
+        payload: MediaCodecs.H264.annexb_to_elementary_stream(au),
         duration: ExMP4.Helper.timescalify(duration, :nanosecond, timescale)
       })
 

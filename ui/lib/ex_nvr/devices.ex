@@ -8,7 +8,7 @@ defmodule ExNVR.Devices do
   alias __MODULE__.{Onvif, Supervisor}
   alias Ecto.Multi
   alias ExNVR.Model.{Device, Recording, Run}
-  alias ExNVR.{HTTP, Repo}
+  alias ExNVR.{HTTP, Pipelines, Repo}
   alias ExNVR.Devices.Cameras.HttpClient.{Axis, Hik, Milesight}
 
   import Ecto.Query
@@ -56,8 +56,8 @@ defmodule ExNVR.Devices do
   @spec list(map() | Keyword.t()) :: [Device.t()]
   def list(params \\ %{}), do: Repo.all(Device.filter(params) |> order_by([d], d.inserted_at))
 
-  @spec ip_cameras() :: [Device.t()]
-  def ip_cameras(), do: list(%{type: :ip})
+  @spec ip_cameras :: [Device.t()]
+  def ip_cameras, do: list(%{type: :ip})
 
   @spec get(binary()) :: Device.t() | nil
   def get(device_id), do: Repo.get(Device, device_id)
@@ -137,8 +137,8 @@ defmodule ExNVR.Devices do
     File.mkdir_p!(Device.lpr_thumbnails_dir(device))
   end
 
-  @spec summary() :: list()
-  def summary() do
+  @spec summary :: list()
+  def summary do
     list()
     |> Task.async_stream(
       fn device ->
@@ -176,8 +176,8 @@ defmodule ExNVR.Devices do
   end
 
   # Supervisor functions
-  @spec start_all() :: :ok
-  def start_all() do
+  @spec start_all :: :ok
+  def start_all do
     if run_pipeline?() do
       list()
       |> Enum.filter(&Device.recording?/1)
@@ -254,9 +254,9 @@ defmodule ExNVR.Devices do
 
   defp stream_stats(device) do
     if Device.streaming?(device) do
-      ExNVR.Pipelines.Main.get_tracks(device)
+      Pipelines.Main.get_tracks(device)
     end
   end
 
-  defp run_pipeline?(), do: ExNVR.Utils.run_main_pipeline?()
+  defp run_pipeline?, do: ExNVR.Utils.run_main_pipeline?()
 end
