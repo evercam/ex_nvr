@@ -13,7 +13,7 @@ defmodule ExNVR.Pipeline.Output.HLS2 do
   alias ExMP4.{Box, FWriter}
   alias ExNVR.HLS.MultivariantPlaylist
   alias ExNVR.Pipeline.Event.StreamClosed
-  alias ExNVR.Pipeline.Output.HLS.MultiFileWriter
+  alias ExNVR.Pipeline.Output.HLS.{MultiFileWriter, Variant}
   alias ExNVR.Utils
   alias Membrane.{Buffer, Event, H264, H265, ResourceGuard}
 
@@ -56,7 +56,7 @@ defmodule ExNVR.Pipeline.Output.HLS2 do
     end)
 
     state = %{
-      streams: %{},
+      variants: %{},
       location: options.location,
       playlist: MultivariantPlaylist.new([])
     }
@@ -65,37 +65,41 @@ defmodule ExNVR.Pipeline.Output.HLS2 do
   end
 
   @impl true
-  def handle_pad_added(Pad.ref(stream_type, _ref), _ctx, state) do
-    playlist = MultivariantPlaylist.add_variant(state.playlist, stream_type)
-    streams = Map.put(state.streams, stream_type, init_stream(stream_type))
-    {[], %{state | streams: streams, playlist: playlist}}
+  def handle_pad_added(Pad.ref(variant_name, _ref), _ctx, state) do
+    playlist = MultivariantPlaylist.add_variant(state.playlist, variant_name)
+    variants = Map.put(state.variants, variant_name, Variant.new(variant_name))
+    {[], %{state | variants: variants, playlist: playlist}}
   end
 
   @impl true
-  def handle_stream_format(Pad.ref(stream_type, _ref) = pad, stream_format, ctx, state) do
+  def handle_stream_format(Pad.ref(variant_name, _ref) = pad, stream_format, ctx, state) do
     old_stream_format = ctx.pads[pad].stream_format
-    stream = state.streams[stream_type]
+    variant = state.variants[variant_name]
 
     state =
       cond do
         is_nil(old_stream_format) ->
-          put_in(state, [:streams, stream.type], %{stream | track: new_track(stream_format)})
+          put_in(state, [:variants, variant.name], %{
+            variant
+            | track: track_from_stream_format(stream_format)
+          })
 
         codec_changed?(old_stream_format, stream_format) ->
           raise "HLS does not support codec change"
 
         old_stream_format != stream_format ->
-          :ok = stream.writer |> FWriter.flush_fragment() |> FWriter.close()
+          :ok = variant.writer |> FWriter.flush_fragment() |> FWriter.close()
 
-          stream = %{
-            init_stream(stream_type)
-            | track: new_track(stream_format),
-              count_segments: stream.count_segments + 1,
-              count_media_init: stream.count_media_init,
+          variant =
+            Variant.reset_writer(variant)
+            |> Variant.inc_segment_count()
+            |> Map.merge(%{
+              track: track_from_stream_format(stream_format),
+              count_media_init: variant.count_media_init,
               insert_discontinuity?: true
-          }
+            })
 
-          %{state | streams: Map.put(state.streams, stream_type, stream)}
+          %{state | variants: Map.put(state.variants, variant_name, variant)}
 
         true ->
           state
@@ -105,41 +109,43 @@ defmodule ExNVR.Pipeline.Output.HLS2 do
   end
 
   @impl true
-  def handle_event(Pad.ref(stream_type, _ref), %Event.Discontinuity{}, _ctx, state) do
-    {[], handle_discontinuity(state, stream_type)}
+  def handle_event(Pad.ref(variant_name, _ref), %Event.Discontinuity{}, _ctx, state) do
+    {[], handle_discontinuity(state, variant_name)}
   end
 
   @impl true
-  def handle_event(Pad.ref(stream_type, _ref), %StreamClosed{}, _ctx, state) do
-    {[], handle_discontinuity(state, stream_type)}
+  def handle_event(Pad.ref(variant_name, _ref), %StreamClosed{}, _ctx, state) do
+    {[], handle_discontinuity(state, variant_name)}
   end
 
   @impl true
-  def handle_buffer(Pad.ref(stream_type, _ref), buffer, _ctx, state) do
-    state = do_handle_buffer(state, state.streams[stream_type], buffer)
+  def handle_buffer(Pad.ref(variant_name, _ref), buffer, _ctx, state) do
+    state = do_handle_buffer(state, state.variants[variant_name], buffer)
     {[], state}
   end
 
   @impl true
-  def handle_info({:init_header, variant, uri}, _ctx, state) do
-    playlist = MultivariantPlaylist.add_init_header(state.playlist, variant, uri)
+  def handle_info({:init_header, variant_name, uri}, _ctx, state) do
+    playlist = MultivariantPlaylist.add_init_header(state.playlist, variant_name, uri)
     {[], %{state | playlist: playlist}}
   end
 
   @impl true
-  def handle_info({:segment, variant, segment}, _ctx, state) do
-    stream = state.streams[variant]
-    {playlist, discarded} = MultivariantPlaylist.add_segment(state.playlist, variant, segment)
+  def handle_info({:segment, variant_name, segment}, _ctx, state) do
+    variant = state.variants[variant_name]
+
+    {playlist, discarded} =
+      MultivariantPlaylist.add_segment(state.playlist, variant_name, segment)
 
     playlist =
-      if stream.insert_discontinuity?,
-        do: MultivariantPlaylist.add_discontinuity(playlist, variant),
+      if variant.insert_discontinuity?,
+        do: MultivariantPlaylist.add_discontinuity(playlist, variant_name),
         else: playlist
 
-    {actions, stream} =
-      if stream.playable?,
-        do: {[], stream},
-        else: {[notify_parent: {:track_playable, variant}], %{stream | playable?: true}}
+    {actions, variant} =
+      if variant.playable?,
+        do: {[], variant},
+        else: {[notify_parent: {:track_playable, variant_name}], %{variant | playable?: true}}
 
     serialize(playlist, state.location)
     delete_discarded_segments(discarded, state.location)
@@ -148,7 +154,8 @@ defmodule ExNVR.Pipeline.Output.HLS2 do
      %{
        state
        | playlist: playlist,
-         streams: Map.put(state.streams, variant, %{stream | insert_discontinuity?: false})
+         variants:
+           Map.put(state.variants, variant_name, %{variant | insert_discontinuity?: false})
      }}
   end
 
@@ -157,66 +164,63 @@ defmodule ExNVR.Pipeline.Output.HLS2 do
     {[], state}
   end
 
-  defp do_handle_buffer(state, %{last_buffer: nil} = stream, buffer)
+  defp do_handle_buffer(state, %{last_buffer: nil} = variant, buffer)
        when Utils.keyframe(buffer) do
-    stream_type = stream.type
-
-    {stream, sps} =
-      case stream.track.media do
+    {variant, sps} =
+      case variant.track.media do
         :h264 ->
           {{sps, pps}, _au} = MediaCodecs.H264.pop_parameter_sets(buffer.payload)
-          stream = %{stream | track: %{stream.track | priv_data: Box.Avcc.new(sps, pps)}}
-          {stream, MediaCodecs.H264.parse_nalu(List.first(sps))}
+          variant = %{variant | track: %{variant.track | priv_data: Box.Avcc.new(sps, pps)}}
+          {variant, MediaCodecs.H264.parse_nalu(List.first(sps))}
 
         :h265 ->
           {{vps, sps, pps}, _au} = MediaCodecs.H265.pop_parameter_sets(buffer.payload)
-          stream = %{stream | track: %{stream.track | priv_data: get_hevc_dcr(vps, sps, pps)}}
-          {stream, MediaCodecs.H265.parse_nalu(List.first(sps))}
+          variant = %{variant | track: %{variant.track | priv_data: get_hevc_dcr(vps, sps, pps)}}
+          {variant, MediaCodecs.H265.parse_nalu(List.first(sps))}
       end
 
     playlist =
-      MultivariantPlaylist.update_settings(state.playlist, stream_type,
-        resolution: resolution(stream.track),
-        codecs: codecs(stream.track, sps.content)
+      MultivariantPlaylist.update_settings(state.playlist, variant.name,
+        resolution: resolution(variant.track),
+        codecs: codecs(variant.track, sps.content)
       )
 
     writer_opts = [
       dir: state.location,
-      init_write: &send(self(), {:init_header, stream_type, &1}),
-      segment_write: &send(self(), {:segment, stream_type, &1}),
-      segment_name_prefix: stream_type,
-      start_segment_number: stream.count_segments,
-      start_init_number: stream.count_media_init
+      init_write: &send(self(), {:init_header, variant.name, &1}),
+      segment_write: &send(self(), {:segment, variant.name, &1}),
+      segment_name_prefix: variant.name,
+      start_segment_number: variant.count_segments,
+      start_init_number: variant.count_media_init
     ]
 
     writer =
       writer_opts
-      |> FWriter.new!([stream.track], [moof_base_offset: true, duration: false], MultiFileWriter)
+      |> FWriter.new!([variant.track], [moof_base_offset: true, duration: false], MultiFileWriter)
       |> FWriter.create_segment()
       |> FWriter.create_fragment()
 
-    stream = %{
-      stream
+    variant = %{
+      Variant.inc_media_init_count(variant)
       | writer: writer,
         last_buffer: buffer,
-        track: FWriter.track(writer, :video),
-        count_media_init: stream.count_media_init + 1
+        track: FWriter.track(writer, :video)
     }
 
-    %{state | streams: Map.put(state.streams, stream.type, stream), playlist: playlist}
+    %{state | variants: Map.put(state.variants, variant.name, variant), playlist: playlist}
   end
 
   defp do_handle_buffer(state, %{last_buffer: nil}, _buffer) do
     state
   end
 
-  defp do_handle_buffer(state, %{last_buffer: last_buffer} = stream, buffer) do
+  defp do_handle_buffer(state, %{last_buffer: last_buffer} = variant, buffer) do
     duration = Buffer.get_dts_or_pts(buffer) - Buffer.get_dts_or_pts(last_buffer)
     keyframe? = Utils.keyframe(last_buffer)
-    timescale = stream.track.timescale
+    timescale = variant.track.timescale
 
     sample = %ExMP4.Sample{
-      track_id: stream.track.id,
+      track_id: variant.track.id,
       dts: timescalify(Buffer.get_dts_or_pts(last_buffer), :nanosecond, timescale),
       pts: timescalify(last_buffer.pts, :nanosecond, timescale),
       sync?: keyframe?,
@@ -224,76 +228,44 @@ defmodule ExNVR.Pipeline.Output.HLS2 do
       duration: ExMP4.Helper.timescalify(duration, :nanosecond, timescale)
     }
 
-    stream =
-      if keyframe? and stream.segment_duration >= @segment_duration do
+    variant =
+      if keyframe? and variant.segment_duration >= @segment_duration do
         writer =
-          stream.writer
+          variant.writer
           |> FWriter.flush_fragment()
           |> FWriter.create_segment()
           |> FWriter.create_fragment()
           |> FWriter.write_sample(sample)
 
         %{
-          stream
+          Variant.inc_segment_count(variant)
           | writer: writer,
-            segment_duration: sample.duration,
-            count_segments: stream.count_segments + 1
+            segment_duration: sample.duration
         }
       else
-        writer = FWriter.write_sample(stream.writer, sample)
-        %{stream | writer: writer, segment_duration: stream.segment_duration + sample.duration}
+        writer = FWriter.write_sample(variant.writer, sample)
+        %{variant | writer: writer, segment_duration: variant.segment_duration + sample.duration}
       end
 
-    put_in(state, [:streams, stream.type], %{stream | last_buffer: buffer})
+    put_in(state, [:variants, variant.name], %{variant | last_buffer: buffer})
   end
 
-  defp handle_discontinuity(state, stream_type) do
-    stream = state.streams[stream_type]
+  defp handle_discontinuity(state, variant_name) do
+    variant = state.variants[variant_name]
 
-    if writer = stream.writer do
+    if writer = variant.writer do
       writer |> FWriter.flush_fragment() |> FWriter.close()
 
-      stream = %{
-        init_stream(stream_type)
-        | track: stream.track,
-          count_segments: stream.count_segments + 1,
-          insert_discontinuity?: true
-      }
+      variant =
+        variant
+        |> Variant.reset_writer()
+        |> Variant.inc_segment_count()
+        |> Map.put(:insert_discontinuity?, true)
 
-      %{state | streams: Map.put(state.streams, stream_type, stream)}
+      %{state | variants: Map.put(state.variants, variant_name, variant)}
     else
       state
     end
-  end
-
-  defp init_stream(stream_type) do
-    %{
-      type: stream_type,
-      writer: nil,
-      last_buffer: nil,
-      track: nil,
-      segment_duration: 0,
-      playable?: false,
-      count_segments: 0,
-      count_media_init: 0,
-      insert_discontinuity?: false
-    }
-  end
-
-  defp new_track(stream_format) do
-    media =
-      case stream_format do
-        %H264{} -> :h264
-        %H265{} -> :h265
-      end
-
-    %ExMP4.Track{
-      type: :video,
-      media: media,
-      width: stream_format.width,
-      height: stream_format.height,
-      timescale: @timescale
-    }
   end
 
   defp serialize(playlist, location) do

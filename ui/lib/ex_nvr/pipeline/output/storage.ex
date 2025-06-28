@@ -98,7 +98,7 @@ defmodule ExNVR.Pipeline.Output.Storage do
 
     cond do
       is_nil(old_stream_format) ->
-        {[], %{state | track: new_track(stream_format)}}
+        {[], %{state | track: track_from_stream_format(stream_format)}}
 
       same_stream_format?(old_stream_format, stream_format) ->
         {[], state}
@@ -107,7 +107,7 @@ defmodule ExNVR.Pipeline.Output.Storage do
         state =
           state
           |> handle_discontinuity()
-          |> Map.put(:track, new_track(stream_format))
+          |> Map.put(:track, track_from_stream_format(stream_format))
 
         {[], state}
     end
@@ -214,22 +214,6 @@ defmodule ExNVR.Pipeline.Output.Storage do
   end
 
   defp same_stream_format?(_, _), do: false
-
-  defp new_track(stream_format) do
-    media =
-      case stream_format do
-        %H264{} -> :h264
-        %H265{} -> :h265
-      end
-
-    %ExMP4.Track{
-      type: :video,
-      media: media,
-      width: stream_format.width,
-      height: stream_format.height,
-      timescale: @timescale
-    }
-  end
 
   defp handle_discontinuity(%{writer: nil} = state), do: state
 

@@ -3,6 +3,8 @@ defmodule ExNVR.MediaUtils do
 
   alias Membrane.Buffer
 
+  @default_video_timescale 90_000
+
   @spec get_hevc_dcr([binary()], [binary()], [binary()]) :: ExMP4.Box.Hvcc.t()
   def get_hevc_dcr(vpss, spss, ppss) do
     %{content: sps} = MediaCodecs.H265.parse_nalu(List.first(spss))
@@ -45,5 +47,22 @@ defmodule ExNVR.MediaUtils do
     )
     |> Enum.reverse()
     |> hd()
+  end
+
+  @spec track_from_stream_format(module()) :: ExMP4.Track.t()
+  def track_from_stream_format(stream_format) do
+    media =
+      case stream_format do
+        %Membrane.H264{} -> :h264
+        %Membrane.H265{} -> :h265
+      end
+
+    %ExMP4.Track{
+      type: :video,
+      media: media,
+      width: stream_format.width,
+      height: stream_format.height,
+      timescale: @default_video_timescale
+    }
   end
 end
