@@ -86,7 +86,7 @@ defmodule ExNVR.MixProject do
       {:onvif, github: "gBillal/onvif", tag: "v0.7.0"},
       {:slipstream, "~> 1.2.0"},
       {:live_vue, "~> 0.5.7"},
-      {:sentry, "~> 10.9"},
+      {:sentry, "~> 11.0"},
       {:xav, "~> 0.11.0"},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:mimic, "~> 1.12.0", only: :test},
