@@ -300,10 +300,10 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
   defp remove_unused_stream(manifest_file, %{pos: pos}) when not is_nil(pos), do: manifest_file
 
   defp remove_unused_stream(manifest_file, %{stream: :high}),
-    do: HLS.Processor.delete_stream(manifest_file, "live_sub_stream")
+    do: HLS.Processor.delete_stream(manifest_file, "sub_stream")
 
   defp remove_unused_stream(manifest_file, %{stream: :low}),
-    do: HLS.Processor.delete_stream(manifest_file, "live_main_stream")
+    do: HLS.Processor.delete_stream(manifest_file, "main_stream")
 
   defp remove_unused_stream(manifest_file, _params), do: manifest_file
 

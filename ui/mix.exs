@@ -64,7 +64,7 @@ defmodule ExNVR.MixProject do
       {:flop, "~> 0.26.0"},
       {:req, "~> 0.5.0"},
       {:multipart, "~> 0.4.0"},
-      {:ex_mp4, "~> 0.9.0"},
+      {:ex_mp4, "~> 0.10.0"},
       {:floki, "~> 0.38.0"},
       {:phoenix, "~> 1.7.2"},
       {:phoenix_ecto, "~> 4.4"},

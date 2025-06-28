@@ -66,26 +66,13 @@ defmodule ExNVR.Pipeline.Output.WebRTC do
     state =
       cond do
         is_nil(old_stream_format) ->
-          case stream_format do
-            %H264{} ->
-              %{
-                state
-                | video_codecs: [@h264_codec],
-                  payloader: Encoder.H264.init([]),
-                  payloader_mod: Encoder.H264
-              }
-
-            %H265{} ->
-              %{
-                state
-                | video_codecs: [@h265_codec],
-                  payloader: Encoder.H265.init([]),
-                  payloader_mod: Encoder.H265
-              }
-          end
+          init_rtp_payloader(stream_format, state)
 
         old_stream_format == stream_format ->
           state
+
+        map_size(state.peers) == 0 ->
+          init_rtp_payloader(stream_format, state)
 
         true ->
           raise "WebRTC doesn't support changing stream format"
@@ -247,5 +234,23 @@ defmodule ExNVR.Pipeline.Output.WebRTC do
     peers
     |> Enum.find({nil, nil}, &(elem(&1, 1) == peer_id))
     |> elem(0)
+  end
+
+  defp init_rtp_payloader(%H264{}, state) do
+    %{
+      state
+      | video_codecs: [@h264_codec],
+        payloader: Encoder.H264.init([]),
+        payloader_mod: Encoder.H264
+    }
+  end
+
+  defp init_rtp_payloader(%H265{}, state) do
+    %{
+      state
+      | video_codecs: [@h265_codec],
+        payloader: Encoder.H265.init([]),
+        payloader_mod: Encoder.H265
+    }
   end
 end

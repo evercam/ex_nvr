@@ -137,9 +137,8 @@ defmodule ExNVR.Pipelines.Main do
   def handle_setup(_ctx, %{device: device} = state) do
     spec =
       [
-        child(:hls_sink, %Output.HLS{
-          location: Path.join(Utils.hls_dir(device.id), "live"),
-          segment_name_prefix: "live"
+        child(:hls_sink, %Output.HLS2{
+          location: Path.join(Utils.hls_dir(device.id), "live")
         })
       ] ++ build_device_spec(device)
 
@@ -166,7 +165,7 @@ defmodule ExNVR.Pipelines.Main do
           |> via_out(Pad.ref(:main_stream_output, id))
           |> child(:tee, Membrane.Tee)
         ] ++
-          build_main_stream_spec(state, track.encoding)
+          build_main_stream_spec(state)
       else
         []
       end
@@ -185,7 +184,7 @@ defmodule ExNVR.Pipelines.Main do
           get_child(child_name)
           |> via_out(Pad.ref(:sub_stream_output, id))
           |> child({:tee, :sub_stream}, Membrane.Tee)
-        ] ++ build_sub_stream_spec(state, track.encoding)
+        ] ++ build_sub_stream_spec(state)
       else
         []
       end
@@ -397,12 +396,12 @@ defmodule ExNVR.Pipelines.Main do
     [child(:rtsp_source, %Source.RTSP{device: device})]
   end
 
-  defp build_main_stream_spec(state, encoding) do
+  defp build_main_stream_spec(state) do
     build_main_stream_storage_spec(state) ++
       [
         get_child(:tee)
         |> via_out(:push_output)
-        |> via_in(Pad.ref(:video, :main_stream), options: [encoding: encoding])
+        |> via_in(Pad.ref(:main_stream, :video))
         |> get_child(:hls_sink),
         get_child(:tee)
         |> via_out(:push_output)
@@ -419,11 +418,11 @@ defmodule ExNVR.Pipelines.Main do
       ]
   end
 
-  defp build_sub_stream_spec(%{device: device} = state, encoding) do
+  defp build_sub_stream_spec(%{device: device} = state) do
     [
       get_child({:tee, :sub_stream})
       |> via_out(:push_output)
-      |> via_in(Pad.ref(:video, :sub_stream), options: [encoding: encoding])
+      |> via_in(Pad.ref(:sub_stream, :video))
       |> get_child(:hls_sink),
       get_child({:tee, :sub_stream})
       |> via_out(:push_output)
