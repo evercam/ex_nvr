@@ -40,6 +40,7 @@ defmodule ExNVRWeb.CoreComponents do
   attr :id, :string, required: true
   attr :show, :boolean, default: false
   attr :on_cancel, JS, default: %JS{}
+  attr :class, :string, default: nil
   slot :inner_block, required: true
 
   def modal(assigns) do
@@ -53,7 +54,7 @@ defmodule ExNVRWeb.CoreComponents do
     >
       <div id={"#{@id}-bg"} class="bg-zinc-50/90 fixed inset-0 transition-opacity" aria-hidden="true" />
       <div
-        class="fixed inset-0 overflow-y-auto dark:bg-gray-400"
+        class={["fixed inset-0 overflow-y-auto", @class || "dark:bg-gray-400"]}
         aria-labelledby={"#{@id}-title"}
         aria-describedby={"#{@id}-description"}
         role="dialog"
