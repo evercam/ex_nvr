@@ -137,7 +137,7 @@ defmodule ExNVR.Pipelines.Main do
   def handle_setup(_ctx, %{device: device} = state) do
     spec =
       [
-        child(:hls_sink, %Output.HLS2{
+        child(:hls_sink, %Output.HLS{
           location: Path.join(Utils.hls_dir(device.id), "live")
         })
       ] ++ build_device_spec(device)

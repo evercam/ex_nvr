@@ -46,8 +46,9 @@ defmodule ExNVR.Elements.Transcoder do
             height: state.height,
             format: :yuv420p,
             time_base: {1, @dest_time_base},
-            gop_size: 16,
-            profile: encoder_profile()
+            gop_size: 32,
+            profile: encoder_profile(),
+            max_b_frames: 0
           )
 
         out_stream_format = %H264{
@@ -76,21 +77,36 @@ defmodule ExNVR.Elements.Transcoder do
 
     with {:ok, frame} <- Decoder.decode(state.decoder, buffer.payload, dts: dts, pts: pts),
          packets <- Encoder.encode(state.encoder, frame) do
-      buffers =
-        Enum.map(
-          packets,
-          &%Membrane.Buffer{
-            payload: &1.data,
-            dts: &1.dts && timescalify(&1.dts, @dest_time_base, @original_time_base),
-            pts: &1.pts && timescalify(&1.pts, @dest_time_base, @original_time_base)
-          }
-        )
-
+      buffers = Enum.map(packets, &map_to_buffer/1)
       {[buffer: {:output, buffers}], state}
     else
       _other ->
         {[], state}
     end
+  end
+
+  @impl true
+  def handle_end_of_stream(:input, _ctx, state) do
+    {:ok, frames} = Decoder.flush(state.decoder)
+
+    buffers =
+      frames
+      |> Enum.map(&Encoder.encode(state.encoder, &1))
+      |> Kernel.++(Encoder.flush(state.encoder))
+      |> Enum.map(&map_to_buffer/1)
+
+    {[buffer: {:output, buffers}, forward: :output], state}
+  end
+
+  defp map_to_buffer(packet) do
+    metadata = %{h264: %{key_frame?: packet.keyframe?}}
+
+    %Membrane.Buffer{
+      payload: packet.data,
+      dts: packet.dts && timescalify(packet.dts, @dest_time_base, @original_time_base),
+      pts: packet.pts && timescalify(packet.pts, @dest_time_base, @original_time_base),
+      metadata: metadata
+    }
   end
 
   # arm architecture use a precompiled ffmpeg with OpenH264 encoder which supports constrained_baseline profile
