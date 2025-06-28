@@ -165,7 +165,7 @@ defmodule ExNVR.Pipelines.Main do
           |> via_out(Pad.ref(:main_stream_output, id))
           |> child(:tee, Membrane.Tee)
         ] ++
-          build_main_stream_spec(state, track.encoding)
+          build_main_stream_spec(state)
       else
         []
       end
@@ -184,7 +184,7 @@ defmodule ExNVR.Pipelines.Main do
           get_child(child_name)
           |> via_out(Pad.ref(:sub_stream_output, id))
           |> child({:tee, :sub_stream}, Membrane.Tee)
-        ] ++ build_sub_stream_spec(state, track.encoding)
+        ] ++ build_sub_stream_spec(state)
       else
         []
       end
@@ -396,7 +396,7 @@ defmodule ExNVR.Pipelines.Main do
     [child(:rtsp_source, %Source.RTSP{device: device})]
   end
 
-  defp build_main_stream_spec(state, encoding) do
+  defp build_main_stream_spec(state) do
     build_main_stream_storage_spec(state) ++
       [
         get_child(:tee)
@@ -418,7 +418,7 @@ defmodule ExNVR.Pipelines.Main do
       ]
   end
 
-  defp build_sub_stream_spec(%{device: device} = state, _encoding) do
+  defp build_sub_stream_spec(%{device: device} = state) do
     [
       get_child({:tee, :sub_stream})
       |> via_out(:push_output)
@@ -436,7 +436,7 @@ defmodule ExNVR.Pipelines.Main do
       build_sub_stream_bif_spec(state)
   end
 
-  defp build_main_stream_storage_spec(%{record_main_stream?: true}), do: []
+  defp build_main_stream_storage_spec(%{record_main_stream?: false}), do: []
 
   defp build_main_stream_storage_spec(state) do
     [

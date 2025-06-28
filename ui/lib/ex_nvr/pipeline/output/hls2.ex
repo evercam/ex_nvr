@@ -250,21 +250,20 @@ defmodule ExNVR.Pipeline.Output.HLS2 do
   defp handle_discontinuity(state, stream_type) do
     stream = state.streams[stream_type]
 
-    stream =
-      if writer = stream.writer do
-        writer |> FWriter.flush_fragment() |> FWriter.close()
+    if writer = stream.writer do
+      writer |> FWriter.flush_fragment() |> FWriter.close()
 
-        %{
-          init_stream(stream_type)
-          | track: stream.track,
-            count_segments: stream.count_segments + 1,
-            insert_discontinuity?: true
-        }
-      else
-        stream
-      end
+      stream = %{
+        init_stream(stream_type)
+        | track: stream.track,
+          count_segments: stream.count_segments + 1,
+          insert_discontinuity?: true
+      }
 
-    %{state | streams: Map.put(state.streams, stream_type, stream)}
+      %{state | streams: Map.put(state.streams, stream_type, stream)}
+    else
+      state
+    end
   end
 
   defp init_stream(stream_type) do

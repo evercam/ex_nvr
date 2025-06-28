@@ -16,9 +16,9 @@ defmodule ExNVRWeb.API.DeviceStreamingControllerTest do
   #EXT-X-VERSION:7
   #EXT-X-INDEPENDENT-SEGMENTS
   #EXT-X-STREAM-INF:BANDWIDTH=1138520,CODECS="avc1.42e00a"
-  live_main_stream.m3u8
+  main_stream.m3u8
   #EXT-X-STREAM-INF:BANDWIDTH=138520,CODECS="avc1.42e00a"
-  live_sub_stream.m3u8
+  sub_stream.m3u8
   """
 
   setup %{conn: conn} do
@@ -43,8 +43,8 @@ defmodule ExNVRWeb.API.DeviceStreamingControllerTest do
 
       body = response(conn, 200)
 
-      assert body =~ "live_main_stream.m3u8"
-      assert body =~ "live_sub_stream.m3u8"
+      assert body =~ "main_stream.m3u8"
+      assert body =~ "sub_stream.m3u8"
     end
 
     test "get manifest file for not recorded date", %{conn: conn, device: device} do
@@ -59,16 +59,16 @@ defmodule ExNVRWeb.API.DeviceStreamingControllerTest do
         |> get(~p"/api/devices/#{device.id}/hls/index.m3u8?stream=high")
         |> response(200)
 
-      assert response =~ "live_main_stream.m3u8"
-      refute response =~ "live_sub_stream.m3u8"
+      assert response =~ "main_stream.m3u8"
+      refute response =~ "sub_stream.m3u8"
 
       response =
         conn
         |> get(~p"/api/devices/#{device.id}/hls/index.m3u8?stream=low")
         |> response(200)
 
-      refute response =~ "live_main_stream.m3u8"
-      assert response =~ "live_sub_stream.m3u8"
+      refute response =~ "main_stream.m3u8"
+      assert response =~ "sub_stream.m3u8"
     end
 
     test "get manifest file with invalid params", %{conn: conn, device: device} do
