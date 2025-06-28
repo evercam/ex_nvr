@@ -15,7 +15,7 @@ defmodule ExNVR.Pipeline.Output.HLSPipelineTest do
 
   defp start_pipeline(in_file, out_dir, nb_streams \\ 1, resolution \\ nil) do
     spec = [
-      child(:sink, %ExNVR.Pipeline.Output.HLS2{
+      child(:sink, %ExNVR.Pipeline.Output.HLS{
         location: out_dir
       }),
       child(:source, %Membrane.File.Source{location: in_file})

@@ -1,4 +1,4 @@
-defmodule ExNVR.Pipeline.Output.HLS2 do
+defmodule ExNVR.Pipeline.Output.HLS do
   @moduledoc """
   Output element that create HLS playlists from audio/video
   """
@@ -10,10 +10,10 @@ defmodule ExNVR.Pipeline.Output.HLS2 do
   import ExMP4.Helper
   import ExNVR.MediaUtils
 
+  alias __MODULE__.{MultiFileWriter, Variant}
   alias ExMP4.{Box, FWriter}
   alias ExNVR.HLS.MultivariantPlaylist
   alias ExNVR.Pipeline.Event.StreamClosed
-  alias ExNVR.Pipeline.Output.HLS.{MultiFileWriter, Variant}
   alias ExNVR.Utils
   alias Membrane.{Buffer, Event, H264, H265, ResourceGuard}
 

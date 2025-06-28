@@ -50,8 +50,6 @@ defmodule ExNVR.MixProject do
       {:httpoison, "~> 2.2.1"},
       {:membrane_raw_video_format, "~> 0.4.0", override: true},
       {:membrane_file_plugin, "~> 0.17.0"},
-      {:membrane_mp4_plugin, "~> 0.35.0"},
-      {:membrane_http_adaptive_stream_plugin, "~> 0.18.0"},
       {:membrane_realtimer_plugin, "~> 0.10.0"},
       {:ex_webrtc, "~> 0.14.0"},
       {:ex_libsrtp, "~> 0.7.0"},
@@ -89,6 +87,7 @@ defmodule ExNVR.MixProject do
       {:sentry, "~> 10.9"},
       {:xav, "~> 0.11.0"},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
+      {:membrane_h26x_plugin, "~> 0.10", only: :test},
       {:mimic, "~> 1.12.0", only: :test},
       {:faker, "~> 0.17", only: :test},
       {:bypass, "~> 2.1", only: :test}
