@@ -13,6 +13,6 @@ defmodule ExNVR.HLS.Assertions do
   end
 
   defp find_headers(files) do
-    Enum.filter(files, &String.match?(&1, ~r/.*header.*$/))
+    Enum.filter(files, &String.match?(&1, ~r/.*init.*$/))
   end
 end

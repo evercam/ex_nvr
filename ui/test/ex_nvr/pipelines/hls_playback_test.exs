@@ -25,18 +25,30 @@ defmodule ExNVR.Pipelines.HlsPlaybackTest do
       end_date: ~U(2023-06-23 10:00:10Z)
     )
 
-    %{device: device}
+    %{device: device, hls_dir: Path.join(ctx.tmp_dir, UUID.uuid4())}
   end
 
   describe "Hls playback" do
-    test "playback recording", %{device: device, tmp_dir: out_dir} do
-      pid = prepare_pipeline(device, directory: out_dir, stream: :high)
+    test "playback recording", %{device: device, hls_dir: dir} do
+      pid = prepare_pipeline(device, directory: dir, stream: :high)
 
       HlsPlayback.start_streaming(pid)
 
-      assert_pipeline_notified(pid, :sink, {:track_playable, :playback})
+      assert_pipeline_notified(pid, :sink, {:track_playable, :main_stream})
 
-      check_hls_playlist(out_dir, 2)
+      check_hls_playlist(dir, 2)
+
+      HlsPlayback.stop_streaming(pid)
+    end
+
+    test "playback recording with transcoding", %{device: device, hls_dir: dir} do
+      pid = prepare_pipeline(device, directory: dir, stream: :high, resolution: 240)
+
+      HlsPlayback.start_streaming(pid)
+
+      assert_pipeline_notified(pid, :sink, {:track_playable, :main_stream})
+
+      check_hls_playlist(dir, 2)
 
       HlsPlayback.stop_streaming(pid)
     end

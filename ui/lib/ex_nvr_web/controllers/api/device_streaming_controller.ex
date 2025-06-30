@@ -38,14 +38,16 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
         %{"stream_id" => stream_id, "segment_name" => segment_name} = params
       ) do
     folder = if params["live"] == "true", do: "live", else: stream_id
-    path = Path.join([Utils.hls_dir(conn.assigns.device.id), folder, segment_name])
+    base_path = Path.join(Utils.hls_dir(conn.assigns.device.id), folder)
+    {:ok, segment_name} = Path.safe_relative(segment_name, base_path)
+    full_path = Path.join(base_path, segment_name)
 
-    case File.exists?(path) do
+    case File.exists?(full_path) do
       true ->
         if String.ends_with?(segment_name, ".m3u8") do
           ExNVRWeb.HlsStreamingMonitor.update_last_access_time(stream_id)
 
-          path
+          full_path
           |> File.read!()
           |> HLS.Processor.add_query_params(:media_playlist,
             stream_id: stream_id,
@@ -53,7 +55,7 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
           )
           |> then(&send_resp(conn, 200, &1))
         else
-          send_file(conn, 200, path)
+          send_file(conn, 200, full_path)
         end
 
       false ->
