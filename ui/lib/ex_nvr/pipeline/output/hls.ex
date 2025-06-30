@@ -159,18 +159,18 @@ defmodule ExNVR.Pipeline.Output.HLS do
         :h264 ->
           {{sps, pps}, _au} = MediaCodecs.H264.pop_parameter_sets(buffer.payload)
           variant = %{variant | track: %{variant.track | priv_data: Box.Avcc.new(sps, pps)}}
-          {variant, MediaCodecs.H264.parse_nalu(List.first(sps))}
+          {variant, MediaCodecs.H264.NALU.parse(List.first(sps))}
 
         :h265 ->
           {{vps, sps, pps}, _au} = MediaCodecs.H265.pop_parameter_sets(buffer.payload)
           variant = %{variant | track: %{variant.track | priv_data: get_hevc_dcr(vps, sps, pps)}}
-          {variant, MediaCodecs.H265.parse_nalu(List.first(sps))}
+          {variant, MediaCodecs.H265.NALU.parse(List.first(sps))}
       end
 
     playlist =
       MultivariantPlaylist.update_settings(state.playlist, variant.name,
         resolution: resolution(variant.track),
-        codecs: codecs(variant.track, sps.content)
+        codecs: codecs(variant.track.media, sps.content)
       )
 
     writer_opts = [
@@ -279,20 +279,6 @@ defmodule ExNVR.Pipeline.Output.HLS do
 
   defp resolution(track), do: {track.width, track.height}
 
-  defp codecs(track, sps) do
-    case track.media do
-      :h264 ->
-        compatibility =
-          <<sps.constraint_set0::1, sps.constraint_set1::1, sps.constraint_set2::1,
-            sps.constraint_set3::1, sps.constraint_set4::1, sps.constraint_set5::1, 0::2>>
-
-        "avc1." <> Base.encode16(<<sps.profile_idc, compatibility::binary, sps.level_idc>>)
-
-      :h265 ->
-        "hvc1.#{sps.profile_idc}.4.#{tier(sps.tier_flag)}#{sps.level_idc}.B0"
-    end
-  end
-
-  defp tier(0), do: "L"
-  defp tier(1), do: "H"
+  defp codecs(:h264, sps), do: MediaCodecs.H264.SPS.mime_type(sps, "avc1")
+  defp codecs(:h265, sps), do: MediaCodecs.H265.SPS.mime_type(sps, "hvc1")
 end

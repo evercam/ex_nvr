@@ -1,13 +1,14 @@
 defmodule ExNVR.MediaUtils do
   @moduledoc false
 
+  alias MediaCodecs.H265
   alias Membrane.Buffer
 
   @default_video_timescale 90_000
 
   @spec get_hevc_dcr([binary()], [binary()], [binary()]) :: ExMP4.Box.Hvcc.t()
   def get_hevc_dcr(vpss, spss, ppss) do
-    %{content: sps} = MediaCodecs.H265.parse_nalu(List.first(spss))
+    sps = H265.SPS.parse(List.first(spss))
 
     <<constraint_indicator_flags::48>> =
       <<sps.progressive_source_flag::1, sps.interlaced_source_flag::1,
