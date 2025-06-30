@@ -45,7 +45,7 @@ defmodule ExNVRWeb.DashboardLive do
         />
       </div>
 
-      <.modal id="download-modal">
+      <.modal id="download-modal" class="dark:bg-gray-800/70 dark:backdrop-blur-none">
         <div class="bg-gray-300 dark:bg-gray-800 p-8 rounded">
           <h2 class="text-xl text-black dark:text-white font-bold mb-4">Download Footage</h2>
           <.simple_form
@@ -71,6 +71,7 @@ defmodule ExNVRWeb.DashboardLive do
                   id="footage_start_date"
                   type="datetime-local"
                   label="Start Date"
+                  value={@start_date}
                   required
                 />
               </div>
