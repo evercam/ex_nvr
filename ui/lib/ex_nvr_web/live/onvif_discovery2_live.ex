@@ -165,7 +165,7 @@ defmodule ExNVRWeb.OnvifDiscovery2Live do
               </div>
             </div>
           </div>
-          <.button>
+          <.button phx-click="add-device">
             <.icon name="hero-plus" class="w-4 h-4" />Add to NVR
           </.button>
         </div>
@@ -459,6 +459,48 @@ defmodule ExNVRWeb.OnvifDiscovery2Live do
     }
 
     {:noreply, assign(socket, selected_device: selected_device)}
+  end
+
+  def handle_event("add-device", _params, socket) do
+    selected_device = socket.assigns.selected_device
+    %{username: username, password: password} = selected_device.device
+
+    stream_config =
+      case selected_device.selected_profiles do
+        [main_stream, sub_stream] ->
+          %{
+            stream_uri: main_stream.stream_uri,
+            snapshot_uri: main_stream.snapshot_uri,
+            profile_token: main_stream.id,
+            sub_stream_uri: sub_stream.stream_uri,
+            sub_snapshot_uri: sub_stream.snapshot_uri,
+            sub_profile_token: sub_stream.id
+          }
+
+        [main_stream] ->
+          %{
+            stream_uri: main_stream.stream_uri,
+            snapshot_uri: main_stream.snapshot_uri,
+            profile_token: main_stream.id
+          }
+
+        _other ->
+          %{}
+      end
+
+    socket
+    |> put_flash(:device_params, %{
+      name: selected_device.name,
+      type: :ip,
+      vendor: selected_device.device.manufacturer,
+      model: selected_device.device.model,
+      mac: selected_device.network_interface && selected_device.network_interface.hw_address,
+      url: selected_device.device.address,
+      stream_config: stream_config,
+      credentials: %{username: username, password: password}
+    })
+    |> redirect(to: ~p"/devices/new")
+    |> then(&{:noreply, &1})
   end
 
   defp assign_discover_settings(socket, settings) do
