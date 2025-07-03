@@ -725,6 +725,20 @@ defmodule ExNVRWeb.CoreComponents do
     """
   end
 
+  slot :inner_block, required: true
+
+  def tag(assigns) do
+    ~H"""
+    <span class={[
+      "inline-flex items-center dark:bg-gray-200 rounded-full border px-2.5 py-0.5 font-semibold transition-colors",
+      "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-gray-200 hover:bg-primary/80",
+      "text-xs dark:text-black"
+    ]}>
+      {render_slot(@inner_block)}
+    </span>
+    """
+  end
+
   def pagination(assigns) do
     ~H"""
     <div aria-label="Pagination" class="flex justify-end mt-4">

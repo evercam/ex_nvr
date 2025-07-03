@@ -54,12 +54,16 @@ defmodule ExNVR.Devices.Cameras.StreamProfile do
           id: binary() | non_neg_integer(),
           enabled: boolean(),
           name: binary(),
-          video_config: nil | VideoConfig.t()
+          video_config: nil | VideoConfig.t(),
+          stream_uri: binary() | nil,
+          snapshot_uri: binary() | nil
         }
 
   defstruct [
     :id,
     :name,
+    :stream_uri,
+    :snapshot_uri,
     enabled: false,
     video_config: nil
   ]

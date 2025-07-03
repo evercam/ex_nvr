@@ -5,7 +5,8 @@ defmodule ExNVRWeb.OnvifDiscovery2Live do
 
   require Logger
 
-  alias ExNVR.Devices.Cameras.{NetworkInterface, NTP}
+  alias ExNVR.Devices.Cameras.{NetworkInterface, NTP, StreamProfile}
+  alias ExNVRWeb.Onvif.StreamProfile2
 
   defmodule DiscoverSettings do
     @moduledoc false
@@ -36,7 +37,18 @@ defmodule ExNVRWeb.OnvifDiscovery2Live do
   defmodule CameraDetails do
     @moduledoc false
 
-    defstruct [:name, :probe, :device, :network_interface, :ntp, :auth_form, tab: "system"]
+    defstruct [
+      :name,
+      :probe,
+      :device,
+      :network_interface,
+      :ntp,
+      :stream_profiles,
+      :auth_form,
+      :streams_form,
+      :selected_profiles,
+      tab: "system"
+    ]
   end
 
   def render(assigns) do
@@ -77,7 +89,8 @@ defmodule ExNVRWeb.OnvifDiscovery2Live do
           </.simple_form>
         </div>
       </div>
-
+      
+    <!-- Device Discovery Section -->
       <div class="w-3/4 flex justify-between items-center bg-white p-5 border rounded-lg dark:border-gray-600 dark:bg-gray-950 dark:text-white mr-5">
         <div class="flex items-center space-x-2">
           <.icon name="network" class="row-span-2 h-6 w-6" />
@@ -93,7 +106,8 @@ defmodule ExNVRWeb.OnvifDiscovery2Live do
           <.icon name="hero-magnifying-glass-solid" class="w-4 h-4 mr-2" /> Scan Network
         </.button>
       </div>
-
+      
+    <!-- Device List Section -->
       <div class="w-3/4 flex flex-col space-y-5 bg-white p-5 border rounded-lg dark:border-gray-600 dark:bg-gray-950 dark:text-white mr-5">
         <span class="text-md font-bold">
           <.icon name="hero-wifi" class="w-5 h-5 mr-1" /> Found {length(@devices)} Device(s)
@@ -135,7 +149,8 @@ defmodule ExNVRWeb.OnvifDiscovery2Live do
       </div>
 
       <.separator :if={@selected_device} class="w-3/4 mr-5" />
-
+      
+    <!-- Device Details Section -->
       <div :if={@selected_device} class="w-3/4 flex flex-col space-y-2 mr-5">
         <div class="flex justify-between items-center border rounded-lg bg-white dark:border-gray-600 dark:bg-gray-950 dark:text-white p-5">
           <div class="flex items-center">
@@ -240,9 +255,7 @@ defmodule ExNVRWeb.OnvifDiscovery2Live do
               </div>
               <div class="flex justify-between">
                 <span class="text-gray-600">DHCP:</span>
-                <span class="inline-flex items-center dark:bg-gray-200 rounded-full border px-2.5 py-0.5 font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-gray-200 hover:bg-primary/80 text-xs dark:text-black">
-                  {format_dhcp(@selected_device.network_interface.ipv4.dhcp)}
-                </span>
+                <.tag>{format_dhcp(@selected_device.network_interface.ipv4.dhcp)}</.tag>
               </div>
             </div>
           </div>
@@ -261,15 +274,13 @@ defmodule ExNVRWeb.OnvifDiscovery2Live do
               </div>
               <div class="flex justify-between">
                 <span class="text-gray-600">NTP Enabled</span>
-                <span class="inline-flex items-center dark:bg-gray-200 rounded-full border px-2.5 py-0.5 font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-gray-200 hover:bg-primary/80 text-xs dark:text-black">
-                  {yes_no(@selected_device.ntp)}
-                </span>
+                <.tag>{yes_no(@selected_device.ntp)}</.tag>
               </div>
               <div class="flex justify-between">
                 <span class="text-gray-600">Dayligth Saving</span>
-                <span class="inline-flex items-center dark:bg-gray-200 rounded-full border px-2.5 py-0.5 font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-gray-200 hover:bg-primary/80 text-xs dark:text-black">
+                <.tag>
                   {yes_no(@selected_device.device.system_date_time.daylight_savings)}
-                </span>
+                </.tag>
               </div>
               <div class="flex justify-between">
                 <span class="text-gray-600">NTP Server</span>
@@ -279,6 +290,46 @@ defmodule ExNVRWeb.OnvifDiscovery2Live do
               </div>
             </div>
           </div>
+        </div>
+
+        <div
+          :if={@selected_device.tab == "streams"}
+          class="flex flex-col border rounded-lg bg-white dark:border-gray-600 dark:bg-gray-950 dark:text-white"
+        >
+          <h2 class="text-lg font-bold p-3">Stream Selection</h2>
+          <div class="space-y-2 p-5 pt-0 text-sm">
+            <.simple_form
+              id="stream_selection_form"
+              for={@selected_device.streams_form}
+              phx-change="update-selected-stream"
+            >
+              <div class="grid grid-cols-2 gap-x-5">
+                <.input
+                  field={@selected_device.streams_form[:main_stream]}
+                  type="select"
+                  name="main_stream"
+                  options={stream_options(@selected_device.stream_profiles)}
+                  label="Main Stream"
+                />
+
+                <.input
+                  field={@selected_device.streams_form[:sub_stream]}
+                  type="select"
+                  name="sub_stream"
+                  options={stream_options(@selected_device.stream_profiles)}
+                  label="Sub Stream"
+                  prompt=""
+                />
+              </div>
+            </.simple_form>
+          </div>
+        </div>
+        <div :if={@selected_device.tab == "streams"} class="grid grid-cols-2 gap-x-5">
+          <StreamProfile2.stream_profile
+            :for={{profile, idx} <- Enum.with_index(@selected_device.selected_profiles)}
+            id={"#{profile.id}-#{idx}"}
+            profile={profile}
+          />
         </div>
       </div>
     </div>
@@ -364,6 +415,8 @@ defmodule ExNVRWeb.OnvifDiscovery2Live do
             %CameraDetails{camera_details | device: onvif_device}
             |> get_network_interface()
             |> get_ntp()
+            |> get_stream_profiles()
+            |> set_streams_form()
 
           socket =
             socket
@@ -395,6 +448,19 @@ defmodule ExNVRWeb.OnvifDiscovery2Live do
     {:noreply, assign(socket, selected_device: device)}
   end
 
+  def handle_event("update-selected-stream", params, socket) do
+    selected_device = socket.assigns.selected_device
+    main_stream = Enum.find(selected_device.stream_profiles, &(&1.id == params["main_stream"]))
+    sub_stream = Enum.find(selected_device.stream_profiles, &(&1.id == params["sub_stream"]))
+
+    selected_device = %{
+      selected_device
+      | selected_profiles: Enum.reject([main_stream, sub_stream], &is_nil/1)
+    }
+
+    {:noreply, assign(socket, selected_device: selected_device)}
+  end
+
   defp assign_discover_settings(socket, settings) do
     discover_form = to_form(DiscoverSettings.create_changeset(settings))
     assign(socket, discover_settings: settings, discover_form: discover_form)
@@ -423,6 +489,53 @@ defmodule ExNVRWeb.OnvifDiscovery2Live do
   end
 
   defp get_ntp(camera_details), do: camera_details
+
+  defp get_stream_profiles(%{device: %{media_ver20_service_path: nil}} = camera_details) do
+    Logger.warning("[OnvifDiscovery] camera does not support onvif media version 2")
+    camera_details
+  end
+
+  defp get_stream_profiles(camera_details) do
+    case Onvif.Media2.get_profiles(camera_details.device) do
+      {:ok, profiles} ->
+        %{camera_details | stream_profiles: Enum.map(profiles, &StreamProfile.from_onvif/1)}
+        |> get_stream_uris()
+
+      {:error, reason} ->
+        Logger.error("Failed to get stream profiles for camera #{inspect(reason)}")
+        camera_details
+    end
+  end
+
+  defp get_stream_uris(%{device: device} = camera_details) do
+    profiles =
+      Enum.map(camera_details.stream_profiles, fn profile ->
+        with {:ok, stream_uri} <- Onvif.Media2.get_stream_uri(device, profile.id),
+             {:ok, snapshot_uri} <- Onvif.Media2.get_snapshot_uri(device, profile.id) do
+          %{profile | stream_uri: stream_uri, snapshot_uri: snapshot_uri}
+        else
+          _error ->
+            profile
+        end
+      end)
+
+    %{camera_details | stream_profiles: profiles}
+  end
+
+  defp set_streams_form(%{stream_profiles: profiles} = camera_details) do
+    main_stream = Enum.at(profiles, 0)
+    sub_stream = Enum.at(profiles, 1)
+
+    streams_form =
+      to_form(%{
+        "main_stream" => main_stream && main_stream.id,
+        "sub_stream" => sub_stream && sub_stream.id
+      })
+
+    selected_profiles = Enum.reject([main_stream, sub_stream], &is_nil/1)
+
+    %{camera_details | streams_form: streams_form, selected_profiles: selected_profiles}
+  end
 
   # view functions
   defp ip_addresses do
@@ -461,4 +574,8 @@ defmodule ExNVRWeb.OnvifDiscovery2Live do
   defp yes_no(nil), do: "No"
   defp yes_no(false), do: "No"
   defp yes_no(_other), do: "Yes"
+
+  defp stream_options(stream_profiles) do
+    Enum.map(stream_profiles, &{&1.name, &1.id})
+  end
 end
