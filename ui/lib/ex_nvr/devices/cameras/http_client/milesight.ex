@@ -69,15 +69,17 @@ defmodule ExNVR.Devices.Cameras.HttpClient.Milesight do
           id: stream_profile["url"],
           name: name,
           enabled: stream_profile["enable"] != 0,
-          codec: profile_codec(stream_profile["profileCodec"]),
-          profile: profile(stream_profile["profileCodec"], stream_profile["profile"]),
-          width: stream_profile["width"],
-          height: stream_profile["height"],
-          frame_rate: stream_profile["framerate"],
-          bitrate: stream_profile["bitrate"],
-          bitrate_mode: bitrate_mode(stream_profile["rateMode"]),
-          gop: stream_profile["profileGop"],
-          smart_codec: stream_profile["smartStreamEnable"] == 1
+          video_config: %StreamProfile.VideoConfig{
+            codec: profile_codec(stream_profile["profileCodec"]),
+            codec_profile: profile(stream_profile["profileCodec"], stream_profile["profile"]),
+            width: stream_profile["width"],
+            height: stream_profile["height"],
+            frame_rate: stream_profile["framerate"],
+            bitrate: stream_profile["bitrate"],
+            bitrate_mode: bitrate_mode(stream_profile["rateMode"]),
+            gop: stream_profile["profileGop"],
+            smart_codec: stream_profile["smartStreamEnable"] == 1
+          }
         }
       end
 
@@ -176,20 +178,20 @@ defmodule ExNVR.Devices.Cameras.HttpClient.Milesight do
     nil
   end
 
-  defp profile_codec(0), do: "H264"
-  defp profile_codec(1), do: "MPEG4"
-  defp profile_codec(2), do: "MJPEG"
-  defp profile_codec(3), do: "H265"
-  defp profile_codec(_other), do: "n/a"
+  defp profile_codec(0), do: :h264
+  defp profile_codec(1), do: :mpeg4
+  defp profile_codec(2), do: :mjpeg
+  defp profile_codec(3), do: :h265
+  defp profile_codec(_other), do: :unknown
 
   defp profile(0, 0), do: "base"
   defp profile(0, 1), do: "main"
   defp profile(0, 2), do: "high"
-  defp profile(_codec, _other), do: "n/a"
+  defp profile(_codec, _other), do: nil
 
-  defp bitrate_mode(0), do: "CBR"
-  defp bitrate_mode(1), do: "VBR"
-  defp bitrate_mode(_other), do: "n/a"
+  defp bitrate_mode(0), do: :cbr
+  defp bitrate_mode(1), do: :vbr
+  defp bitrate_mode(_other), do: nil
 
   defp handle_http_response({:ok, %{status: status, body: body}}, parser_fn)
        when status >= 200 and status < 300 do
