@@ -17,7 +17,11 @@ defmodule ExNVRWeb.DeviceListLive do
         </.link>
       </div>
 
-      <.table id="devices" rows={@devices}>
+      <.table
+        id="devices"
+        rows={@devices}
+        row_click={fn device -> JS.navigate(~p"/devices/#{device.id}/details") end}
+      >
         <:col :let={device} label="Id">{device.id}</:col>
         <:col :let={device} label="Type">{get_type_label(device.type)}</:col>
         <:col :let={device} label="Name">{device.name}</:col>
