@@ -1,17 +1,26 @@
 defmodule ExNVRWeb.DeviceDetailsLive do
   use ExNVRWeb, :live_view
 
-  alias ExNVR.Devices
+  alias ExNVR.{Devices, Recordings}
   alias ExNVRWeb.Router.Helpers, as: Routes
+  alias ExNVRWeb.RecordingListLive
 
   @impl true
   def mount(%{"id" => device_id} = params, _session, socket) do
     device = Devices.get!(device_id)
+
+    {:ok, {recordings, meta}} =
+      Recordings.get_recordings_by_device_id(device_id)
+
     active_tab = params["tab"] || "details"
 
     {:ok,
      assign(socket,
+       filter_params: %{},
+       sort_params: %{},
        device: device,
+       recordings: recordings,
+       meta: meta,
        active_tab: active_tab,
        params: params
      )}
@@ -22,7 +31,8 @@ defmodule ExNVRWeb.DeviceDetailsLive do
     {:noreply,
      socket
      |> assign(:active_tab, params["tab"] || socket.assigns.active_tab)
-     |> assign(:params, params)}
+     |> assign(:params, params)
+     |> load_device_recordings(params)}
   end
 
   @impl true
@@ -35,6 +45,73 @@ defmodule ExNVRWeb.DeviceDetailsLive do
      |> push_patch(
        to: Routes.device_details_path(socket, :show, socket.assigns.device.id, params)
      )}
+  end
+
+  @impl true
+  def handle_info(_msg, socket) do
+    Map.merge(socket.assigns.filter_params, socket.assigns.pagination_params)
+    |> Map.merge(socket.assigns.sort_params)
+  end
+
+  @impl true
+  def handle_event("filter-recordings", filter_params, socket) do
+    params = Map.put(socket.assigns.params, "filter_params", filter_params)
+
+    {:noreply,
+     socket
+     |> assign(:filter_params, filter_params)
+     |> assign(:pagination_params, %{})
+     |> push_patch(
+       to: Routes.device_details_path(socket, :show, socket.assigns.device.id, params)
+     )}
+  end
+
+  def load_device_recordings(socket, params) do
+    sort_params =
+      Map.take(params, ["order_by", "order_directions"])
+
+    params = params["filter_params"] || sort_params || %{}
+
+    case Recordings.get_recordings_by_device_id(socket.assigns.device.id, params) do
+      {:ok, {recordings, meta}} ->
+        params
+        |> IO.inspect(label: "this is the parmaaa")
+
+        socket
+        |> assign(meta: meta, recordings: recordings, sort_params: sort_params)
+
+      {:error, meta} ->
+        socket
+        |> assign(meta: meta)
+    end
+  end
+
+  def filter_form(%{meta: meta, recordings: recordings} = assigns) do
+    assigns =
+      assign(assigns, form: to_form(meta), meta: meta, recordings: recordings)
+
+    ~H"""
+    <.form for={@form} id={@id} phx-change="filter-recordings" class="flex items-baseline space-x-4">
+      <Flop.Phoenix.filter_fields
+        :let={f}
+        form={@form}
+        fields={[
+          start_date: [op: :>=, type: "datetime-local", label: "Start Date"],
+          end_date: [op: :<=, type: "datetime-local", label: "End Date"]
+        ]}
+      >
+        <div>
+          <.input
+            class="border rounded p-1"
+            field={f.field}
+            type={f.type}
+            phx-debounce="500"
+            {f.rest}
+          />
+        </div>
+      </Flop.Phoenix.filter_fields>
+    </.form>
+    """
   end
 
   @impl true
@@ -56,7 +133,12 @@ defmodule ExNVRWeb.DeviceDetailsLive do
             <p><strong>Name:</strong> {@device.name}</p>
             <p><strong>Type:</strong> {Atom.to_string(@device.type)}</p>
             <p><strong>Status:</strong> {Atom.to_string(@device.state)}</p>
-            <p><strong>Created:</strong> {Calendar.strftime(@device.inserted_at, "%b %d, %Y %H:%M:%S %Z")}</p>
+            <p>
+              <strong>Created:</strong> {Calendar.strftime(
+                @device.inserted_at,
+                "%b %d, %Y %H:%M:%S %Z"
+              )}
+            </p>
             <p><strong>Timezone:</strong> {@device.timezone}</p>
             <div class="mt-4">
               <img src={~p"/api/devices/#{@device.id}/snapshot"} class="max-w-md" />
@@ -65,7 +147,27 @@ defmodule ExNVRWeb.DeviceDetailsLive do
         </:tab_content>
 
         <:tab_content for="recordings">
-          <div class="text-center text-gray-500 dark:text-gray-400">Recordings tab coming soon...</div>
+          <div class="text-center text-gray-500 dark:text-gray-400">
+            <.filter_form meta={@meta} recordings={@recordings} id="recording-filter-form" />
+
+            <Flop.Phoenix.table
+              id="recordings"
+              opts={ExNVRWeb.FlopConfig.table_opts()}
+              meta={@meta}
+              items={@recordings}
+              path={~p"/devices/#{@device.id}/details?tab=recordings"}
+            >
+              <:col :let={recording} label="Id">{recording.id}</:col>
+              <:col :let={recording} label="Start-date" field={:start_date}>
+                {RecordingListLive.format_date(recording.start_date, @device.timezone)}
+              </:col>
+              <:col :let={recording} label="End-date" field={:end_date}>
+                {RecordingListLive.format_date(recording.end_date, @device.timezone)}
+              </:col>
+
+              <.pagination meta={@meta} />
+            </Flop.Phoenix.table>
+          </div>
         </:tab_content>
 
         <:tab_content for="stats">

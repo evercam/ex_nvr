@@ -285,7 +285,7 @@ defmodule ExNVRWeb.RecordingListLive do
     |> JS.set_attribute({"src", nil}, to: "#recording-player")
   end
 
-  defp format_date(date, timezone) do
+  def format_date(date, timezone) do
     date
     |> DateTime.shift_zone!(timezone)
     |> Calendar.strftime("%b %d, %Y %H:%M:%S %z")
