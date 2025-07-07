@@ -13,7 +13,7 @@ defmodule ExNVRWeb.DeviceListLive do
     <div class="grow px-4 py-6">
       <div :if={@current_user.role == :admin} class="ml-4 sm:ml-0">
         <.link href={~p"/devices/new"}>
-          <.button class="pl-3 pr-3"><.icon name="hero-plus-solid" class="mr-1" />Add device</.button>
+          <.button><.icon name="hero-plus-solid" class="h-4 w-4" />Add Device</.button>
         </.link>
       </div>
 

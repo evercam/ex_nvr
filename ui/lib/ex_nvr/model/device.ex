@@ -297,7 +297,7 @@ defmodule ExNVR.Model.Device do
         {:error, :no_url}
 
       url ->
-        Onvif.Device.new(url, device.credentials.username, device.credentials.password)
+        ExOnvif.Device.new(url, device.credentials.username, device.credentials.password)
     end
   end
 

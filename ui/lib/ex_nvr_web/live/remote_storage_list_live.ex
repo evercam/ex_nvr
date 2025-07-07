@@ -10,7 +10,7 @@ defmodule ExNVRWeb.RemoteStorageListLive do
     <div class="grow e-m-8">
       <div class="ml-4 sm:ml-0">
         <.link href={~p"/remote-storages/new"}>
-          <.button>Add remote storage</.button>
+          <.button><.icon name="hero-plus-solid" class="h-4 w-4" />Add Remote Storage</.button>
         </.link>
       </div>
 
