@@ -6,6 +6,7 @@ defmodule ExNVRWeb.API.OnvifController do
   import ExNVR.Authorization
 
   alias Ecto.Changeset
+  alias ExNVR.Devices
 
   action_fallback ExNVRWeb.API.FallbackController
 
@@ -15,14 +16,14 @@ defmodule ExNVRWeb.API.OnvifController do
     with :ok <- authorize(conn.assigns.current_user, :onvif, :discover),
          {:ok, params} <- validate_discover_query_params(params),
          discover_params <- Keyword.new(Map.take(params, [:ip_address, :probe_timeout])),
-         devices <- ExNVR.Devices.Onvif.discover(discover_params) do
+         devices <- Devices.Onvif.discover(discover_params) do
       result = Enum.map(devices, &init_device(&1, params))
       json(conn, result)
     end
   end
 
   defp init_device(probe, params) do
-    case Onvif.Device.init(probe, params[:username], params[:password]) do
+    case ExOnvif.Device.init(probe, params[:username], params[:password]) do
       {:ok, device} -> device
       {:error, _error} -> probe
     end

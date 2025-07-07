@@ -32,7 +32,7 @@ config :ex_nvr, ExNVRWeb.Endpoint,
   pubsub_server: ExNVR.PubSub,
   live_view: [signing_salt: "ASTBdstw"],
   check_origin: false,
-  code_reloader: true,
+  code_reloader: Mix.env() == :dev,
   debug_errors: true,
   secret_key_base: "N3BcJ3uTqFM8etN2w9NAYYYjqaGQTGwLL1qM2vXt7yF5VqXnas30RBqci94ZLKvB",
   watchers: [
@@ -40,19 +40,21 @@ config :ex_nvr, ExNVRWeb.Endpoint,
   ],
   reloadable_apps: [:ex_nvr, :ex_nvr_fw]
 
-config :phoenix_live_reload, :dirs, [
-  Path.expand("../../ui", __DIR__),
-  Path.expand("..", __DIR__)
-]
-
-config :ex_nvr, ExNVRWeb.Endpoint,
-  live_reload: [
-    patterns: [
-      ~r"priv/static/.*(js|css|png|jpeg|jpg|gif|svg)$",
-      ~r"priv/gettext/.*(po)$",
-      ~r"lib/(ex_nvr_web|nerves_web)/(controllers|live|components)/.*(ex|heex)$"
-    ]
+if Mix.env() != :test do
+  config :phoenix_live_reload, :dirs, [
+    Path.expand("../../ui", __DIR__),
+    Path.expand("..", __DIR__)
   ]
+
+  config :ex_nvr, ExNVRWeb.Endpoint,
+    live_reload: [
+      patterns: [
+        ~r"priv/static/.*(js|css|png|jpeg|jpg|gif|svg)$",
+        ~r"priv/gettext/.*(po)$",
+        ~r"lib/(ex_nvr_web|nerves_web)/(controllers|live|components)/.*(ex|heex)$"
+      ]
+    ]
+end
 
 config :live_vue,
   vite_host: "http://localhost:5173",

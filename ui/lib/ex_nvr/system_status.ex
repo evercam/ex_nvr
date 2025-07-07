@@ -93,7 +93,7 @@ defmodule ExNVR.SystemStatus do
 
   defp cpu_load(value), do: Float.ceil(value / 256, 2)
 
-  defp list_block_storages() do
+  defp list_block_storages do
     # include MMC, SATA, USB and NVMe drives
     case ExNVR.Disk.list_drives(major_number: [8, 179, 259]) do
       {:ok, blocks} -> blocks
@@ -103,7 +103,7 @@ defmodule ExNVR.SystemStatus do
     _error -> []
   end
 
-  defp device_info() do
+  defp device_info do
     [
       {:serial_number, read_from_file(@serial_number_file)},
       {:device_model, read_from_file(@model_file)}

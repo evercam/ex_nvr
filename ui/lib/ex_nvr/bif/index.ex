@@ -10,8 +10,8 @@ defmodule ExNVR.BIF.Index do
 
   defstruct entries: []
 
-  @spec new() :: t()
-  def new(), do: %__MODULE__{entries: []}
+  @spec new :: t()
+  def new, do: %__MODULE__{entries: []}
 
   @spec add_entry(t(), timestamp(), image_size()) :: t()
   def add_entry(%__MODULE__{} = index, timestamp, image_size) do

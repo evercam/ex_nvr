@@ -15,6 +15,14 @@ defmodule ExNVR.Pipeline.StorageMonitor do
     GenServer.start_link(__MODULE__, opts)
   end
 
+  def pause(pid) do
+    GenServer.call(pid, :pause)
+  end
+
+  def resume(pid) do
+    GenServer.call(pid, :resume)
+  end
+
   @impl true
   def init(opts) do
     device = Keyword.fetch!(opts, :device)
@@ -27,7 +35,8 @@ defmodule ExNVR.Pipeline.StorageMonitor do
       dir: Device.base_dir(device),
       schedule_timer: nil,
       dir_timer: nil,
-      record?: nil
+      record?: nil,
+      paused?: false
     }
 
     {:ok, state, {:continue, :record?}}
@@ -51,6 +60,23 @@ defmodule ExNVR.Pipeline.StorageMonitor do
   end
 
   @impl true
+  def handle_call(:pause, _from, state) do
+    state
+    |> notify_parent(false)
+    |> then(&{:reply, :ok, %{&1 | paused?: true}})
+  end
+
+  @impl true
+  def handle_call(:resume, _from, state) do
+    state
+    |> notify_parent(record?(state))
+    |> then(&{:reply, :ok, %{&1 | paused?: false}})
+  end
+
+  @impl true
+  def handle_info(:check_dir, %{paused?: true} = state), do: {:noreply, state}
+
+  @impl true
   def handle_info(:check_dir, state) do
     case Utils.writable(state.dir) do
       :ok ->
@@ -65,6 +91,9 @@ defmodule ExNVR.Pipeline.StorageMonitor do
         {:noreply, state}
     end
   end
+
+  @impl true
+  def handle_info(:check_schedule, %{paused?: true} = state), do: {:noreply, state}
 
   @impl true
   def handle_info(:check_schedule, state) do

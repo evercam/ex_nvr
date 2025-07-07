@@ -11,6 +11,7 @@ module.exports = {
     "./js/**/*.js",
     "../lib/*_web.ex",
     "../lib/*_web/**/*.*ex",
+    "../../nerves_fw/lib/*_web/**/*.*ex",
     "./node_modules/flowbite/**/*.js"
   ],
   theme: {

@@ -157,7 +157,7 @@
             </label>
             <.live_file_input
               :if={@device_type == "file" && is_nil(@device.id)}
-              class="w-full dark:text-white dark:bg-gray-700 rounded-lg"
+              class="w-full dark:text-white dark:bg-gray-800 rounded-lg dark:border-gray-600 focus:border-none focus:outline-zinc-400 dark:border-gray-600 dark:focus:outline-blue-500 dark:focus:border-none"
               upload={@uploads.file_to_upload}
               required
             />

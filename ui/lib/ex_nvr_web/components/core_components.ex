@@ -17,8 +17,9 @@ defmodule ExNVRWeb.CoreComponents do
   use Gettext, backend: ExNVRWeb.Gettext
   use Phoenix.Component
 
-  alias Phoenix.LiveView.JS
   alias ExNVRWeb.Components
+  alias Phoenix.HTML
+  alias Phoenix.LiveView.JS
 
   @doc """
   Renders a modal.
@@ -84,6 +85,50 @@ defmodule ExNVRWeb.CoreComponents do
                 {render_slot(@inner_block)}
               </div>
             </.focus_wrap>
+          </div>
+        </div>
+      </div>
+    </div>
+    """
+  end
+
+  attr :id, :string, required: true
+  attr :show, :boolean, default: false
+  attr :on_cancel, JS, default: %JS{}
+  slot :header, required: true
+  slot :inner_block, required: true
+
+  def modal2(assigns) do
+    ~H"""
+    <div
+      id={@id}
+      phx-mounted={@show && show_modal(@id)}
+      phx-remove={hide_modal(@id)}
+      data-cancel={JS.exec(@on_cancel, "phx-remove")}
+      tabindex="-1"
+      aria-hidden="true"
+      class="hidden overflow-y-auto overflow-x-hidden fixed top-0 right-0 left-0 z-50 justify-center items-center w-full md:inset-0 h-[calc(100%-1rem)] max-h-full"
+    >
+      <div class="relative p-4 w-full max-w-md max-h-full">
+        <!-- Modal content -->
+        <div class="relative bg-white rounded-lg shadow-sm dark:bg-gray-700">
+          <!-- Modal header -->
+          <div class="flex items-center justify-between p-4 md:p-5 border-b rounded-t dark:border-gray-600 border-gray-200">
+            <h3 class="text-xl font-semibold text-gray-900 dark:text-white">
+              {render_slot(@header)}
+            </h3>
+            <button
+              type="button"
+              class="end-2.5 text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm w-8 h-8 ms-auto inline-flex justify-center items-center dark:hover:bg-gray-600 dark:hover:text-white"
+              phx-click={JS.exec("data-cancel", to: "##{@id}")}
+            >
+              <.icon name="hero-x-mark-solid dark:bg-white" class="h-5 w-5" />
+              <span class="sr-only">Close modal</span>
+            </button>
+          </div>
+          <!-- Modal body -->
+          <div class="p-4 md:p-5">
+            {render_slot(@inner_block)}
           </div>
         </div>
       </div>
@@ -191,7 +236,7 @@ defmodule ExNVRWeb.CoreComponents do
   def simple_form(assigns) do
     ~H"""
     <.form :let={f} for={@for} as={@as} {@rest}>
-      <div class="space-y-8">
+      <div class="space-y-4">
         {render_slot(@inner_block, f)}
         <div :for={action <- @actions} class={"mt-2 flex items-center gap-6 " <> @actions_class}>
           {render_slot(action, f)}
@@ -209,6 +254,7 @@ defmodule ExNVRWeb.CoreComponents do
       <.button>Send!</.button>
       <.button phx-click="go" class="ml-2">Send!</.button>
   """
+
   attr :type, :string, default: nil
   attr :class, :string, default: nil
   attr :rest, :global, include: ~w(disabled form name value)
@@ -220,10 +266,10 @@ defmodule ExNVRWeb.CoreComponents do
     <button
       type={@type}
       class={[
-        "phx-submit-loading:opacity-75 py-2.5 px-5 me-2 mb-2 text-sm font-medium text-gray-900",
-        "focus:outline-none bg-white rounded-md border border-gray-200 hover:bg-gray-100",
-        "hover:text-blue-700 focus:z-10 focus:ring-4 focus:ring-gray-100 dark:focus:ring-gray-700",
-        "dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:text-white dark:hover:bg-gray-700",
+        "phx-submit-loading:opacity-75 inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium",
+        "ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        "focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4",
+        "[&_svg]:shrink-0 text-primary-foreground h-10 px-4 py-2 bg-blue-600 hover:bg-blue-700 dark:text-white",
         @class
       ]}
       {@rest}
@@ -253,7 +299,7 @@ defmodule ExNVRWeb.CoreComponents do
   attr :type, :string,
     default: "text",
     values: ~w(checkbox color date datetime-local email file hidden month number password
-               range radio search select tel text textarea time url week)
+               range radio search select tel text textarea time url week toggle)
 
   attr :field, Phoenix.HTML.FormField,
     doc: "a form field struct retrieved from the form, for example: @form[:email]"
@@ -270,7 +316,7 @@ defmodule ExNVRWeb.CoreComponents do
 
   slot :inner_block
 
-  def input(%{field: %Phoenix.HTML.FormField{} = field} = assigns) do
+  def input(%{field: %HTML.FormField{} = field} = assigns) do
     assigns
     |> assign(field: nil, id: assigns.id || field.id)
     |> assign(:errors, Enum.map(field.errors, &translate_error(&1)))
@@ -279,9 +325,34 @@ defmodule ExNVRWeb.CoreComponents do
     |> input()
   end
 
+  def input(%{type: "toggle", value: value} = assigns) do
+    assigns =
+      assign_new(assigns, :checked, fn -> HTML.Form.normalize_value("checkbox", value) end)
+
+    ~H"""
+    <div phx-feedback-for={@name}>
+      <label class="inline-flex items-center mb-5 cursor-pointer">
+        <input type="hidden" name={@name} value="false" />
+        <input
+          id={@id}
+          type="checkbox"
+          name={@name}
+          value="true"
+          checked={@checked}
+          class="sr-only peer"
+          {@rest}
+        />
+        <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:w-5 after:h-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600">
+        </div>
+      </label>
+      <.error :for={msg <- @errors}>{msg}</.error>
+    </div>
+    """
+  end
+
   def input(%{type: "checkbox", value: value} = assigns) do
     assigns =
-      assign_new(assigns, :checked, fn -> Phoenix.HTML.Form.normalize_value("checkbox", value) end)
+      assign_new(assigns, :checked, fn -> HTML.Form.normalize_value("checkbox", value) end)
 
     ~H"""
     <div phx-feedback-for={@name}>
@@ -445,7 +516,7 @@ defmodule ExNVRWeb.CoreComponents do
         class={[
           "mt-1 block w-full rounded-lg text-black focus:ring-0 sm:text-sm sm:leading-6",
           "phx-no-feedback:border-zinc-300 phx-no-feedback:focus:border-zinc-400",
-          "border-zinc-300 focus:border-zinc-400 dark:bg-gray-700 dark:border-gray-600",
+          "border-zinc-300 focus:border-zinc-400 dark:bg-gray-600 dark:border-gray-500",
           "dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500",
           "text-black",
           @errors != [] && "border-rose-400 focus:border-rose-400"
@@ -654,6 +725,20 @@ defmodule ExNVRWeb.CoreComponents do
     """
   end
 
+  slot :inner_block, required: true
+
+  def tag(assigns) do
+    ~H"""
+    <span class={[
+      "inline-flex items-center dark:bg-gray-200 rounded-full border px-2.5 py-0.5 font-semibold transition-colors",
+      "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-gray-200 hover:bg-primary/80",
+      "text-xs dark:text-black"
+    ]}>
+      {render_slot(@inner_block)}
+    </span>
+    """
+  end
+
   def pagination(assigns) do
     ~H"""
     <div aria-label="Pagination" class="flex justify-end mt-4">
@@ -685,7 +770,7 @@ defmodule ExNVRWeb.CoreComponents do
           <span class="px-3 h-8 text-gray-500">...</span>
         </li>
         <li
-          :for={idx <- 3..(@meta.total_pages - 2)}
+          :for={idx <- 3..(@meta.total_pages - 2)//1}
           :if={@meta.total_pages > 6 && abs(@meta.current_page - idx) <= 1}
         >
           <.pagination_link current_page={@meta.current_page} page={idx} target={assigns[:target]} />
@@ -750,6 +835,14 @@ defmodule ExNVRWeb.CoreComponents do
     """
   end
 
+  attr :class, :string, default: ""
+
+  def separator(assigns) do
+    ~H"""
+    <hr class={["h-px my-8 bg-gray-200 border-0 dark:bg-gray-700", @class]} />
+    """
+  end
+
   ## JS Commands
 
   def show(js \\ %JS{}, selector) do
@@ -785,6 +878,15 @@ defmodule ExNVRWeb.CoreComponents do
     |> JS.focus_first(to: "##{id}-content")
   end
 
+  def show_modal2(js \\ %JS{}, id) when is_binary(id) do
+    js
+    |> JS.show(
+      to: "##{id}",
+      display: "flex",
+      transition: {"transition-all transform ease-out duration-300", "opacity-0", "opacity-100"}
+    )
+  end
+
   def hide_modal(js \\ %JS{}, id) do
     js
     |> JS.hide(
@@ -795,6 +897,15 @@ defmodule ExNVRWeb.CoreComponents do
     |> JS.hide(to: "##{id}", transition: {"block", "block", "hidden"})
     |> JS.remove_class("overflow-hidden", to: "body")
     |> JS.pop_focus()
+  end
+
+  def hide_modal2(js \\ %JS{}, id) do
+    js
+    |> JS.hide(
+      to: "##{id}",
+      transition: {"transition-all transform ease-in duration-200", "opacity-100", "opacity-0"}
+    )
+    |> JS.hide(to: "##{id}", transition: {"block", "block", "hidden"})
   end
 
   attr :dropdown_id, :string, required: true

@@ -6,8 +6,8 @@ defmodule ExNVRWeb.Controller.Helpers do
   import Plug.Conn
   import Phoenix.Controller
 
-  alias Plug.Conn
   alias ExNVRWeb.ErrorJSON
+  alias Plug.Conn
 
   @spec not_found(Conn.t()) :: Conn.t()
   def not_found(conn), do: render_error(conn, 404)

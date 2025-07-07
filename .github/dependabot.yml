@@ -6,7 +6,7 @@ updates:
       interval: weekly
 
   - package-ecosystem: "mix"
-    directory: "/rtsp"
+    directory: "/nerves_fw"
     schedule:
       interval: weekly
 

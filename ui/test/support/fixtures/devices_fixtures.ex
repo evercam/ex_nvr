@@ -4,23 +4,23 @@ defmodule ExNVR.DevicesFixtures do
   entities via the `ExNVR.Devices` context.
   """
 
-  @spec valid_rtsp_url() :: binary()
-  def valid_rtsp_url(), do: "rtsp://example#{System.unique_integer()}:8541"
+  @spec valid_rtsp_url :: binary()
+  def valid_rtsp_url, do: "rtsp://example#{System.unique_integer()}:8541"
 
-  @spec valid_file_location() :: Path.t()
-  def valid_file_location(), do: "../../fixtures/mp4/big_buck_avc.mp4" |> Path.expand(__DIR__)
-  def invalid_file_extenstion(), do: "../../fixtures/video-30-10s.h264" |> Path.expand(__DIR__)
+  @spec valid_file_location :: Path.t()
+  def valid_file_location, do: "../../fixtures/mp4/big_buck_avc.mp4" |> Path.expand(__DIR__)
+  def invalid_file_extenstion, do: "../../fixtures/video-30-10s.h264" |> Path.expand(__DIR__)
 
-  @spec valid_device_name() :: binary()
-  def valid_device_name(), do: "Device_#{System.unique_integer([:monotonic, :positive])}"
+  @spec valid_device_name :: binary()
+  def valid_device_name, do: "Device_#{System.unique_integer([:monotonic, :positive])}"
 
   @spec valid_device_credentials() :: map()
-  def valid_device_credentials(), do: %{username: "user", password: "pass"}
+  def valid_device_credentials, do: %{username: "user", password: "pass"}
 
   @spec valid_device_settings() :: map()
-  def valid_device_settings(), do: %{generate_bif: false, storage_address: "/tmp"}
+  def valid_device_settings, do: %{generate_bif: false, storage_address: "/tmp"}
 
-  def valid_device_storage_config(), do: %{address: "/tmp"}
+  def valid_device_storage_config, do: %{address: "/tmp"}
 
   @spec valid_device_attributes(map(), binary()) :: map()
   def valid_device_attributes(attrs \\ %{}, type \\ :ip) do

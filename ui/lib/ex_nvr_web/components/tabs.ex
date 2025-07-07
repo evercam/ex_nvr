@@ -1,4 +1,6 @@
 defmodule ExNVRWeb.Components.Tabs do
+  @moduledoc false
+
   use Phoenix.LiveComponent
 
   attr :id, :string, required: true

@@ -5,6 +5,7 @@ defmodule ExNVR.EventsFixtures do
   """
 
   alias ExNVR.Events
+  alias ExNVR.Model.Device
 
   @plate_image "test/fixtures/license-plate.jpg"
 
@@ -38,7 +39,7 @@ defmodule ExNVR.EventsFixtures do
       |> valid_lpr_event_attributes()
       |> then(&Events.create_lpr_event(device, &1, nil))
 
-    ExNVR.Model.Device.lpr_thumbnails_dir(device)
+    Device.lpr_thumbnails_dir(device)
     |> Path.join(Events.LPR.plate_name(event))
     |> File.write!(File.read!(@plate_image))
 

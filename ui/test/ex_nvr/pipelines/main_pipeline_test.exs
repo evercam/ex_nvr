@@ -32,7 +32,7 @@ defmodule ExNVR.Pipelines.MainPipelineTest do
     assert_pipeline_notified(
       pid,
       :file_source,
-      {:main_stream, 1, %Track{type: :video, encoding: :H264}}
+      {:main_stream, %{1 => %Track{type: :video, encoding: :h264}}}
     )
 
     assert Devices.get!(device.id).state == :streaming
@@ -109,9 +109,6 @@ defmodule ExNVR.Pipelines.MainPipelineTest do
 
     assert File.exists?(hls_dir)
     assert Path.join(hls_dir, "*.mp4") |> Path.wildcard() |> length() == 1
-
-    # TODO: test rtsp sources and add tests for storage.
-    # by default file sources are not stored on the filesystem.
 
     assert :ok = Testing.Pipeline.terminate(pid)
   end

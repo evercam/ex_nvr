@@ -22,6 +22,14 @@ defmodule ExNVR.Nerves.DiskMounter do
     GenServer.call(__MODULE__, {:delete_fstab_entries, options})
   end
 
+  def mount() do
+    GenServer.call(__MODULE__, :mount)
+  end
+
+  def umount(lazy? \\ true) do
+    GenServer.call(__MODULE__, {:umount, lazy?})
+  end
+
   @impl true
   def init(opts) do
     NervesUEvent.subscribe([])
@@ -65,6 +73,26 @@ defmodule ExNVR.Nerves.DiskMounter do
     end)
     |> Enum.join("\n")
     |> then(&File.write!(state.fstab, &1))
+
+    {:reply, :ok, state}
+  end
+
+  @impl true
+  def handle_call(:mount, _from, state) do
+    mount_all(state)
+    {:reply, :ok, state}
+  end
+
+  @impl true
+  def handle_call({:umount, lazy?}, _from, state) do
+    Logger.info("[DiskMounter] unmouting all filesystems declared in fstab")
+    args = if lazy?, do: ["-l"], else: []
+
+    File.read!(state.fstab)
+    |> String.split("\n")
+    |> Enum.reject(&(&1 == ""))
+    |> Enum.map(&Enum.at(String.split(&1, " "), 1))
+    |> Enum.each(&System.cmd("umount", args ++ [&1]))
 
     {:reply, :ok, state}
   end

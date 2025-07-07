@@ -9,15 +9,12 @@ defmodule ExNVR.Pipeline.Output.WebRTC do
 
   import Bitwise
 
-  alias ExNVR.RTP.Payloader
   alias ExNVR.Pipeline.Event.StreamClosed
   alias ExWebRTC.{MediaStreamTrack, PeerConnection, RTPCodecParameters, SessionDescription}
   alias Membrane.{H264, H265, Time}
+  alias RTSP.RTP.Encoder
 
-  @max_payload_size 1460
   @max_rtp_timestamp 1 <<< 32
-  @max_rtp_seq_no (1 <<< 16) - 1
-
   @clock_rate 90_000
   @h264_codec %RTPCodecParameters{
     payload_type: 96,
@@ -54,7 +51,6 @@ defmodule ExNVR.Pipeline.Output.WebRTC do
       video_codecs: [],
       peers: %{},
       peers_state: %{},
-      next_sequence_number: Enum.random(0..@max_rtp_seq_no),
       payloader: nil,
       payloader_mod: nil,
       video_track: video_track
@@ -64,24 +60,22 @@ defmodule ExNVR.Pipeline.Output.WebRTC do
   end
 
   @impl true
-  def handle_stream_format(:video, stream_format, _ctx, state) do
-    state =
-      case stream_format do
-        %H264{} ->
-          %{
-            state
-            | video_codecs: [@h264_codec],
-              payloader: Payloader.H264.new(@max_payload_size),
-              payloader_mod: Payloader.H264
-          }
+  def handle_stream_format(:video, stream_format, ctx, state) do
+    old_stream_format = ctx.pads.video.stream_format
 
-        %H265{} ->
-          %{
-            state
-            | video_codecs: [@h265_codec],
-              payloader: Payloader.H265.new(@max_payload_size),
-              payloader_mod: Payloader.H265
-          }
+    state =
+      cond do
+        is_nil(old_stream_format) ->
+          init_rtp_payloader(stream_format, state)
+
+        old_stream_format == stream_format ->
+          state
+
+        map_size(state.peers) == 0 ->
+          init_rtp_payloader(stream_format, state)
+
+        true ->
+          raise "WebRTC doesn't support changing stream format"
       end
 
     {[], state}
@@ -97,7 +91,6 @@ defmodule ExNVR.Pipeline.Output.WebRTC do
       )
 
     Process.monitor(peer_id)
-    Process.monitor(pc)
 
     {:ok, _} = PeerConnection.add_track(pc, state.video_track)
     create_offer(pc, peer_id)
@@ -123,26 +116,17 @@ defmodule ExNVR.Pipeline.Output.WebRTC do
 
   @impl true
   def handle_buffer(:video, buffer, _ctx, state) do
-    {rtp_packets, payloader} = state.payloader_mod.payload(state.payloader, buffer.payload)
-
     timestamp =
       buffer.pts
       |> Time.divide_by_timebase(Ratio.new(Time.second(), @clock_rate))
       |> rem(@max_rtp_timestamp)
 
-    new_seq_number =
-      Enum.reduce(rtp_packets, state.next_sequence_number, fn packet, seq ->
-        packet = %{packet | sequence_number: seq, timestamp: timestamp}
-        send_video_packet(state, packet)
-        seq + 1 &&& @max_rtp_seq_no
-      end)
+    {rtp_packets, payloader} =
+      state.payloader_mod.handle_sample(buffer.payload, timestamp, state.payloader)
 
-    {[],
-     %{
-       state
-       | payloader: payloader,
-         next_sequence_number: new_seq_number
-     }}
+    Enum.each(rtp_packets, &send_video_packet(state, &1))
+
+    {[], %{state | payloader: payloader}}
   end
 
   @impl true
@@ -169,16 +153,34 @@ defmodule ExNVR.Pipeline.Output.WebRTC do
   end
 
   @impl true
-  def handle_info({:ex_webrtc, pc, {:connection_state_change, :connected}}, _ctx, state) do
-    {[], %{state | peers_state: Map.put(state.peers_state, pc, :connected)}}
+  def handle_info({:ex_webrtc, pc, {:connection_state_change, conn_state}}, _ctx, state) do
+    state =
+      case conn_state do
+        :connected ->
+          %{state | peers_state: Map.put(state.peers_state, pc, :connected)}
+
+        :failed ->
+          PeerConnection.close(pc)
+
+          %{
+            state
+            | peers: Map.delete(state.peers, pc),
+              peers_state: Map.delete(state.peers_state, pc)
+          }
+
+        _other ->
+          state
+      end
+
+    {[], state}
   end
 
   @impl true
-  def handle_info({:DOWN, _monitor, :process, peer_or_pc, _reason}, _ctx, state) do
+  def handle_info({:DOWN, _monitor, :process, peer, _reason}, _ctx, state) do
     pc =
-      case find_peer_pc(state.peers, peer_or_pc) do
+      case find_peer_pc(state.peers, peer) do
         nil ->
-          peer_or_pc
+          peer
 
         pc ->
           PeerConnection.close(pc)
@@ -232,5 +234,23 @@ defmodule ExNVR.Pipeline.Output.WebRTC do
     peers
     |> Enum.find({nil, nil}, &(elem(&1, 1) == peer_id))
     |> elem(0)
+  end
+
+  defp init_rtp_payloader(%H264{}, state) do
+    %{
+      state
+      | video_codecs: [@h264_codec],
+        payloader: Encoder.H264.init([]),
+        payloader_mod: Encoder.H264
+    }
+  end
+
+  defp init_rtp_payloader(%H265{}, state) do
+    %{
+      state
+      | video_codecs: [@h265_codec],
+        payloader: Encoder.H265.init([]),
+        payloader_mod: Encoder.H265
+    }
   end
 end

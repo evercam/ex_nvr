@@ -25,7 +25,7 @@ defmodule ExNVR.TokenPruner do
     {:noreply, state}
   end
 
-  defp schedule_job() do
+  defp schedule_job do
     Process.send_after(self(), :delete_expired_tokens, :timer.hours(2))
   end
 end

@@ -4,12 +4,12 @@ defmodule ExNVR.Recordings do
   """
   import Ecto.Query
 
+  alias __MODULE__.VideoAssembler
   alias Ecto.Multi
   alias ExMP4.{BitStreamFilter, Reader}
   alias ExNVR.Model.{Device, Recording, Run}
   alias ExNVR.Repo
   alias Phoenix.PubSub
-  alias __MODULE__.VideoAssembler
 
   @recordings_topic "recordings"
   @default_end_date ~U(2099-01-01 00:00:00Z)
@@ -111,21 +111,21 @@ defmodule ExNVR.Recordings do
     with {:ok, reader} <- ExMP4.Reader.new(path) do
       track = ExMP4.Reader.track(reader, :video)
       offset = ExMP4.Helper.timescalify(offset, :microsecond, track.timescale)
+      codec = if track.media == :h265, do: :hevc, else: track.media
 
       reader
       |> read_samples(track, offset, method)
-      |> Stream.map(&%Membrane.Buffer{payload: &1.payload, dts: &1.dts, pts: &1.pts})
-      |> ExNVR.MediaUtils.decode_last(ExNVR.Decoder.new!(track.media))
-      |> then(fn buffer ->
+      |> ExNVR.MediaUtils.decode_last(Xav.Decoder.new(codec))
+      |> then(fn frame ->
         datetime =
           DateTime.add(
             recording.start_date,
-            ExMP4.Helper.timescalify(buffer.pts, track.timescale, :microsecond),
+            ExMP4.Helper.timescalify(frame.pts, track.timescale, :microsecond),
             :microsecond
           )
 
         {:ok, snapshot} =
-          Turbojpeg.yuv_to_jpeg(buffer.payload, track.width, track.height, 75, :I420)
+          Turbojpeg.yuv_to_jpeg(frame.data, frame.width, frame.height, 75, :I420)
 
         {:ok, datetime, snapshot}
       end)
@@ -293,7 +293,7 @@ defmodule ExNVR.Recordings do
     end)
   end
 
-  def subscribe_to_recording_events() do
+  def subscribe_to_recording_events do
     PubSub.subscribe(ExNVR.PubSub, @recordings_topic)
   end
 
