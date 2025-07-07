@@ -7,10 +7,10 @@ defmodule ExNVRWeb.OnvifDiscoveryLiveTest do
   import Mimic
   import Phoenix.LiveViewTest
 
-  alias Onvif.Devices.{NetworkInterface, SystemDateAndTime}
-  alias Onvif.Discovery.Probe
-  alias Onvif.Media.VideoResolution
-  alias Onvif.Media2.{Profile, VideoEncoderConfigurationOption}
+  alias ExOnvif.Devices.{NetworkInterface, SystemDateAndTime}
+  alias ExOnvif.Discovery.Probe
+  alias ExOnvif.Media.VideoResolution
+  alias ExOnvif.Media2.{Profile, VideoEncoderConfigurationOption}
 
   @probes [
     %Probe{
@@ -38,8 +38,8 @@ defmodule ExNVRWeb.OnvifDiscoveryLiveTest do
   ]
 
   setup_all do
-    Mimic.copy(Onvif.Devices)
-    Mimic.copy(Onvif.Media2)
+    Mimic.copy(ExOnvif.Devices)
+    Mimic.copy(ExOnvif.Media2)
   end
 
   setup %{conn: conn} do
@@ -63,7 +63,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLiveTest do
   end
 
   test "Render found devices", %{conn: conn} do
-    expect(Onvif.Discovery, :probe, fn _params -> @probes end)
+    expect(ExOnvif.Discovery, :probe, fn _params -> @probes end)
 
     {:ok, lv, _html} = live(conn, ~p"/onvif-discovery")
 
@@ -85,11 +85,11 @@ defmodule ExNVRWeb.OnvifDiscoveryLiveTest do
 
   describe "Render details" do
     setup do
-      expect(Onvif.Discovery, :probe, fn _params -> @probes end)
+      expect(ExOnvif.Discovery, :probe, fn _params -> @probes end)
 
-      expect(Onvif.Device, :init, fn probe, "admin", "pass" ->
+      expect(ExOnvif.Device, :init, fn probe, "admin", "pass" ->
         {:ok,
-         %Onvif.Device{
+         %ExOnvif.Device{
            manufacturer: "Evercam",
            model: "B11",
            serial_number: "B11-DZ10",
@@ -107,7 +107,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLiveTest do
          }}
       end)
 
-      expect(Onvif.Devices, :get_network_interfaces, fn _device ->
+      expect(ExOnvif.Devices, :get_network_interfaces, fn _device ->
         {:ok,
          [
            %NetworkInterface{
@@ -123,7 +123,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLiveTest do
          ]}
       end)
 
-      expect(Onvif.Media2, :get_profiles, fn _device ->
+      expect(ExOnvif.Media2, :get_profiles, fn _device ->
         {:ok,
          [
            %Profile{
@@ -153,21 +153,21 @@ defmodule ExNVRWeb.OnvifDiscoveryLiveTest do
          ]}
       end)
 
-      expect(Onvif.Media2, :get_stream_uri, fn _device, "Profile_1" ->
+      expect(ExOnvif.Media2, :get_stream_uri, fn _device, "Profile_1" ->
         {:ok, "rtsp://192.168.1.200:554/main"}
       end)
       |> expect(:get_stream_uri, fn _device, "Profile_2" ->
         {:ok, "rtsp://192.168.1.200:554/sub"}
       end)
 
-      expect(Onvif.Media2, :get_snapshot_uri, fn _device, "Profile_1" ->
+      expect(ExOnvif.Media2, :get_snapshot_uri, fn _device, "Profile_1" ->
         {:ok, "http://192.168.1.200:8101/snapshot"}
       end)
       |> expect(:get_snapshot_uri, fn _device, "Profile_2" ->
         {:ok, "http://192.168.1.200:8101/sub"}
       end)
 
-      expect(Onvif.Media2, :get_video_encoder_configuration_options, fn _device,
+      expect(ExOnvif.Media2, :get_video_encoder_configuration_options, fn _device,
                                                                         profile_token: "Profile_1" ->
         {:ok,
          [
@@ -175,8 +175,8 @@ defmodule ExNVRWeb.OnvifDiscoveryLiveTest do
              resolutions_available: [],
              encoding: :h265,
              gov_length_range: [1, 50],
-             bitrate_range: %Onvif.Schemas.IntRange{min: 10, max: 1000},
-             quality_range: %Onvif.Schemas.FloatRange{min: 1, max: 10}
+             bitrate_range: %ExOnvif.Schemas.IntRange{min: 10, max: 1000},
+             quality_range: %ExOnvif.Schemas.FloatRange{min: 1, max: 10}
            }
          ]}
       end)
@@ -188,8 +188,8 @@ defmodule ExNVRWeb.OnvifDiscoveryLiveTest do
              resolutions_available: [],
              encoding: :h264,
              gov_length_range: [1, 25],
-             bitrate_range: %Onvif.Schemas.IntRange{min: 10, max: 100},
-             quality_range: %Onvif.Schemas.FloatRange{min: 1, max: 10}
+             bitrate_range: %ExOnvif.Schemas.IntRange{min: 10, max: 100},
+             quality_range: %ExOnvif.Schemas.FloatRange{min: 1, max: 10}
            }
          ]}
       end)
@@ -209,7 +209,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLiveTest do
       refute lv |> element("#192\\.168\\.1\\.200 button", "Authenticate") |> has_element?()
       assert lv |> element("#192\\.168\\.1\\.200 button", "View Details") |> has_element?()
 
-      expect(Onvif.Device, :init, 1, fn _probe, _user, _pass ->
+      expect(ExOnvif.Device, :init, 1, fn _probe, _user, _pass ->
         {:error, "Invalid Credentials"}
       end)
 

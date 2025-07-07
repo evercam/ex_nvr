@@ -1,12 +1,12 @@
 defmodule ExNVR.Devices.Cameras.StreamProfile do
   @moduledoc false
 
-  alias Onvif.Media2.Profile
+  alias ExOnvif.Media2.Profile
 
   defmodule VideoConfig do
     @moduledoc false
 
-    alias Onvif.Media2.Profile.VideoEncoder
+    alias ExOnvif.Media2.Profile.VideoEncoder
 
     @type t :: %__MODULE__{
             codec: atom(),

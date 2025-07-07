@@ -5,15 +5,15 @@ defmodule ExNVR.Devices.Onvif do
 
   alias __MODULE__.AutoConfig
   alias ExNVR.Model.Device
-  alias Onvif.Devices.SystemDateAndTime
-  alias Onvif.Media2
-  alias Onvif.Media2.Profile.VideoEncoder
-  alias Onvif.Search
-  alias Onvif.Search.{FindRecordings, GetRecordingSearchResults}
+  alias ExOnvif.Devices.SystemDateAndTime
+  alias ExOnvif.Media2
+  alias ExOnvif.Media2.Profile.VideoEncoder
+  alias ExOnvif.Search
+  alias ExOnvif.Search.{FindRecordings, GetRecordingSearchResults}
 
-  @spec discover(Keyword.t()) :: [Onvif.Discovery.Probe.t()]
+  @spec discover(Keyword.t()) :: [ExOnvif.Discovery.Probe.t()]
   def discover(options) do
-    Onvif.Discovery.probe(options)
+    ExOnvif.Discovery.probe(options)
     |> Enum.uniq()
     |> Enum.map(fn probe ->
       # Ignore link local addresses
@@ -47,14 +47,14 @@ defmodule ExNVR.Devices.Onvif do
 
   def all_config(_device), do: %{}
 
-  @spec onvif_device(Device.t()) :: {:ok, Onvif.Device.t()} | {:error, any()}
+  @spec onvif_device(Device.t()) :: {:ok, ExOnvif.Device.t()} | {:error, any()}
   def onvif_device(%Device{type: :ip} = device) do
     case Device.http_url(device) do
       nil ->
         {:error, :no_url}
 
       url ->
-        Onvif.Device.new(url, device.credentials.username, device.credentials.password)
+        ExOnvif.Device.new(url, device.credentials.username, device.credentials.password)
     end
   end
 
@@ -66,7 +66,7 @@ defmodule ExNVR.Devices.Onvif do
   end
 
   # Auto configure cameras
-  @spec auto_configure(Onvif.Device.t()) :: AutoConfig.t()
+  @spec auto_configure(ExOnvif.Device.t()) :: AutoConfig.t()
   def auto_configure(%{manufacturer: vendor} = onvif_device)
       when vendor in ["HIKVISION", "Milesight Technology Co.,Ltd."] do
     Logger.info("Auto configure #{vendor} camera")
@@ -153,7 +153,7 @@ defmodule ExNVR.Devices.Onvif do
   defp do_configure_profiles(auto_config, onvif_device) do
     Logger.info("[Onvif] Configure profiles")
 
-    case Onvif.Media2.get_profiles(onvif_device) do
+    case ExOnvif.Media2.get_profiles(onvif_device) do
       {:ok, profiles} ->
         auto_config
         |> do_configure_profile(onvif_device, Enum.at(profiles, 0), :main_stream)
@@ -168,7 +168,7 @@ defmodule ExNVR.Devices.Onvif do
 
   defp do_configure_profile(auto_config, onvif_device, profile, stream_type) do
     config_options_result =
-      Onvif.Media2.get_video_encoder_configuration_options(onvif_device,
+      ExOnvif.Media2.get_video_encoder_configuration_options(onvif_device,
         profile_token: profile.reference_token
       )
 
@@ -208,7 +208,7 @@ defmodule ExNVR.Devices.Onvif do
         resolution: select_resolution(config.resolutions_available, stream_type)
     }
 
-    Onvif.Media2.set_video_encoder_configuration(onvif_device, video_encoder)
+    ExOnvif.Media2.set_video_encoder_configuration(onvif_device, video_encoder)
   end
 
   defp stream_profiles(onvif_device, device) do
@@ -226,7 +226,7 @@ defmodule ExNVR.Devices.Onvif do
   defp do_get_onvif_stream_profile(_onvif_device, ""), do: nil
 
   defp do_get_onvif_stream_profile(onvif_device, profile_token) do
-    case Onvif.Media2.get_profiles(onvif_device, token: profile_token, type: ["VideoEncoder"]) do
+    case ExOnvif.Media2.get_profiles(onvif_device, token: profile_token, type: ["VideoEncoder"]) do
       {:ok, [profile]} -> profile
       _other -> nil
     end

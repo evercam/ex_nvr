@@ -3,7 +3,7 @@ defmodule ExNVR.Devices.Cameras.NetworkInterface do
   Module describing a network interface for a camera device.
   """
 
-  alias Onvif.Devices.NetworkInterface
+  alias ExOnvif.Devices.NetworkInterface
 
   defmodule IPAddress do
     @moduledoc """

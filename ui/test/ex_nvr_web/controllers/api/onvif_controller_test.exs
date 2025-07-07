@@ -5,7 +5,7 @@ defmodule ExNVRWeb.API.OnvifControllerTest do
   import ExNVR.AccountsFixtures
   import Mimic
 
-  alias Onvif.Discovery.Probe
+  alias ExOnvif.Discovery.Probe
 
   @discovered_devices [
     %Probe{
@@ -29,13 +29,13 @@ defmodule ExNVRWeb.API.OnvifControllerTest do
 
   describe "GET/POST /api/onvif/discover" do
     test "discover devices", %{conn: conn} do
-      expect(Onvif.Discovery, :probe, fn [probe_timeout: 2_000] -> @discovered_devices end)
+      expect(ExOnvif.Discovery, :probe, fn [probe_timeout: 2_000] -> @discovered_devices end)
 
-      expect(Onvif.Device, :init, fn probe, "admin", "pass" ->
+      expect(ExOnvif.Device, :init, fn probe, "admin", "pass" ->
         assert ["http://192.168.1.100/onvif/device_service"] = probe.address
 
         {:ok,
-         %Onvif.Device{
+         %ExOnvif.Device{
            manufacturer: "Hikvision",
            address: List.first(probe.address),
            scopes: probe.scopes

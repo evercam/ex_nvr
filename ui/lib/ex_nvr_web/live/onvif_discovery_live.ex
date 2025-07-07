@@ -90,7 +90,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
           </.simple_form>
         </div>
       </div>
-      
+
     <!-- Device Discovery Section -->
       <div class="w-3/4 flex justify-between items-center bg-white p-5 border rounded-lg dark:border-gray-600 dark:bg-gray-950 dark:text-white mr-5">
         <div class="flex items-center space-x-2">
@@ -107,7 +107,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
           <.icon name="hero-magnifying-glass-solid" class="w-4 h-4 mr-2" /> Scan Network
         </.button>
       </div>
-      
+
     <!-- Device List Section -->
       <div class="w-3/4 flex flex-col space-y-5 bg-white p-5 border rounded-lg dark:border-gray-600 dark:bg-gray-950 dark:text-white mr-5">
         <span class="text-md font-bold">
@@ -146,7 +146,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
       </div>
 
       <.separator :if={@selected_device} class="w-3/4 mr-5" />
-      
+
     <!-- Device Details Section -->
       <div :if={@selected_device} class="w-3/4 flex flex-col space-y-2 mr-5">
         <div class="flex justify-between items-center border rounded-lg bg-white dark:border-gray-600 dark:bg-gray-950 dark:text-white p-5">
@@ -417,7 +417,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
     if idx = Enum.find_index(devices, &(&1.id == params["id"])) do
       camera_details = Enum.at(devices, idx)
 
-      case Onvif.Device.init(camera_details.probe, params["username"], params["password"]) do
+      case ExOnvif.Device.init(camera_details.probe, params["username"], params["password"]) do
         {:ok, onvif_device} ->
           camera_details =
             %CameraDetails{camera_details | device: onvif_device}
@@ -533,7 +533,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
   end
 
   defp get_network_interface(camera_details) do
-    case Onvif.Devices.get_network_interfaces(camera_details.device) do
+    case ExOnvif.Devices.get_network_interfaces(camera_details.device) do
       {:ok, interfaces} ->
         %{camera_details | network_interface: NetworkInterface.from_onvif(List.first(interfaces))}
 
@@ -544,7 +544,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
   end
 
   defp get_ntp(%{device: %{system_date_time: %{date_time_type: :ntp}}} = camera_details) do
-    case Onvif.Devices.get_ntp(camera_details.device) do
+    case ExOnvif.Devices.get_ntp(camera_details.device) do
       {:ok, ntp} ->
         %{camera_details | ntp: NTP.from_onvif(ntp)}
 
@@ -562,7 +562,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
   end
 
   defp get_stream_profiles(camera_details) do
-    case Onvif.Media2.get_profiles(camera_details.device) do
+    case ExOnvif.Media2.get_profiles(camera_details.device) do
       {:ok, profiles} ->
         %{camera_details | stream_profiles: Enum.map(profiles, &StreamProfile.from_onvif/1)}
         |> get_stream_uris()
@@ -576,8 +576,8 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
   defp get_stream_uris(%{device: device} = camera_details) do
     profiles =
       Enum.map(camera_details.stream_profiles, fn profile ->
-        with {:ok, stream_uri} <- Onvif.Media2.get_stream_uri(device, profile.id),
-             {:ok, snapshot_uri} <- Onvif.Media2.get_snapshot_uri(device, profile.id) do
+        with {:ok, stream_uri} <- ExOnvif.Media2.get_stream_uri(device, profile.id),
+             {:ok, snapshot_uri} <- ExOnvif.Media2.get_snapshot_uri(device, profile.id) do
           %{profile | stream_uri: stream_uri, snapshot_uri: snapshot_uri}
         else
           _error ->

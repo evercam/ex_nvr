@@ -3,7 +3,7 @@ defmodule ExNVR.Devices.Cameras.NTP do
   Module describing an NTP configuration for a camera device.
   """
 
-  alias Onvif.Devices.NTP
+  alias ExOnvif.Devices.NTP
 
   @type t :: %__MODULE__{
           dhcp?: boolean(),
