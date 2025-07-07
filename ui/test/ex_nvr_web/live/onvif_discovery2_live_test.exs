@@ -113,8 +113,10 @@ defmodule ExNVRWeb.OnvifDiscovery2LiveTest do
            %NetworkInterface{
              info: %NetworkInterface.Info{name: "eth0", hw_address: "aa:bb:cc:00:11:22"},
              ipv4: %NetworkInterface.IPv4{
+               enabled: true,
                config: %NetworkInterface.IPv4.Config{
-                 manual: %{address: "192.168.1.100"}
+                 dhcp: false,
+                 manual: %{address: "192.168.1.200", prefix_length: 24}
                }
              }
            }
@@ -152,17 +154,17 @@ defmodule ExNVRWeb.OnvifDiscovery2LiveTest do
       end)
 
       expect(Onvif.Media2, :get_stream_uri, fn _device, "Profile_1" ->
-        {:ok, "rtsp://192.168.1.100:554/main"}
+        {:ok, "rtsp://192.168.1.200:554/main"}
       end)
       |> expect(:get_stream_uri, fn _device, "Profile_2" ->
-        {:ok, "rtsp://192.168.1.100:554/sub"}
+        {:ok, "rtsp://192.168.1.200:554/sub"}
       end)
 
       expect(Onvif.Media2, :get_snapshot_uri, fn _device, "Profile_1" ->
-        {:ok, "http://192.168.1.100:8101/snapshot"}
+        {:ok, "http://192.168.1.200:8101/snapshot"}
       end)
       |> expect(:get_snapshot_uri, fn _device, "Profile_2" ->
-        {:ok, "http://192.168.1.100:8101/sub"}
+        {:ok, "http://192.168.1.200:8101/sub"}
       end)
 
       expect(Onvif.Media2, :get_video_encoder_configuration_options, fn _device,
@@ -216,6 +218,80 @@ defmodule ExNVRWeb.OnvifDiscovery2LiveTest do
 
       html = render_submit(auth_form, %{username: "admin", password: "pass", id: "192.168.1.2"})
       assert html =~ "could not find device with id"
+    end
+
+    test "Show device details", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/onvif-discovery")
+      lv |> element("button", "Scan Network") |> render_click()
+
+      lv
+      |> element("#auth-form")
+      |> render_submit(%{username: "admin", password: "pass", id: "192.168.1.200"})
+
+      html =
+        lv
+        |> element("#192\\.168\\.1\\.200 button", "View Details")
+        |> render_click()
+
+      assert has_element?(lv, "button", "Add to NVR")
+
+      assert html =~ "Hardware Information"
+      assert html =~ "Evercam"
+      assert html =~ "B11"
+
+      html = lv |> element("div span[phx-click]", "Network") |> render_click()
+
+      assert html =~ "Network Configuration"
+      assert html =~ "192.168.1.200"
+      assert html =~ "aa:bb:cc:00:11:22"
+      assert html =~ "Disabled"
+
+      html = lv |> element("div span[phx-click]", "Date & Time") |> render_click()
+
+      assert html =~ "Time Settings"
+      assert html =~ "CST-01:00"
+
+      html = lv |> element("div span[phx-click]", "Streams") |> render_click()
+
+      assert html =~ "mainStream"
+      assert html =~ "subStream"
+      assert html =~ "3840x2160"
+      assert html =~ "640x480"
+      assert html =~ "rtsp://192.168.1.200:554/main"
+      assert html =~ "rtsp://192.168.1.200:554/sub"
+      assert html =~ "http://192.168.1.200:8101/snapshot"
+      assert html =~ "H.265"
+      assert html =~ "H.264"
+
+      assert has_element?(lv, "#stream_selection_form")
+    end
+
+    test "Add to NVR", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/onvif-discovery")
+      lv |> element("button", "Scan Network") |> render_click()
+
+      lv
+      |> element("#auth-form")
+      |> render_submit(%{username: "admin", password: "pass", id: "192.168.1.200"})
+
+      lv
+      |> element("#192\\.168\\.1\\.200 button", "View Details")
+      |> render_click()
+
+      {:ok, conn} =
+        lv
+        |> element("button", "Add to NVR")
+        |> render_click()
+        |> follow_redirect(conn, ~p"/devices/new")
+
+      device_params = Phoenix.Flash.get(conn.assigns.flash, :device_params)
+      assert device_params.name == "Camera 2"
+      assert device_params.type == :ip
+      assert device_params.stream_config.stream_uri == "rtsp://192.168.1.200:554/main"
+      assert device_params.stream_config.snapshot_uri == "http://192.168.1.200:8101/snapshot"
+      assert device_params.stream_config.sub_stream_uri == "rtsp://192.168.1.200:554/sub"
+      assert device_params.stream_config.sub_snapshot_uri == "http://192.168.1.200:8101/sub"
+      assert device_params.vendor == "Evercam"
     end
   end
 end

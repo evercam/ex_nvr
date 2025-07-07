@@ -5,6 +5,7 @@ defmodule ExNVRWeb.OnvifDiscovery2Live do
 
   require Logger
 
+  alias ExNVR.Devices
   alias ExNVR.Devices.Cameras.{NetworkInterface, NTP, StreamProfile}
   alias ExNVRWeb.Onvif.StreamProfile2
 
@@ -38,6 +39,7 @@ defmodule ExNVRWeb.OnvifDiscovery2Live do
     @moduledoc false
 
     defstruct [
+      :id,
       :name,
       :probe,
       :device,
@@ -89,7 +91,7 @@ defmodule ExNVRWeb.OnvifDiscovery2Live do
           </.simple_form>
         </div>
       </div>
-      
+
     <!-- Device Discovery Section -->
       <div class="w-3/4 flex justify-between items-center bg-white p-5 border rounded-lg dark:border-gray-600 dark:bg-gray-950 dark:text-white mr-5">
         <div class="flex items-center space-x-2">
@@ -106,13 +108,13 @@ defmodule ExNVRWeb.OnvifDiscovery2Live do
           <.icon name="hero-magnifying-glass-solid" class="w-4 h-4 mr-2" /> Scan Network
         </.button>
       </div>
-      
+
     <!-- Device List Section -->
       <div class="w-3/4 flex flex-col space-y-5 bg-white p-5 border rounded-lg dark:border-gray-600 dark:bg-gray-950 dark:text-white mr-5">
         <span class="text-md font-bold">
           <.icon name="hero-wifi" class="w-5 h-5 mr-1" /> Found {length(@devices)} Device(s)
         </span>
-        <div :for={device <- @devices} id={device.probe.device_ip} class="flex flex-col space-y-2">
+        <div :for={device <- @devices} id={device.id} class="flex flex-col space-y-2">
           <div class="flex justify-between border rounded-lg dark:border-gray-200 p-5">
             <div class="flex items-center">
               <div class="boder-1 rounded-lg bg-gray-200 dark:bg-gray-600 p-2 mr-2">
@@ -127,7 +129,7 @@ defmodule ExNVRWeb.OnvifDiscovery2Live do
             </div>
             <.button
               :if={is_nil(device.device)}
-              class="bg-white dark:bg-gray-950 border dark:border-gray-600"
+              class="bg-white dark:bg-gray-950 dark:hover:bg-gray-800 border dark:border-gray-600"
               phx-click={
                 show_modal2(
                   JS.set_attribute({"phx-value-id", device.probe.device_ip}, to: "#auth-form"),
@@ -137,11 +139,7 @@ defmodule ExNVRWeb.OnvifDiscovery2Live do
             >
               <.icon name="hero-lock-closed" class="w-4 h-4" />Authenticate
             </.button>
-            <.button
-              :if={not is_nil(device.device)}
-              phx-click="show-details"
-              phx-value-id={device.probe.device_ip}
-            >
+            <.button :if={not is_nil(device.device)} phx-click="show-details" phx-value-id={device.id}>
               <.icon name="hero-check-circle" class="w-4 h-4" />View Details
             </.button>
           </div>
@@ -149,7 +147,7 @@ defmodule ExNVRWeb.OnvifDiscovery2Live do
       </div>
 
       <.separator :if={@selected_device} class="w-3/4 mr-5" />
-      
+
     <!-- Device Details Section -->
       <div :if={@selected_device} class="w-3/4 flex flex-col space-y-2 mr-5">
         <div class="flex justify-between items-center border rounded-lg bg-white dark:border-gray-600 dark:bg-gray-950 dark:text-white p-5">
@@ -165,9 +163,18 @@ defmodule ExNVRWeb.OnvifDiscovery2Live do
               </div>
             </div>
           </div>
-          <.button phx-click="add-device">
-            <.icon name="hero-plus" class="w-4 h-4" />Add to NVR
-          </.button>
+          <div>
+            <.button
+              class="bg-white dark:bg-gray-950 dark:hover:bg-gray-800 border dark:border-gray-600"
+              phx-click="auto-configure"
+              phx-disable-with="Auto Configuring..."
+            >
+              <.icon name="hero-wrench" class="w-4 h-4" />Auto Configure
+            </.button>
+            <.button phx-click="add-device">
+              <.icon name="hero-plus" class="w-4 h-4" />Add to NVR
+            </.button>
+          </div>
         </div>
 
         <div class="grid grid-cols-4 content-center rounded-lg bg-white dark:border-gray-600 dark:bg-gray-700 dark:text-white p-1">
@@ -398,7 +405,9 @@ defmodule ExNVRWeb.OnvifDiscovery2Live do
         ip_address: settings.ip_address,
         timeout: :timer.seconds(settings.timeout)
       )
-      |> Enum.map(&%CameraDetails{probe: &1, name: scope_value(&1.scopes, "name")})
+      |> Enum.map(
+        &%CameraDetails{id: &1.device_ip, probe: &1, name: scope_value(&1.scopes, "name")}
+      )
 
     {:noreply, assign(socket, devices: devices, selected_device: nil)}
   end
@@ -406,7 +415,7 @@ defmodule ExNVRWeb.OnvifDiscovery2Live do
   def handle_event("authenticate-device", params, socket) do
     devices = socket.assigns.devices
 
-    if idx = Enum.find_index(devices, &(&1.probe.device_ip == params["id"])) do
+    if idx = Enum.find_index(devices, &(&1.id == params["id"])) do
       camera_details = Enum.at(devices, idx)
 
       case Onvif.Device.init(camera_details.probe, params["username"], params["password"]) do
@@ -436,7 +445,7 @@ defmodule ExNVRWeb.OnvifDiscovery2Live do
   def handle_event("show-details", params, socket) do
     devices = socket.assigns.devices
 
-    if device = Enum.find(devices, &(&1.probe.device_ip == params["id"])) do
+    if device = Enum.find(devices, &(&1.id == params["id"])) do
       {:noreply, assign(socket, selected_device: device)}
     else
       {:noreply, socket}
@@ -500,6 +509,22 @@ defmodule ExNVRWeb.OnvifDiscovery2Live do
       credentials: %{username: username, password: password}
     })
     |> redirect(to: ~p"/devices/new")
+    |> then(&{:noreply, &1})
+  end
+
+  def handle_event("auto-configure", _params, socket) do
+    camera_details = socket.assigns.selected_device
+    devices = socket.assigns.devices
+
+    _auto_config_result = Devices.Onvif.auto_configure(camera_details.device)
+    camera_details = camera_details |> get_stream_profiles() |> set_streams_form()
+
+    idx = Enum.find_index(devices, &(&1.id == camera_details.id))
+    devices = List.replace_at(devices, idx, camera_details)
+
+    socket
+    |> assign(selected_device: camera_details, devices: devices)
+    |> put_flash(:info, "Camera configured successfully")
     |> then(&{:noreply, &1})
   end
 
