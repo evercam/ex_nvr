@@ -74,9 +74,6 @@ defmodule ExNVRWeb.DeviceDetailsLive do
 
     case Recordings.get_recordings_by_device_id(socket.assigns.device.id, params) do
       {:ok, {recordings, meta}} ->
-        params
-        |> IO.inspect(label: "this is the parmaaa")
-
         socket
         |> assign(meta: meta, recordings: recordings, sort_params: sort_params)
 
