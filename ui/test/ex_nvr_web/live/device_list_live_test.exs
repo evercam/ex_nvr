@@ -18,7 +18,7 @@ defmodule ExNVRWeb.DeviceListLiveTest do
         |> log_in_user(user_fixture())
         |> live(~p"/devices")
 
-      assert html =~ "Add device"
+      assert html =~ "Add Device"
       assert html =~ device.name
       assert html =~ device.id
     end

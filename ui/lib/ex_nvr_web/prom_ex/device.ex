@@ -4,6 +4,7 @@ defmodule ExNVRWeb.PromEx.Device do
   use PromEx.Plugin
 
   alias ExNVR.Devices
+  alias ExNVR.Devices.Cameras.StreamProfile
   alias ExNVR.Model.Device
   alias PromEx.MetricTypes.Polling
 
@@ -16,7 +17,6 @@ defmodule ExNVRWeb.PromEx.Device do
     :id,
     :enabled,
     :codec,
-    :profile,
     :width,
     :height,
     :bitrate,
@@ -104,7 +104,7 @@ defmodule ExNVRWeb.PromEx.Device do
   defp execute_stream_config(device) do
     with {:ok, streams} <- Devices.stream_profiles(device) do
       for stream <- streams do
-        metadata = Map.put(stream, :device_id, device.id)
+        metadata = Map.put(StreamProfile.flatten(stream), :device_id, device.id)
         :telemetry.execute(@camera_stream_info_event, %{value: 1}, metadata)
       end
     end

@@ -9,6 +9,7 @@ defmodule ExNVR.Devices.Cameras.HttpClient.Hik do
 
   import SweetXml
 
+  alias ExNVR.Devices.Cameras.StreamProfile
   alias ExNVR.HTTP
 
   @lpr_path "/ISAPI/Traffic/channels/1/vehicledetect/plates"
@@ -98,33 +99,50 @@ defmodule ExNVR.Devices.Cameras.HttpClient.Hik do
       ~x"//StreamingChannel"l,
       id: ~x"./id/text()"i,
       enabled: ~x"./enabled/text()"s |> transform_by(&String.to_existing_atom/1),
-      codec: ~x"./Video/videoCodecType/text()"s |> transform_by(&String.replace(&1, ".", "")),
-      width: ~x"./Video/videoResolutionWidth/text()"I,
-      height: ~x"./Video/videoResolutionHeight/text()"I,
-      bitrate: ~x"./Video/constantBitRate/text()"I,
-      bitrate_mode: ~x"./Video/videoQualityControlType/text()"s,
-      frame_rate: ~x"./Video/maxFrameRate/text()"I |> transform_by(&(&1 / 100)),
-      gop: ~x"./Video/GovLength/text()"I,
-      smart_codec: ~x"./Video/SmartCodec/enabled/text()"s,
-      h264_profile: ~x"./Video/H264Profile/text()"s,
-      h265_profile: ~x"./Video/H265Profile/text()"s
+      video_config: [
+        ~x"./Video",
+        codec: ~x"./videoCodecType/text()"s |> transform_by(&String.replace(&1, ".", "")),
+        width: ~x"./videoResolutionWidth/text()"I,
+        height: ~x"./videoResolutionHeight/text()"I,
+        bitrate: ~x"./constantBitRate/text()"I,
+        bitrate_mode:
+          ~x"./videoQualityControlType/text()"s
+          |> transform_by(&(String.downcase(&1) |> String.to_atom())),
+        frame_rate: ~x"./maxFrameRate/text()"I |> transform_by(&(&1 / 100)),
+        gop: ~x"./GovLength/text()"I,
+        smart_codec: ~x"./SmartCodec/enabled/text()"s,
+        h264_profile: ~x"./H264Profile/text()"s,
+        h265_profile: ~x"./H265Profile/text()"s
+      ]
     )
     |> Enum.map(fn config ->
       smart_codec =
-        case config.smart_codec do
+        case config.video_config.smart_codec do
           "" -> false
           value -> String.to_existing_atom(value)
         end
 
       profile =
-        case config.codec do
-          "H264" -> String.downcase(config.h264_profile)
-          "H265" -> String.downcase(config.h265_profile)
+        case config.video_config.codec do
+          "H264" -> String.downcase(config.video_config.h264_profile)
+          "H265" -> String.downcase(config.video_config.h265_profile)
           _other -> nil
         end
 
-      config = Map.merge(config, %{smart_codec: smart_codec, profile: profile})
-      struct(ExNVR.Devices.Cameras.StreamProfile, config)
+      codec = String.downcase(config.video_config.codec) |> String.to_atom()
+
+      config = %{
+        config
+        | video_config:
+            Map.merge(config.video_config, %{
+              codec: codec,
+              smart_codec: smart_codec,
+              codec_profile: profile
+            })
+      }
+
+      video_config = struct(StreamProfile.VideoConfig, config.video_config)
+      %StreamProfile{id: config.id, enabled: config.enabled, video_config: video_config}
     end)
   end
 

@@ -17,7 +17,7 @@ defmodule ExNVRWeb.RemoteStoragesListLiveTest do
         |> log_in_user(user_fixture())
         |> live(~p"/remote-storages")
 
-      assert html =~ "Add remote storage"
+      assert html =~ "Add Remote Storage"
       assert html =~ remote_storage.name
       assert html =~ Atom.to_string(remote_storage.type)
       assert html =~ Integer.to_string(remote_storage.id)
