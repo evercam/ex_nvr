@@ -74,6 +74,14 @@ defmodule ExNVR.Recordings do
     |> Repo.one()
   end
 
+  @spec get_recordings_by_device_id(binary(), map(), stream_type()) :: [Recording.t()]
+  def get_recordings_by_device_id(device_id, params \\ %{}, stream_type \\ :high) do
+    Recording.with_type(stream_type)
+    |> Recording.list_with_devices()
+    |> Recording.with_device(device_id)
+    |> ExNVR.Flop.validate_and_run(params, for: Recording)
+  end
+
   @spec exists?(Device.t(), DateTime.t()) :: boolean()
   @spec exists?(Device.t(), stream_type(), DateTime.t()) :: boolean()
   def exists?(%Device{id: id}, stream_type \\ :high, date) do
