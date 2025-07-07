@@ -1,5 +1,5 @@
 defmodule ExNVR.Devices.Cameras.NetworkInterface do
-  @doc """
+  @moduledoc """
   Module describing a network interface for a camera device.
   """
 

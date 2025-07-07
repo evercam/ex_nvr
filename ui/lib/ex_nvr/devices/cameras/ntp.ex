@@ -1,5 +1,5 @@
 defmodule ExNVR.Devices.Cameras.NTP do
-  @doc """
+  @moduledoc """
   Module describing an NTP configuration for a camera device.
   """
 
