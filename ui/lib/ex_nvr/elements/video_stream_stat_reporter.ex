@@ -81,7 +81,7 @@ defmodule ExNVR.Elements.VideoStreamStatReporter do
   @impl true
   def handle_buffer(:input, buffer, _ctx, state) do
     elapsed_time = max(Time.as_milliseconds(Time.monotonic_time() - state.start_time, :round), 1)
-    total_bytes = state.total_bytes + byte_size(buffer.payload)
+    total_bytes = state.total_bytes + IO.iodata_length(buffer.payload)
     total_frames = state.total_frames + 1
 
     state = %{
@@ -107,7 +107,7 @@ defmodule ExNVR.Elements.VideoStreamStatReporter do
 
     :telemetry.execute(
       @frame_event,
-      %{size: byte_size(buffer.payload), gop_size: state.gop_size},
+      %{size: IO.iodata_length(buffer.payload), gop_size: state.gop_size},
       Map.take(state, [:device_id, :stream])
     )
 

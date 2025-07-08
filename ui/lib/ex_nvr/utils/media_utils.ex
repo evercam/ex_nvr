@@ -1,14 +1,14 @@
 defmodule ExNVR.MediaUtils do
   @moduledoc false
 
-  alias MediaCodecs.H265
+  alias MediaCodecs.H265.NALU
   alias Membrane.Buffer
 
   @default_video_timescale 90_000
 
   @spec get_hevc_dcr([binary()], [binary()], [binary()]) :: ExMP4.Box.Hvcc.t()
   def get_hevc_dcr(vpss, spss, ppss) do
-    sps = H265.SPS.parse(List.first(spss))
+    sps = NALU.SPS.parse(List.first(spss))
 
     <<constraint_indicator_flags::48>> =
       <<sps.progressive_source_flag::1, sps.interlaced_source_flag::1,
@@ -66,4 +66,8 @@ defmodule ExNVR.MediaUtils do
       timescale: @default_video_timescale
     }
   end
+
+  @spec to_annexb(binary() | [binary()]) :: binary()
+  def to_annexb(au) when is_list(au), do: Enum.map_join(au, &<<1::32, &1::binary>>)
+  def to_annexb(au), do: au
 end

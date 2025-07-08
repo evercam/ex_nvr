@@ -168,7 +168,8 @@ defmodule ExNVRWeb.OnvifDiscoveryLiveTest do
       end)
 
       expect(ExOnvif.Media2, :get_video_encoder_configuration_options, fn _device,
-                                                                        profile_token: "Profile_1" ->
+                                                                          profile_token:
+                                                                            "Profile_1" ->
         {:ok,
          [
            %VideoEncoderConfigurationOption{
