@@ -5,6 +5,8 @@ defmodule ExNVR.Pipeline.Source.RTSP do
 
   use Membrane.Source
 
+  import ExMP4.Helper
+
   alias ExNVR.Model.Device
   alias ExNVR.Pipeline.Track
   alias MediaCodecs.{H264, H265}
@@ -98,8 +100,8 @@ defmodule ExNVR.Pipeline.Source.RTSP do
 
     buffer = %Membrane.Buffer{
       payload: payload,
-      dts: rtp_timestamp,
-      pts: rtp_timestamp,
+      dts: timescalify(rtp_timestamp, track.timescale, Membrane.Time.second()),
+      pts: timescalify(rtp_timestamp, track.timescale, Membrane.Time.second()),
       metadata: %{
         :timestamp => timestamp,
         track.encoding => %{key_frame?: keyframe?}
@@ -203,7 +205,13 @@ defmodule ExNVR.Pipeline.Source.RTSP do
     with {:ok, tracks} <- RTSP.connect(stream.pid, @timeout + 1000),
          :ok <- RTSP.play(stream.pid, @timeout + 1000) do
       # Add sanity check: make sure that the tracks and their control path are the same between disconnection
-      tracks = Map.new(tracks, &{&1.control_path, Track.new(&1.type, &1.rtpmap.encoding)})
+      tracks =
+        Map.new(
+          tracks,
+          &{&1.control_path,
+           Track.new(&1.type, &1.rtpmap.encoding, timescale: &1.rtpmap.clock_rate)}
+        )
+
       stream = %{stream | reconnect_attempt: 0, tracks: tracks}
       {[notify_parent: {stream.type, tracks}], stream}
     else
@@ -242,34 +250,30 @@ defmodule ExNVR.Pipeline.Source.RTSP do
   defp get_stream_format(:h265, sample, true) do
     sps_nalu =
       sample
-      |> H265.nalus()
-      |> Enum.filter(&(H265.NALU.type(&1) == :sps))
-      |> List.first()
+      |> Enum.find(&(H265.NALU.type(&1) == :sps))
       |> H265.NALU.parse()
 
     %Membrane.H265{
       alignment: :au,
       stream_structure: :annexb,
-      width: H265.SPS.width(sps_nalu.content),
-      height: H265.SPS.height(sps_nalu.content),
-      profile: H265.SPS.profile(sps_nalu.content)
+      width: H265.NALU.SPS.width(sps_nalu.content),
+      height: H265.NALU.SPS.height(sps_nalu.content),
+      profile: H265.NALU.SPS.profile(sps_nalu.content)
     }
   end
 
   defp get_stream_format(:h264, sample, true) do
     sps_nalu =
       sample
-      |> H264.nalus()
-      |> Enum.filter(&(H264.NALU.type(&1) == :sps))
-      |> List.first()
+      |> Enum.find(&(H264.NALU.type(&1) == :sps))
       |> H264.NALU.parse()
 
     %Membrane.H264{
       alignment: :au,
       stream_structure: :annexb,
-      width: H264.SPS.width(sps_nalu.content),
-      height: H264.SPS.height(sps_nalu.content),
-      profile: H264.SPS.profile(sps_nalu.content)
+      width: H264.NALU.SPS.width(sps_nalu.content),
+      height: H264.NALU.SPS.height(sps_nalu.content),
+      profile: H264.NALU.SPS.profile(sps_nalu.content)
     }
   end
 

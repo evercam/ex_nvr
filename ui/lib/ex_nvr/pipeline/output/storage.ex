@@ -9,16 +9,11 @@ defmodule ExNVR.Pipeline.Output.Storage do
   import ExNVR.MediaUtils
 
   alias ExMP4.{Box, Writer}
-  alias ExNVR.Model.Device
-  alias ExNVR.Model.Run
+  alias ExNVR.Model.{Device, Run}
   alias ExNVR.Pipeline.Event.StreamClosed
   alias ExNVR.Pipeline.Output.Storage.Segment
   alias ExNVR.Utils
-  alias Membrane.Buffer
-  alias Membrane.Event
-  alias Membrane.H264
-  alias Membrane.H265
-  alias Membrane.Time
+  alias Membrane.{Buffer, Event, H264, H265, Time}
 
   @time_error Time.milliseconds(30)
   @time_drift_threshold Time.seconds(30)
@@ -318,7 +313,7 @@ defmodule ExNVR.Pipeline.Output.Storage do
     segment =
       state.current_segment
       |> Segment.add_duration(duration)
-      |> Segment.add_size(byte_size(last_buffer.payload))
+      |> Segment.add_size(IO.iodata_length(last_buffer.payload))
 
     %{
       state

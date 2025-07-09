@@ -1,29 +1,30 @@
 defmodule ExNVR.MediaUtils do
   @moduledoc false
 
-  alias MediaCodecs.H265
+  alias MediaCodecs.H265.NALU
   alias Membrane.Buffer
 
   @default_video_timescale 90_000
 
   @spec get_hevc_dcr([binary()], [binary()], [binary()]) :: ExMP4.Box.Hvcc.t()
   def get_hevc_dcr(vpss, spss, ppss) do
-    sps = H265.SPS.parse(List.first(spss))
+    sps = NALU.SPS.parse(List.first(spss))
+    profile = sps.profile_tier_level
 
     <<constraint_indicator_flags::48>> =
-      <<sps.progressive_source_flag::1, sps.interlaced_source_flag::1,
-        sps.non_packed_constraint_flag::1, sps.frame_only_constraint_flag::1, 0::44>>
+      <<profile.progressive_source_flag::1, profile.interlaced_source_flag::1,
+        profile.non_packed_constraint_flag::1, profile.frame_only_constraint_flag::1, 0::44>>
 
     %ExMP4.Box.Hvcc{
       vpss: vpss,
       spss: spss,
       ppss: ppss,
-      profile_space: sps.profile_space,
-      tier_flag: sps.tier_flag,
-      profile_idc: sps.profile_idc,
-      profile_compatibility_flags: sps.profile_compatibility_flag,
+      profile_space: profile.profile_space,
+      tier_flag: profile.tier_flag,
+      profile_idc: profile.profile_idc,
+      profile_compatibility_flags: profile.profile_compatibility_flag,
       constraint_indicator_flags: constraint_indicator_flags,
-      level_idc: sps.level_idc,
+      level_idc: profile.level_idc,
       chroma_format_idc: sps.chroma_format_idc,
       bit_depth_chroma_minus8: sps.bit_depth_chroma_minus8,
       bit_depth_luma_minus8: sps.bit_depth_luma_minus8,
@@ -66,4 +67,8 @@ defmodule ExNVR.MediaUtils do
       timescale: @default_video_timescale
     }
   end
+
+  @spec to_annexb(binary() | [binary()]) :: binary()
+  def to_annexb(au) when is_list(au), do: Enum.map_join(au, &<<1::32, &1::binary>>)
+  def to_annexb(au), do: au
 end
