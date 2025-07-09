@@ -102,7 +102,7 @@ defmodule ExNVR.Nerves.RUT.Auth do
     end
   end
 
-  def authenticate(base_url, username, password) do
+  defp authenticate(base_url, username, password) do
     url = base_url <> @login_path
     conn_opts = [transport_opts: [verify: :verify_none]]
 
@@ -141,7 +141,7 @@ defmodule ExNVR.Nerves.RUT.Auth do
     end
   end
 
-  def track_redirected(request, opts \\ []) do
+  defp track_redirected(request, opts \\ []) do
     request
     |> Req.Request.register_options([:track_redirected])
     |> Req.Request.merge_options(opts)
