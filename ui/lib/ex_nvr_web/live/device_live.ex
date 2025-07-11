@@ -150,7 +150,7 @@ defmodule ExNVRWeb.DeviceLive do
   end
 
   defp put_storage_schedule(%{"storage_config" => storage} = params, nil) do
-    Map.put(params, "storage_config", Map.put(storage, "schedule", default_schedule()))
+    Map.put(params, "storage_config", Map.put(storage, "schedule", nil))
   end
 
   defp put_storage_schedule(%{"storage_config" => storage} = params, schedule) do

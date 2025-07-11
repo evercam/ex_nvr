@@ -256,7 +256,6 @@ defmodule ExNVRWeb.DeviceLiveTest do
     test "update an IP Camera device", %{
       conn: conn,
       device: device,
-      remote_storage: remote_storage,
       custom_storage_schedule: custom_storage_schedule,
       custom_snapshot_schedule: custom_snapshot_schedule
     } do
@@ -339,3 +338,5 @@ defmodule ExNVRWeb.DeviceLiveTest do
     end
   end
 end
+
+
