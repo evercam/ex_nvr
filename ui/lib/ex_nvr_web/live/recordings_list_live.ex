@@ -272,7 +272,7 @@ defmodule ExNVRWeb.RecordingListLive do
     end
   end
 
-  defp open_popup(recording) do
+  def open_popup(recording) do
     JS.remove_class("hidden", to: "#popup-container")
     |> JS.set_attribute(
       {"src", "/api/devices/#{recording.device_id}/recordings/#{recording.filename}/blob"},
@@ -280,7 +280,7 @@ defmodule ExNVRWeb.RecordingListLive do
     )
   end
 
-  defp close_popup do
+  def close_popup do
     JS.add_class("hidden", to: "#popup-container")
     |> JS.set_attribute({"src", nil}, to: "#recording-player")
   end
