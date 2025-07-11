@@ -45,6 +45,21 @@ defmodule ExNVRWeb.DeviceListLiveTest do
       assert {:redirect, %{to: path}} = redirect
       assert path == ~p"/devices/new"
     end
+
+    test "redirect clicking on the device", %{conn: conn, device: device} do
+      {:ok, lv, _html} =
+        conn
+        |> log_in_user(user_fixture())
+        |> live(~p"/devices")
+
+      {:error, redirect} =
+        lv
+        |> element(~s|[id="device-row-#{device.id}"] td:first-child|)
+        |> render_click()
+
+      assert {:live_redirect, %{to: path}} = redirect
+      assert path =~ ~p"/devices/#{device.id}/details"
+    end
   end
 
   describe "Start/Stop device recording" do
