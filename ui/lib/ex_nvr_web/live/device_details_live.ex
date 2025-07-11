@@ -1,6 +1,10 @@
 defmodule ExNVRWeb.DeviceDetailsLive do
   use ExNVRWeb, :live_view
 
+  require Logger
+
+  import ExNVRWeb.RecordingListLive, only: [recording_details_popover: 1]
+
   alias ExNVR.{Devices, Recordings}
   alias ExNVRWeb.Router.Helpers, as: Routes
   alias ExNVRWeb.RecordingListLive
@@ -22,7 +26,9 @@ defmodule ExNVRWeb.DeviceDetailsLive do
        recordings: recordings,
        meta: meta,
        active_tab: active_tab,
-       params: params
+       params: params,
+       pagination_params: %{},
+       files_details: %{}
      )}
   end
 
@@ -63,6 +69,41 @@ defmodule ExNVRWeb.DeviceDetailsLive do
      |> assign(:pagination_params, %{})
      |> push_patch(
        to: Routes.device_details_path(socket, :show, socket.assigns.device.id, params)
+     )}
+  end
+
+  @impl true
+  def handle_event("fetch-details", %{"id" => recording_id}, socket) do
+    files_details = socket.assigns.files_details
+    recording_id = String.to_integer(recording_id)
+    recording = Enum.find(socket.assigns.recordings, &(&1.id == recording_id))
+    device = socket.assigns.device
+
+    files_details =
+      with :error <- Map.fetch(files_details, recording_id),
+           {:error, reason} <- Recordings.details(device, recording) do
+        Logger.error("could not fetch file details, due to: #{inspect(reason)}")
+        Map.put(files_details, recording_id, :error)
+      else
+        {:ok, details} -> Map.put(socket.assigns.files_details, recording_id, details)
+      end
+
+    {:noreply, assign(socket, :files_details, files_details)}
+  end
+
+  def handle_event("paginate", pagination_params, socket) do
+    pagination_params = Map.merge(socket.assigns.pagination_params, pagination_params)
+
+    params =
+      Map.merge(socket.assigns.filter_params, pagination_params)
+      |> Map.merge(socket.assigns.sort_params)
+
+    {:noreply,
+     socket
+     |> assign(pagination_params: pagination_params)
+     |> push_patch(
+       to: Routes.device_details_path(socket, :show, socket.assigns.device.id, params),
+       replace: true
      )}
   end
 
@@ -142,7 +183,8 @@ defmodule ExNVRWeb.DeviceDetailsLive do
             </div>
           </div>
         </:tab_content>
-
+        
+    <!-- recordings tab -->
         <:tab_content for="recordings">
           <div class="text-center text-gray-500 dark:text-gray-400">
             <.filter_form meta={@meta} recordings={@recordings} id="recording-filter-form" />
@@ -161,9 +203,68 @@ defmodule ExNVRWeb.DeviceDetailsLive do
               <:col :let={recording} label="End-date" field={:end_date}>
                 {RecordingListLive.format_date(recording.end_date, @device.timezone)}
               </:col>
+              <:action :let={recording}>
+                <div class="flex justify-end">
+                  <button
+                    data-popover-target={"popover-click-#{recording.id}"}
+                    data-popover-trigger="click"
+                    phx-click="fetch-details"
+                    phx-value-id={recording.id}
+                    type="button"
+                  >
+                    <span title="Show information">
+                      <.icon
+                        name="hero-information-circle-solid"
+                        class="w-6 h-6 mr-2 dark:text-gray-400 cursor-pointer"
+                      />
+                    </span>
+                  </button>
 
-              <.pagination meta={@meta} />
+                  <.recording_details_popover
+                    recording={recording}
+                    rec_details={@files_details[recording.id]}
+                  />
+                  <span
+                    title="Preview recording"
+                    phx-click={RecordingListLive.open_popup(recording)}
+                    id={"thumbnail-#{recording.id}"}
+                  >
+                    <.icon
+                      name="hero-eye-solid"
+                      class="w-6 h-6 z-auto mr-2 dark:text-gray-400 cursor-pointer thumbnail"
+                    />
+                  </span>
+                  <div class="flex justify-end">
+                    <.link
+                      href={
+                        ~p"/api/devices/#{recording.device_id}/recordings/#{recording.filename}/blob"
+                      }
+                      class="inline-flex items-center text-gray-900 rounded-lg"
+                      id={"recording-#{recording.id}-link"}
+                    >
+                      <span title="Download recording">
+                        <.icon name="hero-arrow-down-tray-solid" class="w-6 h-6 dark:text-gray-400" />
+                      </span>
+                    </.link>
+                  </div>
+                </div>
+              </:action>
             </Flop.Phoenix.table>
+
+            <.pagination meta={@meta} />
+          </div>
+          <div
+            id="popup-container"
+            class="popup-container fixed top-0 left-0 w-full h-full bg-black bg-opacity-75 flex justify-center items-center hidden"
+          >
+            <button
+              class="popup-close absolute top-4 right-4 text-white"
+              phx-click={RecordingListLive.close_popup()}
+            >
+              ×
+            </button>
+            <video id="recording-player" autoplay class="w-full h-auto max-w-full max-h-[80%]">
+            </video>
           </div>
         </:tab_content>
 
