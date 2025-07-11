@@ -104,11 +104,26 @@ defmodule ExNVR.Nerves.RUT.Auth do
 
   defp authenticate(base_url, username, password) do
     url = base_url <> @login_path
+    conn_opts = [transport_opts: [verify: :verify_none]]
 
-    case Req.post(url, json: %{username: username, password: password}) do
-      {:ok, %Req.Response{status: 200, body: %{"data" => data}}}
+    resp =
+      Req.new(url: url)
+      |> track_redirected()
+      |> Req.post(
+        json: %{username: username, password: password},
+        connect_options: conn_opts
+      )
+
+    case resp do
+      {:ok, %Req.Response{status: 200, body: %{"data" => data}} = resp}
       when is_map_key(data, "expires") ->
-        req = Req.new(base_url: base_url <> "/api", auth: {:bearer, data["token"]})
+        req =
+          Req.new(
+            base_url: Map.get(resp.private, :final_url, base_url) <> "/api",
+            auth: {:bearer, data["token"]},
+            connect_options: conn_opts
+          )
+
         {:ok, req, data["expires"]}
 
       {:ok, %Req.Response{body: body}} ->
@@ -124,5 +139,16 @@ defmodule ExNVR.Nerves.RUT.Auth do
       {:ok, %{body: %{"success" => true}}} -> true
       _other -> false
     end
+  end
+
+  defp track_redirected(request, opts \\ []) do
+    request
+    |> Req.Request.register_options([:track_redirected])
+    |> Req.Request.merge_options(opts)
+    |> Req.Request.prepend_response_steps(track_redirected: &track_redirected_uri/1)
+  end
+
+  defp track_redirected_uri({request, response}) do
+    {request, put_in(response.private[:final_url], URI.to_string(%{request.url | path: nil}))}
   end
 end

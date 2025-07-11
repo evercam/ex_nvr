@@ -8,7 +8,7 @@ defmodule ExNVR.MixProject do
     [
       app: @app,
       version: @version,
-      elixir: "~> 1.17",
+      elixir: "~> 1.18",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
@@ -36,8 +36,7 @@ defmodule ExNVR.MixProject do
   # Type `mix help deps` for examples and options.
   defp deps do
     [
-      {:rtsp, "~> 0.2.0"},
-      {:media_codecs, "~> 0.3.0"},
+      {:rtsp, "~> 0.3.0"},
       {:ex_sdp, "~> 1.0"},
       {:bundlex, "~> 1.5", override: true},
       {:bcrypt_elixir, "~> 3.0"},

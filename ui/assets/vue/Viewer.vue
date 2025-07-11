@@ -87,12 +87,12 @@
             :pause-on-click="false"
             :video-options="videoOptions"
             :hls-options="{
-              manifestLoadingTimeOut: 60_000
+              manifestLoadingTimeOut: 60000
             }"
           />
           <div
             v-else
-            class="relative text-lg rounded-tr rounded-tl text-center bg-gray-200 dark:text-gray-200 w-full h-full dark:bg-gray-500 flex justify-center items-center d-flex"
+            class="relative text-lg rounded-tr rounded-tl text-center bg-gray-200 dark:text-gray-200 w-full h-full dark:bg-gray-400 flex justify-center items-center d-flex"
           >
             Device is not recording, live view is not available
           </div>

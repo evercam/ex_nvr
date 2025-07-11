@@ -8,6 +8,8 @@ defmodule ExNVR.Pipeline.Output.Thumbnailer do
   require ExNVR.Utils
   require Membrane.Logger
 
+  import ExNVR.MediaUtils, only: [to_annexb: 1]
+
   alias Membrane.{Buffer, H264, H265}
 
   def_input_pad :input,
@@ -88,7 +90,7 @@ defmodule ExNVR.Pipeline.Output.Thumbnailer do
   def handle_buffer(:input, _buffer, _ctx, state), do: {[], state}
 
   defp do_decode(buffer, state) do
-    with {:ok, decoded} <- Xav.Decoder.decode(state.decoder, buffer.payload),
+    with {:ok, decoded} <- Xav.Decoder.decode(state.decoder, to_annexb(buffer.payload)),
          {:ok, jpeg_image} <- to_jpeg(decoded.data, state),
          :ok <- File.write(image_path(state.dest, buffer), jpeg_image) do
       {[], %{state | last_buffer_pts: buffer.pts}}

@@ -207,12 +207,23 @@ defmodule ExNVR.Pipeline.Output.HLS do
     keyframe? = Utils.keyframe(last_buffer)
     timescale = variant.track.timescale
 
+    payload =
+      case variant.track.media do
+        :h264 ->
+          {_parameter_sets, au} = MediaCodecs.H264.pop_parameter_sets(last_buffer.payload)
+          MediaCodecs.H264.annexb_to_elementary_stream(au)
+
+        :h265 ->
+          {_parameter_sets, au} = MediaCodecs.H265.pop_parameter_sets(last_buffer.payload)
+          MediaCodecs.H265.annexb_to_elementary_stream(au)
+      end
+
     sample = %ExMP4.Sample{
       track_id: variant.track.id,
       dts: timescalify(Buffer.get_dts_or_pts(last_buffer), :nanosecond, timescale),
       pts: timescalify(last_buffer.pts, :nanosecond, timescale),
       sync?: keyframe?,
-      payload: MediaCodecs.H264.annexb_to_elementary_stream(last_buffer.payload),
+      payload: payload,
       duration: ExMP4.Helper.timescalify(duration, :nanosecond, timescale)
     }
 
@@ -279,6 +290,6 @@ defmodule ExNVR.Pipeline.Output.HLS do
 
   defp resolution(track), do: {track.width, track.height}
 
-  defp codecs(:h264, sps), do: MediaCodecs.H264.SPS.mime_type(sps, "avc1")
-  defp codecs(:h265, sps), do: MediaCodecs.H265.SPS.mime_type(sps, "hvc1")
+  defp codecs(:h264, sps), do: MediaCodecs.H264.NALU.SPS.mime_type(sps, "avc1")
+  defp codecs(:h265, sps), do: MediaCodecs.H265.NALU.SPS.mime_type(sps, "hvc1")
 end

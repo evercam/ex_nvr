@@ -14,21 +14,22 @@ defmodule ExNVR.Pipeline.Track do
   @type t :: %__MODULE__{
           type: media_type(),
           encoding: media_codec(),
+          timescale: non_neg_integer(),
           stats: Stat.t() | nil
         }
 
   @derive Jason.Encoder
   @enforce_keys [:type]
-  defstruct @enforce_keys ++ [encoding: nil, stats: nil]
+  defstruct @enforce_keys ++ [encoding: nil, stats: nil, timescale: 0]
 
-  @spec new(media_type(), media_codec()) :: t()
-  def new(type, encoding) do
+  @spec new(media_type(), media_codec(), Keyword.t()) :: t()
+  def new(type, encoding, opts \\ []) do
     encoding = encoding |> to_string() |> String.downcase() |> String.to_atom()
-    %__MODULE__{type: type, encoding: encoding}
+    %__MODULE__{type: type, encoding: encoding} |> struct!(opts)
   end
 
   @spec new(ExMP4.Track.t()) :: t()
   def new(%ExMP4.Track{} = track) do
-    %__MODULE__{type: track.type, encoding: track.media}
+    %__MODULE__{type: track.type, encoding: track.media, timescale: track.timescale}
   end
 end

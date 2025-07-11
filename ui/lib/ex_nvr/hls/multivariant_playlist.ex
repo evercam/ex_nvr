@@ -70,8 +70,11 @@ defmodule ExNVR.HLS.MultivariantPlaylist do
   @spec serialize(t()) :: {String.t(), %{variant() => String.t()}}
   def serialize(%__MODULE__{} = state) do
     master =
-      %MultivariantPlaylist{independent_segments: true, items: Map.values(state.streams)}
-      |> ExM3U8.serialize()
+      ExM3U8.serialize(%MultivariantPlaylist{
+        version: 7,
+        independent_segments: true,
+        items: Map.values(state.streams)
+      })
 
     playlists =
       Map.new(state.playlists, fn {name, playlist} ->
