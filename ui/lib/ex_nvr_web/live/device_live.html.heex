@@ -1,4 +1,4 @@
-<div class="grow mx-auto max-w-2xl e-my-6">
+<div class="grow mx-auto max-w-3xl e-my-6">
   <div class="px-6 lg:px-8 bg-gray-300 dark:bg-gray-800">
     <h3
       :if={@device.id == nil}
@@ -245,6 +245,15 @@
                 />
               </div>
             </div>
+
+            <div class="flex items-center gap-4 mb-2">
+              <.vue
+                v-component="ScheduleFormInput"
+                class="e-h-full"
+                form_field={Map.take(storage_config[:schedule], [:id, :name, :value])}
+                v-socket={@socket}
+              />
+            </div>
           </.inputs_for>
         </div>
         <div :if={@device_type == "ip"} id="snapshot-config" class="flex flex-col">
@@ -284,6 +293,14 @@
                   required
                 />
               </div>
+              <div :if={snapshot_config[:enabled].value}>
+                <.vue
+                  v-component="ScheduleFormInput"
+                  class="e-h-full"
+                  form_field={Map.take(snapshot_config[:schedule], [:id, :name, :value])}
+                  v-socket={@socket}
+                />
+              </div>
             </.inputs_for>
           </div>
         </div>
@@ -299,11 +316,16 @@
         </div>
       </div>
       <:actions>
-        <.button :if={is_nil(@device.id)} class="w-full" phx-disable-with="Creating...">
+        <.button
+          :if={is_nil(@device.id)}
+          id="submit-btn"
+          class="w-full"
+          phx-disable-with="Creating..."
+        >
           Create
         </.button>
 
-        <.button :if={@device.id} class="w-full" phx-disable-with="Updating...">
+        <.button :if={@device.id} id="submit-btn" class="w-full" phx-disable-with="Updating...">
           Update
         </.button>
       </:actions>

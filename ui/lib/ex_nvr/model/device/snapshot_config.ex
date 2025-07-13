@@ -31,7 +31,7 @@ defmodule ExNVR.Model.Device.SnapshotConfig do
 
   defp validate_config(changeset, true) do
     changeset
-    |> validate_required(__MODULE__.__schema__(:fields))
+    |> validate_required([:upload_interval, :remote_storage])
     |> validate_number(:upload_interval,
       greater_than_or_equal_to: 5,
       less_than_or_equal_to: 3600
@@ -49,10 +49,14 @@ defmodule ExNVR.Model.Device.SnapshotConfig do
   defp validate_schedule(%Ecto.Changeset{valid?: false} = changeset), do: changeset
 
   defp validate_schedule(changeset) do
-    changeset
-    |> get_field(:schedule)
-    |> Schedule.validate()
-    |> case do
+    schedule = get_field(changeset, :schedule)
+    do_validate_schedule(changeset, schedule)
+  end
+
+  defp do_validate_schedule(changeset, nil), do: changeset
+
+  defp do_validate_schedule(changeset, schedule) do
+    case Schedule.validate(schedule) do
       {:ok, schedule} ->
         put_change(changeset, :schedule, schedule)
 

@@ -45,6 +45,7 @@ defmodule ExNVRWeb.DeviceLive do
   def handle_event("validate", %{"device" => device_params}, socket) do
     device = socket.assigns.device
 
+    device_params = decode_schedule(device_params)
     {device_type, changeset} = get_validation_assigns(device, device_params)
 
     changeset
@@ -62,9 +63,7 @@ defmodule ExNVRWeb.DeviceLive do
 
   def handle_event("save_device", %{"device" => device_params}, socket) do
     device = socket.assigns.device
-    device_type = socket.assigns.device_type
-
-    device_params = put_default_schedule(device_params, device_type)
+    device_params = decode_schedule(device_params)
 
     if device.id,
       do: do_update_device(socket, device, device_params),
@@ -81,9 +80,7 @@ defmodule ExNVRWeb.DeviceLive do
     %Device{model: model, url: url, mac: mac}
   end
 
-  defp init_device(_device_params) do
-    %Device{}
-  end
+  defp init_device(_device_params), do: %Device{}
 
   defp get_validation_assigns(%{id: id} = device, device_params) when not is_nil(id) do
     device_type = Atom.to_string(device.type)
@@ -95,29 +92,6 @@ defmodule ExNVRWeb.DeviceLive do
     device_type = device_params["type"]
     changeset = Devices.change_device_creation(%Device{}, device_params)
     {device_type, changeset}
-  end
-
-  defp put_default_schedule(device_config, "file"), do: device_config
-
-  defp put_default_schedule(
-         %{"snapshot_config" => %{"enabled" => false}} = device_config,
-         _device_type
-       ),
-       do: device_config
-
-  defp put_default_schedule(%{"snapshot_config" => snapshot_config} = device_config, _device_type) do
-    snapshot_config =
-      Map.put(snapshot_config, "schedule", %{
-        "1" => ["00:00-23:59"],
-        "2" => ["00:00-23:59"],
-        "3" => ["00:00-23:59"],
-        "4" => ["00:00-23:59"],
-        "5" => ["00:00-23:59"],
-        "6" => ["00:00-23:59"],
-        "7" => ["00:00-23:59"]
-      })
-
-    Map.put(device_config, "snapshot_config", snapshot_config)
   end
 
   defp do_save_device(socket, device_params) do
@@ -183,6 +157,23 @@ defmodule ExNVRWeb.DeviceLive do
   defp list_remote_storages do
     RemoteStorages.list() |> Enum.map(& &1.name)
   end
+
+  defp decode_schedule(params) do
+    params =
+      if params["storage_config"],
+        do: update_in(params, ["storage_config", "schedule"], &do_decode_schedule/1),
+        else: params
+
+    if params["snapshot_config"],
+      do: update_in(params, ["snapshot_config", "schedule"], &do_decode_schedule/1),
+      else: params
+  end
+
+  defp do_decode_schedule(schedule) when is_binary(schedule) do
+    Jason.decode!(schedule)
+  end
+
+  defp do_decode_schedule(schedule), do: schedule
 
   defp humanize_capacity({capacity, _percentag}) do
     cond do
