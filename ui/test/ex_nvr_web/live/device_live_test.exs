@@ -3,7 +3,7 @@ defmodule ExNVRWeb.DeviceLiveTest do
 
   use ExNVRWeb.ConnCase
 
-  import ExNVR.{AccountsFixtures, DevicesFixtures, RemoteStoragesFixtures}
+  import ExNVR.{AccountsFixtures, DevicesFixtures}
   import Phoenix.LiveViewTest
 
   alias ExNVR.Devices
@@ -12,10 +12,7 @@ defmodule ExNVRWeb.DeviceLiveTest do
   @moduletag :tmp_dir
 
   setup %{conn: conn} do
-    %{
-      conn: log_in_user(conn, user_fixture()),
-      remote_storage: remote_storage_fixture()
-    }
+    %{conn: log_in_user(conn, user_fixture())}
   end
 
   describe "Device page" do
