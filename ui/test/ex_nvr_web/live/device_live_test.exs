@@ -338,5 +338,3 @@ defmodule ExNVRWeb.DeviceLiveTest do
     end
   end
 end
-
-

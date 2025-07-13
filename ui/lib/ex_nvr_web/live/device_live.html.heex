@@ -247,41 +247,11 @@
             </div>
 
             <div class="flex items-center gap-4 mb-2">
-              <label class="block font-medium text-black dark:text-white mt-1">Schedule</label>
-              <div class="flex gap-4 mt-1">
-                <label class="inline-flex items-center">
-                  <input
-                    type="radio"
-                    name="storage_schedule_mode"
-                    value="default"
-                    class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
-                    checked={@storage_schedule_mode == :default}
-                    phx-change="update_schedule_mode"
-                  />
-                  <span class="ml-2 text-black dark:text-white">Default</span>
-                </label>
-
-                <label class="inline-flex items-center">
-                  <input
-                    type="radio"
-                    name="storage_schedule_mode"
-                    value="custom"
-                    class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
-                    checked={@storage_schedule_mode == :custom}
-                    phx-change="update_schedule_mode"
-                  />
-                  <span class="ml-2 text-black dark:text-white">Custom</span>
-                </label>
-              </div>
-            </div>
-
-            <div :if={@storage_schedule_mode == :custom} class="-ml-4">
               <.vue
-                v-component="Schedule"
+                v-component="ScheduleFormInput"
                 class="e-h-full"
-                schedule={@storage_schedule}
+                form_field={Map.take(storage_config[:schedule], [:id, :name, :value])}
                 v-socket={@socket}
-                v-on:change={JS.push("update_storage_schedule")}
               />
             </div>
           </.inputs_for>
@@ -324,42 +294,12 @@
                 />
               </div>
               <div :if={snapshot_config[:enabled].value}>
-                <label class="block font-medium text-black dark:text-white mt-1">Schedule</label>
-                <div class="flex gap-4 mt-1">
-                  <label class="inline-flex items-center">
-                    <input
-                      type="radio"
-                      name="snapshot_schedule_mode"
-                      value="default"
-                      class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
-                      checked={@snapshot_schedule_mode == :default}
-                      phx-change="update_schedule_mode"
-                    />
-                    <span class="ml-2 text-black dark:text-white">Default</span>
-                  </label>
-
-                  <label class="inline-flex items-center">
-                    <input
-                      type="radio"
-                      name="snapshot_schedule_mode"
-                      value="custom"
-                      class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
-                      checked={@snapshot_schedule_mode == :custom}
-                      phx-change="update_schedule_mode"
-                    />
-                    <span class="ml-2 text-black dark:text-white">Custom</span>
-                  </label>
-                </div>
-
-                <div :if={@snapshot_schedule_mode == :custom} class="-ml-4">
-                  <.vue
-                    v-component="Schedule"
-                    class="e-h-full"
-                    schedule={@snapshot_schedule}
-                    v-socket={@socket}
-                    v-on:change={JS.push("update_snapshot_schedule")}
-                  />
-                </div>
+                <.vue
+                  v-component="ScheduleFormInput"
+                  class="e-h-full"
+                  form_field={Map.take(snapshot_config[:schedule], [:id, :name, :value])}
+                  v-socket={@socket}
+                />
               </div>
             </.inputs_for>
           </div>
