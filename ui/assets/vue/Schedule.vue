@@ -209,8 +209,7 @@ export default defineComponent({
     },
     isIdle(isIdle) {
       if (isIdle) {
-        this.mergeOverlappingSegments()
-        this.$emit('change', this.getFormattedSchedule())
+        this.emitChangeEvent()
       }
     },
   },
@@ -433,6 +432,8 @@ export default defineComponent({
 
         return {...d, segments: newSegs}
       })
+
+      this.emitChangeEvent()
     },
     onBackgroundMouseDown(event: MouseEvent) {
       const clickedElement = event.target as HTMLElement
@@ -593,6 +594,10 @@ export default defineComponent({
     showHour(hour: number): boolean {
       const idx = hour - 1
       return idx % this.tickInterval === 0 || hour === 24
+    },
+    emitChangeEvent() {
+      this.mergeOverlappingSegments()
+      this.$emit('change', this.getFormattedSchedule())
     },
   },
 })

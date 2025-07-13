@@ -68,12 +68,23 @@ export default defineComponent({
     schedule_mode(newValue) {
       if (newValue === 'default') {
         this.form_field.value = undefined;
+      } else if (newValue === 'custom') {
+        this.form_field.value = this.defaultSchedule;
       }
     }
   },
   data() {
     return {
       schedule_mode: this.form_field.value ? 'custom' : 'default',
+      defaultSchedule: {
+          "1": ["00:00-23:59"],
+          "2": ["00:00-23:59"],
+          "3": ["00:00-23:59"],
+          "4": ["00:00-23:59"],
+          "5": ["00:00-23:59"],
+          "6": ["00:00-23:59"],
+          "7": ["00:00-23:59"]
+        }
     }
   },
   methods: {

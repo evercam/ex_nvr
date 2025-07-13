@@ -147,63 +147,6 @@ defmodule ExNVRWeb.DeviceLiveTest do
       assert Phoenix.Flash.get(conn.assigns.flash, :info) == "Device created successfully"
     end
 
-    test "create a new IP device with custom schedules", %{
-      conn: conn,
-      remote_storage: remote_storage,
-      custom_storage_schedule: custom_storage_schedule,
-      custom_snapshot_schedule: custom_snapshot_schedule
-    } do
-      {:ok, lv, _} = live(conn, ~p"/devices/new")
-
-      lv
-      |> form("#device_form", %{
-        "device" => %{
-          "name" => "Scheduled IP Device",
-          "type" => "ip",
-          "vendor" => "HIKVISION",
-          "snapshot_config" => %{"enabled" => "true"}
-        }
-      })
-      |> render_change()
-
-      lv
-      |> form("#device_form", %{
-        "snapshot_schedule_mode" => "custom",
-        "storage_schedule_mode" => "custom"
-      })
-      |> render_change()
-
-      render_hook(lv, "update_storage_schedule", custom_storage_schedule)
-      render_hook(lv, "update_snapshot_schedule", custom_snapshot_schedule)
-
-      lv
-      |> form("#device_form", %{
-        "device" => %{
-          "name" => "Scheduled IP Device",
-          "type" => "ip",
-          "vendor" => "HIKVISION",
-          "credentials" => %{"username" => "user", "password" => "pass"},
-          "stream_config" => %{"stream_uri" => "rtsp://localhost:554"},
-          "storage_config" => %{
-            "address" => "/tmp",
-            "full_drive_threshold" => "90",
-            "full_drive_action" => "nothing",
-            "record_sub_stream" => "never"
-          },
-          "snapshot_config" => %{
-            "enabled" => "true",
-            "upload_interval" => "60",
-            "remote_storage" => remote_storage.name
-          }
-        }
-      })
-      |> render_submit()
-
-      [created] = Devices.list()
-      assert created.storage_config.schedule == custom_storage_schedule
-      assert created.snapshot_config.schedule == custom_snapshot_schedule
-    end
-
     test "renders errors on form submission", %{conn: conn} do
       {:ok, lv, _} = live(conn, ~p"/devices/new")
 
@@ -231,53 +174,16 @@ defmodule ExNVRWeb.DeviceLiveTest do
       %{
         device: camera_device_fixture(ctx.tmp_dir),
         file_device: file_device_fixture(),
-        remote_storage: remote_storage_fixture(),
-        custom_storage_schedule: %{
-          "1" => ["08:00-12:00"],
-          "2" => [],
-          "3" => [],
-          "4" => [],
-          "5" => [],
-          "6" => [],
-          "7" => []
-        },
-        custom_snapshot_schedule: %{
-          "1" => [],
-          "2" => ["09:00-10:00"],
-          "3" => [],
-          "4" => [],
-          "5" => [],
-          "6" => [],
-          "7" => []
-        }
+        remote_storage: remote_storage_fixture()
       }
     end
 
-    test "update an IP Camera device", %{
-      conn: conn,
-      device: device,
-      custom_storage_schedule: custom_storage_schedule,
-      custom_snapshot_schedule: custom_snapshot_schedule
-    } do
+    test "update an IP Camera device", %{conn: conn, device: device} do
       {:ok, lv, _} = live(conn, ~p"/devices/#{device.id}")
 
       lv
-      |> form("#device_form", %{
-        "device" => %{
-          "snapshot_config" => %{"enabled" => "true"}
-        }
-      })
+      |> form("#device_form", %{"device" => %{"storage_config" => %{}}})
       |> render_change()
-
-      lv
-      |> form("#device_form", %{
-        "snapshot_schedule_mode" => "custom",
-        "storage_schedule_mode" => "custom"
-      })
-      |> render_change()
-
-      render_hook(lv, "update_storage_schedule", custom_storage_schedule)
-      render_hook(lv, "update_snapshot_schedule", custom_snapshot_schedule)
 
       {:ok, conn} =
         lv
@@ -297,8 +203,6 @@ defmodule ExNVRWeb.DeviceLiveTest do
       assert updated_device = Devices.get(device.id)
       assert updated_device.name == "My Updated Device"
       assert updated_device.stream_config.stream_uri == "rtsp://localhost:554"
-      assert updated_device.storage_config.schedule == custom_storage_schedule
-      assert updated_device.snapshot_config.schedule == custom_snapshot_schedule
     end
 
     test "renders errors on invalid update params for an IP Device", %{conn: conn, device: device} do

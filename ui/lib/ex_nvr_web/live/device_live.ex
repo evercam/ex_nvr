@@ -159,9 +159,14 @@ defmodule ExNVRWeb.DeviceLive do
   end
 
   defp decode_schedule(params) do
-    params
-    |> update_in(["storage_config", "schedule"], &do_decode_schedule/1)
-    |> update_in(["snapshot_config", "schedule"], &do_decode_schedule/1)
+    params =
+      if params["storage_config"],
+        do: update_in(params, ["storage_config", "schedule"], &do_decode_schedule/1),
+        else: params
+
+    if params["snapshot_config"],
+      do: update_in(params, ["snapshot_config", "schedule"], &do_decode_schedule/1),
+      else: params
   end
 
   defp do_decode_schedule(schedule) when is_binary(schedule) do
