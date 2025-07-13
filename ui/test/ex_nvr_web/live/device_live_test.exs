@@ -14,25 +14,7 @@ defmodule ExNVRWeb.DeviceLiveTest do
   setup %{conn: conn} do
     %{
       conn: log_in_user(conn, user_fixture()),
-      remote_storage: remote_storage_fixture(),
-      custom_storage_schedule: %{
-        "1" => ["08:00-12:00"],
-        "2" => [],
-        "3" => [],
-        "4" => [],
-        "5" => [],
-        "6" => [],
-        "7" => []
-      },
-      custom_snapshot_schedule: %{
-        "1" => [],
-        "2" => ["09:00-10:00"],
-        "3" => [],
-        "4" => [],
-        "5" => [],
-        "6" => [],
-        "7" => []
-      }
+      remote_storage: remote_storage_fixture()
     }
   end
 
@@ -173,17 +155,12 @@ defmodule ExNVRWeb.DeviceLiveTest do
     setup ctx do
       %{
         device: camera_device_fixture(ctx.tmp_dir),
-        file_device: file_device_fixture(),
-        remote_storage: remote_storage_fixture()
+        file_device: file_device_fixture()
       }
     end
 
     test "update an IP Camera device", %{conn: conn, device: device} do
       {:ok, lv, _} = live(conn, ~p"/devices/#{device.id}")
-
-      lv
-      |> form("#device_form", %{"device" => %{"storage_config" => %{}}})
-      |> render_change()
 
       {:ok, conn} =
         lv
