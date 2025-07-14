@@ -108,7 +108,7 @@
 
 <script lang="ts">
 import type {PropType} from "vue"
-import {defineComponent} from "vue"
+import {defineComponent, ref} from "vue"
 import {ResizeObserverDirective} from "@evercam/ui"
 
 type DayCode = 0 | 1 | 2 | 3 | 4 | 5 | 6
@@ -171,14 +171,16 @@ export default defineComponent({
     sortedDays(): DaySchedule[] {
       return this.internalDays.slice().sort((a, b) => (a.day < b.day ? -1 : 1))
     },
-    segmentsContainerStyles(): Record<string, unknown> {
-      const mainContainer = this.$refs.mainContainer?.getBoundingClientRect()
+    segmentsContainerStyles(): Record<string, string> {
+      const mainContainer = this.$refs.mainContainer as HTMLElement
       if (!mainContainer || !this.segmentsContainerRect) return {}
+
+      const rect = mainContainer.getBoundingClientRect()
       return {
         width: `${this.segmentsContainerRect.width}px`,
         height: `${this.segmentsContainerRect.height}px`,
-        top: `${this.segmentsContainerRect.top - mainContainer.top}px`,
-        left: `${this.segmentsContainerRect.left - mainContainer.left}px`,
+        top: `${this.segmentsContainerRect.top - rect.top}px`,
+        left: `${this.segmentsContainerRect.left - rect.left}px`,
       }
     },
     pixelsPerHour(): number {
@@ -600,6 +602,10 @@ export default defineComponent({
       this.$emit('change', this.getFormattedSchedule())
     },
   },
+  setup() {
+    const mainContainer = ref<HTMLElement | null>(null)
+    return { mainContainer }
+  }
 })
 </script>
 
