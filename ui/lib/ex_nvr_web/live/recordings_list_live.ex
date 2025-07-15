@@ -116,6 +116,7 @@ defmodule ExNVRWeb.RecordingListLive do
               class="border rounded p-1"
               field={f.field}
               type={f.type}
+              label={f.label}
               phx-debounce="500"
               {f.rest}
             />
