@@ -63,6 +63,9 @@ jobs:
       EXNVR_REMOTE_SERVER_TOKEN: ${{ secrets.EXNVR_REMOTE_SERVER_TOKEN }}
       EXNVR_ICE_SERVERS: ${{ secrets.ICE_SERVERS }}
       SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+      LOKI_URL: ${{ vars.LOKI_URL }}
+      LOKI_USERNAME: ${{ secrets.LOKI_USERNAME }}
+      LOKI_PASSWORD: ${{ secrets.LOKI_PASSWORD }}
     steps:
       - uses: actions/checkout@v3
         with:
