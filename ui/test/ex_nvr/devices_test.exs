@@ -155,17 +155,11 @@ defmodule ExNVR.DevicesTest do
                errors_on(changeset)
     end
 
-    test "require upload_interval, remote_storage and schedule when snapshot config is enabled" do
+    test "require upload_interval, remote_storage when snapshot config is enabled" do
       {:error, changeset} =
         Devices.create(%{snapshot_config: %{enabled: true}})
 
-      assert %{
-               snapshot_config: %{
-                 remote_storage: ["can't be blank"],
-                 schedule: ["can't be blank"]
-               }
-             } =
-               errors_on(changeset)
+      assert %{snapshot_config: %{remote_storage: ["can't be blank"]}} = errors_on(changeset)
     end
 
     test "validate snapshot config upload interval" do
