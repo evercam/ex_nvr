@@ -75,7 +75,8 @@ defmodule ExNVR.Disk do
     :hotplug,
     :tran,
     :parts,
-    :form_factor
+    :form_factor,
+    :type
   ]
 
   @doc """
@@ -138,7 +139,7 @@ defmodule ExNVR.Disk do
       disk_info = smartctl_get_disk_info(device["path"])
       model = disk_info["model_name"] || String.trim(to_string(device["model"]))
 
-      %__MODULE__{
+      disk = %__MODULE__{
         name: device["name"],
         path: device["path"],
         vendor: get_vendor(device["vendor"], model),
@@ -151,6 +152,8 @@ defmodule ExNVR.Disk do
         fs: map_fs(device),
         form_factor: get_in(disk_info, ["form_factor", "name"])
       }
+
+      guess_storage_type(disk, disk_info)
     end)
   end
 
@@ -200,6 +203,21 @@ defmodule ExNVR.Disk do
     else
       %{}
     end
+  end
+
+  defp guess_storage_type(disk, smart_info) do
+    path = "/sys/block/#{disk.name}/queue/rotational"
+
+    type =
+      cond do
+        disk.tran == "nvme" -> :nvme
+        File.exists?(path) and String.trim(File.read!(path)) == "1" -> :hdd
+        smart_info["rotation_rate"] != 0 -> :hdd
+        smart_info["rotation_rate"] == 0 -> :ssd
+        true -> nil
+      end
+
+    %{disk | type: type}
   end
 
   defp to_integer(nil), do: nil
