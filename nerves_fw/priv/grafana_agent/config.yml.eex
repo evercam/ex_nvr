@@ -42,6 +42,7 @@ logs:
                 job: ex_nvr
                 __path__: /data/logs/ex_nvr.log
                 host: <%= @kit_id %>
+                nerves: true
           pipeline_stages:
           - match:
               selector: '{job="ex_nvr"}'
