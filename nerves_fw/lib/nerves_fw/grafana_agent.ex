@@ -139,7 +139,7 @@ defmodule ExNVR.Nerves.GrafanaAgent do
       true ->
         [
           loki_url: config[:url],
-          loki_usernane: config[:username],
+          loki_username: config[:username],
           loki_password: config[:password],
           kit_id: kit_id
         ]
