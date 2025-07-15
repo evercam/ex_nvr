@@ -6,8 +6,8 @@ defmodule ExNVRWeb.DeviceDetailsLive do
   import ExNVRWeb.RecordingListLive, only: [recording_details_popover: 1]
 
   alias ExNVR.{Devices, Recordings}
-  alias ExNVRWeb.Router.Helpers, as: Routes
   alias ExNVRWeb.RecordingListLive
+  alias ExNVRWeb.Router.Helpers, as: Routes
 
   @impl true
   def mount(%{"id" => device_id} = params, _session, socket) do
@@ -111,9 +111,20 @@ defmodule ExNVRWeb.DeviceDetailsLive do
     sort_params =
       Map.take(params, ["order_by", "order_directions"])
 
-    params = params["filter_params"] || sort_params || %{}
+    params =
+      params["filter_params"] || sort_params || %{}
 
-    case Recordings.get_recordings_by_device_id(socket.assigns.device.id, params) do
+    nested_filter_params =
+      Flop.nest_filters(%{device_id: socket.assigns.device.id, filters: params["filters"]}, [
+        :device_id
+      ])
+      |> then(fn filter ->
+        params
+        |> Map.put("filters", filter.filters)
+        |> Map.merge(sort_params)
+      end)
+
+    case Recordings.list(nested_filter_params) do
       {:ok, {recordings, meta}} ->
         socket
         |> assign(meta: meta, recordings: recordings, sort_params: sort_params)
@@ -137,12 +148,13 @@ defmodule ExNVRWeb.DeviceDetailsLive do
           start_date: [op: :>=, type: "datetime-local", label: "Start Date"],
           end_date: [op: :<=, type: "datetime-local", label: "End Date"]
         ]}
-      >
+        >
         <div>
           <.input
             class="border rounded p-1"
             field={f.field}
             type={f.type}
+            label={f.label}
             phx-debounce="500"
             {f.rest}
           />
@@ -168,6 +180,37 @@ defmodule ExNVRWeb.DeviceDetailsLive do
 
         <:tab_content for="details">
           <div class="space-y-2 text-black dark:text-white">
+            <.table
+              id="details"
+              rows={[@device]}
+              >
+              <:col :let={device} label="Name"> {device.name} </:col>
+              <:col :let={device} label="Type">{Atom.to_string(device.type)} </:col>
+              <:col :let={device} label="Status">
+                <div class="flex items-center">
+                  <div class={
+                  ["h-2.5 w-2.5 rounded-full mr-2"] ++
+                    case device.state do
+                      :recording -> ["bg-green-500"]
+                      :streaming -> ["bg-green-500"]
+                      :failed -> ["bg-red-500"]
+                      :stopped -> ["bg-yellow-500"]
+                    end
+                  }>
+                  </div>
+                  {String.upcase(to_string(device.state))}
+                </div>
+              </:col>
+              <:col :let={device} label="Created At">{Calendar.strftime(
+                device.inserted_at,
+                "%b %d, %Y %H:%M:%S %Z"
+              )}
+              </:col>
+
+
+              <:col :let={device} label="TimeZone">{device.timezone}</:col>
+
+            </.table>
             <p><strong>Name:</strong> {@device.name}</p>
             <p><strong>Type:</strong> {Atom.to_string(@device.type)}</p>
             <p><strong>Status:</strong> {Atom.to_string(@device.state)}</p>
@@ -178,12 +221,9 @@ defmodule ExNVRWeb.DeviceDetailsLive do
               )}
             </p>
             <p><strong>Timezone:</strong> {@device.timezone}</p>
-            <div class="mt-4">
-              <img src={~p"/api/devices/#{@device.id}/snapshot"} class="max-w-md" />
-            </div>
           </div>
         </:tab_content>
-        
+
     <!-- recordings tab -->
         <:tab_content for="recordings">
           <div class="text-center text-gray-500 dark:text-gray-400">
@@ -211,37 +251,34 @@ defmodule ExNVRWeb.DeviceDetailsLive do
                     phx-click="fetch-details"
                     phx-value-id={recording.id}
                     type="button"
-                  >
+                    >
                     <span title="Show information">
                       <.icon
-                        name="hero-information-circle-solid"
-                        class="w-6 h-6 mr-2 dark:text-gray-400 cursor-pointer"
-                      />
+                  name="hero-information-circle-solid"
+                  class="w-6 h-6 mr-2 dark:text-gray-400 cursor-pointer"
+                />
                     </span>
                   </button>
-
                   <.recording_details_popover
-                    recording={recording}
-                    rec_details={@files_details[recording.id]}
-                  />
+              recording={recording}
+              rec_details={@files_details[recording.id]}
+            />
                   <span
                     title="Preview recording"
                     phx-click={RecordingListLive.open_popup(recording)}
                     id={"thumbnail-#{recording.id}"}
-                  >
+                    >
                     <.icon
-                      name="hero-eye-solid"
-                      class="w-6 h-6 z-auto mr-2 dark:text-gray-400 cursor-pointer thumbnail"
-                    />
+                name="hero-eye-solid"
+                class="w-6 h-6 z-auto mr-2 dark:text-gray-400 cursor-pointer thumbnail"
+              />
                   </span>
                   <div class="flex justify-end">
                     <.link
-                      href={
-                        ~p"/api/devices/#{recording.device_id}/recordings/#{recording.filename}/blob"
-                      }
+                      href={~p"/api/devices/#{recording.device_id}/recordings/#{recording.filename}/blob"}
                       class="inline-flex items-center text-gray-900 rounded-lg"
                       id={"recording-#{recording.id}-link"}
-                    >
+                      >
                       <span title="Download recording">
                         <.icon name="hero-arrow-down-tray-solid" class="w-6 h-6 dark:text-gray-400" />
                       </span>
@@ -249,6 +286,7 @@ defmodule ExNVRWeb.DeviceDetailsLive do
                   </div>
                 </div>
               </:action>
+
             </Flop.Phoenix.table>
 
             <.pagination meta={@meta} />

@@ -6,17 +6,6 @@ defmodule ExNvrWeb.DeviceDetailsLiveTest do
 
   @moduletag :tmp_dir
 
-  @doc """
-    check list for this test
-
-  1. check the rendering of that page
-  2. check if the tabs are available
-  3. check if the tabs contains the data needed
-  4.  
-
-  test the tab change feat
-  test the details of each tab
-  """
   describe "Device details page" do
     setup ctx do
       %{
@@ -48,22 +37,14 @@ defmodule ExNvrWeb.DeviceDetailsLiveTest do
         |> log_in_user(user_fixture())
         |> live(~p"/devices/#{device.id}/details")
 
-      tabs
-      |> Enum.map(fn tab ->
-        {:ok, new_html} =
-          lv
-          |> element(~s|[phx-click="switch_tab"][phx-value-tab=#{tab}]|)
-          |> render_click()
-          |> Floki.parse_document()
+      for tab <- tabs do
+        element = element(lv, "[phx-click='switch_tab'][phx-value-tab='#{tab}']")
+        assert has_element?(element)
 
-        # check switch tabs when click happens
-        [{"li", attrs, _children}] =
-          new_html
-          |> Floki.find("#tab-#{tab}")
+        _html = render_click(element)
 
-        {"aria-selected", value} = List.keyfind(attrs, "aria-selected", 0)
-        assert value == "true"
-      end)
+        assert element(lv, "#tab-#{tab}[aria-selected='true']") |> has_element?()
+      end
     end
   end
 end
