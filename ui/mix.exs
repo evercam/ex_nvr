@@ -84,7 +84,7 @@ defmodule ExNVR.MixProject do
       {:ex_onvif, "~> 0.7.1"},
       {:slipstream, "~> 1.2.0"},
       {:live_vue, "~> 0.5.7"},
-      {:sentry, "~> 10.9"},
+      {:sentry, "~> 11.0"},
       {:xav, "~> 0.11.0"},
       {:live_debugger, "~> 0.2.0", only: :dev},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
