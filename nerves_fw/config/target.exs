@@ -159,7 +159,7 @@ config :mdns_lite,
 
 config :nerves_hub_link,
   connect: true,
-  host: URI.parse(System.fetch_env!("NERVES_HUB_URI")).host,
+  host: URI.parse(System.fetch_env!("NERVES_HUB_DEVICES_URI")).host,
   remote_iex: true,
   shared_secret: [
     product_key: System.get_env("NERVES_HUB_PRODUCT_KEY", "fake_key"),
