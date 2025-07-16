@@ -138,6 +138,7 @@ defmodule ExNVR.Hardware.Victron do
 
   @speed 19_200
   @reporting_interval :timer.seconds(15)
+  @restart_interval :timer.hours(1)
   @last_data_update_in_seconds 30
 
   @alarm_reasons [
@@ -164,6 +165,7 @@ defmodule ExNVR.Hardware.Victron do
       pid: pid,
       data: %__MODULE__{},
       timer: nil,
+      restart_timer: nil,
       datetime: DateTime.utc_now()
     }
 
@@ -172,17 +174,12 @@ defmodule ExNVR.Hardware.Victron do
 
   @impl true
   def handle_continue(:probe, state) do
-    options = [
-      active: false,
-      speed: @speed,
-      framing: {Circuits.UART.Framing.Line, separator: "\r\n"}
-    ]
-
-    with :ok <- Circuits.UART.open(state.pid, state.serial_port, options),
+    with :ok <- Circuits.UART.open(state.pid, state.serial_port, uart_options()),
          true <- victron_device?(state) do
       Circuits.UART.configure(state.pid, active: true)
       {:ok, timer_ref} = :timer.send_interval(@reporting_interval, :report)
-      {:noreply, %{state | timer: timer_ref}}
+      {:ok, restart_timer} = :timer.send_interval(@restart_interval, :restart)
+      {:noreply, %{state | timer: timer_ref, restart_timer: restart_timer}}
     else
       _other ->
         Logger.info("#{inspect(state.serial_port)} is not a victron serial port")
@@ -214,6 +211,16 @@ defmodule ExNVR.Hardware.Victron do
   end
 
   @impl true
+  def handle_info(:restart, state) do
+    # Sometimes the Victron stuck and send the same
+    # we restart the connection to avoid such issues
+    :ok = Circuits.UART.close(state.pid)
+    :ok = Circuits.UART.open(state.pid, state.serial_port, uart_options(true))
+
+    {:noreply, state}
+  end
+
+  @impl true
   def handle_info(_msg, state) do
     {:noreply, state}
   end
@@ -222,6 +229,14 @@ defmodule ExNVR.Hardware.Victron do
   def terminate(_reason, state) do
     Circuits.UART.close(state.pid)
     :timer.cancel(state.timer)
+  end
+
+  defp uart_options(active \\ false) do
+    [
+      active: active,
+      speed: @speed,
+      framing: {Circuits.UART.Framing.Line, separator: "\r\n"}
+    ]
   end
 
   defp victron_device?(state, max_attemots \\ 3)

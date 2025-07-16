@@ -28,15 +28,10 @@ config :live_vue,
   ssr_module: LiveVue.SSR.NodeJS,
   ssr: false
 
-root_source_code = [
-  File.cwd!(),
-  Path.join([File.cwd!(), "..", "rtsp"])
-]
-
 config :sentry,
-  release: "ex_nvr@0.21.0",
+  release: "ex_nvr@0.22.0",
   report_deps: false,
-  root_source_code_paths: root_source_code,
+  root_source_code_paths: File.cwd!(),
   context_lines: 5,
   environment_name: config_env(),
   enable_source_code_context: true

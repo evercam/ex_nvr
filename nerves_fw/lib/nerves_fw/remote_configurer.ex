@@ -167,6 +167,9 @@ defmodule ExNVR.Nerves.RemoteConfigurer do
         prom_url: config["prom_url"],
         prom_username: config["prom_username"],
         prom_password: config["prom_password"],
+        loki_url: config["loki_url"],
+        loki_username: config["loki_username"],
+        loki_password: config["loki_password"],
         kit_id: kit_id()
       )
 
