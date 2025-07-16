@@ -13,15 +13,15 @@ defmodule ExNVR.Nerves.Netbird.Client do
     GenServer.call(__MODULE__, {:up, management_url, setup_key, host}, @timeout)
   end
 
-  def up() do
+  def up do
     GenServer.call(__MODULE__, :up, @timeout)
   end
 
-  def down() do
+  def down do
     GenServer.call(__MODULE__, :down, @timeout)
   end
 
-  def status() do
+  def status do
     GenServer.call(__MODULE__, :status, @timeout)
   end
 

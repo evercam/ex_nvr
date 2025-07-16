@@ -7,7 +7,8 @@ defmodule ExNVR.Nerves.SystemStatus do
   use GenServer
 
   alias ExNVR.Nerves.Monitoring.UPS
-  alias ExNVR.Nerves.RUT
+  alias ExNVR.Nerves.{Netbird, RUT}
+  alias Nerves.Runtime
 
   def start_link(_options) do
     GenServer.start_link(__MODULE__, %{}, name: __MODULE__)
@@ -25,7 +26,7 @@ defmodule ExNVR.Nerves.SystemStatus do
     :ok = ExNVR.SystemStatus.set(:router, rut_data())
     :ok = ExNVR.SystemStatus.set(:netbird, netbird())
     :ok = ExNVR.SystemStatus.set(:nerves, true)
-    :ok = ExNVR.SystemStatus.set(:device_model, Nerves.Runtime.KV.get("a.nerves_fw_platform"))
+    :ok = ExNVR.SystemStatus.set(:device_model, Runtime.KV.get("a.nerves_fw_platform"))
     :ok = ExNVR.SystemStatus.set(:ups, ups_data())
 
     Process.send_after(self(), :collect_system_metrics, to_timeout(second: 30))
@@ -37,28 +38,28 @@ defmodule ExNVR.Nerves.SystemStatus do
     {:noreply, state}
   end
 
-  defp hostname() do
+  defp hostname do
     case Nerves.Runtime.KV.get("nerves_evercam_id") do
       "" -> :inet.gethostname() |> elem(1) |> List.to_string()
       evercam_id -> evercam_id
     end
   end
 
-  defp netbird() do
-    case ExNVR.Nerves.Netbird.status() do
+  defp netbird do
+    case Netbird.status() do
       {:ok, data} -> data
       _error -> false
     end
   end
 
-  defp rut_data() do
+  defp rut_data do
     case RUT.system_information() do
       {:ok, data} -> data
       _error -> nil
     end
   end
 
-  defp ups_data() do
+  defp ups_data do
     case Process.whereis(UPS) do
       pid when is_pid(pid) -> UPS.state(pid)
       _other -> nil

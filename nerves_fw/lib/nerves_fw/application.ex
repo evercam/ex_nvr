@@ -33,11 +33,11 @@ defmodule ExNVR.Nerves.Application do
     common_config()
   end
 
-  def target() do
+  def target do
     Application.get_env(:ex_nvr_fw, :target)
   end
 
-  def grafana_agent_config() do
+  def grafana_agent_config do
     [
       mac_address: VintageNet.get(["interface", "eth0", "mac_address"]),
       serial_number: Runtime.serial_number(),
@@ -46,7 +46,7 @@ defmodule ExNVR.Nerves.Application do
     ]
   end
 
-  defp common_config() do
+  defp common_config do
     [
       {ExNVR.Nerves.Netbird, []},
       {ExNVR.Nerves.DiskMounter, []},

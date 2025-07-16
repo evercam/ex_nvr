@@ -8,6 +8,7 @@ defmodule ExNVR.Nerves.GrafanaAgent do
   require Logger
 
   alias __MODULE__.ConfigRenderer
+  alias Nerves.Runtime
 
   @github_api_url "https://api.github.com/repos/grafana/agent/releases"
 
@@ -91,7 +92,7 @@ defmodule ExNVR.Nerves.GrafanaAgent do
     {:noreply, state}
   end
 
-  defp grafana_agent_download_url() do
+  defp grafana_agent_download_url do
     Req.get!(@github_api_url,
       headers: [{"content-type", "application/vnd.github+json"}],
       params: [per_page: 1]
@@ -125,8 +126,8 @@ defmodule ExNVR.Nerves.GrafanaAgent do
     end
   end
 
-  defp loki_config() do
-    kit_id = Nerves.Runtime.KV.get("nerves_evercam_id")
+  defp loki_config do
+    kit_id = Runtime.KV.get("nerves_evercam_id")
     config = Application.get_env(:ex_nvr_fw, :loki, [])
 
     cond do

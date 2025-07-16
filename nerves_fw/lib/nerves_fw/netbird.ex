@@ -20,9 +20,9 @@ defmodule ExNVR.Nerves.Netbird do
     Client.up(management_url, setup_key, host)
   end
 
-  def up(), do: Client.up()
+  def up, do: Client.up()
 
-  def status(), do: Client.status()
+  def status, do: Client.status()
 
   @impl true
   def init(opts) do

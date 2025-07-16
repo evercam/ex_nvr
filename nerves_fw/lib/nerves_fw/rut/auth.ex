@@ -86,7 +86,7 @@ defmodule ExNVR.Nerves.RUT.Auth do
       else: {:error, :no_credentials}
   end
 
-  defp get_default_gateway() do
+  defp get_default_gateway do
     case System.cmd("ip", ["route"], stderr_to_stdout: true) do
       {output, 0} ->
         String.split(output, "\n")

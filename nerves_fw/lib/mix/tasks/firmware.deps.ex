@@ -1,4 +1,6 @@
 defmodule Mix.Tasks.Firmware.Deps do
+  @moduledoc false
+
   use Mix.Task
 
   @github_api_url "https://api.github.com/repos/:owner/releases"
@@ -19,7 +21,7 @@ defmodule Mix.Tasks.Firmware.Deps do
     :ok
   end
 
-  defp download_netbird() do
+  defp download_netbird do
     tmp_path = Path.join(System.tmp_dir!(), "netbird.tar.xz")
 
     Req.get!(netbird_download_url(), into: File.stream!(tmp_path))
@@ -30,7 +32,7 @@ defmodule Mix.Tasks.Firmware.Deps do
     File.rm!(tmp_path)
   end
 
-  defp netbird_download_url() do
+  defp netbird_download_url do
     Req.get!(repo_url(@netbird_repo),
       headers: [{"content-type", "application/vnd.github+json"}],
       params: [per_page: 1]
