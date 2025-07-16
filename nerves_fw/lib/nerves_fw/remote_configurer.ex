@@ -15,7 +15,7 @@ defmodule ExNVR.Nerves.RemoteConfigurer do
 
   require Logger
 
-  alias ExNVR.{Accounts, Model}
+  alias ExNVR.Accounts
   alias ExNVR.Nerves.{DiskMounter, GrafanaAgent, Netbird}
   alias Nerves.Runtime
   alias Req.Response
