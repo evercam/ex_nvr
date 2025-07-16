@@ -30,6 +30,8 @@ defmodule NervesFw.MixProject do
 
   # Run "mix help deps" to learn about dependencies.
   defp deps do
+    env = if Mix.env() == :prod, do: :prod, else: :dev
+
     [
       # Dependencies for all targets
       {:nerves, "~> 1.10", runtime: false},
@@ -38,10 +40,9 @@ defmodule NervesFw.MixProject do
       {:toolshed, "~> 0.4.0"},
       {:nerves_hub_link, "~> 2.7"},
       {:nerves_hub_cli, "~> 2.0"},
-      {:ex_nvr, path: "../ui"},
+      {:ex_nvr, path: "../ui", env: env},
       {:circuits_gpio, "~> 2.1"},
       {:circuits_i2c, "~> 2.0"},
-      {:phoenix_live_reload, "~> 1.2", only: :dev},
 
       # Allow Nerves.Runtime on host to support development, testing and CI.
       # See config/host.exs for usage.
