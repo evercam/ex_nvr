@@ -30,10 +30,9 @@ defmodule NervesFw.MixProject do
 
   # Run "mix help deps" to learn about dependencies.
   defp deps do
-    [
-      # {:tesla, "~> 1.13.2", override: true},
-      # {:keen_loki_logger, "~> 0.5.1"},
+    env = if Mix.env() == :prod, do: :prod, else: :dev
 
+    [
       # Dependencies for all targets
       {:nerves, "~> 1.10", runtime: false},
       {:shoehorn, "~> 0.9.1"},
@@ -41,10 +40,9 @@ defmodule NervesFw.MixProject do
       {:toolshed, "~> 0.4.0"},
       {:nerves_hub_link, "~> 2.7"},
       {:nerves_hub_cli, "~> 2.0"},
-      {:ex_nvr, path: "../ui"},
+      {:ex_nvr, path: "../ui", env: env},
       {:circuits_gpio, "~> 2.1"},
       {:circuits_i2c, "~> 2.0"},
-      {:phoenix_live_reload, "~> 1.2", only: :dev},
 
       # Allow Nerves.Runtime on host to support development, testing and CI.
       # See config/host.exs for usage.
@@ -52,7 +50,7 @@ defmodule NervesFw.MixProject do
 
       # Dependencies for all targets except :host
       {:nerves_pack, "~> 0.7.0", targets: @all_targets},
-      {:mimic, "~> 1.12.0", only: :test},
+      {:mimic, "~> 2.0.0", only: :test},
 
       # Dependencies for specific targets
       # NOTE: It's generally low risk and recommended to follow minor version

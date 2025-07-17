@@ -59,23 +59,7 @@ defmodule ExNVR.Nerves.RUT.Scheduler do
   def new_instances(schedule, pin, status) do
     schedule
     |> reverse_schedule(status != 1)
-    |> Enum.flat_map(fn {day, times} ->
-      day = rem(String.to_integer(day), 7)
-
-      Enum.map(times, fn %{start_time: start_time, end_time: end_time} ->
-        end_time = Time.add(end_time, 1)
-        end_day = if Time.compare(end_time, ~T(00:00:00)) == :eq, do: rem(day + 1, 7), else: day
-
-        %Instance{
-          enabled: true,
-          pin: pin,
-          start_day: day,
-          start_time: start_time,
-          end_day: end_day,
-          end_time: end_time
-        }
-      end)
-    end)
+    |> Enum.flat_map(fn {day, times} -> new_instance(day, times, pin) end)
     |> combine_instances()
   end
 
@@ -113,6 +97,24 @@ defmodule ExNVR.Nerves.RUT.Scheduler do
     Enum.chunk_every(intervals, 2, 1, :discard)
     |> Enum.map(fn [interval1, interval2] ->
       %{start_time: Time.add(interval1.end_time, 1), end_time: Time.add(interval2.start_time, -1)}
+    end)
+  end
+
+  defp new_instance(day, times, pin) do
+    day = rem(String.to_integer(day), 7)
+
+    Enum.map(times, fn %{start_time: start_time, end_time: end_time} ->
+      end_time = Time.add(end_time, 1)
+      end_day = if Time.compare(end_time, ~T(00:00:00)) == :eq, do: rem(day + 1, 7), else: day
+
+      %Instance{
+        enabled: true,
+        pin: pin,
+        start_day: day,
+        start_time: start_time,
+        end_day: end_day,
+        end_time: end_time
+      }
     end)
   end
 

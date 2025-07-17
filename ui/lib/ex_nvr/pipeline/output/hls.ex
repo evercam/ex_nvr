@@ -163,7 +163,7 @@ defmodule ExNVR.Pipeline.Output.HLS do
 
         :h265 ->
           {{vps, sps, pps}, _au} = MediaCodecs.H265.pop_parameter_sets(buffer.payload)
-          variant = %{variant | track: %{variant.track | priv_data: get_hevc_dcr(vps, sps, pps)}}
+          variant = %{variant | track: %{variant.track | priv_data: Box.Hvcc.new(vps, sps, pps)}}
           {variant, MediaCodecs.H265.NALU.parse(List.first(sps))}
       end
 

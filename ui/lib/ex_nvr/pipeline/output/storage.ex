@@ -296,7 +296,7 @@ defmodule ExNVR.Pipeline.Output.Storage do
 
         track.media == :h265 ->
           {{vps, sps, pps}, au} = MediaCodecs.H265.pop_parameter_sets(last_buffer.payload)
-          state = %{state | track: %{state.track | priv_data: get_hevc_dcr(vps, sps, pps)}}
+          state = %{state | track: %{state.track | priv_data: Box.Hvcc.new(vps, sps, pps)}}
           {state, au}
       end
 

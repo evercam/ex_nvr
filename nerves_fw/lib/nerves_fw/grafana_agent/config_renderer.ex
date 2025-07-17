@@ -15,6 +15,24 @@ defmodule ExNVR.Nerves.GrafanaAgent.ConfigRenderer do
     File.write(config_file_path, rendered_config)
   end
 
+  @spec generate_log_config(Keyword.t(), Path.t()) :: String.t()
+  def generate_log_config(opts, config_file) do
+    config = File.read!(config_file)
+
+    if not String.contains?(config, "logs:") do
+      template_config =
+        template_file(opts)
+        |> File.stream!(:line)
+        |> Stream.drop_while(&(not String.starts_with?(&1, "logs:")))
+        |> Stream.take_while(&(String.starts_with?(&1, "logs:") or String.match?(&1, ~r/^\s+/)))
+        |> Enum.join()
+
+      rendered_config = EEx.eval_string(template_config, assigns: opts)
+
+      File.write!(config_file, config <> "\n\n" <> rendered_config)
+    end
+  end
+
   defp template_file(%{template_file: file}), do: file
 
   defp template_file(_) do

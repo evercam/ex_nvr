@@ -8,8 +8,8 @@ defmodule ExNVR.Nerves.Monitoring.PowerSchedule do
 
   require Logger
 
-  alias ExNVR.Devices
-  alias ExNVR.Model.Schedule
+  alias ExNVR.{Devices, Pipelines}
+  alias ExNVR.Model.{Device, Schedule}
   alias ExNVR.Nerves.{DiskMounter, SystemSettings}
 
   def start_link(opts) do
@@ -67,7 +67,7 @@ defmodule ExNVR.Nerves.Monitoring.PowerSchedule do
     Logger.warning("[Power schedule]: unknown action #{inspect(action)}")
   end
 
-  defp get_settings() do
+  defp get_settings do
     power_config = SystemSettings.get_settings().power_schedule
 
     %{
@@ -76,10 +76,10 @@ defmodule ExNVR.Nerves.Monitoring.PowerSchedule do
     }
   end
 
-  defp stop_recording() do
+  defp stop_recording do
     Devices.list()
-    |> Enum.filter(&ExNVR.Model.Device.recording?/1)
-    |> Enum.each(&ExNVR.Pipelines.Main.stop_recording/1)
+    |> Enum.filter(&Device.recording?/1)
+    |> Enum.each(&Pipelines.Main.stop_recording/1)
 
     :timer.apply_after(to_timeout(second: 2), fn -> DiskMounter.umount() end)
   end
