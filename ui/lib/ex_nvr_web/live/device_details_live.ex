@@ -207,16 +207,6 @@ defmodule ExNVRWeb.DeviceDetailsLive do
 
               <:col :let={device} label="TimeZone">{device.timezone}</:col>
             </.table>
-            <p><strong>Name:</strong> {@device.name}</p>
-            <p><strong>Type:</strong> {Atom.to_string(@device.type)}</p>
-            <p><strong>Status:</strong> {Atom.to_string(@device.state)}</p>
-            <p>
-              <strong>Created:</strong> {Calendar.strftime(
-                @device.inserted_at,
-                "%b %d, %Y %H:%M:%S %Z"
-              )}
-            </p>
-            <p><strong>Timezone:</strong> {@device.timezone}</p>
           </div>
         </:tab_content>
         
