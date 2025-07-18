@@ -207,13 +207,14 @@ defmodule ExNVR.Disk do
 
   defp guess_storage_type(disk, smart_info) do
     path = "/sys/block/#{disk.name}/queue/rotational"
+    rotation_rate = Map.get(smart_info, "rotation_rate")
 
     type =
       cond do
         disk.tran == "nvme" -> :nvme
         File.exists?(path) and String.trim(File.read!(path)) == "1" -> :hdd
-        smart_info["rotation_rate"] != 0 -> :hdd
-        smart_info["rotation_rate"] == 0 -> :ssd
+        rotation_rate != nil and rotation_rate != 0 -> :hdd
+        rotation_rate == 0 -> :ssd
         true -> nil
       end
 
