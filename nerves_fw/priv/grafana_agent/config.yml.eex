@@ -31,7 +31,7 @@ logs:
         basic_auth:
           username: "<%= @loki_username %>"
           password: "<%= @loki_password %>"
-  positions_directory: /root/grafana-agent/positions
+  positions_directory: /root/grafana_agent/positions
   configs:
     - name: local
       scrape_configs:
