@@ -223,7 +223,7 @@ defmodule ExNVR.Pipeline.Source.RTSP do
   defp reconnect(stream, reason) do
     delay = calculate_retry_delay(stream.reconnect_attempt)
 
-    Membrane.Logger.error("""
+    Membrane.Logger.warning("""
     Error while connecting to #{stream.type}, retrying in #{delay} ms
     Reason: #{inspect(reason)}
     """)

@@ -31,7 +31,7 @@ logs:
         basic_auth:
           username: "<%= @loki_username %>"
           password: "<%= @loki_password %>"
-  positions_directory: /tmp/positions
+  positions_directory: /root/grafana_agent/positions
   configs:
     - name: local
       scrape_configs:
@@ -53,6 +53,9 @@ logs:
                     time:
               - labels:
                   level:
+              - timestamp:
+                  source: time
+                  format: RFC3339
               - template:
                   source: message
                   template: '{{ omit (mustFromJson .Entry) "severity" "time" | mustToJson  }}'

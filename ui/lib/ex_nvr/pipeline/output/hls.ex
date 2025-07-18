@@ -66,7 +66,7 @@ defmodule ExNVR.Pipeline.Output.HLS do
 
     state =
       cond do
-        is_nil(old_stream_format) ->
+        is_nil(variant.track) ->
           put_in(state, [:variants, variant.name], %{
             variant
             | track: track_from_stream_format(stream_format)

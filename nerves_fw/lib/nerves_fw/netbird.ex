@@ -3,6 +3,8 @@ defmodule ExNVR.Nerves.Netbird do
 
   use Supervisor
 
+  require Logger
+
   alias __MODULE__.Client
 
   @default_config [
@@ -20,9 +22,11 @@ defmodule ExNVR.Nerves.Netbird do
     Client.up(management_url, setup_key, host)
   end
 
-  def up, do: Client.up()
+  defdelegate up, to: Client
 
-  def status, do: Client.status()
+  defdelegate status, to: Client
+
+  defdelegate down, to: Client
 
   @impl true
   def init(opts) do
@@ -33,9 +37,16 @@ defmodule ExNVR.Nerves.Netbird do
       File.mkdir!(config_dir)
     end
 
+    logger_fn = fn log ->
+      case String.split(log, " ", parts: 3) do
+        [_date_time, level, message] -> Logger.log(map_log_level(level), ["netbird: ", message])
+        _other -> Logger.log(:info, log)
+      end
+    end
+
     children = [
       {MuonTrap.Daemon,
-       ["netbird", netbird_args(opts), [log_output: :info, stderr_to_stdout: true]]},
+       ["netbird", netbird_args(opts), [logger_fun: logger_fn, stderr_to_stdout: true]]},
       {__MODULE__.Client, opts}
     ]
 
@@ -56,4 +67,8 @@ defmodule ExNVR.Nerves.Netbird do
       opts[:log_file]
     ]
   end
+
+  defp map_log_level("ERRO"), do: :error
+  defp map_log_level("WARN"), do: :warning
+  defp map_log_level(_other), do: :info
 end

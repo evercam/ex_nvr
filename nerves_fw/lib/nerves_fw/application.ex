@@ -30,7 +30,7 @@ defmodule ExNVR.Nerves.Application do
   end
 
   def children(_target) do
-    common_config()
+    common_config() ++ [{ExNVR.Nerves.Monitoring.UPS, []}]
   end
 
   def target do
@@ -54,7 +54,6 @@ defmodule ExNVR.Nerves.Application do
       {MuonTrap.Daemon, ["nginx", [], [stderr_to_stdout: true, log_output: :info]]},
       {ExNVR.Nerves.RemoteConfigurer, Application.get_env(:ex_nvr_fw, :remote_configurer)},
       {ExNVR.Nerves.Monitoring.PowerSchedule, []},
-      {ExNVR.Nerves.Monitoring.UPS, []},
       {ExNVR.Nerves.RUT.Auth, []},
       {ExNVR.Nerves.SystemStatus, []}
     ]
