@@ -53,6 +53,7 @@ defmodule ExNVR.Nerves.SystemStatus do
         addr
         |> :inet.ntoa()
         |> to_string()
+
       _ ->
         nil
     end)
