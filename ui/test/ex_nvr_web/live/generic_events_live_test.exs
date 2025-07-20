@@ -178,7 +178,7 @@ defmodule ExNVRWeb.GenericEventsLiveTest do
         |> render_change()
 
       expected_url =
-        "#{ExNVRWeb.Endpoint.url()}/api/devices/#{device.id}/events?type=#{type}"
+        "#{ExNVRWeb.Endpoint.local_url()}/api/devices/#{device.id}/events?type=#{type}"
 
       assert updated =~ expected_url
     end

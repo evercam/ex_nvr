@@ -72,4 +72,13 @@ defmodule ExNVRWeb.Endpoint do
   plug Plug.Head
   plug Plug.Session, @session_options
   plug ExNVRWeb.Router
+
+  def local_url do
+    url = Application.get_env(:ex_nvr, __MODULE__, []) |> Keyword.get(:url, [])
+    scheme = Keyword.get(url, :scheme, "http")
+    port = Keyword.get(url, :port, 4000)
+    host = ExNVR.SystemStatus.get(:local_ip) || Keyword.get(url, :host, "localhost")
+
+    "#{scheme}://#{host}:#{port}"
+  end
 end
