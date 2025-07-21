@@ -1,0 +1,102 @@
+server:
+  log_level: info
+
+metrics:
+  wal_directory: "<%= @wal_directory %>"
+  global:
+    external_labels:
+      mac: "<%= @mac_address %>"
+      sbc_serial: "<%= @serial_number %>"
+      sbc_name: "<%= @platform %>"
+    remote_write:
+    - url: "<%= @prom_url %>"
+      basic_auth:
+        username: "<%= @prom_username %>"
+        password: "<%= @prom_password %>"
+  configs:
+  - name: local
+    scrape_configs:
+    - job_name: ex_nvr
+      metrics_path: /metrics
+      static_configs:
+      - targets:
+        - localhost:4000
+        labels:
+          instance: "<%= @kit_id %>"
+
+logs:
+  global:
+    clients:
+      - url: "<%= @loki_url %>"
+        basic_auth:
+          username: "<%= @loki_username %>"
+          password: "<%= @loki_password %>"
+  positions_directory: /root/grafana_agent/positions
+  configs:
+    - name: local
+      scrape_configs:
+        - job_name: ex_nvr-logs
+          static_configs:
+            - targets: [localhost]
+              labels:
+                job: ex_nvr
+                __path__: /data/logs/ex_nvr.log
+                host: <%= @kit_id %>
+                nerves: true
+          pipeline_stages:
+          - match:
+              selector: '{job="ex_nvr"}'
+              stages:
+              - json:
+                  expressions:
+                    level: severity
+                    time:
+              - labels:
+                  level:
+              - timestamp:
+                  source: time
+                  format: RFC3339
+              - template:
+                  source: message
+                  template: '{{ omit (mustFromJson .Entry) "severity" "time" | mustToJson  }}'
+              - output:
+                  source: message
+
+integrations:
+  scrape_integrations: true
+  node_exporter:
+    enabled: true
+    relabel_configs:
+    - source_labels:
+      - __address__
+      target_label: instance
+      replacement: "<%= @kit_id %>"
+    metric_relabel_configs: []
+    set_collectors:
+    - boottime
+    - conntrack
+    - cpu
+    - cpufreq
+    - diskstats
+    - drm
+    - filefd
+    - filesystem
+    - hwmon
+    - loadavg
+    - meminfo
+    - netclass
+    - netdev
+    - netstat
+    - nvme
+    - os
+    - powersupplyclass
+    - rapl
+    - sockstat
+    - softnet
+    - stat
+    - thermal_zone
+    - time
+    - timex
+    - uname
+    - vmstat
+    - wifi
