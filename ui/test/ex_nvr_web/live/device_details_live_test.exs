@@ -46,5 +46,60 @@ defmodule ExNvrWeb.DeviceDetailsLiveTest do
         assert element(lv, "#tab-#{tab}[aria-selected='true']") |> has_element?()
       end
     end
+
+    test "Stop device recording on settings tab", %{conn: conn, tmp_dir: tmp_dir} do
+      device = camera_device_fixture(tmp_dir, %{state: :recording})
+
+      {:ok, lv, html} =
+        conn
+        |> log_in_user(user_fixture())
+        |> live(~p"/devices/#{device.id}/details?tab=settings")
+
+      assert html =~ "Stop recording"
+
+      html =
+        lv
+        |> element(~s|a|, "Stop recording")
+        |> render_click()
+
+      assert html =~ "Start recording"
+
+      assert ExNVR.Devices.get!(device.id).state == :stopped
+    end
+
+    test "Start device recording on settings tab", %{conn: conn, tmp_dir: tmp_dir} do
+      device = camera_device_fixture(tmp_dir, %{state: :stopped})
+
+      {:ok, lv, html} =
+        conn
+        |> log_in_user(user_fixture())
+        |> live(~p"/devices/#{device.id}/details?tab=settings")
+
+      assert html =~ "Start recording"
+
+      html =
+        lv
+        |> element(~s|a|, "Start recording")
+        |> render_click()
+
+      assert html =~ "Stop recording"
+
+      assert ExNVR.Devices.get!(device.id).state == :recording
+    end
+
+    test "Update device on settings tab", %{conn: conn, device: device} do
+      {:ok, lv, _html} =
+        conn
+        |> log_in_user(user_fixture())
+        |> live(~p"/devices/#{device.id}/details?tab=settings")
+
+      {:error, redirect} =
+        lv
+        |> element(~s|a|, "Update")
+        |> render_click()
+
+      assert {:redirect, %{to: path}} = redirect
+      assert path == ~p"/devices/#{device.id}"
+    end
   end
 end
