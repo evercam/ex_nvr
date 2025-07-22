@@ -3,6 +3,7 @@ defmodule ExNVR.Nerves.RemoteConfigHandler do
 
   require Logger
 
+  alias ExNVR.Model
   alias ExNVR.Nerves.{RUT, SystemSettings}
 
   def handle_message("config", config) do

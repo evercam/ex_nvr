@@ -37,9 +37,9 @@ jobs:
    
       - name: Set FFmpeg env variables
         run: |
-          echo "PKG_CONFIG_PATH=${{ env.GITHUB_WORKSPACE }}/ffmpeg/lib/pkgconfig" >> $GITHUB_ENV
-          echo "CPATH=${{ env.GITHUB_WORKSPACE }}/ffmpeg/include" >> $GITHUB_ENV
-          echo "LIBRARY_PATH=${{ env.GITHUB_WORKSPACE }}/ffmpeg/lib" >> $GITHUB_ENV
+          echo "PKG_CONFIG_PATH=${{ github.workspace }}/ffmpeg/lib/pkgconfig" >> $GITHUB_ENV
+          echo "CPATH=${{ github.workspace }}/ffmpeg/include" >> $GITHUB_ENV
+          echo "LIBRARY_PATH=${{ github.workspace }}/ffmpeg/lib" >> $GITHUB_ENV
 
       - name: Get deps
         run: mix deps.get --only prod
