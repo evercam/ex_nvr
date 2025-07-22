@@ -3,11 +3,15 @@ defmodule ExNVRWeb.DeviceDetailsLive do
 
   require Logger
 
+  import ExNVR.Authorization
+
   import ExNVRWeb.RecordingListLive, only: [recording_details_popover: 1]
 
   alias ExNVR.{Devices, Recordings}
   alias ExNVRWeb.RecordingListLive
   alias ExNVRWeb.Router.Helpers, as: Routes
+
+  alias ExNVR.Model.Device
 
   @impl true
   def mount(%{"id" => device_id} = params, _session, socket) do
@@ -105,6 +109,65 @@ defmodule ExNVRWeb.DeviceDetailsLive do
        to: Routes.device_details_path(socket, :show, socket.assigns.device.id, params),
        replace: true
      )}
+  end
+
+  def handle_event("stop-recording", _params, socket) do
+    user = socket.assigns.current_user
+
+    case authorize(user, :device, :update) do
+      :ok -> update_device_state(socket, :stopped)
+      {:error, :unauthorized} -> unauthorized(socket, :noreply)
+    end
+  end
+
+  def handle_event("start-recording", _params, socket) do
+    user = socket.assigns.current_user
+
+    Device.recording?(socket.assigns.device)
+
+    case authorize(user, :device, :update) do
+      :ok -> update_device_state(socket, :recording)
+      {:error, :unauthorized} -> unauthorized(socket, :noreply)
+    end
+  end
+
+  def handle_event("delete-device", socket) do
+    user = socket.assigns.current_user
+    device = socket.assigns.device
+
+    with :ok <- authorize(user, :device, :delete),
+         :ok <- Devices.delete(device) do
+      socket =
+        socket
+        |> put_flash(:info, "Device #{device.name} Deleted")
+        |> push_navigate(to: "/devices")
+
+      {:noreply, socket}
+    else
+      _other -> {:noreply, put_flash(socket, :error, "could not delet device")}
+    end
+  end
+
+  defp update_device_state(socket, new_state) do
+    device =
+      socket.assigns.device
+
+    Devices.update_state(device, new_state)
+    |> case do
+      {:ok, device} ->
+        {:noreply,
+         socket
+         |> assign(device: device)}
+
+      _ ->
+        {:noreply, put_flash(socket, :error, "could not update device state")}
+    end
+  end
+
+  defp unauthorized(socket, reply) do
+    socket
+    |> put_flash(:error, "You are not authorized to perform this action!")
+    |> then(&{reply, &1})
   end
 
   def load_device_recordings(socket, params) do
@@ -298,7 +361,67 @@ defmodule ExNVRWeb.DeviceDetailsLive do
         </:tab_content>
 
         <:tab_content for="settings">
-          <div class="text-center text-gray-500 dark:text-gray-400">Settings tab coming soon...</div>
+          <div class="flex gap-4 text-gray-500 dark:text-gray-500">
+            <.link class="border border-gray-500 p-2  rounded-md" href={~p"/devices/#{@device.id}"}>
+              Update
+            </.link>
+            <.link
+              class="border border-gray-500 p-2  rounded-md"
+              phx-click={show_modal("delete-device-modal-#{@device.id}")}
+              phx-value-device={@device.id}
+            >
+              Delete
+            </.link>
+            <.link
+              :if={not Device.recording?(@device)}
+              class="border border-gray-500 p-2 rounded-md"
+              phx-click="start-recording"
+              phx-value-device={@device.id}
+            >
+              <span class="inline-block h-2.5 w-2.5 rounded-full bg-red-500"></span> Start recording
+            </.link>
+
+            <.link
+              :if={Device.recording?(@device)}
+              class="border border-gray-500 p-2 rounded-md"
+              phx-click="stop-recording"
+              phx-value-device={@device.id}
+            >
+              <span class="inline-block h-2.5 w-2.5 rounded-full bg-green-500"></span> Stop recording
+            </.link>
+
+            <.modal id={"delete-device-modal-#{@device.id}"}>
+              <div class="p-3 dark:bg-gray-800 m-8 rounded">
+                <h2 class="text-xl text-black dark:text-white font-bold mb-4">
+                  Are you sure you want to delete this device? <br />
+                </h2>
+                <h3>
+                  The actual recording files are not deleted. <br />
+                  If you want to delete them delete the following folders: <br />
+                  <div class="bg-white dark:bg-gray-400 rounded-md p-4 mt-2">
+                    <code class="text-gray-800 font-bold">
+                      {Device.base_dir(@device)}
+                    </code>
+                  </div>
+                </h3>
+                <div class="mt-4">
+                  <button
+                    phx-click="delete-device"
+                    phx-value-device={@device.id}
+                    class="bg-red-500 hover:bg-red-600 text-black dark:text-white py-2 px-4 rounded mr-4 font-bold"
+                  >
+                    Confirm Delete
+                  </button>
+                  <button
+                    phx-click={hide_modal("delete-device-modal-#{@device.id}")}
+                    class="bg-gray-200 hover:bg-gray-400 text-gray-800 py-2 px-4 rounded font-bold"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </.modal>
+          </div>
         </:tab_content>
 
         <:tab_content for="events">
