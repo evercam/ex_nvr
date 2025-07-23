@@ -75,7 +75,7 @@ defmodule ExNVRWeb.Endpoint do
 
   def local_ip do
     with {:ok, ifs} <- :inet.getifaddrs(),
-         {_, opts} <- Enum.find(ifs, fn {name, _} -> name == ~c"eth0" end),
+         {_, opts} <- List.keyfind(ifs, ~c"eth0", 0),
          addrs <- Keyword.get_values(opts, :addr),
          ipv4 <- Enum.find(addrs, &match?({_, _, _, _}, &1)) do
       ipv4
