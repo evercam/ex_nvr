@@ -73,12 +73,24 @@ defmodule ExNVRWeb.Endpoint do
   plug Plug.Session, @session_options
   plug ExNVRWeb.Router
 
+  def local_ip do
+    with {:ok, ifs} <- :inet.getifaddrs(),
+         {_, opts} <- Enum.find(ifs, fn {name, _} -> name == ~c"eth0" end),
+         addrs <- Keyword.get_values(opts, :addr),
+         ipv4 <- Enum.find(addrs, &match?({_, _, _, _}, &1)) do
+      ipv4
+      |> :inet_parse.ntoa()
+      |> to_string()
+    else
+      _ -> "127.0.0.1"
+    end
+  end
+
   def local_url do
     url = Application.get_env(:ex_nvr, __MODULE__, []) |> Keyword.get(:url, [])
     scheme = Keyword.get(url, :scheme, "http")
     port = Keyword.get(url, :port, 4000)
-    host = ExNVR.SystemStatus.get(:local_ip) || Keyword.get(url, :host, "localhost")
 
-    "#{scheme}://#{host}:#{port}"
+    "#{scheme}://#{local_ip()}:#{port}"
   end
 end

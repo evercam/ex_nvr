@@ -23,7 +23,6 @@ defmodule ExNVR.Nerves.SystemStatus do
   @impl true
   def handle_info(:collect_system_metrics, state) do
     :ok = ExNVR.SystemStatus.set(:hostname, hostname())
-    :ok = ExNVR.SystemStatus.set(:local_ip, local_ip())
     :ok = ExNVR.SystemStatus.set(:router, rut_data())
     :ok = ExNVR.SystemStatus.set(:netbird, netbird())
     :ok = ExNVR.SystemStatus.set(:nerves, true)
@@ -44,19 +43,6 @@ defmodule ExNVR.Nerves.SystemStatus do
       "" -> :inet.gethostname() |> elem(1) |> List.to_string()
       evercam_id -> evercam_id
     end
-  end
-
-  def local_ip do
-    VintageNet.get(["interface", "eth0", "addresses"])
-    |> Enum.find_value(nil, fn
-      %{family: :inet, address: addr} ->
-        addr
-        |> :inet.ntoa()
-        |> to_string()
-
-      _ ->
-        nil
-    end)
   end
 
   defp netbird do
