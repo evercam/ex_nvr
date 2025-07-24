@@ -2,6 +2,8 @@ defmodule ExNVRWeb.Endpoint do
   use Sentry.PlugCapture
   use Phoenix.Endpoint, otp_app: :ex_nvr
 
+  alias ExNVR.Utils
+
   # The session will be stored in the cookie and signed,
   # this means its contents can be read but not tampered with.
   # Set :encryption_salt if you would also like to encrypt it.
@@ -73,24 +75,8 @@ defmodule ExNVRWeb.Endpoint do
   plug Plug.Session, @session_options
   plug ExNVRWeb.Router
 
-  def local_ip do
-    with {:ok, ifs} <- :inet.getifaddrs(),
-         {_, opts} <- List.keyfind(ifs, ~c"eth0", 0),
-         addrs <- Keyword.get_values(opts, :addr),
-         ipv4 <- Enum.find(addrs, &match?({_, _, _, _}, &1)) do
-      ipv4
-      |> :inet_parse.ntoa()
-      |> to_string()
-    else
-      _ -> "127.0.0.1"
-    end
-  end
-
   def local_url do
-    url = Application.get_env(:ex_nvr, __MODULE__, []) |> Keyword.get(:url, [])
-    scheme = Keyword.get(url, :scheme, "http")
-    port = Keyword.get(url, :port, 4000)
-
-    "#{scheme}://#{local_ip()}:#{port}"
+    {:ok, {_addr, port}} = server_info(:http)
+    URI.to_string(%URI{scheme: "http", host: Utils.local_ip(), port: port})
   end
 end

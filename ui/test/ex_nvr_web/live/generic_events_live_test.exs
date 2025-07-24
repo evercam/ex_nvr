@@ -1,5 +1,6 @@
 defmodule ExNVRWeb.GenericEventsLiveTest do
   use ExNVRWeb.ConnCase
+  use Mimic
 
   import Phoenix.LiveViewTest
   import ExNVR.{AccountsFixtures, DevicesFixtures, EventsFixtures}
@@ -100,8 +101,12 @@ defmodule ExNVRWeb.GenericEventsLiveTest do
 
   describe "Webhook Config functionality" do
     setup %{conn: conn, tmp_dir: tmp_dir} do
+      Mimic.copy(ExNVRWeb.Endpoint)
+      Mimic.stub(ExNVRWeb.Endpoint, :local_url, fn -> "http://localhost:4002" end)
+
       user = user_fixture()
       device = camera_device_fixture(tmp_dir, %{name: "Test Camera"})
+
       {:ok, conn: log_in_user(conn, user), user: user, device: device}
     end
 
@@ -177,8 +182,7 @@ defmodule ExNVRWeb.GenericEventsLiveTest do
         })
         |> render_change()
 
-      expected_url =
-        "#{ExNVRWeb.Endpoint.local_url()}/api/devices/#{device.id}/events?type=#{type}"
+      expected_url = "http://localhost:4002/api/devices/#{device.id}/events?type=#{type}"
 
       assert updated =~ expected_url
     end
