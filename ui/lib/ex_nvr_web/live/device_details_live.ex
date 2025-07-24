@@ -7,6 +7,7 @@ defmodule ExNVRWeb.DeviceDetailsLive do
 
   import ExNVRWeb.RecordingListLive, only: [recording_details_popover: 1]
 
+  alias ExNVR.Events
   alias ExNVR.{Devices, Recordings}
   alias ExNVRWeb.RecordingListLive
   alias ExNVRWeb.Router.Helpers, as: Routes
@@ -28,6 +29,7 @@ defmodule ExNVRWeb.DeviceDetailsLive do
        sort_params: %{},
        device: device,
        recordings: recordings,
+       events: [],
        meta: meta,
        active_tab: active_tab,
        params: params,
@@ -42,7 +44,7 @@ defmodule ExNVRWeb.DeviceDetailsLive do
      socket
      |> assign(:active_tab, params["tab"] || socket.assigns.active_tab)
      |> assign(:params, params)
-     |> load_device_recordings(params)}
+     |> load_device_recordings_or_events(params)}
   end
 
   @impl true
@@ -65,6 +67,19 @@ defmodule ExNVRWeb.DeviceDetailsLive do
 
   @impl true
   def handle_event("filter-recordings", filter_params, socket) do
+    params = Map.put(socket.assigns.params, "filter_params", filter_params)
+
+    {:noreply,
+     socket
+     |> assign(:filter_params, filter_params)
+     |> assign(:pagination_params, %{})
+     |> push_patch(
+       to: Routes.device_details_path(socket, :show, socket.assigns.device.id, params)
+     )}
+  end
+
+  @impl true
+  def handle_event("filter-events", filter_params, socket) do
     params = Map.put(socket.assigns.params, "filter_params", filter_params)
 
     {:noreply,
@@ -170,22 +185,14 @@ defmodule ExNVRWeb.DeviceDetailsLive do
     |> then(&{reply, &1})
   end
 
-  def load_device_recordings(socket, params) do
+  defp load_device_recordings_or_events(socket, params)
+       when socket.assigns.active_tab == "recordings" do
     sort_params =
       Map.take(params, ["order_by", "order_directions"])
 
-    params =
-      params["filter_params"] || sort_params || %{}
+    params = params["filter_params"] || sort_params || %{}
 
-    nested_filter_params =
-      Flop.nest_filters(%{device_id: socket.assigns.device.id, filters: params["filters"]}, [
-        :device_id
-      ])
-      |> then(fn filter ->
-        params
-        |> Map.put("filters", filter.filters)
-        |> Map.merge(sort_params)
-      end)
+    nested_filter_params = nest_filter_params(socket, params, sort_params)
 
     case Recordings.list(nested_filter_params) do
       {:ok, {recordings, meta}} ->
@@ -198,26 +205,90 @@ defmodule ExNVRWeb.DeviceDetailsLive do
     end
   end
 
+  defp load_device_recordings_or_events(socket, params)
+       when socket.assigns.active_tab == "events" do
+    sort_params = Map.take(params, ["order_by", "order_directions"])
+
+    params = params["filter_params"] || sort_params || %{}
+
+    nest_event_filter_params =
+      nest_filter_params(socket, params, sort_params)
+
+    Events.list_events(nest_event_filter_params)
+    |> case do
+      {:ok, {events, meta}} ->
+        assign(socket, meta: meta, events: events, sort_params: sort_params)
+
+      {:error, meta} ->
+        assign(socket, meta: meta, events: [])
+    end
+  end
+
+  defp load_device_recordings_or_events(socket, _params), do: socket
+
+  def nest_filter_params(socket, params, sort_params) do
+    Flop.nest_filters(%{device_id: socket.assigns.device.id, filters: params["filters"]}, [
+      :device_id
+    ])
+    |> then(fn filter ->
+      params
+      |> Map.put("filters", filter.filters)
+      |> Map.merge(sort_params)
+    end)
+  end
+
   def filter_form(%{meta: meta, recordings: recordings} = assigns) do
     assigns =
       assign(assigns, form: to_form(meta), meta: meta, recordings: recordings)
 
     ~H"""
-    <.form for={@form} id={@id} phx-change="filter-recordings" class="flex items-baseline space-x-4">
+    <div class="flex justify-between">
+      <.form for={@form} id={@id} phx-change="filter-recordings" class="flex items-baseline space-x-4">
+        <Flop.Phoenix.filter_fields
+          :let={f}
+          form={@form}
+          fields={[
+            start_date: [op: :>=, type: "datetime-local", label: "Start Date"],
+            end_date: [op: :<=, type: "datetime-local", label: "End Date"]
+          ]}
+        >
+          <div>
+            <.input
+              class="border rounded p-1"
+              field={f.field}
+              type={f.type}
+              label={f.label}
+              phx-debounce="500"
+              {f.rest}
+            />
+          </div>
+        </Flop.Phoenix.filter_fields>
+      </.form>
+    </div>
+    """
+  end
+
+  def event_filter_form(%{meta: meta, events: events} = assigns) do
+    assigns =
+      assign(assigns, form: to_form(meta), events: events)
+
+    ~H"""
+    <.form for={@form} id="event-tab-filter-form" phx-change="filter-events" class="flex space-x-4">
       <Flop.Phoenix.filter_fields
         :let={f}
         form={@form}
         fields={[
-          start_date: [op: :>=, type: "datetime-local", label: "Start Date"],
-          end_date: [op: :<=, type: "datetime-local", label: "End Date"]
+          type: [op: :like, placeholder: "Filter by event type"],
+          time: [op: :>=, label: "Min event time"],
+          time: [op: :<=, label: "Max event time"]
         ]}
       >
         <div>
           <.input
             class="border rounded p-1"
             field={f.field}
-            type={f.type}
             label={f.label}
+            type={f.type}
             phx-debounce="500"
             {f.rest}
           />
@@ -240,37 +311,43 @@ defmodule ExNVRWeb.DeviceDetailsLive do
         <:tab id="stats" label="Stats" />
         <:tab id="settings" label="Settings" />
         <:tab id="events" label="Events" />
-
+        
+    <!-- device details tab -->
         <:tab_content for="details">
-          <div class="space-y-2 text-black dark:text-white">
-            <.table id="details" rows={[@device]}>
-              <:col :let={device} label="Name">{device.name}</:col>
-              <:col :let={device} label="Type">{Atom.to_string(device.type)}</:col>
-              <:col :let={device} label="Status">
-                <div class="flex items-center">
-                  <div class={
-                    ["h-2.5 w-2.5 rounded-full mr-2"] ++
-                      case device.state do
-                        :recording -> ["bg-green-500"]
-                        :streaming -> ["bg-green-500"]
-                        :failed -> ["bg-red-500"]
-                        :stopped -> ["bg-yellow-500"]
-                      end
-                  }>
-                  </div>
-                  {String.upcase(to_string(device.state))}
+          <ul class="divide-y divide-gray-700 text-white rounded-md shadow-sm max-w-xl ">
+            <li class="p-4 flex justify-between items-center">
+              <span class="font-semibold text-gray-400">Name:</span>
+              <span>{@device.name}</span>
+            </li>
+            <li class="p-4 flex justify-between items-center">
+              <span class="font-semibold text-gray-400">Type:</span>
+              <span>{@device.type}</span>
+            </li>
+            <li class="p-4 flex justify-between items-center">
+              <span class="font-semibold text-gray-400">Status:</span>
+              <span class="font-bold flex items-center gap-1">
+                <div class={
+                  ["h-2.5 w-2.5 rounded-full mr-2"] ++
+                    case @device.state do
+                      :recording -> ["bg-green-500"]
+                      :streaming -> ["bg-green-500"]
+                      :failed -> ["bg-red-500"]
+                      :stopped -> ["bg-yellow-500"]
+                    end
+                }>
                 </div>
-              </:col>
-              <:col :let={device} label="Created At">
-                {Calendar.strftime(
-                  device.inserted_at,
-                  "%b %d, %Y %H:%M:%S %Z"
-                )}
-              </:col>
-
-              <:col :let={device} label="TimeZone">{device.timezone}</:col>
-            </.table>
-          </div>
+                {String.upcase(to_string(@device.state))}
+              </span>
+            </li>
+            <li class="p-4 flex justify-between items-center">
+              <span class="font-semibold text-gray-400">Created At:</span>
+              <span>{Calendar.strftime(@device.inserted_at, "%b %d, %Y %H:%M:%S %Z")}</span>
+            </li>
+            <li class="p-4 flex justify-between items-center">
+              <span class="font-semibold text-gray-400">Timezone:</span>
+              <span>{@device.timezone}</span>
+            </li>
+          </ul>
         </:tab_content>
         
     <!-- recordings tab -->
@@ -355,77 +432,46 @@ defmodule ExNVRWeb.DeviceDetailsLive do
             </video>
           </div>
         </:tab_content>
-
+        
+    <!-- stats tab-->
         <:tab_content for="stats">
           <div class="text-center text-gray-500 dark:text-gray-400">Stats tab coming soon...</div>
         </:tab_content>
 
         <:tab_content for="settings">
-          <div class="flex gap-4 text-gray-500 dark:text-gray-500">
-            <.link class="border border-gray-500 p-2  rounded-md" href={~p"/devices/#{@device.id}"}>
-              Update
-            </.link>
-            <.link
-              class="border border-gray-500 p-2  rounded-md"
-              phx-click={show_modal("delete-device-modal-#{@device.id}")}
-              phx-value-device={@device.id}
-            >
-              Delete
-            </.link>
-            <.link
-              :if={not Device.recording?(@device)}
-              class="border border-gray-500 p-2 rounded-md"
-              phx-click="start-recording"
-              phx-value-device={@device.id}
-            >
-              <span class="inline-block h-2.5 w-2.5 rounded-full bg-red-500"></span> Start recording
-            </.link>
-
-            <.link
-              :if={Device.recording?(@device)}
-              class="border border-gray-500 p-2 rounded-md"
-              phx-click="stop-recording"
-              phx-value-device={@device.id}
-            >
-              <span class="inline-block h-2.5 w-2.5 rounded-full bg-green-500"></span> Stop recording
-            </.link>
-
-            <.modal id={"delete-device-modal-#{@device.id}"}>
-              <div class="p-3 dark:bg-gray-800 m-8 rounded">
-                <h2 class="text-xl text-black dark:text-white font-bold mb-4">
-                  Are you sure you want to delete this device? <br />
-                </h2>
-                <h3>
-                  The actual recording files are not deleted. <br />
-                  If you want to delete them delete the following folders: <br />
-                  <div class="bg-white dark:bg-gray-400 rounded-md p-4 mt-2">
-                    <code class="text-gray-800 font-bold">
-                      {Device.base_dir(@device)}
-                    </code>
-                  </div>
-                </h3>
-                <div class="mt-4">
-                  <button
-                    phx-click="delete-device"
-                    phx-value-device={@device.id}
-                    class="bg-red-500 hover:bg-red-600 text-black dark:text-white py-2 px-4 rounded mr-4 font-bold"
-                  >
-                    Confirm Delete
-                  </button>
-                  <button
-                    phx-click={hide_modal("delete-device-modal-#{@device.id}")}
-                    class="bg-gray-200 hover:bg-gray-400 text-gray-800 py-2 px-4 rounded font-bold"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            </.modal>
+          <div class="text-center text-gray-500 dark:text-gray-400">
+            Settings tab comming soon....
           </div>
         </:tab_content>
-
+        
+    <!-- events tab-->
         <:tab_content for="events">
-          <div class="text-center text-gray-500 dark:text-gray-400">Events tab coming soon...</div>
+          <div class="text-center text-gray-500 dark:text-gray-400">
+            <.event_filter_form meta={@meta} events={@events} />
+
+            <Flop.Phoenix.table
+              id="events"
+              opts={ExNVRWeb.FlopConfig.table_opts()}
+              items={@events}
+              meta={@meta}
+              path={~p"/devices/#{@device.id}/details?tab=events"}
+            >
+              <:col :let={event} label="Device" field={:device_name}>
+                {if event.device, do: event.device.name, else: "N/A"}
+              </:col>
+              <:col :let={event} label="Event Type" field={:type}>
+                {event.type}
+              </:col>
+              <:col :let={event} label="Event Time" field={:time}>
+                {Calendar.strftime(event.time, "%b %d, %Y %H:%M:%S %Z")}
+              </:col>
+              <:col :let={event} label="Data">
+                {Jason.encode!(event.metadata)}
+              </:col>
+            </Flop.Phoenix.table>
+
+            <.pagination meta={@meta} />
+          </div>
         </:tab_content>
       </.tabs>
     </div>
