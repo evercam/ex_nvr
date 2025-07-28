@@ -7,7 +7,7 @@ defmodule ExNVR.Nerves.Monitoring.UPS do
 
   require Logger
 
-  alias ExNVR.Devices
+  alias ExNVR.{Devices, Model, Pipelines}
   alias ExNVR.Nerves.{DiskMounter, SystemSettings}
   alias ExNVR.Nerves.GPIO
 
@@ -172,32 +172,32 @@ defmodule ExNVR.Nerves.Monitoring.UPS do
   defp do_trigger_action(:low_battery?, :stop_recording, 0), do: start_recording()
   defp do_trigger_action(_key, _action, _value), do: :ok
 
-  defp power_off() do
+  defp power_off do
     Logger.info("[UPS] shutodwn system")
     stop_recording()
     Nerves.Runtime.poweroff()
   end
 
-  defp stop_recording() do
+  defp stop_recording do
     Logger.info("[UPS] stop recording")
 
     Devices.list()
-    |> Enum.filter(&ExNVR.Model.Device.recording?/1)
-    |> Enum.each(&ExNVR.Pipelines.Main.stop_recording/1)
+    |> Enum.filter(&Model.Device.recording?/1)
+    |> Enum.each(&Pipelines.Main.stop_recording/1)
 
     # avoid unmouting filesystem before the pipeline flush
     # the current recording.
     :timer.apply_after(to_timeout(second: 2), fn -> DiskMounter.umount() end)
   end
 
-  defp start_recording() do
+  defp start_recording do
     Logger.info("[UPS] start recording")
 
     :ok = DiskMounter.mount()
 
     Devices.list()
-    |> Enum.filter(&ExNVR.Model.Device.recording?/1)
-    |> Enum.each(&ExNVR.Pipelines.Main.start_recording/1)
+    |> Enum.filter(&Model.Device.recording?/1)
+    |> Enum.each(&Pipelines.Main.start_recording/1)
   end
 
   defp event_name(:ac_ok?), do: "power"

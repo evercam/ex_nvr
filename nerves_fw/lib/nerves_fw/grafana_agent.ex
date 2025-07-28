@@ -8,6 +8,7 @@ defmodule ExNVR.Nerves.GrafanaAgent do
   require Logger
 
   alias __MODULE__.ConfigRenderer
+  alias Nerves.Runtime
 
   @github_api_url "https://api.github.com/repos/grafana/agent/releases"
 
@@ -39,6 +40,11 @@ defmodule ExNVR.Nerves.GrafanaAgent do
     if not File.exists?(config_file) do
       ConfigRenderer.generate_config_file(Map.new(config), config_dir)
     end
+
+    # Configure logging for devices that are
+    # already configured. This will be deleted
+    # in the next version (v0.23.0)
+    configure_logging(state)
 
     case File.exists?(Path.join(config_dir, "grafana-agent")) do
       true ->
@@ -86,7 +92,7 @@ defmodule ExNVR.Nerves.GrafanaAgent do
     {:noreply, state}
   end
 
-  defp grafana_agent_download_url() do
+  defp grafana_agent_download_url do
     Req.get!(@github_api_url,
       headers: [{"content-type", "application/vnd.github+json"}],
       params: [per_page: 1]
@@ -109,5 +115,35 @@ defmodule ExNVR.Nerves.GrafanaAgent do
       )
 
     %{state | pid: pid}
+  end
+
+  defp configure_logging(state) do
+    config_file = Path.join(state.config_dir, "agent.yml")
+    loki_config = loki_config()
+
+    if loki_config != [] do
+      ConfigRenderer.generate_log_config(loki_config, config_file)
+    end
+  end
+
+  defp loki_config do
+    kit_id = Runtime.KV.get("nerves_evercam_id")
+    config = Application.get_env(:ex_nvr_fw, :loki, [])
+
+    cond do
+      kit_id == "" or is_nil(kit_id) ->
+        []
+
+      config == [] ->
+        []
+
+      true ->
+        [
+          loki_url: config[:url],
+          loki_username: config[:username],
+          loki_password: config[:password],
+          kit_id: kit_id
+        ]
+    end
   end
 end

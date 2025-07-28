@@ -55,6 +55,7 @@ jobs:
       REMOTE_CONFIGURER_VERSION: ${{ vars.REMOTE_CONFIGURER_VERSION }}
       NH_TOKEN: ${{ secrets.NH_TOKEN }}
       NERVES_HUB_URI: ${{ vars.NERVES_HUB_URI }}
+      NERVES_HUB_DEVICES_URI: ${{ vars.NERVES_HUB_DEVICES_URI }}
       NERVES_HUB_ORG: ${{ vars.NERVES_HUB_ORG }}
       NERVES_HUB_PRODUCT: ${{ vars.NERVES_HUB_PRODUCT }}
       NERVES_HUB_NON_INTERACTIVE: true
@@ -63,6 +64,9 @@ jobs:
       EXNVR_REMOTE_SERVER_TOKEN: ${{ secrets.EXNVR_REMOTE_SERVER_TOKEN }}
       EXNVR_ICE_SERVERS: ${{ secrets.ICE_SERVERS }}
       SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+      LOKI_URL: ${{ vars.LOKI_URL }}
+      LOKI_USERNAME: ${{ secrets.LOKI_USERNAME }}
+      LOKI_PASSWORD: ${{ secrets.LOKI_PASSWORD }}
     steps:
       - uses: actions/checkout@v3
         with:

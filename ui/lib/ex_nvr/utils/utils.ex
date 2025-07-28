@@ -84,6 +84,20 @@ defmodule ExNVR.Utils do
     |> URI.to_string()
   end
 
+  @spec local_ip :: binary()
+  def local_ip do
+    with {:ok, ifs} <- :inet.getifaddrs(),
+         {_, opts} <- List.keyfind(ifs, ~c"eth0", 0),
+         addrs <- Keyword.get_values(opts, :addr),
+         ipv4 <- Enum.find(addrs, &match?({_, _, _, _}, &1)) do
+      ipv4
+      |> :inet_parse.ntoa()
+      |> to_string()
+    else
+      _ -> "127.0.0.1"
+    end
+  end
+
   # Streaming & Codecs utilities
   defguard keyframe(buffer)
            when (is_map_key(buffer.metadata, :h264) and buffer.metadata.h264.key_frame?) or

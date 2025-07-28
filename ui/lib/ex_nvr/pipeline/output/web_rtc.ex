@@ -11,7 +11,7 @@ defmodule ExNVR.Pipeline.Output.WebRTC do
 
   alias ExNVR.Pipeline.Event.StreamClosed
   alias ExWebRTC.{MediaStreamTrack, PeerConnection, RTPCodecParameters, SessionDescription}
-  alias Membrane.{H264, H265, Time}
+  alias Membrane.{H264, H265}
   alias RTSP.RTP.Encoder
 
   @max_rtp_timestamp 1 <<< 32
@@ -118,7 +118,7 @@ defmodule ExNVR.Pipeline.Output.WebRTC do
   def handle_buffer(:video, buffer, _ctx, state) do
     timestamp =
       buffer.pts
-      |> Time.divide_by_timebase(Ratio.new(Time.second(), @clock_rate))
+      |> ExMP4.Helper.timescalify(:nanosecond, @clock_rate)
       |> rem(@max_rtp_timestamp)
 
     {rtp_packets, payloader} =

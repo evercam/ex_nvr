@@ -24,6 +24,44 @@ metrics:
         labels:
           instance: "<%= @kit_id %>"
 
+logs:
+  global:
+    clients:
+      - url: "<%= @loki_url %>"
+        basic_auth:
+          username: "<%= @loki_username %>"
+          password: "<%= @loki_password %>"
+  positions_directory: /root/grafana_agent/positions
+  configs:
+    - name: local
+      scrape_configs:
+        - job_name: ex_nvr-logs
+          static_configs:
+            - targets: [localhost]
+              labels:
+                job: ex_nvr
+                __path__: /data/logs/ex_nvr.log
+                host: <%= @kit_id %>
+                nerves: true
+          pipeline_stages:
+          - match:
+              selector: '{job="ex_nvr"}'
+              stages:
+              - json:
+                  expressions:
+                    level: severity
+                    time:
+              - labels:
+                  level:
+              - timestamp:
+                  source: time
+                  format: RFC3339
+              - template:
+                  source: message
+                  template: '{{ omit (mustFromJson .Entry) "severity" "time" | mustToJson  }}'
+              - output:
+                  source: message
+
 integrations:
   scrape_integrations: true
   node_exporter:

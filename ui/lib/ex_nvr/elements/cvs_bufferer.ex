@@ -12,6 +12,8 @@ defmodule ExNVR.Elements.CVSBufferer do
 
   require ExNVR.Utils
 
+  import ExNVR.MediaUtils, only: [to_annexb: 1]
+
   alias ExNVR.Utils
   alias Membrane.{H264, H265}
 
@@ -54,7 +56,7 @@ defmodule ExNVR.Elements.CVSBufferer do
   def handle_parent_notification(:snapshot, _ctx, state) do
     {:ok, snapshot} =
       state.cvs
-      |> Enum.reverse()
+      |> Enum.reduce([], &[to_annexb(&1) | &2])
       |> ExNVR.MediaUtils.decode_last(state.decoder)
       |> then(&Turbojpeg.yuv_to_jpeg(&1.data, &1.width, &1.height, 75, :I420))
 

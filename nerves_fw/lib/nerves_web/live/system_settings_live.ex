@@ -160,11 +160,11 @@ defmodule ExNVR.NervesWeb.SystemSettingsLive do
   defp disabled_class(false), do: ["pointer-events-none opacity-50"]
   defp disabled_class(true), do: []
 
-  defp ups_actions() do
+  defp ups_actions do
     [{"Power Off", :power_off}, {"Stop Recording", :stop_recording}, {"Nothing", :nothing}]
   end
 
-  defp gpio_pins() do
+  defp gpio_pins do
     Circuits.GPIO.enumerate()
     |> Enum.map(& &1.label)
     |> Enum.reject(&(&1 == "-"))

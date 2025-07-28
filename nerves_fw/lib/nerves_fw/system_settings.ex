@@ -13,6 +13,8 @@ defmodule ExNVR.Nerves.SystemSettings do
   @system_settings_topic "system_settings"
 
   defmodule State do
+    @moduledoc false
+
     use Ecto.Schema
 
     import Ecto.Changeset
@@ -136,7 +138,7 @@ defmodule ExNVR.Nerves.SystemSettings do
     GenServer.call(pid, {:update_ups_settings, params})
   end
 
-  def subscribe() do
+  def subscribe do
     Phoenix.PubSub.subscribe(ExNVR.Nerves.PubSub, @system_settings_topic)
   end
 
@@ -201,7 +203,7 @@ defmodule ExNVR.Nerves.SystemSettings do
     end
   end
 
-  defp settings_path() do
+  defp settings_path do
     Application.get_env(:ex_nvr_fw, :system_settings_path, @default_path)
   end
 

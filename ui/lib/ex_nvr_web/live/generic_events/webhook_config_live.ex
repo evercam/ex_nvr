@@ -218,7 +218,7 @@ defmodule ExNVRWeb.GenericEventsLive.WebhookConfig do
   end
 
   defp endpoint_url(assigns, copyable \\ false) do
-    base_url = "#{ExNVRWeb.Endpoint.url()}/api/devices/"
+    base_url = "#{ExNVRWeb.Endpoint.local_url()}/api/devices/"
 
     device = assigns.device_id || ":device_id"
     event = assigns.type || ":type"

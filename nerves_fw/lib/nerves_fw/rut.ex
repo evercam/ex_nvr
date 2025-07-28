@@ -5,7 +5,7 @@ defmodule ExNVR.Nerves.RUT do
 
   alias __MODULE__.{Auth, Scheduler, SystemInformation}
 
-  def system_information() do
+  def system_information do
     with {:ok, client} <- Auth.get_client() do
       do_request(client, "/system/device/status", fn data ->
         %SystemInformation{
@@ -19,13 +19,13 @@ defmodule ExNVR.Nerves.RUT do
     end
   end
 
-  def io_status() do
+  def io_status do
     with {:ok, client} <- Auth.get_client() do
       do_request(client, "/io/status")
     end
   end
 
-  def scheduler() do
+  def scheduler do
     with {:ok, client} <- Auth.get_client(),
          {:ok, data} <- do_request(client, "/io/scheduler/global"),
          {:ok, instances} <- do_request(client, "/io/scheduler/config") do

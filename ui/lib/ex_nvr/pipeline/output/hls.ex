@@ -66,7 +66,7 @@ defmodule ExNVR.Pipeline.Output.HLS do
 
     state =
       cond do
-        is_nil(old_stream_format) ->
+        is_nil(variant.track) ->
           put_in(state, [:variants, variant.name], %{
             variant
             | track: track_from_stream_format(stream_format)
@@ -163,7 +163,7 @@ defmodule ExNVR.Pipeline.Output.HLS do
 
         :h265 ->
           {{vps, sps, pps}, _au} = MediaCodecs.H265.pop_parameter_sets(buffer.payload)
-          variant = %{variant | track: %{variant.track | priv_data: get_hevc_dcr(vps, sps, pps)}}
+          variant = %{variant | track: %{variant.track | priv_data: Box.Hvcc.new(vps, sps, pps)}}
           {variant, MediaCodecs.H265.NALU.parse(List.first(sps))}
       end
 
@@ -207,12 +207,23 @@ defmodule ExNVR.Pipeline.Output.HLS do
     keyframe? = Utils.keyframe(last_buffer)
     timescale = variant.track.timescale
 
+    payload =
+      case variant.track.media do
+        :h264 ->
+          {_parameter_sets, au} = MediaCodecs.H264.pop_parameter_sets(last_buffer.payload)
+          MediaCodecs.H264.annexb_to_elementary_stream(au)
+
+        :h265 ->
+          {_parameter_sets, au} = MediaCodecs.H265.pop_parameter_sets(last_buffer.payload)
+          MediaCodecs.H265.annexb_to_elementary_stream(au)
+      end
+
     sample = %ExMP4.Sample{
       track_id: variant.track.id,
       dts: timescalify(Buffer.get_dts_or_pts(last_buffer), :nanosecond, timescale),
       pts: timescalify(last_buffer.pts, :nanosecond, timescale),
       sync?: keyframe?,
-      payload: MediaCodecs.H264.annexb_to_elementary_stream(last_buffer.payload),
+      payload: payload,
       duration: ExMP4.Helper.timescalify(duration, :nanosecond, timescale)
     }
 
@@ -279,6 +290,6 @@ defmodule ExNVR.Pipeline.Output.HLS do
 
   defp resolution(track), do: {track.width, track.height}
 
-  defp codecs(:h264, sps), do: MediaCodecs.H264.SPS.mime_type(sps, "avc1")
-  defp codecs(:h265, sps), do: MediaCodecs.H265.SPS.mime_type(sps, "hvc1")
+  defp codecs(:h264, sps), do: MediaCodecs.H264.NALU.SPS.mime_type(sps, "avc1")
+  defp codecs(:h265, sps), do: MediaCodecs.H265.NALU.SPS.mime_type(sps, "hvc1")
 end

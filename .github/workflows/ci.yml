@@ -68,7 +68,6 @@ jobs:
         run: mix format --check-formatted
 
       - name: Run Credo
-        if: matrix.folder != 'nerves_fw'
         run: mix credo --strict
 
       - name: Run tests

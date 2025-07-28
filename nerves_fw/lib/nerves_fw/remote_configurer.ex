@@ -16,6 +16,8 @@ defmodule ExNVR.Nerves.RemoteConfigurer do
   require Logger
 
   alias ExNVR.Accounts
+  alias ExNVR.Nerves.{DiskMounter, GrafanaAgent, Netbird}
+  alias Nerves.Runtime
   alias Req.Response
 
   @netbird_mangement_url "https://vpn.evercam.io"
@@ -73,7 +75,7 @@ defmodule ExNVR.Nerves.RemoteConfigurer do
 
   defp url(state), do: String.replace(state.url, ":id", kit_id())
 
-  defp kit_id() do
+  defp kit_id do
     kit_id = Nerves.Runtime.KV.get("nerves_evercam_id")
 
     if kit_id == "" do
@@ -101,10 +103,10 @@ defmodule ExNVR.Nerves.RemoteConfigurer do
 
   defp connect_to_netbird!(config) do
     Logger.info("[RemoteConfigurer] Connect to Netbird management server")
-    {:ok, _} = ExNVR.Nerves.Netbird.up(@netbird_mangement_url, config["vpn_setup_key"], kit_id())
+    {:ok, _} = Netbird.up(@netbird_mangement_url, config["vpn_setup_key"], kit_id())
   end
 
-  def format_hdd!() do
+  def format_hdd! do
     ExNVR.Disk.list_drives!()
     |> Enum.reject(&ExNVR.Disk.has_filesystem?/1)
     |> case do
@@ -133,7 +135,7 @@ defmodule ExNVR.Nerves.RemoteConfigurer do
         Logger.info("[RemoteConfigurer] Add mountpoint to fstab and mount it")
 
         part = get_disk_first_part(drive.path)
-        :ok = ExNVR.Nerves.DiskMounter.add_fstab_entry(part.fs.uuid, @mountpoint, :ext4)
+        :ok = DiskMounter.add_fstab_entry(part.fs.uuid, @mountpoint, :ext4)
     end
   end
 
@@ -165,17 +167,20 @@ defmodule ExNVR.Nerves.RemoteConfigurer do
         prom_url: config["prom_url"],
         prom_username: config["prom_username"],
         prom_password: config["prom_password"],
+        loki_url: config["loki_url"],
+        loki_username: config["loki_username"],
+        loki_password: config["loki_password"],
         kit_id: kit_id()
       )
 
-    ExNVR.Nerves.GrafanaAgent.reconfigure(config)
+    GrafanaAgent.reconfigure(config)
   end
 
   defp finalize_config(state, config) do
     body = %{
       mac_address: VintageNet.get(["interface", "eth0", "mac_address"]),
-      serial_number: Nerves.Runtime.serial_number(),
-      device_name: Nerves.Runtime.KV.get("a.nerves_fw_platform"),
+      serial_number: Runtime.serial_number(),
+      device_name: Runtime.KV.get("a.nerves_fw_platform"),
       username: @admin_user,
       password: config["ex_nvr_password"]
     }

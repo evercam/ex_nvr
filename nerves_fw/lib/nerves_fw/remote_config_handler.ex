@@ -3,6 +3,7 @@ defmodule ExNVR.Nerves.RemoteConfigHandler do
 
   require Logger
 
+  alias ExNVR.Model
   alias ExNVR.Nerves.{RUT, SystemSettings}
 
   def handle_message("config", config) do
@@ -29,7 +30,7 @@ defmodule ExNVR.Nerves.RemoteConfigHandler do
   defp power_schedule_updated?(_, _), do: true
 
   defp update_router_schedule(schedule) do
-    schedule = schedule && ExNVR.Model.Schedule.parse!(schedule)
+    schedule = schedule && Model.Schedule.parse!(schedule)
     schedule = add_one_minute(schedule)
 
     with {:error, reason} <- RUT.set_scheduler(schedule) do

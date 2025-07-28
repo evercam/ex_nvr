@@ -70,6 +70,23 @@ config :logger, backends: [RingLogger]
 
 config :logger, RingLogger, level: :info
 
+config :logger, :default_handler,
+  level: :info,
+  formatter: {LoggerJSON.Formatters.Basic, metadata: [:device_id, :user_id, :request_id]}
+
+log_dir = System.get_env("NERVES_LOG_DIR", "/data/logs")
+
+config :logger, :default_handler,
+  level: :info,
+  config: [
+    file: to_charlist(Path.join(log_dir, "ex_nvr.log")),
+    filesync_repeat_interval: 5000,
+    file_check: 5000,
+    max_no_bytes: 20_000_000,
+    max_no_files: 5,
+    compress_on_rotate: true
+  ]
+
 # Use shoehorn to start the main application. See the shoehorn
 # library documentation for more control in ordering how OTP
 # applications are started and handling failures.
@@ -142,7 +159,7 @@ config :mdns_lite,
 
 config :nerves_hub_link,
   connect: true,
-  host: URI.parse(System.fetch_env!("NERVES_HUB_URI")).host,
+  host: URI.parse(System.fetch_env!("NERVES_HUB_DEVICES_URI")).host,
   remote_iex: true,
   shared_secret: [
     product_key: System.get_env("NERVES_HUB_PRODUCT_KEY", "fake_key"),
@@ -169,18 +186,25 @@ config :tzdata, data_dir: "/data/elixir_tzdata"
 
 root_source_code = [
   File.cwd!(),
-  Path.join([File.cwd!(), "..", "ui"]),
-  Path.join([File.cwd!(), "..", "rtsp"])
+  Path.join([File.cwd!(), "..", "ui"])
 ]
 
 config :sentry,
   dsn: System.get_env("SENTRY_DSN", nil),
-  release: "ex_nvr@0.21.0",
+  release: "ex_nvr@0.22.0",
   report_deps: false,
   root_source_code_paths: root_source_code,
   context_lines: 5,
   environment_name: config_env(),
   enable_source_code_context: true
+
+# Loki config
+if System.get_env("LOKI_URL") do
+  config :ex_nvr_fw, :loki,
+    url: System.fetch_env!("LOKI_URL"),
+    username: System.fetch_env!("LOKI_USERNAME"),
+    password: System.fetch_env!("LOKI_PASSWORD")
+end
 
 # Import target specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
