@@ -109,6 +109,16 @@ defmodule ExNVR.Disk do
 
   def has_filesystem?(%Part{} = part), do: not is_nil(part.fs)
 
+  @spec has_mountpoint?(t() | Part.t(), String.t()) :: boolean()
+  def has_mountpoint?(%__MODULE__{fs: %FS{mountpoint: mountpoint}}, mountpoint), do: true
+  def has_mountpoint?(%Part{fs: %FS{mountpoint: mountpoint}}, mountpoint), do: true
+
+  def has_mountpoint?(%{parts: parts}, mountpoint) when is_list(parts) do
+    Enum.any?(parts, &has_mountpoint?(&1, mountpoint))
+  end
+
+  def has_mountpoint?(_, _), do: false
+
   defp list_unix_drives(opts) do
     # By default retrieve disks with major version of 8 and 259
     major_numbers = Keyword.get(opts, :major_number, [8, 259])
