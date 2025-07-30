@@ -384,7 +384,8 @@ defmodule ExNVR.Pipeline.Output.Storage do
       end_date: Segment.end_date(segment) |> Time.to_datetime(),
       device_id: state.device.id,
       stream: state.stream,
-      active: not end_run?
+      active: not end_run?,
+      disk_serial: get_disk_serial(state.device.storage_config.address)
     }
 
     %{state | run: run}
@@ -441,5 +442,17 @@ defmodule ExNVR.Pipeline.Output.Storage do
       Segment end date: #{Segment.end_date(segment) |> Time.to_datetime()}
       Current date time: #{Time.to_datetime(segment.wallclock_end_date)}
     """)
+  end
+
+  defp get_disk_serial(mountpoint) do
+    case ExNVR.Disk.list_drives() do
+      {:ok, drives} ->
+        drives
+        |> Enum.find(%{serial: nil}, &ExNVR.Disk.has_mountpoint?(&1, mountpoint))
+        |> Map.get(:serial)
+
+      _error ->
+        nil
+    end
   end
 end
