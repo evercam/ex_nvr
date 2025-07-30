@@ -151,8 +151,8 @@ export default defineComponent({
       default: ""
     },
     device: {
-      type: String,
-      default: ""
+      type: Object,
+      default: ()  => ({})
     },
     liveViewEnabled: {
       type: Boolean,
@@ -212,6 +212,12 @@ export default defineComponent({
         return
       }
 
+      let start = new Date(this.startDate).toString().split('GMT')[0].trim()
+
+      if (start == null){
+        start = ""
+      }
+
       canvas.width = player.videoWidth
       canvas.height = player.videoHeight
       canvas.getContext('2d').drawImage(player, 0, 0, canvas.width, canvas.height)
@@ -222,7 +228,7 @@ export default defineComponent({
 
       const link = document.createElement("a")
       link.style.display = "none"
-      link.download = `${this.device.name}_${timestampOfRequest}.png`
+      link.download = `${this.device.name}_${start}_${this.stream}.png`
       link.href = dataUri
 
       document.body.appendChild(link)
