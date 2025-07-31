@@ -116,6 +116,7 @@ defmodule ExNVRWeb.RecordingListLive do
               class="border rounded p-1"
               field={f.field}
               type={f.type}
+              label={f.label}
               phx-debounce="500"
               {f.rest}
             />
@@ -272,7 +273,7 @@ defmodule ExNVRWeb.RecordingListLive do
     end
   end
 
-  defp open_popup(recording) do
+  def open_popup(recording) do
     JS.remove_class("hidden", to: "#popup-container")
     |> JS.set_attribute(
       {"src", "/api/devices/#{recording.device_id}/recordings/#{recording.filename}/blob"},
@@ -280,12 +281,12 @@ defmodule ExNVRWeb.RecordingListLive do
     )
   end
 
-  defp close_popup do
+  def close_popup do
     JS.add_class("hidden", to: "#popup-container")
     |> JS.set_attribute({"src", nil}, to: "#recording-player")
   end
 
-  defp format_date(date, timezone) do
+  def format_date(date, timezone) do
     date
     |> DateTime.shift_zone!(timezone)
     |> Calendar.strftime("%b %d, %Y %H:%M:%S %z")
