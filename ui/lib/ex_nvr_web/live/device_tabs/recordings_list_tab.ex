@@ -1,6 +1,6 @@
 defmodule ExNVRWeb.DeviceTabs.RecordingsListTab do
   @moduledoc """
-    recordings list tab 
+    recordings list tab
       recordings list
       filters
       pagination
@@ -146,16 +146,22 @@ defmodule ExNVRWeb.DeviceTabs.RecordingsListTab do
 
   @impl true
   def update(assigns, socket) do
+    params =
+      if connected?(socket) && assigns.params["tab"] != "recordings" do
+        Map.put(assigns.params, "filter_params", %{})
+      else
+        assigns.params
+      end
+
     {:ok,
      socket
      |> assign(assigns)
      |> assign(:filter_details, %{})
      |> assign_new(:pagination_params, fn -> %{} end)
      |> assign_new(:sort_params, fn -> %{} end)
-     |> assign_new(:filter_params, fn -> %{} end)
      |> assign_new(:files_details, fn -> %{} end)
      |> assign_new(:recordings, fn -> %{} end)
-     |> load_device_recordings(assigns.params)}
+     |> load_device_recordings(params)}
   end
 
   @impl true
@@ -209,13 +215,6 @@ defmodule ExNVRWeb.DeviceTabs.RecordingsListTab do
 
   defp load_device_recordings(socket, params) do
     next_page = Map.take(params, ["page"])
-
-    params =
-      if params["tab"] != "recordings" do
-        Map.put(params, "filter_params", %{})
-      else
-        params
-      end
 
     sort_params =
       Map.take(params, ["order_by", "order_directions"])
