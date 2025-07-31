@@ -12,6 +12,8 @@ defmodule ExNVR.Model.Run do
 
   alias Ecto.Changeset
 
+  @seconds_in_day 86_400
+
   @type t :: %__MODULE__{
           start_date: DateTime.t() | nil,
           end_date: DateTime.t() | nil,
@@ -50,6 +52,54 @@ defmodule ExNVR.Model.Run do
       _, q -> q
     end)
     |> order_by([r], asc: r.device_id, asc: r.start_date)
+  end
+
+  # get the summary of available footages grouped by device
+  # and ignoring a provided gap between runs
+  # e.g. a gap of 5 minutes (600 seconds) will combine any runs where the
+  # diff between end_date of a run and start_date of the subsequent run
+  # is less than the gap.
+  def summary(gap_seconds) do
+    gap = gap_seconds / @seconds_in_day
+    fields = [:device_id, :disk_serial, :start_date, :end_date]
+
+    __MODULE__
+    |> where([r], r.stream == :high)
+    |> select([r], map(r, ^fields))
+    |> select_merge([r], %{
+      prev_end_date:
+        over(lag(r.end_date), partition_by: [r.device_id, r.disk_serial], order_by: r.start_date)
+    })
+    |> subquery()
+    |> select([r], map(r, ^fields))
+    |> select_merge([r], %{
+      new_group:
+        fragment(
+          "case when ? is null or julianday(?) - julianday(?) > ? then 1 else 0 end",
+          r.prev_end_date,
+          r.start_date,
+          r.prev_end_date,
+          ^gap
+        )
+    })
+    |> subquery()
+    |> select([r], map(r, ^fields))
+    |> select_merge([r], %{group_id: over(sum(r.new_group), :runs)})
+    |> windows([r],
+      runs: [
+        partition_by: [r.device_id, r.disk_serial],
+        order_by: r.start_date,
+        frame: fragment("ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW")
+      ]
+    )
+    |> subquery()
+    |> select([r], %{
+      device_id: r.device_id,
+      disk_serial: r.disk_serial,
+      start_date: min(r.start_date),
+      end_date: max(r.end_date)
+    })
+    |> group_by([r], [r.device_id, r.disk_serial, r.group_id])
   end
 
   @spec changeset(t(), map()) :: Ecto.Changeset.t()

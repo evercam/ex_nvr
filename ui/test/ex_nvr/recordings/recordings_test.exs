@@ -254,6 +254,88 @@ defmodule ExNVR.RecordingTest do
     end
   end
 
+  test "runs summary", ctx do
+    device_1 = camera_device_fixture(ctx.tmp_dir)
+    device_2 = camera_device_fixture(ctx.tmp_dir)
+    device_3 = camera_device_fixture(ctx.tmp_dir)
+
+    [
+      {device_1, ~U(2025-07-30 10:00:00Z), ~U(2025-08-01 08:05:00Z), nil},
+      {device_1, ~U(2025-08-01 09:00:00Z), ~U(2025-08-02 16:49:17Z), "Serial 1"},
+      {device_1, ~U(2025-08-02 17:00:00Z), ~U(2025-08-03 00:03:47Z), "Serial 1"},
+      {device_2, ~U(2025-08-01 07:00:00Z), ~U(2025-08-01 10:00:47Z), "Serial 2"},
+      {device_2, ~U(2025-08-01 10:13:00Z), ~U(2025-08-02 21:25:00Z), "Serial 2"},
+      {device_3, ~U(2025-08-03 01:15:00Z), ~U(2025-08-03 10:00:00Z), "Serial 1"},
+      {device_3, ~U(2025-08-03 10:01:00Z), ~U(2025-08-04 00:00:00Z), nil},
+      {device_3, ~U(2025-08-04 00:00:15Z), ~U(2025-08-05 05:57:10Z), "Serial 1"}
+    ]
+    |> Enum.each(fn {device, start_date, end_date, disk_serial} ->
+      run_fixture(device, start_date: start_date, end_date: end_date, disk_serial: disk_serial)
+    end)
+
+    expected = %{
+      device_1.id => %{
+        "default" => [
+          %{
+            start_date: ~U(2025-07-30 10:00:00.000000Z),
+            end_date: ~U(2025-08-01 08:05:00.000000Z)
+          }
+        ],
+        "Serial 1" => [
+          %{
+            start_date: ~U(2025-08-01 09:00:00.000000Z),
+            end_date: ~U(2025-08-03 00:03:47.000000Z)
+          }
+        ]
+      },
+      device_2.id => %{
+        "Serial 2" => [
+          %{
+            start_date: ~U(2025-08-01 07:00:00.000000Z),
+            end_date: ~U(2025-08-02 21:25:00.000000Z)
+          }
+        ]
+      },
+      device_3.id => %{
+        "default" => [
+          %{
+            start_date: ~U(2025-08-03 10:01:00.000000Z),
+            end_date: ~U(2025-08-04 00:00:00.000000Z)
+          }
+        ],
+        "Serial 1" => [
+          %{
+            start_date: ~U(2025-08-03 01:15:00.000000Z),
+            end_date: ~U(2025-08-03 10:00:00.000000Z)
+          },
+          %{
+            start_date: ~U(2025-08-04 00:00:15.000000Z),
+            end_date: ~U(2025-08-05 05:57:10.000000Z)
+          }
+        ]
+      }
+    }
+
+    assert ExNVR.Recordings.runs_summary(15 * 60) == expected
+
+    device_id = device_1.id
+
+    assert %{
+             ^device_id => %{
+               "Serial 1" => [
+                 %{
+                   start_date: ~U(2025-08-01 09:00:00.000000Z),
+                   end_date: ~U(2025-08-02 16:49:17.000000Z)
+                 },
+                 %{
+                   start_date: ~U(2025-08-02 17:00:00.000000Z),
+                   end_date: ~U(2025-08-03 00:03:47.000000Z)
+                 }
+               ]
+             }
+           } = ExNVR.Recordings.runs_summary(600)
+  end
+
   defp assert_files_deleted(device, stream_type, recordings, count) do
     recordings_path =
       recordings
