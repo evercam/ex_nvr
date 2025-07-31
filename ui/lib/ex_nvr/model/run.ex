@@ -16,7 +16,8 @@ defmodule ExNVR.Model.Run do
           start_date: DateTime.t() | nil,
           end_date: DateTime.t() | nil,
           active: boolean(),
-          device_id: binary() | nil
+          device_id: binary() | nil,
+          disk_serial: String.t() | nil
         }
 
   @foreign_key_type :binary_id
@@ -25,6 +26,7 @@ defmodule ExNVR.Model.Run do
     field :end_date, :utc_datetime_usec
     field :active, :boolean, default: false
     field :stream, Ecto.Enum, values: [:high, :low], default: :high
+    field :disk_serial, :string
 
     belongs_to :device, ExNVR.Model.Device
   end
