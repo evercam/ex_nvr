@@ -8,51 +8,6 @@ defmodule ExNVRWeb.DeviceDetailsLive do
   alias ExNVRWeb.Router.Helpers, as: Routes
 
   @impl true
-  def mount(%{"id" => device_id} = params, _session, socket) do
-    device = Devices.get!(device_id)
-
-    active_tab = params["tab"] || "details"
-
-    {:ok,
-     assign(socket,
-       device: device,
-       active_tab: active_tab,
-       params: params,
-       files_details: %{}
-     )}
-  end
-
-  @impl true
-  def handle_params(params, _uri, socket) do
-    {:noreply,
-     socket
-     |> assign(:active_tab, params["tab"] || socket.assigns.active_tab)
-     |> assign(:params, params)}
-  end
-
-  @impl true
-  def handle_info({:tab_changed, %{tab: tab}}, socket) do
-    params =
-      socket.assigns.params
-      |> Map.put("tab", tab)
-      |> Map.put("filter_params", %{})
-
-    {:noreply,
-     socket
-     |> assign(:active_tab, tab)
-     |> assign(:params, params)
-     |> push_patch(
-       to: Routes.device_details_path(socket, :show, socket.assigns.device.id, params)
-     )}
-  end
-
-  @impl true
-  def handle_info(_msg, socket) do
-    Map.merge(socket.assigns.filter_params, socket.assigns.pagination_params)
-    |> Map.merge(socket.assigns.sort_params)
-  end
-
-  @impl true
   def render(assigns) do
     ~H"""
     <div class="grow px-4 py-6">
@@ -108,7 +63,7 @@ defmodule ExNVRWeb.DeviceDetailsLive do
         <:tab_content for="recordings">
           <.live_component
             module={RecordingsListTab}
-            id="recording_list_tab"
+            id="recordings_list_tab"
             device={@device}
             params={@params}
           />
@@ -121,14 +76,14 @@ defmodule ExNVRWeb.DeviceDetailsLive do
 
         <:tab_content for="settings">
           <div class="text-center text-gray-500 dark:text-gray-400">
-            Settings tab comming soon....
+            settings tab coming soon...
           </div>
         </:tab_content>
         
     <!-- events tab-->
         <:tab_content for="events">
           <.live_component
-            id="events_lists_tab"
+            id="events_list_tab"
             module={EventsListTab}
             device={@device}
             params={@params}
@@ -137,5 +92,47 @@ defmodule ExNVRWeb.DeviceDetailsLive do
       </.tabs>
     </div>
     """
+  end
+
+  @impl true
+  def mount(%{"id" => device_id} = params, _session, socket) do
+    device = Devices.get!(device_id)
+
+    active_tab = params["tab"] || "details"
+
+    {:ok,
+     assign(socket,
+       device: device,
+       active_tab: active_tab
+     )}
+  end
+
+  @impl true
+  def handle_params(params, _uri, socket) do
+    {:noreply,
+     socket
+     |> assign(:active_tab, params["tab"] || socket.assigns.active_tab)
+     |> assign(:params, params)}
+  end
+
+  @impl true
+  def handle_info({:tab_changed, %{tab: tab}}, socket) do
+    params =
+      socket.assigns.params
+      |> Map.put("tab", tab)
+      |> Map.put("filter_params", %{})
+      |> Map.drop(["order_by", "order_direction"])
+
+    {:noreply,
+     socket
+     |> assign(:active_tab, tab)
+     |> assign(:params, params)
+     |> push_patch(
+       to: Routes.device_details_path(socket, :show, socket.assigns.device.id, params)
+     )}
+  end
+
+  def update_params(tab, id) do
+    send_update(tab, id: id, params: %{})
   end
 end

@@ -80,12 +80,18 @@ defmodule ExNVRWeb.DeviceTabs.EventsListTab do
 
   @impl true
   def update(assigns, socket) do
+    params =
+      if connected?(socket) && assigns.params["tab"] != "events" do
+        Map.put(assigns.params, "filter_params", %{})
+      else
+        assigns.params
+      end
+
     {:ok,
      socket
      |> assign(assigns)
      |> assign_new(:pagination_params, fn -> %{} end)
-     |> assign_new(:filter_params, fn -> %{} end)
-     |> load_events(assigns.params)}
+     |> load_events(params)}
   end
 
   @impl true
@@ -119,13 +125,6 @@ defmodule ExNVRWeb.DeviceTabs.EventsListTab do
   end
 
   defp load_events(socket, params) do
-    params =
-      if params["tab"] != "events" do
-        Map.put(params, "filter_params", %{})
-      else
-        params
-      end
-
     sort_params = Map.take(params, ["order_by", "order_directions"])
 
     params = params["filter_params"] || sort_params || %{}
@@ -133,8 +132,7 @@ defmodule ExNVRWeb.DeviceTabs.EventsListTab do
     nest_event_filter_params =
       nest_filter_params(socket, params, sort_params)
 
-    Events.list_events(nest_event_filter_params)
-    |> case do
+    case Events.list_events(nest_event_filter_params) do
       {:ok, {events, meta}} ->
         assign(socket, meta: meta, events: events, sort_params: sort_params)
 
