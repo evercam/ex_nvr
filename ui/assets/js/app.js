@@ -26,6 +26,8 @@ import topbar from "topbar"
 import "flowbite/dist/flowbite.phoenix"
 import "../css/app.css"
 
+const toolTipId = document.getElementById('tooltipContent');
+
 let Hooks = {
     SwitchDarkMode: {
         mounted() {
@@ -62,6 +64,17 @@ let Hooks = {
         },
         updated() {
             this.highlight(this.el)
+        }
+    },
+
+    FlowbiteInit: {
+        mounted() {
+            initFlowbite()
+
+        },
+        updated() {
+            initFlowbite()
+
         }
     },
     ...getHooks(liveVueApp)
