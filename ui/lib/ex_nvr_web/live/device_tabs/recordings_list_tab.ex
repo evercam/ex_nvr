@@ -17,9 +17,15 @@ defmodule ExNVRWeb.DeviceTabs.RecordingsListTab do
 
   @impl true
   def render(assigns) do
+    IO.inspect(assigns.myself, label: "myself")
+
     ~H"""
     <div>
-      <div class="text-center text-gray-500 dark:text-gray-400">
+      <div
+        class="text-center text-gray-500 dark:text-gray-400"
+        phx-Hook="FlowbiteInit"
+        id="recordings-tab"
+      >
         <.filter_form
           meta={@meta}
           recordings={@recordings}
@@ -58,9 +64,11 @@ defmodule ExNVRWeb.DeviceTabs.RecordingsListTab do
                   />
                 </span>
               </button>
+
               <.recording_details_popover
                 recording={recording}
                 rec_details={@files_details[recording.id]}
+                file_details={@files_details}
               />
               <span
                 title="Preview recording"
@@ -87,9 +95,9 @@ defmodule ExNVRWeb.DeviceTabs.RecordingsListTab do
           </:action>
         </Flop.Phoenix.table>
 
-        <.pagination meta={@meta} target={@myself} />
       </div>
 
+        <.pagination meta={@meta} target={@myself} />
       <div
         id="popup-container"
         class="popup-container fixed top-0 left-0 w-full h-full bg-black bg-opacity-75 flex justify-center items-center hidden"
@@ -102,6 +110,7 @@ defmodule ExNVRWeb.DeviceTabs.RecordingsListTab do
         </button>
         <video id="recording-player" autoplay class="w-full h-auto max-w-full max-h-[80%]"></video>
       </div>
+
     </div>
     """
   end
@@ -160,6 +169,7 @@ defmodule ExNVRWeb.DeviceTabs.RecordingsListTab do
      |> assign_new(:pagination_params, fn -> %{} end)
      |> assign_new(:sort_params, fn -> %{} end)
      |> assign_new(:files_details, fn -> %{} end)
+     |> assign_new(:filter_params, fn -> %{} end)
      |> assign_new(:recordings, fn -> %{} end)
      |> load_device_recordings(params)}
   end
