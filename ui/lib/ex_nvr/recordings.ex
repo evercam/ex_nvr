@@ -176,6 +176,24 @@ defmodule ExNVR.Recordings do
     Repo.update_all(Run.deactivate_query(device_id), set: [active: false])
   end
 
+  @spec runs_summary(non_neg_integer()) :: map()
+  def runs_summary(gap \\ 0) do
+    gap
+    |> Run.summary()
+    |> Repo.all()
+    |> Enum.group_by(& &1.device_id)
+    |> Map.new(fn {device_id, runs} ->
+      runs =
+        Enum.group_by(
+          runs,
+          &(&1.disk_serial || "default"),
+          &Map.take(&1, [:start_date, :end_date])
+        )
+
+      {device_id, runs}
+    end)
+  end
+
   @spec recording_path(Device.t(), map()) :: Path.t()
   @spec recording_path(Device.t(), stream_type(), map()) :: Path.t()
   def recording_path(device, stream_type \\ :high, %{start_date: start_date}) do
