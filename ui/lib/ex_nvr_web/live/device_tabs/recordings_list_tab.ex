@@ -83,7 +83,7 @@ defmodule ExNVRWeb.DeviceTabs.RecordingsListTab do
                   href={~p"/api/devices/#{recording.device_id}/recordings/#{recording.filename}/blob"}
                   class="inline-flex items-center text-gray-900 rounded-lg"
                   id={"recording-#{recording.id}-link"}
-                  >
+                >
                   <span title="Download recording">
                     <.icon name="hero-arrow-down-tray-solid" class="w-6 h-6 dark:text-gray-400" />
                   </span>
@@ -97,11 +97,11 @@ defmodule ExNVRWeb.DeviceTabs.RecordingsListTab do
       <div
         id="popup-container"
         class="popup-container fixed top-0 left-0 w-full h-full bg-black bg-opacity-75 flex justify-center items-center hidden"
-        >
+      >
         <button
           class="popup-close absolute top-4 right-4 text-white"
           phx-click={RecordingListLive.close_popup()}
-          >
+        >
           ×
         </button>
         <video id="recording-player" autoplay class="w-full h-auto max-w-full max-h-[80%]"></video>
@@ -134,10 +134,11 @@ defmodule ExNVRWeb.DeviceTabs.RecordingsListTab do
         >
           <div>
             <.input
-              class="border rounded p-1"
+              class="border rounded p-1 "
               field={f.field}
               type={f.type}
               label={f.label}
+              l_class="text-left"
               phx-debounce="500"
               {f.rest}
             />
