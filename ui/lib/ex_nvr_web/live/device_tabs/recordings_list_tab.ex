@@ -17,8 +17,6 @@ defmodule ExNVRWeb.DeviceTabs.RecordingsListTab do
 
   @impl true
   def render(assigns) do
-    IO.inspect(assigns.myself, label: "myself")
-
     ~H"""
     <div>
       <div
@@ -85,7 +83,7 @@ defmodule ExNVRWeb.DeviceTabs.RecordingsListTab do
                   href={~p"/api/devices/#{recording.device_id}/recordings/#{recording.filename}/blob"}
                   class="inline-flex items-center text-gray-900 rounded-lg"
                   id={"recording-#{recording.id}-link"}
-                >
+                  >
                   <span title="Download recording">
                     <.icon name="hero-arrow-down-tray-solid" class="w-6 h-6 dark:text-gray-400" />
                   </span>
@@ -94,23 +92,20 @@ defmodule ExNVRWeb.DeviceTabs.RecordingsListTab do
             </div>
           </:action>
         </Flop.Phoenix.table>
-
-      </div>
-
         <.pagination meta={@meta} target={@myself} />
+      </div>
       <div
         id="popup-container"
         class="popup-container fixed top-0 left-0 w-full h-full bg-black bg-opacity-75 flex justify-center items-center hidden"
-      >
+        >
         <button
           class="popup-close absolute top-4 right-4 text-white"
           phx-click={RecordingListLive.close_popup()}
-        >
+          >
           ×
         </button>
         <video id="recording-player" autoplay class="w-full h-auto max-w-full max-h-[80%]"></video>
       </div>
-
     </div>
     """
   end
