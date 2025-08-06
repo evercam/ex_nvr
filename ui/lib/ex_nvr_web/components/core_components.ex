@@ -294,6 +294,8 @@ defmodule ExNVRWeb.CoreComponents do
   attr :id, :any, default: nil
   attr :name, :any
   attr :label, :string, default: nil
+  attr :l_class, :string, default: nil
+  nil
   attr :value, :any
 
   attr :type, :string,
@@ -507,7 +509,7 @@ defmodule ExNVRWeb.CoreComponents do
   def input(assigns) do
     ~H"""
     <div phx-feedback-for={@name}>
-      <.label for={@id}>{@label}</.label>
+      <.label for={@id} class={@l_class}>{@label}</.label>
       <input
         type={@type}
         name={@name}
@@ -532,11 +534,15 @@ defmodule ExNVRWeb.CoreComponents do
   Renders a label.
   """
   attr :for, :string, default: nil
+  attr :class, :string, default: nil
   slot :inner_block, required: true
 
   def label(assigns) do
     ~H"""
-    <label for={@for} class="block text-sm font-semibold leading-6 text-black dark:text-white">
+    <label
+      for={@for}
+      class={["block text-sm font-semibold leading-6 text-black dark:text-white", @class]}
+    >
       {render_slot(@inner_block)}
     </label>
     """
