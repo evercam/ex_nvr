@@ -82,7 +82,10 @@ defmodule ExNVRWeb.DeviceTabs.EventsListTab do
   def update(assigns, socket) do
     params =
       if connected?(socket) && assigns.params["tab"] != "events" do
-        Map.put(assigns.params, "filter_params", %{})
+        assigns.params
+        |> Map.put("filter_params", %{})
+        |> Map.put("order_by", [])
+        |> Map.put("order_direction", [])
       else
         assigns.params
       end
