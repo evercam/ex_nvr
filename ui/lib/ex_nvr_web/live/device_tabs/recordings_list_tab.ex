@@ -21,7 +21,6 @@ defmodule ExNVRWeb.DeviceTabs.RecordingsListTab do
     <div>
       <div
         class="text-center text-gray-500 dark:text-gray-400"
-        phx-Hook="FlowbiteInit"
         id="recordings-tab"
       >
         <.filter_form
@@ -153,7 +152,10 @@ defmodule ExNVRWeb.DeviceTabs.RecordingsListTab do
   def update(assigns, socket) do
     params =
       if connected?(socket) && assigns.params["tab"] != "recordings" do
-        Map.put(assigns.params, "filter_params", %{})
+        assigns.params
+        |> Map.put("filter_params", %{})
+        |> Map.put("order_by", [])
+        |> Map.put("order_direction", [])
       else
         assigns.params
       end
