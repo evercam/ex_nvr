@@ -1,7 +1,7 @@
 defmodule ExNVR.AV.Encoder do
   @moduledoc false
 
-  alias ExNVR.AV.Encoder.NIF
+  alias ExNVR.AV.VideoProcessor.NIF
 
   @type t :: reference()
 
@@ -26,7 +26,7 @@ defmodule ExNVR.AV.Encoder do
       |> Map.delete(:time_base)
       |> Map.merge(%{time_base_num: time_base_num, time_base_den: time_base_den})
 
-    NIF.new(codec, nif_options)
+    NIF.new_encoder(codec, nif_options)
   end
 
   @spec encode(t(), ExNVR.AV.Frame.t()) :: [ExNVR.AV.Packet.t()]
@@ -42,7 +42,7 @@ defmodule ExNVR.AV.Encoder do
   @spec flush(t()) :: [ExNVR.AV.Packet.t()]
   def flush(encoder) do
     encoder
-    |> NIF.flush()
+    |> NIF.flush_encoder()
     |> to_packets()
   end
 

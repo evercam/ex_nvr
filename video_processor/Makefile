@@ -16,8 +16,8 @@ VIDEO_PROCESSOR_SO := $(PRIV_DIR)/libvideoprocessor.so
 # uncomment to compile with debug logs
 # DEBUG_LOGS = -DNVR_DEBUG=1
 
-HEADERS := $(DIR)/nvr_encoder.h $(DIR)/encoder.h
-SOURCES := $(DIR)/nvr_encoder.c $(DIR)/encoder.c
+HEADERS := $(DIR)/video_processor.h $(DIR)/encoder.h $(DIR)/decoder.h $(DIR)/utils.h
+SOURCES := $(DIR)/video_processor.c $(DIR)/encoder.c $(DIR)/decoder.c $(DIR)/utils.c
 
 CFLAGS += $(DEBUG_LOGS) -fPIC -shared
 
@@ -61,10 +61,9 @@ download_ffmpeg:
 		tar -xf $(TEMP)/$(PRECOMPILED_FFMPEG_NAME) -C $(FFMPEG_DIR); \
 	fi
 
-$(VIDEO_PROCESSOR_SO):
-	@echo $(FFMPEG_DIR)
+$(VIDEO_PROCESSOR_SO): $(HEADERS) $(SOURCES)
 	mkdir -p $(PRIV_DIR)
-	if [ -d  $(FFMPEG_DIR) ]; then \
+	@if [ -d  $(FFMPEG_DIR) ]; then \
 		cp -f $(FFMPEG_DIR)/lib/*.so* $(PRIV_DIR)/; \
 	fi
 	$(CC) $(CFLAGS) $(IFLAGS) $(LFLAGS) $(SOURCES) -o $(VIDEO_PROCESSOR_SO) $(LDFLAGS)
