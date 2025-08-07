@@ -15,27 +15,30 @@ defmodule ExNVRWeb.DeviceTabs.EventsListTab do
     ~H'''
     <div class="text-center text-gray-500 dark:text-gray-400">
       <.event_filter_form meta={@meta} events={@events} target={@myself} />
-      <Flop.Phoenix.table
-        id="events-tab"
-        opts={ExNVRWeb.FlopConfig.table_opts()}
-        items={@events}
-        meta={@meta}
-        target={@myself}
-        path={~p"/devices/#{@device.id}/details?tab=events"}
-      >
-        <:col :let={event} label="Device" field={:device_name}>
-          {if event.device, do: event.device.name, else: "N/A"}
-        </:col>
-        <:col :let={event} label="Event Type" field={:type}>
-          {event.type}
-        </:col>
-        <:col :let={event} label="Event Time" field={:time}>
-          {Calendar.strftime(event.time, "%b %d, %Y %H:%M:%S %Z")}
-        </:col>
-        <:col :let={event} label="Data">
-          {Jason.encode!(event.metadata)}
-        </:col>
-      </Flop.Phoenix.table>
+
+      <div class="text-center text-gray-500 dark:text-gray-400" id="recordings-tab">
+        <Flop.Phoenix.table
+          id="events-tab"
+          opts={ExNVRWeb.FlopConfig.table_opts()}
+          items={@events}
+          meta={@meta}
+          target={@myself}
+          path={~p"/devices/#{@device.id}/details?tab=events"}
+        >
+          <:col :let={event} label="Device" field={:device_name}>
+            {if event.device, do: event.device.name, else: "N/A"}
+          </:col>
+          <:col :let={event} label="Event Type" field={:type}>
+            {event.type}
+          </:col>
+          <:col :let={event} label="Event Time" field={:time}>
+            {Calendar.strftime(event.time, "%b %d, %Y %H:%M:%S %Z")}
+          </:col>
+          <:col :let={event} label="Data">
+            {Jason.encode!(event.metadata)}
+          </:col>
+        </Flop.Phoenix.table>
+      </div>
 
       <.pagination meta={@meta} target={@myself} />
     </div>

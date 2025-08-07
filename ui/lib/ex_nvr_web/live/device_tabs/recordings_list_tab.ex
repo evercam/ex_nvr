@@ -27,67 +27,71 @@ defmodule ExNVRWeb.DeviceTabs.RecordingsListTab do
           id="recording-filter-form"
         />
 
-        <Flop.Phoenix.table
-          id="recordings"
-          opts={ExNVRWeb.FlopConfig.table_opts()}
-          meta={@meta}
-          items={@recordings}
-          path={~p"/devices/#{@device.id}/details?tab=recordings"}
-        >
-          <:col :let={recording} label="Id">{recording.id}</:col>
-          <:col :let={recording} label="Start-date" field={:start_date}>
-            {RecordingListLive.format_date(recording.start_date, @device.timezone)}
-          </:col>
-          <:col :let={recording} label="End-date" field={:end_date}>
-            {RecordingListLive.format_date(recording.end_date, @device.timezone)}
-          </:col>
-          <:action :let={recording}>
-            <div class="flex justify-end">
-              <button
-                data-popover-target={"popover-click-#{recording.id}"}
-                data-popover-trigger="click"
-                phx-click="fetch-details"
-                phx-value-id={recording.id}
-                type="button"
-                phx-target={@myself}
-              >
-                <span title="Show information">
+        <div class="overflow-y-auto h-[77vh]">
+          <Flop.Phoenix.table
+            id="recordings"
+            opts={ExNVRWeb.FlopConfig.table_opts()}
+            meta={@meta}
+            items={@recordings}
+            path={~p"/devices/#{@device.id}/details?tab=recordings"}
+          >
+            <:col :let={recording} label="Id">{recording.id}</:col>
+            <:col :let={recording} label="Start-date" field={:start_date}>
+              {RecordingListLive.format_date(recording.start_date, @device.timezone)}
+            </:col>
+            <:col :let={recording} label="End-date" field={:end_date}>
+              {RecordingListLive.format_date(recording.end_date, @device.timezone)}
+            </:col>
+            <:action :let={recording}>
+              <div class="flex justify-end">
+                <button
+                  data-popover-target={"popover-click-#{recording.id}"}
+                  data-popover-trigger="click"
+                  phx-click="fetch-details"
+                  phx-value-id={recording.id}
+                  type="button"
+                  phx-target={@myself}
+                >
+                  <span title="Show information">
+                    <.icon
+                      name="hero-information-circle-solid"
+                      class="w-6 h-6 mr-2 dark:text-gray-400 cursor-pointer"
+                    />
+                  </span>
+                </button>
+
+                <.recording_details_popover
+                  recording={recording}
+                  rec_details={@files_details[recording.id]}
+                  file_details={@files_details}
+                />
+                <span
+                  title="Preview recording"
+                  phx-click={RecordingListLive.open_popup(recording)}
+                  id={"thumbnail-#{recording.id}"}
+                >
                   <.icon
-                    name="hero-information-circle-solid"
-                    class="w-6 h-6 mr-2 dark:text-gray-400 cursor-pointer"
+                    name="hero-eye-solid"
+                    class="w-6 h-6 z-auto mr-2 dark:text-gray-400 cursor-pointer thumbnail"
                   />
                 </span>
-              </button>
-
-              <.recording_details_popover
-                recording={recording}
-                rec_details={@files_details[recording.id]}
-                file_details={@files_details}
-              />
-              <span
-                title="Preview recording"
-                phx-click={RecordingListLive.open_popup(recording)}
-                id={"thumbnail-#{recording.id}"}
-              >
-                <.icon
-                  name="hero-eye-solid"
-                  class="w-6 h-6 z-auto mr-2 dark:text-gray-400 cursor-pointer thumbnail"
-                />
-              </span>
-              <div class="flex justify-end">
-                <.link
-                  href={~p"/api/devices/#{recording.device_id}/recordings/#{recording.filename}/blob"}
-                  class="inline-flex items-center text-gray-900 rounded-lg"
-                  id={"recording-#{recording.id}-link"}
-                >
-                  <span title="Download recording">
-                    <.icon name="hero-arrow-down-tray-solid" class="w-6 h-6 dark:text-gray-400" />
-                  </span>
-                </.link>
+                <div class="flex justify-end">
+                  <.link
+                    href={
+                      ~p"/api/devices/#{recording.device_id}/recordings/#{recording.filename}/blob"
+                    }
+                    class="inline-flex items-center text-gray-900 rounded-lg"
+                    id={"recording-#{recording.id}-link"}
+                  >
+                    <span title="Download recording">
+                      <.icon name="hero-arrow-down-tray-solid" class="w-6 h-6 dark:text-gray-400" />
+                    </span>
+                  </.link>
+                </div>
               </div>
-            </div>
-          </:action>
-        </Flop.Phoenix.table>
+            </:action>
+          </Flop.Phoenix.table>
+        </div>
         <.pagination meta={@meta} target={@myself} />
       </div>
       <div
@@ -111,7 +115,7 @@ defmodule ExNVRWeb.DeviceTabs.RecordingsListTab do
       assign(assigns, form: to_form(meta), meta: meta, recordings: recordings)
 
     ~H"""
-    <div class="flex justify-between">
+    <div class="flex  justify-between">
       <.form
         phx-taget={@target}
         for={@form}
