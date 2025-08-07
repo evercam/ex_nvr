@@ -20,6 +20,7 @@ defmodule ExNVR.Devices.Cameras.NTP do
     %__MODULE__{dhcp?: true, server: get_server(ntp.ntp_manual)}
   end
 
+  defp get_server(nil), do: nil
   defp get_server(%{type: :dns} = config), do: config.dns_name
   defp get_server(%{type: :ipv4} = config), do: config.ipv4_address
   defp get_server(%{type: :ipv6} = config), do: config.ipv6_address

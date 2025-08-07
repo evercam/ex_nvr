@@ -16,6 +16,10 @@ defmodule ExNVR.RemoteConnection do
     Slipstream.start_link(__MODULE__, options, name: __MODULE__)
   end
 
+  def push_event(event, payload) do
+    send(__MODULE__, {:push_event, event, payload})
+  end
+
   @impl Slipstream
   def init(options) do
     opts = [uri: options[:uri]]
@@ -60,11 +64,12 @@ defmodule ExNVR.RemoteConnection do
 
   @impl Slipstream
   def handle_info(:send_system_status, socket) do
-    Logger.info("Sending system status")
+    Logger.info("[RemoteConnection] Sending system status")
     push(socket, @topic, "health", ExNVR.SystemStatus.get_all(), @send_timeout)
     {:noreply, socket}
   end
 
+  @impl Slipstream
   def handle_info({:command, ref, {status, payload}}, socket) do
     Logger.info("Sending command result: #{ref}")
     message = %{ref: ref, status: status, payload: payload}
@@ -73,6 +78,13 @@ defmodule ExNVR.RemoteConnection do
       Logger.error("Error while pushing command result message: #{inspect(error)}")
     end
 
+    {:noreply, socket}
+  end
+
+  @impl Slipstream
+  def handle_info({:push_event, event, payload}, socket) do
+    Logger.info("[RemoteConnection] Pushing event: #{event}")
+    push(socket, @topic, event, payload, @send_timeout)
     {:noreply, socket}
   end
 

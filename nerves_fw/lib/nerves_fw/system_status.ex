@@ -6,9 +6,13 @@ defmodule ExNVR.Nerves.SystemStatus do
 
   use GenServer
 
+  require Logger
   alias ExNVR.Nerves.Monitoring.UPS
   alias ExNVR.Nerves.{Netbird, RUT}
   alias Nerves.Runtime
+
+  @runs_summary_interval to_timeout(hour: 1)
+  @run_gap_seconds 1800
 
   def start_link(_options) do
     GenServer.start_link(__MODULE__, %{}, name: __MODULE__)
@@ -17,7 +21,8 @@ defmodule ExNVR.Nerves.SystemStatus do
   @impl true
   def init(_options) do
     Process.send_after(self(), :collect_system_metrics, 0)
-    {:ok, nil}
+    {:ok, ref} = :timer.send_interval(@runs_summary_interval, :runs_summary)
+    {:ok, %{timer_ref: ref}}
   end
 
   @impl true
@@ -30,6 +35,18 @@ defmodule ExNVR.Nerves.SystemStatus do
     :ok = ExNVR.SystemStatus.set(:ups, ups_data())
 
     Process.send_after(self(), :collect_system_metrics, to_timeout(second: 30))
+    {:noreply, state}
+  end
+
+  @impl true
+  def handle_info(:runs_summary, state) do
+    Logger.info("[SystemStatus] Collecting runs summary")
+
+    Task.start(fn ->
+      summary = ExNVR.Recordings.runs_summary(@run_gap_seconds)
+      ExNVR.RemoteConnection.push_event("runs-summary", summary)
+    end)
+
     {:noreply, state}
   end
 
