@@ -212,12 +212,6 @@ export default defineComponent({
         return
       }
 
-      let start = new Date(this.startDate).toString().split('GMT')[0].trim()
-
-      if (start == null){
-        start = ""
-      }
-
       canvas.width = player.videoWidth
       canvas.height = player.videoHeight
       canvas.getContext('2d').drawImage(player, 0, 0, canvas.width, canvas.height)
