@@ -222,7 +222,7 @@ export default defineComponent({
 
       const link = document.createElement("a")
       link.style.display = "none"
-      link.download = `${this.device.name}_${start}_${this.stream}.png`
+      link.download = `${this.device.name}_${timestampOfRequest}_${this.stream}.png`
       link.href = dataUri
 
       document.body.appendChild(link)
