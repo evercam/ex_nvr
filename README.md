@@ -186,5 +186,6 @@ The main feature of this project is to store video streams retrieved from `devic
 
 The project is in a `poncho` style, it consists of the following (sub)projects:
 
+   * `video_processor` - Nif app that contains video encoding, decoding and processing logic.
    * `ui` - Contains the core logic of `ex_nvr` and a live view app.
    * `nerves_fw` - Contains nerves firmware image. Check [here](/nerves_fw/README.md)
