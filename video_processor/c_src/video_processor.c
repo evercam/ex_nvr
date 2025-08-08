@@ -327,6 +327,10 @@ ERL_NIF_TERM flush_decoder(ErlNifEnv *env, int argc,
     return nif_raise(env, "failed_to_flush");
   }
 
+  if (convert_frames(nvr_decoder) < 0) {
+    return nif_raise(env, "failed_to_convert");
+  }
+
   return frames_to_term(env, nvr_decoder->decoder);
 }
 
@@ -374,7 +378,7 @@ static int convert_frames(struct NvrDecoder *nvr_decoder) {
         return ret;
       }
       av_frame_unref(decoder->frames[i]);
-      decoder->frames[i] = nvr_decoder->video_converter->frame;
+      av_frame_ref(decoder->frames[i], nvr_decoder->video_converter->frame);
     }
   }
 

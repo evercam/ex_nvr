@@ -10,6 +10,7 @@ defmodule ExNVR.Pipeline.Output.Thumbnailer do
 
   import ExNVR.MediaUtils, only: [to_annexb: 1]
 
+  alias ExNVR.AV.Decoder
   alias Membrane.{Buffer, H264, H265}
 
   def_input_pad :input,
@@ -63,14 +64,9 @@ defmodule ExNVR.Pipeline.Output.Thumbnailer do
       out_height = div(state.thumbnail_width * format.height, format.width)
       out_height = out_height - rem(out_height, 2)
 
-      decoder = Xav.Decoder.new(codec, out_height: out_height, out_width: state.thumbnail_width)
+      decoder = Decoder.new(codec, out_height: out_height, out_width: state.thumbnail_width)
 
-      {[],
-       %{
-         state
-         | thumbnail_height: out_height,
-           decoder: decoder
-       }}
+      {[], %{state | thumbnail_height: out_height, decoder: decoder}}
     else
       {[], state}
     end
@@ -90,7 +86,7 @@ defmodule ExNVR.Pipeline.Output.Thumbnailer do
   def handle_buffer(:input, _buffer, _ctx, state), do: {[], state}
 
   defp do_decode(buffer, state) do
-    with {:ok, decoded} <- Xav.Decoder.decode(state.decoder, to_annexb(buffer.payload)),
+    with [decoded] <- Decoder.decode(state.decoder, to_annexb(buffer.payload)),
          {:ok, jpeg_image} <- to_jpeg(decoded.data, state),
          :ok <- File.write(image_path(state.dest, buffer), jpeg_image) do
       {[], %{state | last_buffer_pts: buffer.pts}}

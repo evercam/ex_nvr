@@ -2,7 +2,7 @@
 
 #ifdef NVR_DEBUG
 #define NVR_LOG_DEBUG(X, ...)                                                  \
-  fprintf(stderr, "[XAV DEBUG %s] %s:%d " X "\n", __TIME__, __FILE__,          \
+  fprintf(stderr, "[NVR DEBUG %s] %s:%d " X "\n", __TIME__, __FILE__,          \
           __LINE__, ##__VA_ARGS__)
 #else
 #define NVR_LOG_DEBUG(...)
