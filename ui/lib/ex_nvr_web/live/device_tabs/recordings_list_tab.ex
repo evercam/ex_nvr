@@ -19,7 +19,7 @@ defmodule ExNVRWeb.DeviceTabs.RecordingsListTab do
   def render(assigns) do
     ~H"""
     <div>
-      <div class="text-center text-gray-500 dark:text-gray-400" id="recordings-tab">
+      <div class="text-center text-gray-500 dark:text-gray-400" id="recordings-tab" phx-hook="FlowbiteInit">
         <.filter_form
           meta={@meta}
           recordings={@recordings}
