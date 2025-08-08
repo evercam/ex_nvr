@@ -31,7 +31,7 @@ WORKDIR /app
 RUN mix local.hex --force && \
   mix local.rebar --force
 
-# install mix dependencies
+COPY video_processor video_processor
 COPY ui ui
 RUN rm -rf ui/assets/node_modules
 
