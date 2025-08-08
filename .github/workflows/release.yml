@@ -118,7 +118,7 @@ jobs:
         ref: ${{ github.ref }}
 
     - name: Copy Documentation
-      run:  cp ui/priv/static/openapi.yaml docs/
+      run:  cp ui/priv/static/openapi.yaml ui/priv/static/swagger.html docs/
 
     - name: Deploy to GitHub Pages
       run: |
