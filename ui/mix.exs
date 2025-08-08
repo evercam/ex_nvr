@@ -86,7 +86,6 @@ defmodule ExNVR.MixProject do
       {:slipstream, "~> 1.2.0"},
       {:live_vue, "~> 0.5.7"},
       {:sentry, "~> 11.0"},
-      {:xav, "~> 0.11.0"},
       {:live_debugger, "~> 0.3.0", only: [:dev, :test]},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:phoenix_live_reload, "~> 1.2", only: [:dev, :test]},
@@ -154,22 +153,6 @@ defmodule ExNVR.MixProject do
       File.mkdir_p!(libs_dest)
     end
 
-    {libdir, 0} =
-      System.cmd("pkg-config", ["--variable=libdir", "libavformat"], stderr_to_stdout: true)
-
-    ffmpeg_libs =
-      [
-        "libavdevice.so*",
-        "libavcodec.so*",
-        "libavformat.so*",
-        "libavutil.so*",
-        "libavfilter.so*",
-        "libswresample.so*",
-        "libswscale.so*",
-        "libpostproc.so*"
-      ]
-      |> Enum.map(&Path.join(String.trim(libdir), &1))
-
     # Tried to use `File.cp` to copy dependencies however links are not copied correctly
     # which made the size of the destination folder 3 times the original size.
     libs = [
@@ -179,7 +162,7 @@ defmodule ExNVR.MixProject do
       "/usr/lib/#{arch}-linux-#{abi}/libcrypto.so*"
     ]
 
-    System.shell("cp -P #{Enum.join(libs ++ ffmpeg_libs, " ")} #{libs_dest}")
+    System.shell("cp -P #{Enum.join(libs, " ")} #{libs_dest}")
     release
   end
 

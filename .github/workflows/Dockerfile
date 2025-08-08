@@ -17,20 +17,12 @@ RUN \
   cmake \
   libsrtp2-dev \
   libturbojpeg-dev \
-  && mkdir /opt/ffmpeg \
-  && wget -O ffmpeg.tar.xz "https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2025-04-30-13-13/ffmpeg-n6.1.2-27-ge16ff06adb-linuxarm64-gpl-shared-6.1.tar.xz" \
-  && tar -xvf ffmpeg.tar.xz -C /opt/ffmpeg --strip-components=1 \
-  && rm -rf ffmpeg.tar.xz /var/lib/apt/lists/*
+  && rm -rf /var/lib/apt/lists/*
 
 ARG ERL_FLAGS
 ENV ERL_FLAGS=$ERL_FLAGS
 ENV MIX_ENV=prod
 ENV GENERATE_DEB_PACKAGE=true
-
-# Needed to compile Xav
-ENV PKG_CONFIG_PATH=/opt/ffmpeg/lib/pkgconfig
-ENV CPATH=/opt/ffmpeg/include
-ENV LIBRARY_PATH=/opt/ffmpeg/lib
 
 # Create build workdir
 WORKDIR /app
@@ -41,7 +33,7 @@ RUN mix local.hex --force && \
 
 # install mix dependencies
 COPY ui ui
-RUN rm -rf ui/priv/bundlex ui/assets/node_modules
+RUN rm -rf ui/assets/node_modules
 
 WORKDIR /app/ui
 
