@@ -16,8 +16,8 @@ VIDEO_PROCESSOR_SO := $(PRIV_DIR)/libvideoprocessor.so
 # uncomment to compile with debug logs
 # DEBUG_LOGS = -DNVR_DEBUG=1
 
-HEADERS := $(DIR)/video_processor.h $(DIR)/encoder.h $(DIR)/decoder.h $(DIR)/utils.h
-SOURCES := $(DIR)/video_processor.c $(DIR)/encoder.c $(DIR)/decoder.c $(DIR)/utils.c
+HEADERS = $(DIR)/video_processor.h $(DIR)/encoder.h $(DIR)/decoder.h $(DIR)/video_converter.h $(DIR)/utils.h
+SOURCES = $(DIR)/video_processor.c $(DIR)/encoder.c $(DIR)/decoder.c $(DIR)/video_converter.c $(DIR)/utils.c
 
 CFLAGS += $(DEBUG_LOGS) -fPIC -shared
 
