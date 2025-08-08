@@ -1,0 +1,41 @@
+FROM 114786593061.dkr.ecr.eu-west-1.amazonaws.com/ex-nvr/elixir-1.18.3-erlang-27.3.3:latest
+
+# install build dependencies
+RUN apt-get update && apt-get install -y \
+  libsrtp2-dev \
+  libturbojpeg-dev \ 
+  && rm -rf /var/lib/apt/lists/*
+
+# Download ffmpeg
+RUN wget https://a7u4.c16.e2-3.dev/public/ffmpeg-armhf.tar.xz && tar -xf ffmpeg-armhf.tar.xz -C /opt
+ENV PKG_CONFIG_PATH="/opt/ffmpeg/lib/pkgconfig:$PKG_CONFIG_PATH"
+ENV CPATH=/opt/ffmpeg/include
+ENV LIBRARY_PATH=/opt/ffmpeg/lib
+
+ARG ERL_FLAGS
+ENV ERL_FLAGS=$ERL_FLAGS
+ENV MIX_ENV=prod
+ENV GENERATE_DEB_PACKAGE=true
+
+# Create build workdir
+WORKDIR /app
+
+# install hex + rebar
+RUN mix local.hex --force && \
+  mix local.rebar --force
+
+# install mix dependencies
+COPY ui ui
+
+WORKDIR /app/ui
+
+RUN rm -rf priv/bundlex assets/node_modules
+
+RUN mix deps.get
+RUN mix deps.compile
+
+RUN mix sentry.package_source_code
+RUN mix release
+
+RUN mkdir build-assets
+RUN cp _build/prod/*.tar.gz _build/prod/*.deb build-assets/
