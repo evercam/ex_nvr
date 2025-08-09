@@ -1,5 +1,6 @@
 ARCH := $(or $(TARGET_ARCH), $(shell uname -m))
 OS := $(or $(TARGET_OS), $(shell uname -s))
+ABI := gnu
 
 VERSION ?= 0.1.0
 FFMPEG_VERSION ?= 7.1.1
@@ -8,6 +9,8 @@ TEMP ?= $(HOME)/.cache
 FFMPEG_DIR ?= $(TEMP)/ex_nvr/$(VERSION)/$(ARCH)/ffmpeg-$(FFMPEG_VERSION)
 PRECOMPILED_FFMPEG_LINK ?= https://github.com/evercam/ex_nvr_precompiled/releases/download/v$(VERSION)/ffmpeg-linux-$(ARCH)-$(FFMPEG_VERSION).tar.xz
 PRECOMPILED_FFMPEG_NAME ?= ffmpeg-linux-$(shell uname -m)-$(FFMPEG_VERSION).tar.xz
+
+PRECOMPILED = false
 
 DIR := c_src
 PRIV_DIR := $(MIX_APP_PATH)/priv
@@ -26,10 +29,12 @@ IFLAGS = -I$(ERTS_INCLUDE_DIR) -I$(DIR) $$(pkg-config --cflags libavcodec libavu
 LDFLAGS = $$(pkg-config --libs libavcodec libavutil libswscale)
 
 ifeq ($(OS),Linux)
-	ifneq (,$(filter $(ARCH),x86_64 armv7l arm aarch64))
-		DOWNLOAD = 1
-		IFLAGS = -I$(ERTS_INCLUDE_DIR) -I$(DIR) -I$(FFMPEG_DIR)/include
-		LDFLAGS = -L$(PRIV_DIR) -lavcodec -lavutil -lswscale -Wl,-rpath=\$$ORIGIN
+	ifeq ($(ABI),gnu)
+		ifneq (,$(filter $(ARCH),x86_64 armv7l arm aarch64))
+			PRECOMPILED = true
+			IFLAGS = -I$(ERTS_INCLUDE_DIR) -I$(DIR) -I$(FFMPEG_DIR)/include
+			LDFLAGS = -L$(PRIV_DIR) -lavcodec -lavutil -lswscale -Wl,-rpath=\$$ORIGIN
+		endif
 	endif
 endif
 
@@ -53,7 +58,7 @@ endif
 all: download_ffmpeg $(VIDEO_PROCESSOR_SO)
 
 download_ffmpeg:
-	@if [ ! -d $(FFMPEG_DIR) ]; then \
+	@if [ $(PRECOMPILED) = true ] && [ ! -d $(FFMPEG_DIR) ]; then \
 		echo "Downloading precompiled ffmpeg..."; \
 		mkdir -p $(TEMP); \
 		mkdir -p $(FFMPEG_DIR); \
@@ -63,12 +68,12 @@ download_ffmpeg:
 
 $(VIDEO_PROCESSOR_SO): $(HEADERS) $(SOURCES)
 	mkdir -p $(PRIV_DIR)
-	@if [ -d  $(FFMPEG_DIR) ]; then \
+	@if [ $(PRECOMPILED) = true ]; then \
 		cp -f $(FFMPEG_DIR)/lib/*.so* $(PRIV_DIR)/; \
 	fi
 	$(CC) $(CFLAGS) $(IFLAGS) $(LFLAGS) $(SOURCES) -o $(VIDEO_PROCESSOR_SO) $(LDFLAGS)
-	@rm $(PRIV_DIR)/libav*.so $(PRIV_DIR)/libsw*.so
-	@rm $(PRIV_DIR)/libav*.so.*.* $(PRIV_DIR)/libsw*.so.*.*
+	@rm -f $(PRIV_DIR)/libav*.so $(PRIV_DIR)/libsw*.so
+	@rm -f $(PRIV_DIR)/libav*.so.*.* $(PRIV_DIR)/libsw*.so.*.*
 
 format:
 	clang-format -i $(DIR)/*

@@ -1,4 +1,4 @@
-FROM hexpm/elixir:1.18.3-erlang-27.3.3-alpine-3.18.9 AS build
+FROM elixir:1.18.4-otp-27-alpine AS build
 
 # install build dependencies
 RUN \
@@ -8,6 +8,7 @@ RUN \
   git \
   make \
   cmake \
+  curl \
   openssl-dev \ 
   ffmpeg-dev \
   clang-dev \
@@ -18,6 +19,7 @@ RUN \
 ARG VERSION
 ENV VERSION=${VERSION}
 ENV DOCKER_BUILD=true
+ENV ABI=musl
 
 ARG ERL_FLAGS
 ENV ERL_FLAGS=$ERL_FLAGS
@@ -33,6 +35,7 @@ RUN mix local.hex --force && \
 ENV MIX_ENV=prod
 
 # install mix dependencies
+COPY video_processor video_processor
 COPY ui ui
 
 WORKDIR /app/ui
@@ -44,7 +47,7 @@ RUN mix deps.compile
 RUN mix do compile, sentry.package_source_code, release
 
 # prepare release image
-FROM alpine:3.18.9 AS app
+FROM alpine:3.22.1 AS app
 
 # install runtime dependencies
 RUN \
