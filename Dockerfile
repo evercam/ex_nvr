@@ -58,7 +58,7 @@ RUN \
   clang \ 
   curl \
   libsrtp \
-  libjpeg-turbo \
+  libjpeg-turbo-dev \
   coreutils \
   util-linux
 

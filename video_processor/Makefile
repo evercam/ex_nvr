@@ -1,6 +1,6 @@
 ARCH := $(or $(TARGET_ARCH), $(shell uname -m))
 OS := $(or $(TARGET_OS), $(shell uname -s))
-ABI := gnu
+ABI ?= gnu
 
 VERSION ?= 0.1.0
 FFMPEG_VERSION ?= 7.1.1
@@ -50,9 +50,11 @@ ifeq ($(OS),Darwin)
 endif
 
 # Flags for Fedora
-ifneq (,$(wildcard /etc/fedora-release))
-	IFLAGS += $$(pkg-config --cflags-only-I libavcodec libavutil libswscale)
-	LFLAGS += $$(pkg-config --libs-only-L libavcodec libavutil libswscale)
+ifneq ($(PRECOMPILED),true)
+	ifneq (,$(wildcard /etc/fedora-release))
+		IFLAGS += $$(pkg-config --cflags-only-I libavcodec libavutil libswscale)
+		LFLAGS += $$(pkg-config --libs-only-L libavcodec libavutil libswscale)
+	endif
 endif
 
 all: download_ffmpeg $(VIDEO_PROCESSOR_SO)
