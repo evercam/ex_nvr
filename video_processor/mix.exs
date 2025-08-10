@@ -26,7 +26,7 @@ defmodule ExNVR.VideoProcessor.MixProject do
   defp deps do
     [
       {:elixir_make, "~> 0.9", runtime: false},
-      {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
+      {:credo, "~> 1.7", only: [:dev, :test], runtime: false}
     ]
   end
 end
