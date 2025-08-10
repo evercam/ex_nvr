@@ -9,7 +9,7 @@ NVR (Network Video Recorder) for Elixir using [Membrane Framework](https://githu
   - [Contents](#contents)
   - [Installation](#installation)
     - [Docker](#docker)
-      - [Arm/v7](#armv7)
+      - [Linux Arm/v7](#linux-armv7)
     - [Releases](#releases)
   - [Environment Variables](#environment-variables)
   - [WebRTC](#webrtc)
@@ -39,12 +39,12 @@ This will create an image `ex_nvr` with `custom` tag. To run it, issue this comm
 docker run --rm -it -p 4000:4000 --env-file .env ex_nvr:custom
 ```
 
-#### Arm/v7
-There's currently no automated docker build for `arm/v7` since building the image using `buildx` and `Qemu` take ages to complete,
+#### Linux Arm/v7
+There's currently no automated docker build for `arm/v7` since building the image using `buildx` and `Qemu` hangs forever,
 the workaround is to build the image on the target host itself
 
 ```bash
-docker build -t ex_nvr:0.6.0 -f Dockerfile-armv7 .
+docker build -t ex_nvr:0.22.0 -f Dockerfile .
 ```
 
 ### Releases
