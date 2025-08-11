@@ -16,7 +16,10 @@ defmodule ExNVRWeb.DeviceTabs.EventsListTab do
     <div class="text-center text-gray-500 dark:text-gray-400">
       <.event_filter_form meta={@meta} events={@events} target={@myself} />
 
-      <div class="text-center text-gray-500 dark:text-gray-400" id="recordings-tab">
+      <div
+        class="text-center text-gray-500 dark:text-gray-400 overflow-y-auto h-[75vh]"
+        id="recordings-tab"
+      >
         <Flop.Phoenix.table
           id="events-tab"
           opts={ExNVRWeb.FlopConfig.table_opts()}
@@ -97,6 +100,7 @@ defmodule ExNVRWeb.DeviceTabs.EventsListTab do
      socket
      |> assign(assigns)
      |> assign_new(:pagination_params, fn -> %{} end)
+     |> assign_new(:filter_params, fn -> %{} end)
      |> load_events(params)}
   end
 
