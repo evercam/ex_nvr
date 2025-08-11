@@ -35,8 +35,9 @@ defmodule ExNVR.Pipelines.HlsPlayback do
 
   @impl true
   def handle_init(_ctx, options) do
-    Logger.metadata(device_id: options[:device].id)
-    Membrane.Logger.info("Start playback pipeline with options: #{inspect(options)}")
+    device_id = options[:device].id
+    Logger.metadata(device_id: device_id)
+    Membrane.Logger.info("Start playback pipeline with options: #{device_id}")
 
     Process.set_label({:hls_playback, options[:device].id})
 

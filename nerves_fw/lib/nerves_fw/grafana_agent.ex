@@ -14,7 +14,9 @@ defmodule ExNVR.Nerves.GrafanaAgent do
 
   @default_config [
     config_dir: "/data/grafana_agent",
-    wal_directory: "/data/grafana_agent"
+    wal_directory: "/data/grafana_agent",
+    prom_url: "http://localhost:9090",
+    loki_url: "http://localhost:3000"
   ]
 
   def start_link(config) do

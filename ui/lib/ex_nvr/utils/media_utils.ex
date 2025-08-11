@@ -1,22 +1,19 @@
 defmodule ExNVR.MediaUtils do
   @moduledoc false
 
+  alias ExNVR.AV.Decoder
   alias Membrane.Buffer
 
   @default_video_timescale 90_000
 
-  @spec decode_last(Enumerable.t(Buffer.t() | ExMP4.Sample.t()), Xav.Decoder.t()) :: Buffer.t()
+  @spec decode_last(Enumerable.t(Buffer.t() | ExMP4.Sample.t()), Decoder.t()) :: Buffer.t()
   def decode_last(buffers, decoder) do
     buffers
     |> Stream.transform(
       fn -> decoder end,
-      fn packet, decoder ->
-        case Xav.Decoder.decode(decoder, packet.payload, pts: packet.pts) do
-          {:ok, frame} -> {[frame], decoder}
-          _other -> {[], decoder}
-        end
-      end,
-      &Xav.Decoder.flush!/1
+      &{Decoder.decode(&2, &1.payload, pts: &1.pts), &2},
+      &{Decoder.flush(&1), &1},
+      &Function.identity/1
     )
     |> Enum.reverse()
     |> hd()

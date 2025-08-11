@@ -7,8 +7,8 @@ defmodule ExNVR.Elements.Transcoder do
 
   import ExMP4.Helper
 
+  alias ExNVR.AV.{Decoder, Encoder}
   alias Membrane.{H264, H265}
-  alias Xav.{Decoder, Encoder}
 
   @original_time_base Membrane.Time.seconds(1)
   @dest_time_base 90_000
@@ -75,23 +75,19 @@ defmodule ExNVR.Elements.Transcoder do
     dts = buffer.dts && timescalify(buffer.dts, @original_time_base, @dest_time_base)
     pts = buffer.pts && timescalify(buffer.pts, @original_time_base, @dest_time_base)
 
-    with {:ok, frame} <- Decoder.decode(state.decoder, buffer.payload, dts: dts, pts: pts),
-         packets <- Encoder.encode(state.encoder, frame) do
-      buffers = Enum.map(packets, &map_to_buffer/1)
-      {[buffer: {:output, buffers}], state}
-    else
-      _other ->
-        {[], state}
-    end
+    state.decoder
+    |> Decoder.decode(buffer.payload, dts: dts, pts: pts)
+    |> Enum.flat_map(&Encoder.encode(state.encoder, &1))
+    |> Enum.map(&map_to_buffer/1)
+    |> then(&{[buffer: {:output, &1}], state})
   end
 
   @impl true
   def handle_end_of_stream(:input, _ctx, state) do
-    {:ok, frames} = Decoder.flush(state.decoder)
-
     buffers =
-      frames
-      |> Enum.map(&Encoder.encode(state.encoder, &1))
+      state.decoder
+      |> Decoder.flush()
+      |> Enum.flat_map(&Encoder.encode(state.encoder, &1))
       |> Kernel.++(Encoder.flush(state.encoder))
       |> Enum.map(&map_to_buffer/1)
 
@@ -109,12 +105,5 @@ defmodule ExNVR.Elements.Transcoder do
     }
   end
 
-  # arm architecture use a precompiled ffmpeg with OpenH264 encoder which supports constrained_baseline profile
-  # x264 support baseline profile
-  defp encoder_profile do
-    case ExNVR.Utils.system_architecture() do
-      {"arm", _os, _abi} -> "Constrained Baseline"
-      _other -> "Baseline"
-    end
-  end
+  defp encoder_profile, do: "Baseline"
 end
