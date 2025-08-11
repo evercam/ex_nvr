@@ -1,9 +1,7 @@
 FROM 114786593061.dkr.ecr.eu-west-1.amazonaws.com/ex-nvr/elixir-1.18.3-erlang-27.3.3:latest
 
 # install build dependencies
-RUN apt-get update && apt-get install -y \
-  libsrtp2-dev \
-  libturbojpeg-dev \ 
+RUN apt-get update && apt-get install -y libsrtp2-dev \
   && rm -rf /var/lib/apt/lists/*
 
 ARG ERL_FLAGS

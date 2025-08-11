@@ -111,11 +111,10 @@ defmodule ExNVR.Recordings do
     with {:ok, reader} <- ExMP4.Reader.new(path) do
       track = ExMP4.Reader.track(reader, :video)
       offset = ExMP4.Helper.timescalify(offset, :microsecond, track.timescale)
-      codec = if track.media == :h265, do: :hevc, else: track.media
 
       reader
       |> read_samples(track, offset, method)
-      |> ExNVR.MediaUtils.decode_last(AV.Decoder.new(codec))
+      |> ExNVR.MediaUtils.decode_last(AV.Decoder.new(track.media, out_format: :yuvj420p))
       |> then(fn frame ->
         datetime =
           DateTime.add(
@@ -124,10 +123,7 @@ defmodule ExNVR.Recordings do
             :microsecond
           )
 
-        {:ok, snapshot} =
-          Turbojpeg.yuv_to_jpeg(frame.data, frame.width, frame.height, 75, :I420)
-
-        {:ok, datetime, snapshot}
+        {:ok, datetime, AV.VideoProcessor.encode_to_jpeg(frame)}
       end)
     end
   end
