@@ -14,6 +14,7 @@ defmodule ExNVR.Elements.CVSBufferer do
 
   import ExNVR.MediaUtils, only: [to_annexb: 1]
 
+  alias ExNVR.AV.Decoder
   alias ExNVR.Utils
   alias Membrane.{H264, H265}
 
@@ -39,7 +40,7 @@ defmodule ExNVR.Elements.CVSBufferer do
         %H265{} -> :hevc
       end
 
-    {[], %{state | decoder: Xav.Decoder.new(codec)}}
+    {[], %{state | decoder: Decoder.new(codec)}}
   end
 
   @impl true

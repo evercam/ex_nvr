@@ -27,6 +27,7 @@ defmodule ExNVR.Pipeline.Output.Socket do
 
   require ExNVR.Utils
 
+  alias ExNVR.AV.Decoder
   alias Membrane.Time
   alias Membrane.{H264, H265}
 
@@ -48,12 +49,12 @@ defmodule ExNVR.Pipeline.Output.Socket do
         %H265{} -> :hevc
       end
 
-    decoder = Xav.Decoder.new(codec, out_format: :rgb24)
+    decoder = Decoder.new(codec, out_format: :rgb24)
 
     {actions, state} =
       if state.decoder do
         state.decoder
-        |> Xav.Decoder.flush!()
+        |> Decoder.flush()
         |> Enum.reduce(state, &send_frame/2)
       else
         {[], state}
@@ -83,8 +84,8 @@ defmodule ExNVR.Pipeline.Output.Socket do
   def handle_buffer(:input, buffer, _ctx, state) do
     buffer = %{buffer | pts: convert_pts(buffer.pts)}
 
-    case Xav.Decoder.decode(state.decoder, buffer.payload, pts: buffer.pts) do
-      {:ok, frame} ->
+    case Decoder.decode(state.decoder, buffer.payload, pts: buffer.pts) do
+      [frame] ->
         timestamp = buffer_timestamp(buffer.metadata[:timestamp])
         state = Map.update!(state, :pts_to_datetime, &Map.put(&1, buffer.pts, timestamp))
         send_frame(frame, state)

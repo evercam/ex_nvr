@@ -8,7 +8,7 @@ defmodule ExNVR.Recordings do
   alias Ecto.Multi
   alias ExMP4.{BitStreamFilter, Reader}
   alias ExNVR.Model.{Device, Recording, Run}
-  alias ExNVR.Repo
+  alias ExNVR.{AV, Repo}
   alias Phoenix.PubSub
 
   @recordings_topic "recordings"
@@ -115,7 +115,7 @@ defmodule ExNVR.Recordings do
 
       reader
       |> read_samples(track, offset, method)
-      |> ExNVR.MediaUtils.decode_last(Xav.Decoder.new(codec))
+      |> ExNVR.MediaUtils.decode_last(AV.Decoder.new(codec))
       |> then(fn frame ->
         datetime =
           DateTime.add(
