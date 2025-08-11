@@ -19,7 +19,11 @@ defmodule ExNVRWeb.DeviceTabs.RecordingsListTab do
   def render(assigns) do
     ~H"""
     <div>
-      <div class="text-center text-gray-500 dark:text-gray-400" id="recordings-tab" phx-hook="FlowbiteInit">
+      <div
+        class="text-center text-gray-500 dark:text-gray-400"
+        id="recordings-tab"
+        phx-hook="FlowbiteInit"
+      >
         <.filter_form
           meta={@meta}
           recordings={@recordings}
@@ -35,7 +39,7 @@ defmodule ExNVRWeb.DeviceTabs.RecordingsListTab do
             items={@recordings}
             path={~p"/devices/#{@device.id}/details?tab=recordings"}
           >
-            <:col :let={recording} label="Id">{recording.id}</:col>
+            <:col :let={recording} label="Idd">{recording.id}</:col>
             <:col :let={recording} label="Start-date" field={:start_date}>
               {RecordingListLive.format_date(recording.start_date, @device.timezone)}
             </:col>
