@@ -14,7 +14,7 @@ defmodule ExNVR.Elements.CVSBufferer do
 
   import ExNVR.MediaUtils, only: [to_annexb: 1]
 
-  alias ExNVR.AV.Decoder
+  alias ExNVR.AV.{Decoder, VideoProcessor}
   alias ExNVR.Utils
   alias Membrane.{H264, H265}
 
@@ -59,7 +59,7 @@ defmodule ExNVR.Elements.CVSBufferer do
       state.cvs
       |> Enum.reduce([], &[to_annexb(&1) | &2])
       |> ExNVR.MediaUtils.decode_last(state.decoder)
-      |> AV.VideoProcessor.encode_to_jpeg()
+      |> VideoProcessor.encode_to_jpeg()
 
     {[notify_parent: {:snapshot, snapshot}], state}
   end
