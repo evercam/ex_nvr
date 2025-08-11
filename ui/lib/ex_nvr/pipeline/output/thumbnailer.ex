@@ -10,7 +10,7 @@ defmodule ExNVR.Pipeline.Output.Thumbnailer do
 
   import ExNVR.MediaUtils, only: [to_annexb: 1]
 
-  alias ExNVR.AV.Decoder
+  alias ExNVR.AV.{Decoder, VideoProcessor}
   alias Membrane.{Buffer, H264, H265}
 
   def_input_pad :input,
@@ -87,7 +87,7 @@ defmodule ExNVR.Pipeline.Output.Thumbnailer do
 
   defp do_decode(buffer, state) do
     with [decoded] <- Decoder.decode(state.decoder, to_annexb(buffer.payload)),
-         jpeg_image <- ExNVR.AV.VideoProcessor.encode_to_jpeg(decoded),
+         jpeg_image <- VideoProcessor.encode_to_jpeg(decoded),
          :ok <- File.write(image_path(state.dest, buffer), jpeg_image) do
       {[], %{state | last_buffer_pts: buffer.pts}}
     else

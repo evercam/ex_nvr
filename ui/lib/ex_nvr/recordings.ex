@@ -123,9 +123,7 @@ defmodule ExNVR.Recordings do
             :microsecond
           )
 
-        jpeg = ExNVR.AV.VideoProcessor.encode_to_jpeg(frame)
-
-        {:ok, datetime, jpeg}
+        {:ok, datetime, AV.VideoProcessor.encode_to_jpeg(frame)}
       end)
     end
   end
