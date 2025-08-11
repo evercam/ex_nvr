@@ -87,7 +87,7 @@ defmodule ExNVR.Pipeline.Output.Thumbnailer do
 
   defp do_decode(buffer, state) do
     with [decoded] <- Decoder.decode(state.decoder, to_annexb(buffer.payload)),
-         {:ok, jpeg_image} <- to_jpeg(decoded.data, state),
+         jpeg_image <- ExNVR.AV.VideoProcessor.encode_to_jpeg(decoded),
          :ok <- File.write(image_path(state.dest, buffer), jpeg_image) do
       {[], %{state | last_buffer_pts: buffer.pts}}
     else
@@ -95,10 +95,6 @@ defmodule ExNVR.Pipeline.Output.Thumbnailer do
         Membrane.Logger.error("Failed to generate thumbnail: #{inspect(error)}")
         {[], state}
     end
-  end
-
-  defp to_jpeg(raw_image, state) do
-    Turbojpeg.yuv_to_jpeg(raw_image, state.thumbnail_width, state.thumbnail_height, 75, :I420)
   end
 
   defp image_path(dest_folder, buffer) do

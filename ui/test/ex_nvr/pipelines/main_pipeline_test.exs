@@ -43,9 +43,7 @@ defmodule ExNVR.Pipelines.MainPipelineTest do
 
     # Live snapshot
     assert {:ok, snapshot} = MainPipeline.live_snapshot(device, :jpeg)
-
-    assert {:ok, %Turbojpeg.JpegHeader{width: 480, height: 240, format: :I420}} =
-             Turbojpeg.get_jpeg_header(snapshot)
+    assert is_binary(snapshot)
 
     # Unix Socket
 

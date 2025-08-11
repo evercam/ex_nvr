@@ -58,7 +58,6 @@ defmodule ExNVR.MixProject do
       {:ex_m3u8, "~> 0.15.0"},
       {:connection, "~> 1.1.0"},
       {:tzdata, "~> 1.1"},
-      {:turbojpeg, "~> 0.4.0"},
       {:ex_aws, "~> 2.5"},
       {:ex_aws_s3, "~> 2.5"},
       {:flop, "~> 0.26.0"},
@@ -157,7 +156,6 @@ defmodule ExNVR.MixProject do
     # which made the size of the destination folder 3 times the original size.
     libs = [
       "/usr/lib/#{arch}-linux-#{abi}/libsrtp2.so*",
-      "/usr/lib/#{arch}-linux-#{abi}/libturbojpeg.so*",
       "/usr/lib/#{arch}-linux-#{abi}/libssl.so*",
       "/usr/lib/#{arch}-linux-#{abi}/libcrypto.so*"
     ]

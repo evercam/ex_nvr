@@ -16,7 +16,6 @@ RUN \
   make \
   cmake \
   libsrtp2-dev \
-  libturbojpeg-dev \
   && rm -rf /var/lib/apt/lists/*
 
 ARG ERL_FLAGS

@@ -40,7 +40,7 @@ defmodule ExNVR.Elements.CVSBufferer do
         %H265{} -> :hevc
       end
 
-    {[], %{state | decoder: Decoder.new(codec)}}
+    {[], %{state | decoder: Decoder.new(codec, out_format: :yuvj420p)}}
   end
 
   @impl true
@@ -55,11 +55,11 @@ defmodule ExNVR.Elements.CVSBufferer do
 
   @impl true
   def handle_parent_notification(:snapshot, _ctx, state) do
-    {:ok, snapshot} =
+    snapshot =
       state.cvs
       |> Enum.reduce([], &[to_annexb(&1) | &2])
       |> ExNVR.MediaUtils.decode_last(state.decoder)
-      |> then(&Turbojpeg.yuv_to_jpeg(&1.data, &1.width, &1.height, 75, :I420))
+      |> ExNVR.AV.VideoProcessor.encode_to_jpeg()
 
     {[notify_parent: {:snapshot, snapshot}], state}
   end
