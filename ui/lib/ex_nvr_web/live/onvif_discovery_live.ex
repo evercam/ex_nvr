@@ -564,7 +564,16 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
   defp get_stream_profiles(camera_details) do
     case ExOnvif.Media2.get_profiles(camera_details.device) do
       {:ok, profiles} ->
-        %{camera_details | stream_profiles: Enum.map(profiles, &StreamProfile.from_onvif/1)}
+        profiles =
+          profiles
+          |> Enum.map(&StreamProfile.from_onvif/1)
+          |> Enum.sort_by(& &1.name, fn name1, _name2 ->
+            main? = name1 == "ex_nvr_main"
+            sub? = name1 == "ex_nvr_sub"
+            main? or (sub? and not main?)
+          end)
+
+        %{camera_details | stream_profiles: profiles}
         |> get_stream_uris()
 
       {:error, reason} ->

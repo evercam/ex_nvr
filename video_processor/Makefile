@@ -28,7 +28,7 @@ CFLAGS += -fPIC -shared
 IFLAGS = -I$(ERTS_INCLUDE_DIR) -I$(DIR) $$(pkg-config --cflags libavcodec libavutil libswscale)
 LDFLAGS = $$(pkg-config --libs libavcodec libavutil libswscale)
 
-ifeq ($(OS),Linux)
+ifneq (,$(filter $(OS),linux Linux))
 	ifeq ($(ABI),gnu)
 		ifneq (,$(filter $(ARCH),x86_64 armv7l arm aarch64))
 			PRECOMPILED = true

@@ -109,7 +109,7 @@ defmodule ExNVR.MixProject do
       ],
       "assets.deploy": [
         "cmd --cd assets npm run build",
-        "phx.digest"
+        "phx.digest --no-compile"
       ],
       "assets.clean": [
         "phx.digest.clean --all"
