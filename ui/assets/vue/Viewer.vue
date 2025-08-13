@@ -151,8 +151,8 @@ export default defineComponent({
       default: ""
     },
     device: {
-      type: String,
-      default: ""
+      type: Object,
+      default: ()  => ({})
     },
     liveViewEnabled: {
       type: Boolean,
@@ -218,9 +218,11 @@ export default defineComponent({
       
       const dataUri = canvas.toDataURL('image/png')
 
+      const timestampOfRequest = new Date().toString().split('GMT')[0].trim();
+
       const link = document.createElement("a")
       link.style.display = "none"
-      link.download = "snapshot.png"
+      link.download = `${this.device.name}_${timestampOfRequest}_${this.stream}.png`
       link.href = dataUri
 
       document.body.appendChild(link)
