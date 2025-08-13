@@ -90,7 +90,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
           </.simple_form>
         </div>
       </div>
-      
+
     <!-- Device Discovery Section -->
       <div class="w-3/4 flex justify-between items-center bg-white p-5 border rounded-lg dark:border-gray-600 dark:bg-gray-950 dark:text-white mr-5">
         <div class="flex items-center space-x-2">
@@ -107,7 +107,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
           <.icon name="hero-magnifying-glass-solid" class="w-4 h-4 mr-2" /> Scan Network
         </.button>
       </div>
-      
+
     <!-- Device List Section -->
       <div class="w-3/4 flex flex-col space-y-5 bg-white p-5 border rounded-lg dark:border-gray-600 dark:bg-gray-950 dark:text-white mr-5">
         <span class="text-md font-bold">
@@ -146,7 +146,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
       </div>
 
       <.separator :if={@selected_device} class="w-3/4 mr-5" />
-      
+
     <!-- Device Details Section -->
       <div :if={@selected_device} class="w-3/4 flex flex-col space-y-2 mr-5">
         <div class="flex justify-between items-center border rounded-lg bg-white dark:border-gray-600 dark:bg-gray-950 dark:text-white p-5">
@@ -564,7 +564,16 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
   defp get_stream_profiles(camera_details) do
     case ExOnvif.Media2.get_profiles(camera_details.device) do
       {:ok, profiles} ->
-        %{camera_details | stream_profiles: Enum.map(profiles, &StreamProfile.from_onvif/1)}
+        profiles =
+          profiles
+          |> Enum.map(&StreamProfile.from_onvif/1)
+          |> Enum.sort_by(& &1.name, fn name1, _name2 ->
+            main? = name1 == "ex_nvr_main"
+            sub? = name1 == "ex_nvr_sub"
+            main? or (sub? and not main?)
+          end)
+
+        %{camera_details | stream_profiles: profiles}
         |> get_stream_uris()
 
       {:error, reason} ->
