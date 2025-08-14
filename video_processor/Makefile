@@ -2,8 +2,8 @@ ARCH := $(or $(TARGET_ARCH), $(shell uname -m))
 OS := $(or $(TARGET_OS), $(shell uname -s))
 ABI ?= gnu
 
-VERSION ?= 0.1.0
-FFMPEG_VERSION ?= 7.1.1
+VERSION := 0.1.0
+FFMPEG_VERSION := 7.1.1
 
 TEMP ?= $(HOME)/.cache
 FFMPEG_DIR ?= $(TEMP)/ex_nvr/$(VERSION)/$(ARCH)/ffmpeg-$(FFMPEG_VERSION)
@@ -60,7 +60,7 @@ endif
 all: download_ffmpeg $(VIDEO_PROCESSOR_SO)
 
 download_ffmpeg:
-	if [ $(PRECOMPILED) = true ] && [ ! -d $(FFMPEG_DIR) ]; then \
+	@if [ $(PRECOMPILED) = true ] && [ ! -d $(FFMPEG_DIR) ]; then \
 		echo "Downloading precompiled ffmpeg..."; \
 		mkdir -p $(TEMP); \
 		mkdir -p $(FFMPEG_DIR); \

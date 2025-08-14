@@ -153,17 +153,17 @@ defmodule ExNVRWeb.OnvifDiscoveryLiveTest do
          ]}
       end)
 
-      expect(ExOnvif.Media2, :get_stream_uri, fn _device, "Profile_2" ->
+      expect(ExOnvif.Media2, :get_stream_uri, fn _device, "Profile_1" ->
         {:ok, "rtsp://192.168.1.200:554/main"}
       end)
-      |> expect(:get_stream_uri, fn _device, "Profile_1" ->
+      |> expect(:get_stream_uri, fn _device, "Profile_2" ->
         {:ok, "rtsp://192.168.1.200:554/sub"}
       end)
 
-      expect(ExOnvif.Media2, :get_snapshot_uri, fn _device, "Profile_2" ->
+      expect(ExOnvif.Media2, :get_snapshot_uri, fn _device, "Profile_1" ->
         {:ok, "http://192.168.1.200:8101/snapshot"}
       end)
-      |> expect(:get_snapshot_uri, fn _device, "Profile_1" ->
+      |> expect(:get_snapshot_uri, fn _device, "Profile_2" ->
         {:ok, "http://192.168.1.200:8101/sub"}
       end)
 

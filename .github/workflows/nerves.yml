@@ -92,7 +92,7 @@ jobs:
           sudo apt-get update && \
           sudo apt-get -y install npm wget build-essential automake autoconf git squashfs-tools ssh-askpass \
                                   pkg-config curl libmnl-dev libssl-dev libncurses5-dev help2man libconfuse-dev \
-                                  libarchive-dev libsrtp2-dev uname
+                                  libarchive-dev libsrtp2-dev
 
       - name: Install fwup
         run: |
