@@ -120,7 +120,7 @@
 </template>
 
 <script>
-import { defineComponent } from 'vue'
+import { defineComponent, isProxy, toRaw } from 'vue'
 import Timeline from './Timeline.vue'
 import { makeFullScreen, exitFullScreen } from '@evercam/ui/vue3'
 
@@ -178,7 +178,14 @@ export default defineComponent({
   },
   watch: {
     url(value) {
-      this.$refs.videoPlayer?.initHls(value)
+      const component = this.$refs.videoPlayer
+      component?.initHls(value)
+
+      const playerElement = component?.$refs?.player
+      if (playerElement) {
+        playerElement._hls = isProxy(component.player) ? toRaw(component.player) : component.player
+        console.log("[Player]: HLS.js initialized", playerElement._hls)
+      }
     }
   },
   data() {
