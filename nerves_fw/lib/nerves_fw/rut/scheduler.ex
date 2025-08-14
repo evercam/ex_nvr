@@ -123,7 +123,6 @@ defmodule ExNVR.Nerves.RUT.Scheduler do
   defp combine_instances([first_instance | rest]) do
     new_instances =
       rest
-      |> Kernel.++([first_instance])
       |> Enum.reduce([first_instance], fn instance2, [instance1 | rest] ->
         if instance1.end_day == instance2.start_day and
              Time.compare(instance1.end_time, instance2.start_time) == :eq do
@@ -140,10 +139,6 @@ defmodule ExNVR.Nerves.RUT.Scheduler do
       end)
       |> Enum.reverse()
 
-    # if the last instance is not merged with the one before
-    # delete it otherwise delete the first instance
-    if first_instance == List.last(new_instances),
-      do: Enum.slice(new_instances, 1..-1//1),
-      else: tl(new_instances)
+    new_instances
   end
 end
