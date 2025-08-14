@@ -60,11 +60,11 @@ endif
 all: download_ffmpeg $(VIDEO_PROCESSOR_SO)
 
 download_ffmpeg:
-	@if [ $(PRECOMPILED) = true ] && [ ! -d $(FFMPEG_DIR) ]; then \
+	if [ $(PRECOMPILED) = true ] && [ ! -d $(FFMPEG_DIR) ]; then \
 		echo "Downloading precompiled ffmpeg..."; \
 		mkdir -p $(TEMP); \
 		mkdir -p $(FFMPEG_DIR); \
-		curl -sL $(PRECOMPILED_FFMPEG_LINK) -o $(TEMP)/$(PRECOMPILED_FFMPEG_NAME); \
+		curl -L $(PRECOMPILED_FFMPEG_LINK) -o $(TEMP)/$(PRECOMPILED_FFMPEG_NAME); \
 		tar -xf $(TEMP)/$(PRECOMPILED_FFMPEG_NAME) -C $(FFMPEG_DIR); \
 	fi
 
