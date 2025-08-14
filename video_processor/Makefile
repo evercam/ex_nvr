@@ -8,7 +8,7 @@ FFMPEG_VERSION ?= 7.1.1
 TEMP ?= $(HOME)/.cache
 FFMPEG_DIR ?= $(TEMP)/ex_nvr/$(VERSION)/$(ARCH)/ffmpeg-$(FFMPEG_VERSION)
 PRECOMPILED_FFMPEG_LINK ?= https://github.com/evercam/ex_nvr_precompiled/releases/download/v$(VERSION)/ffmpeg-linux-$(ARCH)-$(FFMPEG_VERSION).tar.xz
-PRECOMPILED_FFMPEG_NAME ?= ffmpeg-linux-$(shell uname -m)-$(FFMPEG_VERSION).tar.xz
+PRECOMPILED_FFMPEG_NAME ?= ffmpeg-linux-$(ARCH)-$(FFMPEG_VERSION).tar.xz
 
 PRECOMPILED = false
 
