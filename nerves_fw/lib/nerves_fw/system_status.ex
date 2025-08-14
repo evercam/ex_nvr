@@ -20,7 +20,7 @@ defmodule ExNVR.Nerves.SystemStatus do
 
   @impl true
   def init(_options) do
-    Process.send_after(self(), :collect_system_metrics, 0)
+    Process.send_after(self(), :collect_system_metrics, to_timeout(second: 2))
     {:ok, ref} = :timer.send_interval(@runs_summary_interval, :runs_summary)
     {:ok, %{timer_ref: ref}}
   end
