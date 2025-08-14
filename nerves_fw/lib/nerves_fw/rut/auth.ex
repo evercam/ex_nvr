@@ -7,12 +7,14 @@ defmodule ExNVR.Nerves.RUT.Auth do
   alias ExNVR.Nerves.SystemSettings
 
   @login_path "/api/login"
+  @receive_timeout to_timeout(second: 10)
+  @connect_timeout to_timeout(second: 4)
 
   def start_link(opts) do
     GenServer.start_link(__MODULE__, opts, name: __MODULE__)
   end
 
-  def get_client(timeout \\ 5000) do
+  def get_client(timeout \\ to_timeout(second: 15)) do
     GenServer.call(__MODULE__, :get_client, timeout)
   end
 
@@ -111,7 +113,10 @@ defmodule ExNVR.Nerves.RUT.Auth do
       |> track_redirected()
       |> Req.post(
         json: %{username: username, password: password},
-        connect_options: conn_opts
+        connect_options: conn_opts,
+        retry: false,
+        receive_timeout: @receive_timeout,
+        connect_options: [timeout: @connect_timeout]
       )
 
     case resp do
@@ -127,7 +132,8 @@ defmodule ExNVR.Nerves.RUT.Auth do
         {:ok, req, data["expires"]}
 
       {:ok, %Req.Response{body: body}} ->
-        {:error, body["errors"]}
+        message = if is_map(body), do: body["errors"], else: body
+        {:error, message}
 
       other ->
         other

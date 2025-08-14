@@ -567,10 +567,10 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
         profiles =
           profiles
           |> Enum.map(&StreamProfile.from_onvif/1)
-          |> Enum.sort_by(& &1.name, fn name1, _name2 ->
+          |> Enum.sort_by(& &1.name, fn name1, name2 ->
             main? = name1 == "ex_nvr_main"
             sub? = name1 == "ex_nvr_sub"
-            main? or (sub? and not main?)
+            main? or (sub? and not main?) or name2 not in ["ex_nvr_main", "ex_nvr_sub"]
           end)
 
         %{camera_details | stream_profiles: profiles}
