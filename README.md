@@ -44,7 +44,7 @@ There's currently no automated docker build for `arm/v7` since building the imag
 the workaround is to build the image on the target host itself
 
 ```bash
-docker build -t ex_nvr:0.22.0 -f Dockerfile .
+docker build -t ex_nvr:0.23.0 -f Dockerfile .
 ```
 
 ### Releases
@@ -127,7 +127,7 @@ A webrtc player can be embedded in web page by using `iframe`
 <iframe width="640" height="480" src="http://localhost:4000/webrtc/device_id?access_token=token" title="ex_nvr" allowfullscreen></iframe>
 ```
 
-> The `access_token` will eventually expire and must be updated to ensure the proper functioning of the embedded page. We plan to enhance this by introducing the capability to make the page public or generate non-expiring tokens with view privileges. 
+> The `access_token` will eventually expire and must be updated to ensure the proper functioning of the embedded page. We plan to enhance this by introducing the capability to make the page public or generate non-expiring tokens with view privileges.
 
 ## HEVC (H265) Support
 
@@ -137,7 +137,7 @@ When using `ex_nvr` to record H265, no transcoding is done, so streaming from `e
 
 ## Features
 
-The main feature of this project is to store video streams retrieved from `devices` to local file system and allow users to stream back those recorded videos.  
+The main feature of this project is to store video streams retrieved from `devices` to local file system and allow users to stream back those recorded videos.
 
 * **Devices**: read video streams from
    - [x] IP Cameras
