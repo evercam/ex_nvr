@@ -160,7 +160,7 @@ defmodule ExNVRWeb.Router do
     end
   end
 
-  # A super ugly solution to extend the ExNVR UI for custom pages/controllers/rest endpoints
+  # An ugly solution to extend the ExNVR UI for custom pages/controllers/rest endpoints
   # only when running the nerves image
   if Application.compile_env(:ex_nvr, :nerves_routes) do
     # nerves live routes, controllers and API endpoints goes here

@@ -179,7 +179,7 @@ defmodule ExNVRWeb.Components.Sidebar do
           %{
             label: "API Documentation",
             icon: "hero-document-solid",
-            href: ~p"/swagger.html",
+            href: "/swagger.html",
             target: "_blank"
           },
           %{
@@ -234,7 +234,7 @@ defmodule ExNVRWeb.Components.Sidebar do
           %{
             label: "API Documentation",
             icon: "hero-document-solid",
-            href: ~p"/swagger.html",
+            href: "/swagger.html",
             target: "_blank"
           },
           %{
