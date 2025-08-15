@@ -12,16 +12,22 @@
 
 ---
 
+
 ## Defaults at a glance
 
-* **Timezone**: UTC
-* **Action outside schedule**: Power off
-* **UPS**: Disabled; AC pin GPIO27; Battery pin GPIO22; Low‑battery → Stop recording; Delay 120s
-* **Storage mountpoint**: `/data/media` (when present in fstab)
-* **Settings file**: `/data/settings.json`
-* **NetBird state**: `/data/netbird`
-* **Grafana Agent**: `/data/grafana_agent/agent.yml`
-* **Nginx**: Port 80 with internal service proxy path
+| Area                    | Default                                          |
+| ----------------------- |--------------------------------------------------|
+| Timezone                | UTC                                              |
+| Action outside schedule | Power off                                        |
+| UPS enabled             | false                                            |
+| UPS pins                | AC: `GPIO27`, Low‑battery: `GPIO22`              |
+| UPS actions             | AC fail: `nothing`; Low‑battery: `stop_recording` |
+| UPS delay               | 120 s                                            |
+| Mountpoint              | `/data/media`             |
+| Settings file           | `/data/settings.json`                            |
+| NetBird state           | `/data/netbird`                                  |
+| Grafana Agent           | `/data/grafana_agent/agent.yml`                  |
+
 
 ---
 
