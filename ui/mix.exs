@@ -2,7 +2,7 @@ defmodule ExNVR.MixProject do
   use Mix.Project
 
   @app :ex_nvr
-  @version "0.22.0"
+  @version "0.23.0"
 
   def project do
     [
@@ -65,7 +65,7 @@ defmodule ExNVR.MixProject do
       {:multipart, "~> 0.4.0"},
       {:ex_mp4, "~> 0.11.0"},
       {:floki, "~> 0.38.0"},
-      {:phoenix, "~> 1.7.2"},
+      {:phoenix, "~> 1.8.0"},
       {:phoenix_ecto, "~> 4.4"},
       {:phoenix_html, "~> 4.0"},
       {:phoenix_live_view, "~> 1.0"},
@@ -91,7 +91,8 @@ defmodule ExNVR.MixProject do
       {:membrane_h26x_plugin, "~> 0.10", only: :test},
       {:mimic, "~> 2.0.0", only: :test},
       {:faker, "~> 0.17", only: :test},
-      {:bypass, "~> 2.1", only: :test}
+      {:bypass, "~> 2.1", only: :test},
+      {:lazy_html, "~> 0.1.0", only: :test}
     ]
   end
 

@@ -68,6 +68,8 @@ defmodule ExNVR.Nerves.RUT do
           }
         end)
 
+      enable_schedule? = not is_nil(schedule) and instances_body != []
+
       bulk_body =
         %{
           data:
@@ -75,7 +77,7 @@ defmodule ExNVR.Nerves.RUT do
               %{
                 endpoint: "/api/io/scheduler/global",
                 method: "PUT",
-                data: %{enabled: if(schedule, do: "1", else: "0")}
+                data: %{enabled: if(enable_schedule?, do: "1", else: "0")}
               }
             ] ++ List.wrap(delete_instances) ++ instances_body
         }

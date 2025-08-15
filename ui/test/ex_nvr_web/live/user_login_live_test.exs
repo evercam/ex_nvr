@@ -66,7 +66,7 @@ defmodule ExNVRWeb.UserLoginLiveTest do
 
       {:ok, conn} =
         lv
-        |> element(~s|a:fl-contains("Forgot your password?")|)
+        |> element(~s|a[href="/users/reset-password"]|)
         |> render_click()
         |> follow_redirect(conn, ~p"/users/reset-password")
 
