@@ -10,7 +10,7 @@ defmodule ExNVRWeb.DeviceDetailsLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="grow px-4 py-6">
+    <div class="grow px-4 py-6 overflow-y-hidden h-[90%]">
       <h2 class="text-xl font-semibold text-black dark:text-white mb-4">
         Device: {@device.name}
       </h2>
