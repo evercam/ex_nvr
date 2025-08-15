@@ -24,8 +24,8 @@ defmodule ExNVR.Model.Recording do
              ]
            ],
            pagination_types: [:page],
-           default_limit: 100,
-           max_limit: 150}
+           default_limit: 20,
+           max_limit: 30}
 
   @type t :: %__MODULE__{}
 
