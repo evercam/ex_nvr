@@ -27,7 +27,7 @@ defmodule ExNVRWeb.DeviceTabs.RecordingsListTab do
           id="recording-filter-form"
         />
 
-        <div class="overflow-y-auto h-[72vh]">
+        <div class=" overflow-y-auto h-[72vh] list-table">
           <Flop.Phoenix.table
             id="recordings"
             opts={ExNVRWeb.FlopConfig.table_opts()}
@@ -92,7 +92,14 @@ defmodule ExNVRWeb.DeviceTabs.RecordingsListTab do
             </:action>
           </Flop.Phoenix.table>
         </div>
+
+        <div class="fixed bottom-0  right-10 w-full">
+          <div class="bg-gray-300 dark:bg-gray-800">
+            <div class="pb-5">
         <.pagination meta={@meta} target={@myself} />
+            </div>
+          </div>
+        </div>
       </div>
       <div
         id="popup-container"
