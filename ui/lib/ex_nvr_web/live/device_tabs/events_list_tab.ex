@@ -46,8 +46,8 @@ defmodule ExNVRWeb.DeviceTabs.EventsListTab do
       <div class="fixed bottom-0  right-10 w-full">
         <div class="bg-gray-300 dark:bg-gray-800">
           <div class="pb-5">
-      <.pagination meta={@meta} target={@myself} />
-    </div>
+            <.pagination meta={@meta} target={@myself} />
+          </div>
         </div>
       </div>
     </div>
