@@ -17,7 +17,7 @@ defmodule ExNVRWeb.DeviceTabs.EventsListTab do
       <.event_filter_form meta={@meta} events={@events} target={@myself} />
 
       <div
-        class="text-center text-gray-500 dark:text-gray-400 overflow-y-auto h-[75vh]"
+        class="list-table text-center text-gray-500 dark:text-gray-400 overflow-y-auto h-[72vh]"
         id="recordings-tab"
       >
         <Flop.Phoenix.table
@@ -43,7 +43,13 @@ defmodule ExNVRWeb.DeviceTabs.EventsListTab do
         </Flop.Phoenix.table>
       </div>
 
+      <div class="fixed bottom-0  right-10 w-full">
+        <div class="bg-gray-300 dark:bg-gray-800">
+          <div class="pb-5">
       <.pagination meta={@meta} target={@myself} />
+    </div>
+        </div>
+      </div>
     </div>
     '''
   end
