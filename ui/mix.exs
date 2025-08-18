@@ -37,6 +37,7 @@ defmodule ExNVR.MixProject do
   defp deps do
     [
       {:video_processor, path: "../video_processor"},
+      {:media_codecs, "~> 0.8.0", override: true},
       {:rtsp, "~> 0.4.0"},
       {:ex_sdp, "~> 1.0"},
       {:bundlex, "~> 1.5", override: true},
@@ -63,7 +64,7 @@ defmodule ExNVR.MixProject do
       {:flop, "~> 0.26.0"},
       {:req, "~> 0.5.0"},
       {:multipart, "~> 0.4.0"},
-      {:ex_mp4, "~> 0.11.0"},
+      {:ex_mp4, "~> 0.12.0"},
       {:floki, "~> 0.38.0"},
       {:phoenix, "~> 1.8.0"},
       {:phoenix_ecto, "~> 4.4"},
