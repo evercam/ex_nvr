@@ -2,9 +2,9 @@ openapi: 3.0.0
 info:
   title: ExNVR API
   description: Manage ExNVR via API endpoints
-  version: 0.22.0
+  version: 0.23.0
 servers:
-  - url: '{protocol}://{host}:{port}'
+  - url: "{protocol}://{host}:{port}"
     variables:
       protocol:
         enum: [http, https]
@@ -40,7 +40,7 @@ paths:
                   format: password
               required: [username, password]
       responses:
-        '200':
+        "200":
           description: Success
           content:
             application/json:
@@ -50,7 +50,7 @@ paths:
                   access_token:
                     type: string
                     description: An access token to use to authorize subsequent requests
-        '400':
+        "400":
           $ref: "#/components/responses/BadArg"
   /api/users:
     get:
@@ -60,14 +60,14 @@ paths:
       tags:
         - User
       responses:
-        '200':
+        "200":
           description: Success
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/User'
+                  $ref: "#/components/schemas/User"
     post:
       summary: Create user
       description: |
@@ -111,19 +111,19 @@ paths:
                     * Only english available for now.
               required: [first_name, last_name, email]
       responses:
-        '201':
+        "201":
           description: Created
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/User'
-        '400':
+                $ref: "#/components/schemas/User"
+        "400":
           $ref: "#/components/responses/BadArg"
-        '403':
+        "403":
           $ref: "#/components/responses/Unauthorized"
   /api/users/{user_id}:
     parameters:
-      - $ref: '#/components/parameters/user_id'
+      - $ref: "#/components/parameters/user_id"
     get:
       summary: Get user
       description: Get user by id.
@@ -131,15 +131,15 @@ paths:
       tags:
         - User
       responses:
-        '200':
-            description: Success
-            content:
-              application/json:
-                schema:
-                  $ref: '#/components/schemas/User'
-        '404':
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "404":
           $ref: "#/components/responses/NotFound"
-        '403':
+        "403":
           $ref: "#/components/responses/Unauthorized"
     put:
       summary: Update user
@@ -183,15 +183,15 @@ paths:
 
                     * Only english available for now.
       responses:
-        '200':
+        "200":
           description: Success
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/User'
-        '400':
+                $ref: "#/components/schemas/User"
+        "400":
           $ref: "#/components/responses/BadArg"
-        '403':
+        "403":
           $ref: "#/components/responses/Unauthorized"
     delete:
       summary: Delete user
@@ -203,11 +203,11 @@ paths:
       tags:
         - User
       responses:
-        '204':
-            description: Success
-        '404':
+        "204":
+          description: Success
+        "404":
           $ref: "#/components/responses/NotFound"
-        '403':
+        "403":
           $ref: "#/components/responses/Unauthorized"
   /api/remote_storages:
     get:
@@ -217,14 +217,14 @@ paths:
       tags:
         - RemoteStorage
       responses:
-        '200':
+        "200":
           description: Success
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/RemoteStorage'
+                  $ref: "#/components/schemas/RemoteStorage"
     post:
       summary: Create a remote storage.
       description: |
@@ -256,19 +256,19 @@ paths:
 
               required: [name, url, type]
       responses:
-        '201':
+        "201":
           description: Created
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/RemoteStorage'
-        '400':
+                $ref: "#/components/schemas/RemoteStorage"
+        "400":
           $ref: "#/components/responses/BadArg"
-        '403':
+        "403":
           $ref: "#/components/responses/Unauthorized"
   /api/remote_storages/{remote_storage_id}:
     parameters:
-      - $ref: '#/components/parameters/remote_storage_id'
+      - $ref: "#/components/parameters/remote_storage_id"
     get:
       summary: Get remote storage
       description: Get remote storage by id.
@@ -276,15 +276,15 @@ paths:
       tags:
         - RemoteStorage
       responses:
-        '200':
-            description: Success
-            content:
-              application/json:
-                schema:
-                  $ref: '#/components/schemas/RemoteStorage'
-        '404':
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RemoteStorage"
+        "404":
           $ref: "#/components/responses/NotFound"
-        '403':
+        "403":
           $ref: "#/components/responses/Unauthorized"
     put:
       summary: Update a Remote Storage
@@ -304,15 +304,15 @@ paths:
                   type: string
                   description: Remote Storage url
       responses:
-        '200':
+        "200":
           description: Success
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/RemoteStorage'
-        '400':
+                $ref: "#/components/schemas/RemoteStorage"
+        "400":
           $ref: "#/components/responses/BadArg"
-        '403':
+        "403":
           $ref: "#/components/responses/Unauthorized"
     delete:
       summary: Delete a remote storage
@@ -322,11 +322,11 @@ paths:
       tags:
         - RemoteStorage
       responses:
-        '204':
-            description: Success
-        '404':
+        "204":
+          description: Success
+        "404":
           $ref: "#/components/responses/NotFound"
-        '403':
+        "403":
           $ref: "#/components/responses/Unauthorized"
   /api/devices:
     get:
@@ -336,20 +336,20 @@ paths:
       tags:
         - Device
       responses:
-        '200':
+        "200":
           description: Success
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Device'
+                  $ref: "#/components/schemas/Device"
     post:
       summary: Create device
       description: |
         Create a new device.
 
-        Once the device is created, a pipeline will be started and will attempt to connect and 
+        Once the device is created, a pipeline will be started and will attempt to connect and
         retrieve a stream from it.
       operationId: createDevice
       tags:
@@ -407,19 +407,19 @@ paths:
                   $ref: "#/components/schemas/DeviceSnapshotConfig"
               required: [name, type, storage_config]
       responses:
-        '201':
+        "201":
           description: Created
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Device'
-        '400':
+                $ref: "#/components/schemas/Device"
+        "400":
           $ref: "#/components/responses/BadArg"
-        '403':
+        "403":
           $ref: "#/components/responses/Unauthorized"
   /api/devices/{device_id}:
     parameters:
-      - $ref: '#/components/parameters/device_id'
+      - $ref: "#/components/parameters/device_id"
     get:
       summary: Get device
       description: Get device by id.
@@ -427,20 +427,20 @@ paths:
       tags:
         - Device
       responses:
-        '200':
-            description: Success
-            content:
-              application/json:
-                schema:
-                  $ref: '#/components/schemas/Device'
-        '404':
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Device"
+        "404":
           $ref: "#/components/responses/NotFound"
     put:
       summary: Update device
       description: |
         Update device details.
 
-        If the device config (e.g. `stream_config`) is updated, the pipeline is restarted 
+        If the device config (e.g. `stream_config`) is updated, the pipeline is restarted
         to pick up the new configuration.
       operationId: updateDevice
       tags:
@@ -493,22 +493,22 @@ paths:
                 snapshot_config:
                   $ref: "#/components/schemas/DeviceSnapshotConfig"
       responses:
-        '200':
+        "200":
           description: Success
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Device'
-        '400':
+                $ref: "#/components/schemas/Device"
+        "400":
           $ref: "#/components/responses/BadArg"
-        '403':
+        "403":
           $ref: "#/components/responses/Unauthorized"
     delete:
       summary: Delete device
       description: |
         Delete a device giving the device id
 
-        The actual recording files are not deleted. 
+        The actual recording files are not deleted.
         If you want to delete them delete the folder:
 
           `{device.settings.storage_address}/ex_nvr/{device.id}`
@@ -516,29 +516,29 @@ paths:
       tags:
         - Device
       responses:
-        '204':
+        "204":
           description: Success
-        '404':
+        "404":
           $ref: "#/components/responses/NotFound"
-        '403':
+        "403":
           $ref: "#/components/responses/Unauthorized"
   /api/recordings/chunks:
     get:
       summary: Get recordings chunks
-      description: | 
+      description: |
         Get all the recorded videos chunks order by decreasing start date.
       operationId: getRecordingChunks
       tags:
         - Recording
       parameters:
-        - $ref: '#/components/parameters/stream_type'
-        - $ref: '#/components/parameters/filters'
-        - $ref: '#/components/parameters/page'
-        - $ref: '#/components/parameters/page_size'
-        - $ref: '#/components/parameters/order_by'
-        - $ref: '#/components/parameters/order_directions'
+        - $ref: "#/components/parameters/stream_type"
+        - $ref: "#/components/parameters/filters"
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/page_size"
+        - $ref: "#/components/parameters/order_by"
+        - $ref: "#/components/parameters/order_directions"
       responses:
-        '200':
+        "200":
           description: Success
           content:
             application/json:
@@ -548,10 +548,10 @@ paths:
                   data:
                     type: array
                     items:
-                      $ref: '#/components/schemas/Recording'
+                      $ref: "#/components/schemas/Recording"
                   meta:
-                    $ref: '#/components/schemas/ResultMeta'
-        '400':
+                    $ref: "#/components/schemas/ResultMeta"
+        "400":
           $ref: "#/components/responses/BadArg"
   /api/devices/{device_id}/recordings:
     get:
@@ -561,8 +561,8 @@ paths:
       tags:
         - Recording
       parameters:
-        - $ref: '#/components/parameters/device_id'
-        - $ref: '#/components/parameters/stream_type'
+        - $ref: "#/components/parameters/device_id"
+        - $ref: "#/components/parameters/stream_type"
         - name: start_date
           in: query
           required: false
@@ -572,7 +572,7 @@ paths:
             format: date-time
           example: 2023-01-15T10:00:01Z
       responses:
-        '200':
+        "200":
           description: Success
           content:
             application/json:
@@ -593,29 +593,29 @@ paths:
                       type: boolean
                       description: |
                         `true` if this an active run (still recording), `false` otherwise
-        '400':
+        "400":
           $ref: "#/components/responses/BadArg"
   /api/devices/{device_id}/recordings/{recording_id}/blob:
     get:
       summary: Get recording blob
-      description: | 
+      description: |
         Download the video chunk with the specified `recording id` in the specified `device`
       operationId: getRecordingBlob
       tags:
         - Recording
       parameters:
-        - $ref: '#/components/parameters/device_id'
-        - $ref: '#/components/parameters/recording_id'
-        - $ref: '#/components/parameters/stream_type'
+        - $ref: "#/components/parameters/device_id"
+        - $ref: "#/components/parameters/recording_id"
+        - $ref: "#/components/parameters/stream_type"
       responses:
-        '200':
+        "200":
           description: Success
           content:
             video/mp4:
               schema:
                 type: string
                 format: binary
-        '400':
+        "400":
           description: Not found
           content:
             application/json:
@@ -628,10 +628,10 @@ paths:
   /api/devices/{device_id}/hls/index.m3u8:
     get:
       summary: Start HLS streaming
-      description: | 
+      description: |
         Start HLS live view streaming or playback of recorded videos.
 
-        By default, there'll be no transcoding since we currently only support H264, the stream is 
+        By default, there'll be no transcoding since we currently only support H264, the stream is
         muxed as it is into fMP4 files.
 
         If the device has sub stream provided, the manifest will also contain the lower resolution.
@@ -641,17 +641,17 @@ paths:
 
         ## Stream Selection
 
-        if the `stream` query parameter is provided, only the requested stream will be included in the 
-        manifest. 
-        
-        Note that we don't do any checks on the existence of the requested stream (e.g. if you 
+        if the `stream` query parameter is provided, only the requested stream will be included in the
+        manifest.
+
+        Note that we don't do any checks on the existence of the requested stream (e.g. if you
         request the sub stream and the device has no sub stream, then you'll get an empty manifest).
       operationId: startHlsStreaming
       tags:
         - Media Streaming
       parameters:
-        - $ref: '#/components/parameters/device_id'
-        - $ref: '#/components/parameters/stream_type'
+        - $ref: "#/components/parameters/device_id"
+        - $ref: "#/components/parameters/stream_type"
         - name: pos
           in: query
           description: |
@@ -681,7 +681,7 @@ paths:
             type: integer
             enum: [240, 480, 640, 720, 1080]
       responses:
-        '200':
+        "200":
           description: Success
           content:
             application/vnd.apple.mpegurl:
@@ -696,7 +696,7 @@ paths:
       tags:
         - Media Streaming
       parameters:
-        - $ref: '#/components/parameters/device_id'
+        - $ref: "#/components/parameters/device_id"
         - name: time
           in: query
           required: false
@@ -707,12 +707,12 @@ paths:
           schema:
             type: string
             format: date-time
-          example: '2023-10-10T10:00:00Z'
+          example: "2023-10-10T10:00:00Z"
         - name: method
           in: query
           required: false
           description: |
-            Getting a snapshot at the exact timestamp is costly, so, it can be rounded 
+            Getting a snapshot at the exact timestamp is costly, so, it can be rounded
             to the nearest keyframe, thus, the default value is "before".
 
             Possible values are:
@@ -728,9 +728,9 @@ paths:
           schema:
             type: string
             enum: [jpeg]
-        - $ref: '#/components/parameters/stream_type'
+        - $ref: "#/components/parameters/stream_type"
       responses:
-        '200':
+        "200":
           description: success
           headers:
             x-timestamp:
@@ -742,8 +742,8 @@ paths:
               schema:
                 type: string
                 format: byte
-        '400':
-          $ref: '#/components/responses/NotFound'
+        "400":
+          $ref: "#/components/responses/NotFound"
   /api/devices/{device_id}/footage:
     get:
       summary: Download video footage
@@ -751,37 +751,37 @@ paths:
         Download footages in the `mp4` format up to a maximum of 2 hours.
 
         ### Duration and End date
-        
-        In addition to the query parameter `start_date` which is required, either `end_date` 
+
+        In addition to the query parameter `start_date` which is required, either `end_date`
         or `duration` should be provided.
 
-        If the `end_date` is provided, the total time between `start_date` and `end_date` should be within 
+        If the `end_date` is provided, the total time between `start_date` and `end_date` should be within
         2 hours.
 
         ### Downloaded Footage Start Date
-        
-        Note that for this endpoint to be efficient, there's no transcoding done 
+
+        Note that for this endpoint to be efficient, there's no transcoding done
         to the recorded footage. So the start date of the downloaded video may not
-        be the same as the requested one through `start_date` since we need to 
+        be the same as the requested one through `start_date` since we need to
         start the footage from the nearest keyframe before the provided start date.
 
         ### Recording Discontinuity
 
-        A discontinuity in the recorded videos may be present due to several reasons (e.g. lost 
-        connection to the camera, NVR reboot, ...etc.). In this case the video duration may not be 
+        A discontinuity in the recorded videos may be present due to several reasons (e.g. lost
+        connection to the camera, NVR reboot, ...etc.). In this case the video duration may not be
         the one expected.
 
         In the case `end_date` is provided, the interval between `start_date` and `end_date` will be greater
         or equal to the duration of the downloaded video
 
-        In the case `duration` is provided, the end date reported in the downloaded video may be far from 
+        In the case `duration` is provided, the end date reported in the downloaded video may be far from
         the `start_date + duration`.
       operationId: downloadFootage
       tags:
         - Media Streaming
       parameters:
-        - $ref: '#/components/parameters/device_id'
-        - $ref: '#/components/parameters/stream_type'
+        - $ref: "#/components/parameters/device_id"
+        - $ref: "#/components/parameters/stream_type"
         - name: start_date
           in: query
           required: true
@@ -804,7 +804,7 @@ paths:
         - name: duration
           in: query
           required: false
-          description: | 
+          description: |
             The duration of the footage in seconds.
 
             If `end_date` and `duration` is provided, the first condition
@@ -814,23 +814,23 @@ paths:
             minimum: 5
             maximum: 7200
       responses:
-        '200':
+        "200":
           description: success
           headers:
             x-start-date:
               schema:
                 type: integer
               description: |
-                Since the video must start from the nearest keyframe before the requested start date. 
-                
+                Since the video must start from the nearest keyframe before the requested start date.
+
                 This header reports the actual start date in milliseconds unix timestamp.
           content:
             video/mp4:
               schema:
                 type: string
                 format: binary
-        '400':
-          $ref: '#/components/responses/BadArg'
+        "400":
+          $ref: "#/components/responses/BadArg"
   /api/devices/{device_id}/bif/{hour}:
     get:
       summary: Download BIF file
@@ -843,7 +843,7 @@ paths:
       tags:
         - Media Streaming
       parameters:
-        - $ref: '#/components/parameters/device_id'
+        - $ref: "#/components/parameters/device_id"
         - name: hour
           in: path
           required: true
@@ -854,17 +854,17 @@ paths:
             format: date-time
             example: 2023-08-31T13:00:00Z
       responses:
-        '200':
+        "200":
           description: success
           content:
             application/octet-stream:
               schema:
                 type: string
                 format: byte
-        '400':
-          $ref: '#/components/responses/BadArg'
-        '404':
-          $ref: '#/components/responses/NotFound'
+        "400":
+          $ref: "#/components/responses/BadArg"
+        "404":
+          $ref: "#/components/responses/NotFound"
   /api/onvif/discover:
     post:
       summary: Onvif discovery
@@ -872,7 +872,7 @@ paths:
         Scan the local network for Onvif compliant devices.
 
         The following information are retrieved from the devices:
-          
+
           * The url, name and hardware.
           * Date time settings
           * Basic information about the device (vendor, model, firware version, ...etc.)
@@ -880,7 +880,7 @@ paths:
         Most of the operations above needs authentication, so if a `username` and `password` are not provided,
         only public information are retrieved, the other fields will contain a `null` or `empty` values.
 
-        The schema of the data above can be looked up on the onvif wsdl documents [here](https://www.onvif.org/ver10/device/wsdl/devicemgmt.wsdl) 
+        The schema of the data above can be looked up on the onvif wsdl documents [here](https://www.onvif.org/ver10/device/wsdl/devicemgmt.wsdl)
         and [here](https://www.onvif.org/ver20/media/wsdl/media.wsdl).
 
         ***Note***
@@ -907,13 +907,13 @@ paths:
                   type: string
                   description: password to use to authorize requests to discovered devices.
       responses:
-        '200':
+        "200":
           description: Success
           content:
             application/json:
               schema:
                 type: object
-        '400':
+        "400":
           $ref: "#/components/responses/BadArg"
   /api/devices/{device_id}/events:
     post:
@@ -925,11 +925,11 @@ paths:
 
         ## Authorization
         Since events are pushed by third party systems, we need to authenticate these requests. For this
-        we use a `webhook` token. A webhook token has no expiry date and only authorizes this 
+        we use a `webhook` token. A webhook token has no expiry date and only authorizes this
         endpoint.
 
         The webhook token should be sent in the `Authorization` header (recommended) or as a query param `token`.
-        
+
         ## Example
         Here's an example of using cURL to send an event to the webhook endpoint
 
@@ -946,7 +946,7 @@ paths:
       tags:
         - Event
       parameters:
-        - $ref: '#/components/parameters/device_id'
+        - $ref: "#/components/parameters/device_id"
       security:
         - bearerAuth: []
         - queryParamAuth: []
@@ -964,33 +964,33 @@ paths:
                   type: string
                   format: date-time
                   description: Event time (defaults to current time if not provided)
-              required: [ type ]
+              required: [type]
       responses:
-        '201':
+        "201":
           description: Created
-          content: { }
-        '400':
+          content: {}
+        "400":
           $ref: "#/components/responses/BadArg"
-        '404':
+        "404":
           $ref: "#/components/responses/NotFound"
   /api/devices/{device_id}/events/lpr:
     post:
       summary: Create LPR event
       description: |
         Create a new license plate recognition (LPR) event for a specific device.
-        
+
         This endpoint processes camera-specific LPR data formats and stores them in a standardized format.
-        
+
         ## Supported cameras
         Milesight LPR cameras.
-        
+
         ## Authorization
         Uses the same webhook token authorization as the regular events endpoint.
       operationId: createLPREvent
       tags:
         - Event
       parameters:
-        - $ref: '#/components/parameters/device_id'
+        - $ref: "#/components/parameters/device_id"
       security:
         - bearerAuth: []
         - queryParamAuth: []
@@ -999,7 +999,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/MilesightLprEvent'
+              $ref: "#/components/schemas/MilesightLprEvent"
             example:
               plate: "01-D-12345"
               time: "2024-02-01 06:00:05.509"
@@ -1013,12 +1013,12 @@ paths:
               coordinate_y2: "50"
               plate_image: "base64encodedimagedata..."
       responses:
-        '201':
+        "201":
           description: Created
           content: {}
-        '400':
+        "400":
           $ref: "#/components/responses/BadArg"
-        '404':
+        "404":
           $ref: "#/components/responses/NotFound"
   /api/system/status:
     get:
@@ -1035,13 +1035,13 @@ paths:
       tags:
         - System
       responses:
-        '200':
+        "200":
           description: Success
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SystemStatus'
-        '403':
+                $ref: "#/components/schemas/SystemStatus"
+        "403":
           $ref: "#/components/responses/Unauthorized"
 
   /api/events:
@@ -1071,13 +1071,13 @@ paths:
             type: string
             format: date-time
           example: 2023-01-16T10:00:01Z
-        - $ref: '#/components/parameters/filters'
-        - $ref: '#/components/parameters/page'
-        - $ref: '#/components/parameters/page_size'
-        - $ref: '#/components/parameters/order_by'
-        - $ref: '#/components/parameters/order_directions'
+        - $ref: "#/components/parameters/filters"
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/page_size"
+        - $ref: "#/components/parameters/order_by"
+        - $ref: "#/components/parameters/order_directions"
       responses:
-        '200':
+        "200":
           description: Success
           content:
             application/json:
@@ -1085,12 +1085,12 @@ paths:
                 type: object
                 properties:
                   meta:
-                    $ref: '#/components/schemas/ResultMeta'
+                    $ref: "#/components/schemas/ResultMeta"
                   data:
                     type: array
                     items:
-                      $ref: '#/components/schemas/Event'
-        '400':
+                      $ref: "#/components/schemas/Event"
+        "400":
           $ref: "#/components/responses/BadArg"
 
   /api/events/lpr:
@@ -1098,7 +1098,7 @@ paths:
       summary: List LPR events
       description: |
         Get all license plate recognition (LPR) events with pagination and filtering.
-        
+
         The response includes metadata about pagination and an array of LPR events.
       operationId: getLPREvents
       tags:
@@ -1112,13 +1112,13 @@ paths:
           schema:
             type: boolean
             default: false
-        - $ref: '#/components/parameters/filters'
-        - $ref: '#/components/parameters/page'
-        - $ref: '#/components/parameters/page_size'
-        - $ref: '#/components/parameters/order_by'
-        - $ref: '#/components/parameters/order_directions'
+        - $ref: "#/components/parameters/filters"
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/page_size"
+        - $ref: "#/components/parameters/order_by"
+        - $ref: "#/components/parameters/order_directions"
       responses:
-        '200':
+        "200":
           description: Success
           content:
             application/json:
@@ -1126,12 +1126,12 @@ paths:
                 type: object
                 properties:
                   meta:
-                    $ref: '#/components/schemas/ResultMeta'
+                    $ref: "#/components/schemas/ResultMeta"
                   data:
                     type: array
                     items:
-                      $ref: '#/components/schemas/LPREvent'
-        '400':
+                      $ref: "#/components/schemas/LPREvent"
+        "400":
           $ref: "#/components/responses/BadArg"
 
 components:
@@ -1243,7 +1243,7 @@ components:
         schedule:
           type: object
           description: |
-            Describe the time slots during which the snapshots are uploaded. 
+            Describe the time slots during which the snapshots are uploaded.
             The keys are the week days indexes (from 1 to 7) and the values are an array of time intervals.
             If a key is missing, then it default value will be an empty array and no snapshots will be uploaded for this day.
           example:
@@ -1373,12 +1373,12 @@ components:
         direction:
           type: string
           description: Direction of the vehicle
-          enum: [ "Approach", "Leave" ]
+          enum: ["Approach", "Leave"]
           example: "Approach"
         type:
           type: string
           description: List type of the plate
-          enum: [ "White", "Black", "Other" ]
+          enum: ["White", "Black", "Other"]
           example: "White"
         resolution_width:
           type: string
@@ -1519,7 +1519,7 @@ components:
               minimum: 1
         memory:
           type: object
-          description: | 
+          description: |
             System memory stats.
 
             For more details about the memory types reported here, see [erlang docs](https://www.erlang.org/doc/apps/os_mon/memsup.html#get_system_memory_data/0).
@@ -1695,7 +1695,19 @@ components:
           description: The error code.
         cs:
           type: string
-          enum: [off, fault, bulk, absorption, float, equalize, starting_up, auto_equalize, external_control, unknown]
+          enum:
+            [
+              off,
+              fault,
+              bulk,
+              absorption,
+              float,
+              equalize,
+              starting_up,
+              auto_equalize,
+              external_control,
+              unknown,
+            ]
           description: The state of operation.
         fw:
           type: string
@@ -1833,22 +1845,22 @@ components:
           schema:
             $ref: "#/components/schemas/Error"
     NotFound:
-        description: Not Found
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                message:
-                  type: string
+      description: Not Found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
     Unauthorized:
-        description: Unauthorized access
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                message:
-                  type: string
+      description: Unauthorized access
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
 security:
   - bearerAuth: []

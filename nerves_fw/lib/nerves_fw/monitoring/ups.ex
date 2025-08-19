@@ -120,7 +120,7 @@ defmodule ExNVR.Nerves.Monitoring.UPS do
   end
 
   defp do_handle_pin_state_change(key, value, state) do
-    Logger.info("[UPS] #{key} changed to #{value}")
+    Logger.warning("[UPS] #{key} changed to #{value}")
     event = %{type: event_name(key), metadata: %{state: value}}
 
     with {:error, changeset} <- ExNVR.Events.create_event(event) do
