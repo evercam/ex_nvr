@@ -3,7 +3,7 @@ name: Release
 on:
   push:
     tags:
-      - 'v*'
+      - "v*"
 
 jobs:
   release:
@@ -47,7 +47,7 @@ jobs:
 
       - name: Setup QEMU
         uses: docker/setup-qemu-action@v2
-      
+
       - name: Set up Docker Buildx
         id: buildx
         uses: docker/setup-buildx-action@v2
@@ -97,19 +97,19 @@ jobs:
     runs-on: ubuntu-22.04
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
-      with:
-        ref: ${{ github.ref }}
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.ref }}
 
-    - name: Copy Documentation
-      run:  cp ui/priv/static/openapi.yaml docs/
-
-    - name: Deploy to GitHub Pages
-      run: |
-        git config user.name "GitHub Actions"
-        git config user.email "github-actions@github.com"
-        git checkout --orphan gh-pages
-        git add -A
-        git commit -m "Deploy documentation for tag ${{ github.ref_name }} to github pages"
-        git push origin gh-pages -f    
+      - name: Deploy to GitHub Pages
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "github-actions@github.com"
+          git checkout --orphan gh-pages
+          mkdir -p docs
+          cp ui/priv/static/openapi.yaml docs/
+          cp ui/priv/static/swagger.html docs/index.html
+          git add -A
+          git commit -m "Deploy documentation for tag ${{ github.ref_name }} to github pages"
+          git push origin gh-pages -f
