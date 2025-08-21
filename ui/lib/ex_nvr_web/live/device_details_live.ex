@@ -4,8 +4,10 @@ defmodule ExNVRWeb.DeviceDetailsLive do
   require Logger
 
   alias ExNVR.Devices
-  alias ExNVRWeb.DeviceTabs.{EventsListTab, RecordingsListTab}
+  alias ExNVRWeb.DeviceTabs.{EventsListTab, RecordingsListTab, StatsTab}
   alias ExNVRWeb.Router.Helpers, as: Routes
+
+  import ExNVRWeb.ViewUtils
 
   @impl true
   def render(assigns) do
@@ -71,7 +73,13 @@ defmodule ExNVRWeb.DeviceDetailsLive do
         
     <!-- stats tab-->
         <:tab_content for="stats">
-          <div class="text-center text-gray-500 dark:text-gray-400">Stats tab coming soon...</div>
+          <.live_component
+            id="stats_tab"
+            module={StatsTab}
+            device={@device}
+            main_stream_stats={@main_stream_stats}
+            sub_stream_stats={@sub_stream_stats}
+          />
         </:tab_content>
 
         <:tab_content for="settings">
@@ -103,7 +111,9 @@ defmodule ExNVRWeb.DeviceDetailsLive do
     {:ok,
      assign(socket,
        device: device,
-       active_tab: active_tab
+       active_tab: active_tab,
+       main_stream_stats: %{},
+       sub_stream_stats: %{}
      )}
   end
 
@@ -117,6 +127,12 @@ defmodule ExNVRWeb.DeviceDetailsLive do
 
   @impl true
   def handle_info({:tab_changed, %{tab: tab}}, socket) do
+    if tab == "stats" do
+      Phoenix.PubSub.subscribe(ExNVR.PubSub, "stream_info")
+    else
+      Phoenix.PubSub.unsubscribe(ExNVR.PubSub, "stream_info")
+    end
+
     params =
       socket.assigns.params
       |> Map.put("tab", tab)
@@ -130,6 +146,32 @@ defmodule ExNVRWeb.DeviceDetailsLive do
      |> push_patch(
        to: Routes.device_details_path(socket, :show, socket.assigns.device.id, params)
      )}
+  end
+
+  @impl true
+  def handle_info({:main_stream, message}, socket) do
+    {:noreply, assign(socket, main_stream_stats: format_stats(message))}
+  end
+
+  @impl true
+  def handle_info({:sub_stream, message}, socket) do
+    {:noreply, assign(socket, sub_stream_stats: format_stats(message))}
+  end
+
+  @spec format_stats(map()) :: map()
+  def format_stats(stats) do
+    %{
+      "Resolution" => "#{stats["height"]}x#{stats["width"]}",
+      "R-Frame Rate" => "#{stats["r_frame_rate"]}",
+      "AVG-Frame Rate" => "#{stats["avg_frame_rate"]}",
+      "Color Primaries" => stats["color_primaries"],
+      "color_transfer" => stats["color_transfer"],
+      "Bits Per Raw Sample" => stats["bits_per_raw_sample"],
+      "Codec Long Name" => stats["codec_long_name"],
+      "Codec Type" => stats["codec_type"],
+      "AVG Frame Rate" => stats["avg_frame_rate"],
+      "Bit Rate" => humanize_bitrate(String.to_integer(stats["bit_rate"]))
+    }
   end
 
   def update_params(tab, id) do
