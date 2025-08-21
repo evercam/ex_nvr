@@ -294,6 +294,8 @@ defmodule ExNVRWeb.CoreComponents do
   attr :id, :any, default: nil
   attr :name, :any
   attr :label, :string, default: nil
+  attr :l_class, :string, default: nil
+  nil
   attr :value, :any
 
   attr :type, :string,
@@ -507,7 +509,7 @@ defmodule ExNVRWeb.CoreComponents do
   def input(assigns) do
     ~H"""
     <div phx-feedback-for={@name}>
-      <.label for={@id}>{@label}</.label>
+      <.label for={@id} class={@l_class}>{@label}</.label>
       <input
         type={@type}
         name={@name}
@@ -532,11 +534,15 @@ defmodule ExNVRWeb.CoreComponents do
   Renders a label.
   """
   attr :for, :string, default: nil
+  attr :class, :string, default: nil
   slot :inner_block, required: true
 
   def label(assigns) do
     ~H"""
-    <label for={@for} class="block text-sm font-semibold leading-6 text-black dark:text-white">
+    <label
+      for={@for}
+      class={["block text-sm font-semibold leading-6 text-black dark:text-white", @class]}
+    >
       {render_slot(@inner_block)}
     </label>
     """
@@ -625,7 +631,7 @@ defmodule ExNVRWeb.CoreComponents do
           <tr
             :for={row <- @rows}
             id={@row_id && @row_id.(row)}
-            class="text-black bg-gray-200 border-b dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400"
+            class="text-black bg-gray-200 border-b dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 hover:bg-blue-200 dark:hover:bg-gray-600"
           >
             <td
               :for={{col, i} <- Enum.with_index(@col)}
