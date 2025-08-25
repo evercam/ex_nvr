@@ -13,7 +13,8 @@ defmodule ExNVR.MixProject do
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
       releases: [{@app, release()}],
-      deps: deps()
+      deps: deps(),
+      listeners: [Phoenix.CodeReloader]
     ]
   end
 
