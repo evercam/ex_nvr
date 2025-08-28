@@ -95,7 +95,7 @@ jobs:
 
       - name: Install fwup
         run: |
-          wget https://github.com/fwup-home/fwup/releases/download/v1.11.0/fwup_1.11.0_amd64.deb && \
+          wget https://github.com/fwup-home/fwup/releases/download/v1.13.2/fwup_1.13.2_amd64.deb && \
           sudo dpkg -i fwup_1.13.2_amd64.deb && \
           rm fwup_1.13.2_amd64.deb
 
