@@ -6,7 +6,7 @@ defmodule ExNVRWeb.FlopConfig do
   def table_opts do
     [
       table_attrs: [
-        class: "w-[40rem] mt-4 text-sm text-left sm:w-full text-gray-500 dark:text-gray-400"
+        class: "w-[40rem] mt-4 text-sm text-left sm:w-full text-gray-500 dark:text-gray-400 py-3"
       ],
       thead_attrs: [
         class: "text-xs text-black uppercase bg-blue-400 dark:bg-gray-700 dark:text-gray-400"

@@ -50,7 +50,11 @@ html, body {
 }
 
 /* custom scrollbar */
-::-webkit-scrollbar {
+.main-body::-webkit-scrollbar {
+    width: 0px;
+}
+
+.list-table::-webkit-scrollbar {
     width: 15px;
 }
 
