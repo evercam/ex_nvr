@@ -1,6 +1,10 @@
 defmodule ExNVRWeb.DeviceTabs.RecordingsListTab do
-  @moduledoc false
-
+  @moduledoc """
+    recordings list tab
+      recordings list
+      filters
+      pagination
+  """
   use ExNVRWeb, :live_component
 
   require Logger
@@ -15,7 +19,11 @@ defmodule ExNVRWeb.DeviceTabs.RecordingsListTab do
   def render(assigns) do
     ~H"""
     <div>
-      <div class="text-center text-gray-500 dark:text-gray-400" id="recordings-tab">
+      <div
+        class="text-center text-gray-500 dark:text-gray-400"
+        id="recordings-tab"
+        phx-hook="FlowbiteInit"
+      >
         <.filter_form
           meta={@meta}
           recordings={@recordings}
@@ -23,79 +31,72 @@ defmodule ExNVRWeb.DeviceTabs.RecordingsListTab do
           id="recording-filter-form"
         />
 
-        <div>
-          <Flop.Phoenix.table
-            id="recordings"
-            opts={ExNVRWeb.FlopConfig.table_opts()}
-            meta={@meta}
-            items={@recordings}
-            path={~p"/devices/#{@device.id}/details?tab=recordings"}
-          >
-            <:col :let={recording} label="Id">{recording.id}</:col>
-            <:col :let={recording} label="Start-date" field={:start_date}>
-              {RecordingListLive.format_date(recording.start_date, @device.timezone)}
-            </:col>
-            <:col :let={recording} label="End-date" field={:end_date}>
-              {RecordingListLive.format_date(recording.end_date, @device.timezone)}
-            </:col>
-            <:action :let={recording}>
-              <div class="flex justify-end">
-                <button
-                  data-popover-target={"popover-click-#{recording.id}"}
-                  data-popover-trigger="click"
-                  phx-click="fetch-details"
-                  phx-value-id={recording.id}
-                  type="button"
-                  phx-target={@myself}
-                >
-                  <span title="Show information">
-                    <.icon
-                      name="hero-information-circle-solid"
-                      class="w-6 h-6 mr-2 dark:text-gray-400 cursor-pointer"
-                    />
-                  </span>
-                </button>
-
-                <.recording_details_popover
-                  recording={recording}
-                  rec_details={@files_details[recording.id]}
-                  file_details={@files_details}
-                />
-                <span
-                  title="Preview recording"
-                  phx-click={RecordingListLive.open_popup(recording)}
-                  id={"thumbnail-#{recording.id}"}
-                >
+      <div class="overflow-y-auto h-[72vh]">
+        <Flop.Phoenix.table
+          id="recordings"
+          opts={ExNVRWeb.FlopConfig.table_opts()}
+          meta={@meta}
+          items={@recordings}
+          path={~p"/devices/#{@device.id}/details?tab=recordings"}
+        >
+          <:col :let={recording} label="Id">{recording.id}</:col>
+          <:col :let={recording} label="Start-date" field={:start_date}>
+            {RecordingListLive.format_date(recording.start_date, @device.timezone)}
+          </:col>
+          <:col :let={recording} label="End-date" field={:end_date}>
+            {RecordingListLive.format_date(recording.end_date, @device.timezone)}
+          </:col>
+          <:action :let={recording}>
+            <div class="flex justify-end">
+              <button
+                data-popover-target={"popover-click-#{recording.id}"}
+                data-popover-trigger="click"
+                phx-click="fetch-details"
+                phx-value-id={recording.id}
+                type="button"
+                phx-target={@myself}
+              >
+                <span title="Show information">
                   <.icon
-                    name="hero-eye-solid"
-                    class="w-6 h-6 z-auto mr-2 dark:text-gray-400 cursor-pointer thumbnail"
+                    name="hero-information-circle-solid"
+                    class="w-6 h-6 mr-2 dark:text-gray-400 cursor-pointer"
                   />
                 </span>
-                <div class="flex justify-end">
-                  <.link
+              </button>
+
+              <.recording_details_popover
+                recording={recording}
+                rec_details={@files_details[recording.id]}
+                file_details={@files_details}
+              />
+              <span
+                title="Preview recording"
+                phx-click={RecordingListLive.open_popup(recording)}
+                id={"thumbnail-#{recording.id}"}
+              >
+                <.icon
+                  name="hero-eye-solid"
+                  class="w-6 h-6 z-auto mr-2 dark:text-gray-400 cursor-pointer thumbnail"
+                />
+              </span>
+              <div class="flex justify-end">
+                <.link
                     href={
                       ~p"/api/devices/#{recording.device_id}/recordings/#{recording.filename}/blob"
                     }
-                    class="inline-flex items-center text-gray-900 rounded-lg"
-                    id={"recording-#{recording.id}-link"}
-                  >
-                    <span title="Download recording">
-                      <.icon name="hero-arrow-down-tray-solid" class="w-6 h-6 dark:text-gray-400" />
-                    </span>
-                  </.link>
-                </div>
+                  class="inline-flex items-center text-gray-900 rounded-lg"
+                  id={"recording-#{recording.id}-link"}
+                >
+                  <span title="Download recording">
+                    <.icon name="hero-arrow-down-tray-solid" class="w-6 h-6 dark:text-gray-400" />
+                  </span>
+                </.link>
               </div>
-            </:action>
-          </Flop.Phoenix.table>
-        </div>
-
-        <div class="fixed bottom-0  right-10 w-full">
-          <div class="bg-gray-300 dark:bg-gray-800">
-            <div class="pb-5">
-              <.pagination meta={@meta} target={@myself} />
             </div>
-          </div>
+          </:action>
+        </Flop.Phoenix.table>
         </div>
+        <.pagination meta={@meta} target={@myself} />
       </div>
       <div
         id="popup-container"
@@ -240,7 +241,6 @@ defmodule ExNVRWeb.DeviceTabs.RecordingsListTab do
     case Recordings.list(nested_filter_params) do
       {:ok, {recordings, meta}} ->
         socket
-        |> push_event("reload-popovers", %{})
         |> assign(meta: meta, recordings: recordings, sort_params: sort_params)
 
       {:error, meta} ->
