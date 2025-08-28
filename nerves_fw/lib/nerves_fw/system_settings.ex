@@ -52,7 +52,7 @@ defmodule ExNVR.Nerves.SystemSettings do
           values: ~w(power_off stop_recording nothing)a,
           default: :stop_recording
 
-        field :trigger_after, :integer, default: 120
+        field :trigger_after, :integer, default: 30
       end
     end
 

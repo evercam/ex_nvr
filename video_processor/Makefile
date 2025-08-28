@@ -2,13 +2,13 @@ ARCH := $(or $(TARGET_ARCH), $(shell uname -m))
 OS := $(or $(TARGET_OS), $(shell uname -s))
 ABI ?= gnu
 
-VERSION ?= 0.1.0
-FFMPEG_VERSION ?= 7.1.1
+VERSION := 0.1.0
+FFMPEG_VERSION := 7.1.1
 
 TEMP ?= $(HOME)/.cache
 FFMPEG_DIR ?= $(TEMP)/ex_nvr/$(VERSION)/$(ARCH)/ffmpeg-$(FFMPEG_VERSION)
 PRECOMPILED_FFMPEG_LINK ?= https://github.com/evercam/ex_nvr_precompiled/releases/download/v$(VERSION)/ffmpeg-linux-$(ARCH)-$(FFMPEG_VERSION).tar.xz
-PRECOMPILED_FFMPEG_NAME ?= ffmpeg-linux-$(shell uname -m)-$(FFMPEG_VERSION).tar.xz
+PRECOMPILED_FFMPEG_NAME ?= ffmpeg-linux-$(ARCH)-$(FFMPEG_VERSION).tar.xz
 
 PRECOMPILED = false
 
@@ -28,7 +28,7 @@ CFLAGS += -fPIC -shared
 IFLAGS = -I$(ERTS_INCLUDE_DIR) -I$(DIR) $$(pkg-config --cflags libavcodec libavutil libswscale)
 LDFLAGS = $$(pkg-config --libs libavcodec libavutil libswscale)
 
-ifeq ($(OS),Linux)
+ifneq (,$(filter $(OS),linux Linux))
 	ifeq ($(ABI),gnu)
 		ifneq (,$(filter $(ARCH),x86_64 armv7l arm aarch64))
 			PRECOMPILED = true
@@ -64,7 +64,7 @@ download_ffmpeg:
 		echo "Downloading precompiled ffmpeg..."; \
 		mkdir -p $(TEMP); \
 		mkdir -p $(FFMPEG_DIR); \
-		curl -sL $(PRECOMPILED_FFMPEG_LINK) -o $(TEMP)/$(PRECOMPILED_FFMPEG_NAME); \
+		curl -L $(PRECOMPILED_FFMPEG_LINK) -o $(TEMP)/$(PRECOMPILED_FFMPEG_NAME); \
 		tar -xf $(TEMP)/$(PRECOMPILED_FFMPEG_NAME) -C $(FFMPEG_DIR); \
 	fi
 

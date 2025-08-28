@@ -30,6 +30,8 @@ defmodule ExNVR.Nerves.Netbird do
 
   @impl true
   def init(opts) do
+    System.put_env("NB_STATE_DIR", "/data/netbird")
+
     opts = Keyword.merge(@default_config, opts)
     config_dir = opts[:config_file] |> Path.dirname()
 

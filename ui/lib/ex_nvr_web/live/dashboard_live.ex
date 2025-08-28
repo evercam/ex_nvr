@@ -35,7 +35,7 @@ defmodule ExNVRWeb.DashboardLive do
           devices={Enum.map(@devices, &Map.take(&1, [:name, :id]))}
           streams={@supported_streams}
           stream={@stream}
-          device={Map.get(@current_device, :id)}
+          device={Map.take(@current_device, [:id, :name, :timezone])}
           live-view-enabled={@live_view_enabled?}
           start-date={@start_date}
           v-on:switch_stream={JS.push("switch_stream")}

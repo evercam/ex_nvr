@@ -471,6 +471,7 @@ void free_decoder(ErlNifEnv *env, void *obj) {
   struct NvrDecoder *nvr_decoder = (struct NvrDecoder *)obj;
 
   decoder_free(&nvr_decoder->decoder);
+  video_converter_free(&nvr_decoder->video_converter);
 
   if (nvr_decoder->packet != NULL) {
     av_packet_free(&nvr_decoder->packet);

@@ -2,7 +2,7 @@ defmodule ExNVR.MixProject do
   use Mix.Project
 
   @app :ex_nvr
-  @version "0.22.0"
+  @version "0.23.0"
 
   def project do
     [
@@ -13,7 +13,8 @@ defmodule ExNVR.MixProject do
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
       releases: [{@app, release()}],
-      deps: deps()
+      deps: deps(),
+      listeners: [Phoenix.CodeReloader]
     ]
   end
 
@@ -37,6 +38,7 @@ defmodule ExNVR.MixProject do
   defp deps do
     [
       {:video_processor, path: "../video_processor"},
+      {:media_codecs, "~> 0.8.0", override: true},
       {:rtsp, "~> 0.4.0"},
       {:ex_sdp, "~> 1.0"},
       {:bundlex, "~> 1.5", override: true},
@@ -58,15 +60,14 @@ defmodule ExNVR.MixProject do
       {:ex_m3u8, "~> 0.15.0"},
       {:connection, "~> 1.1.0"},
       {:tzdata, "~> 1.1"},
-      {:turbojpeg, "~> 0.4.0"},
       {:ex_aws, "~> 2.5"},
       {:ex_aws_s3, "~> 2.5"},
       {:flop, "~> 0.26.0"},
       {:req, "~> 0.5.0"},
       {:multipart, "~> 0.4.0"},
-      {:ex_mp4, "~> 0.11.0"},
+      {:ex_mp4, "~> 0.12.0"},
       {:floki, "~> 0.38.0"},
-      {:phoenix, "~> 1.7.2"},
+      {:phoenix, "~> 1.8.0"},
       {:phoenix_ecto, "~> 4.4"},
       {:phoenix_html, "~> 4.0"},
       {:phoenix_live_view, "~> 1.0"},
@@ -92,7 +93,8 @@ defmodule ExNVR.MixProject do
       {:membrane_h26x_plugin, "~> 0.10", only: :test},
       {:mimic, "~> 2.0.0", only: :test},
       {:faker, "~> 0.17", only: :test},
-      {:bypass, "~> 2.1", only: :test}
+      {:bypass, "~> 2.1", only: :test},
+      {:lazy_html, "~> 0.1.0", only: :test}
     ]
   end
 
@@ -110,7 +112,7 @@ defmodule ExNVR.MixProject do
       ],
       "assets.deploy": [
         "cmd --cd assets npm run build",
-        "phx.digest"
+        "phx.digest --no-compile"
       ],
       "assets.clean": [
         "phx.digest.clean --all"
@@ -157,7 +159,6 @@ defmodule ExNVR.MixProject do
     # which made the size of the destination folder 3 times the original size.
     libs = [
       "/usr/lib/#{arch}-linux-#{abi}/libsrtp2.so*",
-      "/usr/lib/#{arch}-linux-#{abi}/libturbojpeg.so*",
       "/usr/lib/#{arch}-linux-#{abi}/libssl.so*",
       "/usr/lib/#{arch}-linux-#{abi}/libcrypto.so*"
     ]
