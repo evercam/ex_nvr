@@ -22,7 +22,7 @@ defmodule ExNVRWeb.DeviceDetailsLive do
         <:tab id="stats" label="Stats" />
         <:tab id="settings" label="Settings" />
         <:tab id="events" label="Events" />
-
+        
     <!-- device details tab -->
         <:tab_content for="details">
           <ul class="divide-y divide-gray-700 text-white rounded-md shadow-sm max-w-xl ">
@@ -60,7 +60,7 @@ defmodule ExNVRWeb.DeviceDetailsLive do
             </li>
           </ul>
         </:tab_content>
-
+        
     <!-- recordings tab -->
         <:tab_content for="recordings">
           <.live_component
@@ -70,7 +70,7 @@ defmodule ExNVRWeb.DeviceDetailsLive do
             params={@params}
           />
         </:tab_content>
-
+        
     <!-- stats tab-->
         <:tab_content for="stats">
           <.live_component
@@ -87,7 +87,7 @@ defmodule ExNVRWeb.DeviceDetailsLive do
             settings tab coming soon...
           </div>
         </:tab_content>
-
+        
     <!-- events tab-->
         <:tab_content for="events">
           <.live_component
