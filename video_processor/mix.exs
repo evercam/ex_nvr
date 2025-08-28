@@ -1,4 +1,4 @@
-defmodule ExNVR.VideoProcessor.MixProject do
+defmodule ExNVR.AV.VideoProcessor.MixProject do
   use Mix.Project
 
   @version "0.1.0"
