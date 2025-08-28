@@ -1,4 +1,6 @@
 defmodule ExNVRWeb.DeviceTabs.RecordingsListTab do
+  @moduledoc false
+
   use ExNVRWeb, :live_component
 
   require Logger
