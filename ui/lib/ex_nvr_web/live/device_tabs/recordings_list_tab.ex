@@ -1,10 +1,4 @@
 defmodule ExNVRWeb.DeviceTabs.RecordingsListTab do
-  @moduledoc """
-    recordings list tab
-      recordings list
-      filters
-      pagination
-  """
   use ExNVRWeb, :live_component
 
   require Logger
@@ -27,7 +21,7 @@ defmodule ExNVRWeb.DeviceTabs.RecordingsListTab do
           id="recording-filter-form"
         />
 
-        <div class=" overflow-y-auto h-[72vh] list-table">
+        <div>
           <Flop.Phoenix.table
             id="recordings"
             opts={ExNVRWeb.FlopConfig.table_opts()}
@@ -244,6 +238,7 @@ defmodule ExNVRWeb.DeviceTabs.RecordingsListTab do
     case Recordings.list(nested_filter_params) do
       {:ok, {recordings, meta}} ->
         socket
+        |> push_event("reload-popovers", %{})
         |> assign(meta: meta, recordings: recordings, sort_params: sort_params)
 
       {:error, meta} ->

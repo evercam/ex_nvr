@@ -770,7 +770,7 @@ defmodule ExNVRWeb.CoreComponents do
           </a>
         </li>
         <li :for={page <- 1..2} :if={@meta.total_pages > 6}>
-          <.pagination_link current_page={@meta.current_page} page={page} />
+          <.pagination_link current_page={@meta.current_page} page={page} target={assigns[:target]} />
         </li>
         <li :if={@meta.total_pages > 6 && @meta.current_page > 4}>
           <span class="px-3 h-8 text-gray-500">...</span>
