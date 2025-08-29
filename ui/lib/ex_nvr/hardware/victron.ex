@@ -226,7 +226,15 @@ defmodule ExNVR.Hardware.Victron do
   end
 
   @impl true
-  def terminate(_reason, state) do
+  def terminate(reason, state) do
+    if pid = state.data.pid do
+      Logger.warning("Victron process terminating due to #{inspect(reason)}")
+
+      if pid in ["0xA389", "0xA38A", "0xA38B"],
+        do: ExNVR.SystemStatus.set(:battery_monitor, nil),
+        else: ExNVR.SystemStatus.set(:solar_charger, nil)
+    end
+
     Circuits.UART.close(state.pid)
     :timer.cancel(state.timer)
   end
