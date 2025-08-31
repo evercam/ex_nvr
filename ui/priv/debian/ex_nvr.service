@@ -1,0 +1,17 @@
+[Unit]
+Description=ExNVR: Network Video Recorder
+After=network.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+ExecStart=/opt/ex_nvr/run
+Restart=always
+RestartSec=5
+SyslogIdentifier=ex_nvr
+WorkingDirectory=/opt/ex_nvr
+LimitNOFILE=8192
+
+[Install]
+WantedBy=multi-user.target
