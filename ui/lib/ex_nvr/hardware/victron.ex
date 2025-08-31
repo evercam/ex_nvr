@@ -236,6 +236,7 @@ defmodule ExNVR.Hardware.Victron do
     end
 
     Circuits.UART.close(state.pid)
+    Circuits.UART.stop(state.pid)
     :timer.cancel(state.timer)
   end
 
