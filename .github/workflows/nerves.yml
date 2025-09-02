@@ -3,24 +3,23 @@ name: nerves
 on:
   push:
     tags:
-      - 'v*'
+      - "v*"
 
   workflow_call:
     inputs:
       version:
-        description: 'Custom version string to use instead of the tag-based version'
+        description: "Custom version string to use instead of the tag-based version"
         required: false
         type: string
       target:
-        description: 'Specific target to build (ex_nvr_rpi4, ex_nvr_rpi5, or giraffe). If not specified, all targets will be built.'
+        description: "Specific target to build (ex_nvr_rpi4, ex_nvr_rpi5, or giraffe). If not specified, all targets will be built."
         required: false
         type: string
       git_sha:
         description: 'Target git ref for @actions/checkout. (defaults to "master")'
-        default: 'master'
+        default: "master"
         required: false
         type: string
-
 
 jobs:
   define-matrix:
@@ -88,7 +87,7 @@ jobs:
           echo "Using version: ${{ inputs.version }}"
 
       - name: Install dependencies
-        run: | 
+        run: |
           sudo apt-get update && \
           sudo apt-get -y install npm wget build-essential automake autoconf git squashfs-tools ssh-askpass \
                                   pkg-config curl libmnl-dev libssl-dev libncurses5-dev help2man libconfuse-dev \
@@ -96,9 +95,9 @@ jobs:
 
       - name: Install fwup
         run: |
-          wget https://github.com/fwup-home/fwup/releases/download/v1.11.0/fwup_1.11.0_amd64.deb && \
-          sudo dpkg -i fwup_1.11.0_amd64.deb && \
-          rm fwup_1.11.0_amd64.deb
+          wget https://github.com/fwup-home/fwup/releases/download/v1.13.2/fwup_1.13.2_amd64.deb && \
+          sudo dpkg -i fwup_1.13.2_amd64.deb && \
+          rm fwup_1.13.2_amd64.deb
 
       - name: Install Nerves
         run: |

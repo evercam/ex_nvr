@@ -112,7 +112,7 @@ defmodule ExNVRWeb.API.RecordingControllerTest do
                "total_count" => 4,
                "total_pages" => 1,
                "current_page" => 1,
-               "page_size" => 100
+               "page_size" => 20
              } = response["meta"]
 
       # Low resolution chunks
