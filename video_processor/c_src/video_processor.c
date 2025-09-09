@@ -222,8 +222,8 @@ ERL_NIF_TERM encode(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
     return nif_raise(env, "failed_to_inspect_binary");
   }
 
-  int pts;
-  if (!enif_get_int(env, argv[2], &pts)) {
+  ulong pts;
+  if (!enif_get_ulong(env, argv[2], &pts)) {
     return nif_raise(env, "failed_to_get_int");
   }
 
@@ -427,8 +427,8 @@ static ERL_NIF_TERM nif_packet_to_term(ErlNifEnv *env, AVPacket *packet) {
 
   memcpy(ptr, packet->data, packet->size);
 
-  ERL_NIF_TERM dts = enif_make_int(env, packet->dts);
-  ERL_NIF_TERM pts = enif_make_int(env, packet->pts);
+  ERL_NIF_TERM dts = enif_make_int64(env, packet->dts);
+  ERL_NIF_TERM pts = enif_make_int64(env, packet->pts);
   ERL_NIF_TERM is_keyframe =
       enif_make_atom(env, packet->flags & AV_PKT_FLAG_KEY ? "true" : "false");
   return enif_make_tuple(env, 4, data_term, dts, pts, is_keyframe);
