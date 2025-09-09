@@ -13,8 +13,6 @@ defmodule ExNVRWeb.RemovableStorageLive do
   end
 
   def render(assigns) do
-    IO.inspect(assigns.removable_device, label: "assigns")
-
     ~H"""
     <div class="max-w-lg mx-auto text-white font-medium flex flex-col items-center space-y-6 mt-5">
       <h2 class="text-lg font-semibold">Copy To USB</h2>
