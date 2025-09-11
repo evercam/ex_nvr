@@ -20,7 +20,7 @@ defmodule ExNvrWeb.DeviceDetailsLiveTest do
         |> log_in_user(user_fixture())
         |> live(~p"/devices/#{device.id}/details")
 
-      assert has_element?(lv, "h2", "#{device.name}")
+      assert has_element?(lv, "h2", "Device: #{device.name}")
 
       # check tabs
       tabs
