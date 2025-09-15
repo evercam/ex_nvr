@@ -135,14 +135,14 @@ clean:
 }
 
 ERL_NIF_TERM new_decoder(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
-  if (argc != 4) {
+  if (argc != 5) {
     return nif_raise(env, "invalid_arg_count");
   }
 
   ERL_NIF_TERM ret;
   char *codec_name = NULL, *out_format = NULL;
   const AVCodec *codec = NULL;
-  int out_width, out_height;
+  int out_width, out_height, pad;
 
   if (!nif_get_atom(env, argv[0], &codec_name)) {
     return nif_raise(env, "failed_to_get_atom");
@@ -174,6 +174,11 @@ ERL_NIF_TERM new_decoder(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
     goto clean;
   }
 
+  if (!enif_get_int(env, argv[4], &pad)) {
+    ret = nif_raise(env, "failed_to_get_atom");
+    goto clean;
+  }
+
   enum AVPixelFormat out_pix_fmt = av_get_pix_fmt(out_format);
 
   struct NvrDecoder *nvr_decoder =
@@ -185,6 +190,7 @@ ERL_NIF_TERM new_decoder(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   nvr_decoder->out_width = out_width;
   nvr_decoder->out_height = out_height;
   nvr_decoder->out_format = out_pix_fmt;
+  nvr_decoder->pad = pad;
 
   if (decoder_init(nvr_decoder->decoder, codec) < 0) {
     ret = nif_raise(env, "failed_to_init_decoder");
@@ -365,7 +371,7 @@ static int convert_frames(struct NvrDecoder *nvr_decoder) {
                                           : nvr_decoder->out_format;
       ret = video_converter_init(nvr_decoder->video_converter, c->width,
                                  c->height, c->pix_fmt, nvr_decoder->out_width,
-                                 nvr_decoder->out_height, out_format);
+                                 nvr_decoder->out_height, out_format, nvr_decoder->pad);
       if (ret < 0)
         return ret;
     }
@@ -480,7 +486,7 @@ void free_decoder(ErlNifEnv *env, void *obj) {
 
 static ErlNifFunc funcs[] = {
     {"new_encoder", 2, new_encoder},
-    {"new_decoder", 4, new_decoder},
+    {"new_decoder", 5, new_decoder},
     {"encode", 3, encode, ERL_DIRTY_JOB_CPU_BOUND},
     {"decode", 4, decode, ERL_DIRTY_JOB_CPU_BOUND},
     {"flush_encoder", 1, flush_encoder, ERL_DIRTY_JOB_CPU_BOUND},
