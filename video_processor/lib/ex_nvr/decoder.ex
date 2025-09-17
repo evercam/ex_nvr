@@ -8,13 +8,14 @@ defmodule ExNVR.AV.Decoder do
 
   @type t() :: reference()
 
-  @default_codec_options [out_format: nil, out_width: -1, out_height: -1]
+  @default_codec_options [out_format: nil, out_width: -1, out_height: -1, pad: false]
 
   @spec new(codec(), keyword()) :: t()
   def new(codec, opts \\ []) when codec in [:h264, :h265, :hevc] do
     codec = if codec == :h265, do: :hevc, else: codec
     opts = Keyword.merge(@default_codec_options, opts)
-    NIF.new_decoder(codec, opts[:out_width], opts[:out_height], opts[:out_format])
+    pad = if opts[:pad], do: 1, else: 0
+    NIF.new_decoder(codec, opts[:out_width], opts[:out_height], opts[:out_format], pad)
   end
 
   @spec decode(t(), binary(), pts: integer(), dts: integer()) :: [Frame.t()]

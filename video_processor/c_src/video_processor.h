@@ -16,5 +16,6 @@ struct NvrDecoder {
   // output params
   int out_width;
   int out_height;
+  int pad;
   enum AVPixelFormat out_format;
 };
