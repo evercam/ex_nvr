@@ -175,7 +175,7 @@ ERL_NIF_TERM new_decoder(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   }
 
   if (!enif_get_int(env, argv[4], &pad)) {
-    ret = nif_raise(env, "failed_to_get_atom");
+    ret = nif_raise(env, "failed_to_get_int");
     goto clean;
   }
 
