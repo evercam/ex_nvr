@@ -4,8 +4,7 @@ defmodule ExNVRWeb.CoreComponents do
 
   At the first glance, this module may seem daunting, but its goal is
   to provide some core building blocks in your application, such modals,
-  tables, and forms. The components are mostly markup and well documented
-  with doc strings and declarative assigns. You may customize and style
+  tables, and forms. The components are mostly markup and well documented with doc strings and declarative assigns. You may customize and style
   them in any way you want, based on your application growth and needs.
 
   The default components use Tailwind CSS, a utility-first CSS framework.
@@ -364,7 +363,7 @@ defmodule ExNVRWeb.CoreComponents do
           type="checkbox"
           id={@id}
           name={@name}
-          value="true"
+          value={@value}
           checked={@checked}
           class={[
             "rounded text-black border-gray-300 rounded bg-gray-50 focus:ring-3 focus:ring-blue-300",
