@@ -118,12 +118,8 @@ defmodule ExNVR.Model.Device do
     end
 
     defp validate_uri(field, uri, protocl \\ "rtsp") do
-      protocl
-      |> IO.inspect(label: "here is the protocal")
-
       parsed_uri =
         URI.parse(uri)
-        |> IO.inspect(label: "this ithe url")
 
       checkpath =
         String.starts_with?(parsed_uri.path, "/dev/video")
@@ -133,17 +129,14 @@ defmodule ExNVR.Model.Device do
           []
 
         parsed_uri.scheme != protocl ->
-          IO.inspect(label: "protocal")
           [{field, "scheme should be #{protocl}"}]
 
         to_string(parsed_uri.host) == "" ->
-          IO.inspect(label: "host")
           [{field, "invalid #{protocl} uri"}]
 
         true ->
           []
       end
-      |> IO.inspect(label: "this-->")
     end
   end
 
