@@ -1,6 +1,4 @@
 defmodule ExNVR.Pipeline.Source.Webcam do
-  @moduledoc false
-
   @moduledoc """
 
       start camera
@@ -8,18 +6,16 @@ defmodule ExNVR.Pipeline.Source.Webcam do
       streams to the correct format I420
       h264 -> encodes (todo: using video processor)
   """
+
+  alias ExNVR.AV.{Encoder, Frame}
+  alias ExNVR.Model.Device
   alias JSON.Encoder
-  alias ExNVR.AV.{Decoder, Encoder, Frame}
+
+  alias Membrane.Buffer
+  alias Membrane.CameraCapture.Native
+  alias Membrane.FFmpeg.SWScale.PixelFormatConverter
 
   use Membrane.Source
-  alias Membrane.Buffer
-
-  alias ExNVR.Model.Device
-  alias Membrane.H264
-  alias Membrane.CameraCapture.Native
-
-  alias Membrane.H264.FFmpeg, as: Encode
-  alias Membrane.FFmpeg.SWScale.PixelFormatConverter
 
   @dest_time_base 90_000
 
@@ -158,52 +154,10 @@ defmodule ExNVR.Pipeline.Source.Webcam do
   end
 
   defp maybe_convert(payload, native_converter, _source_format, _target_format) do
-    with {:ok, frame} <- PixelFormatConverter.Native.process(native_converter, payload) do
-      frame
-    else
-      {:error, reason} ->
-        raise "An error has ocurred while processing the buffer: `#{inspect(reason)}`"
+    case PixelFormatConverter.Native.process(native_converter, payload) do
+      {:ok, frame} -> frame
+      {:error, reason} -> raise "Error: #{inspect(reason)}"
     end
-  end
-
-  defp frame_provider(native, parent_pid, state) do
-    with {:ok, frame} <- Native.read_packet(native) do
-      send(parent_pid, {:frame, frame})
-      encode_frame_to_h264(frame, state)
-
-      frame_provider(native, parent_pid, state)
-    else
-      {:error, reason} ->
-        raise "Error when reading packets: #{inspect(reason)}"
-    end
-  end
-
-  def encode_frame_to_h264(frame, state) do
-    time = Membrane.Time.monotonic_time()
-    init_time = state.init_time || time
-
-    frame_details =
-      %{
-        type: :video,
-        data: frame,
-        format: state.pixel_format,
-        width: state.width,
-        height: state.height,
-        pts: time - init_time
-      }
-
-    # encode
-    encoder =
-      Encoder.new(:h264,
-        width: state.width,
-        height: state.height,
-        format: :yuv422p,
-        time_base: {1, @dest_time_base},
-        gop_size: 32,
-        profile: "Baseline",
-        max_b_frames: 0
-      )
-      |> Encoder.encode(frame_details)
   end
 
   defp pixel_format_to_atom("yuv420p"), do: :I420

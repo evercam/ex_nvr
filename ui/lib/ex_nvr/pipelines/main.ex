@@ -135,8 +135,6 @@ defmodule ExNVR.Pipelines.Main do
 
   @impl true
   def handle_setup(_ctx, %{device: device} = state) do
-    state
-
     spec =
       [
         child(:hls_sink, %Output.HLS{
@@ -395,7 +393,7 @@ defmodule ExNVR.Pipelines.Main do
     [child(:file_source, %ExNVR.Pipeline.Source.File{device: device})]
   end
 
-  defp build_device_spec(%{type: :webcam} = device, state) do
+  defp build_device_spec(%{type: :webcam} = _device, state) do
     build_main_stream_storage_spec(state) ++
       [
         child(:source, %Source.Webcam{
