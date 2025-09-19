@@ -160,6 +160,16 @@ defmodule ExNVR.Pipeline.Source.RTSP do
     {[], state}
   end
 
+  @impl true
+  def handle_terminate_request(_ctx, state) do
+    Enum.each(state.streams, fn
+      {_type, nil} -> :ok
+      {_type, stream} -> RTSP.stop(stream.pid)
+    end)
+
+    {[terminate: :normal], state}
+  end
+
   defp do_handle_pad_added(stream_type, control_path, ctx, state) do
     stream = state.streams[stream_type]
 

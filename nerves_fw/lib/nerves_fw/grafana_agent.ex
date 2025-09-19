@@ -10,7 +10,7 @@ defmodule ExNVR.Nerves.GrafanaAgent do
   alias __MODULE__.ConfigRenderer
   alias Nerves.Runtime
 
-  @github_api_url "https://api.github.com/repos/grafana/agent/releases"
+  @github_release_url "https://github.com/grafana/agent/releases/download/v0.44.2/grafana-agent-linux-arm64.zip"
 
   @default_config [
     config_dir: "/data/grafana_agent",
@@ -78,7 +78,7 @@ defmodule ExNVR.Nerves.GrafanaAgent do
     Logger.info("Download grafana agent...")
     tmp_path = Path.join(System.tmp_dir!(), "grafana-agent.zip")
 
-    %{status: 200} = Req.get!(grafana_agent_download_url(), into: File.stream!(tmp_path))
+    %{status: 200} = Req.get!(@github_release_url, into: File.stream!(tmp_path))
 
     Logger.info("Unzip grafana agent zip file...")
     {:ok, [grafana_agent]} = :zip.unzip(to_charlist(tmp_path), cwd: to_charlist(state.config_dir))
@@ -92,19 +92,6 @@ defmodule ExNVR.Nerves.GrafanaAgent do
   @impl true
   def handle_info(_msg, state) do
     {:noreply, state}
-  end
-
-  defp grafana_agent_download_url do
-    Req.get!(@github_api_url,
-      headers: [{"content-type", "application/vnd.github+json"}],
-      params: [per_page: 1]
-    )
-    |> Map.get(:body)
-    |> List.first()
-    |> Map.get("assets")
-    # all our firmware are aarch64
-    |> Enum.find(&String.ends_with?(&1["name"], "linux-arm64.zip"))
-    |> Map.get("browser_download_url")
   end
 
   defp start_grafana_agent(%{config_dir: config_dir} = state) do
