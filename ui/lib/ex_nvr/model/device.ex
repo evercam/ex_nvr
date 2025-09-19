@@ -108,14 +108,26 @@ defmodule ExNVR.Model.Device do
       end)
     end
 
+    defp validate_device_config(changeset, :webcam) do
+      validate_required(changeset, [:stream_uri])
+      |> Changeset.validate_change(:stream_uri, &validate_uri/2)
+    end
+
     defp validate_device_config(changeset, :file) do
       validate_required(changeset, [:filename, :duration])
     end
 
     defp validate_uri(field, uri, protocl \\ "rtsp") do
-      parsed_uri = URI.parse(uri)
+      parsed_uri =
+        URI.parse(uri)
+
+      checkpath =
+        String.starts_with?(parsed_uri.path, "/dev/video")
 
       cond do
+        checkpath ->
+          []
+
         parsed_uri.scheme != protocl ->
           [{field, "scheme should be #{protocl}"}]
 
@@ -126,6 +138,9 @@ defmodule ExNVR.Model.Device do
           []
       end
     end
+  end
+
+  defp validate_uri(filed, uri, protocl) do
   end
 
   defmodule Settings do
@@ -154,7 +169,7 @@ defmodule ExNVR.Model.Device do
   @primary_key {:id, :binary_id, autogenerate: true}
   schema "devices" do
     field :name, :string
-    field :type, Ecto.Enum, values: [:ip, :file], default: :ip
+    field :type, Ecto.Enum, values: [:ip, :file, :webcam], default: :ip
     field :timezone, :string, default: "UTC"
     field :state, Ecto.Enum, values: @states, default: :recording
     field :vendor, :string
