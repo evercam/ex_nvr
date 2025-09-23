@@ -57,7 +57,7 @@ defmodule ExNVR.Elements.CVSBufferer do
   def handle_parent_notification(:snapshot, _ctx, state) do
     snapshot =
       state.cvs
-      |> Enum.reduce([], &[to_annexb(&1) | &2])
+      |> Enum.reduce([], &[%{&1 | payload: to_annexb(&1.payload)} | &2])
       |> ExNVR.MediaUtils.decode_last(state.decoder)
       |> VideoProcessor.encode_to_jpeg()
 
