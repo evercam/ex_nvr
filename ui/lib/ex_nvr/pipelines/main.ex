@@ -400,10 +400,8 @@ defmodule ExNVR.Pipelines.Main do
           framerate: 30
         })
         |> via_out(:main_stream_output)
-        |> via_in(:input)
-        |> child(:encoder, %Membrane.H264.FFmpeg.Encoder{profile: :baseline})
         |> child(:tee, Membrane.Tee)
-        |> via_in(:main_stream)
+        |> via_in(Pad.ref(:main_stream, :video))
         |> get_child(:hls_sink),
         get_child(:tee)
         |> via_out(:push_output)
@@ -414,6 +412,28 @@ defmodule ExNVR.Pipelines.Main do
 
   defp build_device_spec(%{type: :ip} = device, _state) do
     [child(:rtsp_source, %Source.RTSP{device: device})]
+  end
+
+  defp build_main_stream_spec(state) do
+    build_main_stream_storage_spec(state) ++
+      [
+        get_child(:tee)
+        |> via_out(:push_output)
+        |> via_in(Pad.ref(:main_stream, :video))
+        |> get_child(:hls_sink),
+        get_child(:tee)
+        |> via_out(:push_output)
+        |> child({:snapshooter, :main_stream}, ExNVR.Elements.CVSBufferer),
+        get_child(:tee)
+        |> via_out(:push_output)
+        |> child({:stats_reporter, :main_stream}, %VideoStreamStatReporter{
+          device_id: state.device.id
+        }),
+        get_child(:tee)
+        |> via_out(:push_output)
+        |> via_in(:video)
+        |> child(:webrtc, %Output.WebRTC{ice_servers: state.ice_servers})
+      ]
   end
 
   defp build_sub_stream_spec(%{device: device} = state) do
