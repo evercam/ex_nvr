@@ -93,7 +93,7 @@
         <ELayout ref="mainLayout" :height="height">
             <template #main>
                 <!-- stats  -->
-                <div v-if="isOn"  class="absolute z-10 top-5 left-5 max-w-sm bg-slate-800/70 rounded-2xl shadow-xl p-2">
+                <div v-if="isStreamShown"  class="absolute z-10 top-5 left-5 max-w-sm bg-slate-800/70 rounded-2xl shadow-xl p-2">
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-1 gap-y-1">
 
                         <div class="flex flex-col p-1">
@@ -115,13 +115,6 @@
                             <span class="text-sm text-gray-400 font-medium mb-0">Available Levels</span>
                             <span id="frameRate" class="text-base text-gray-100 font-semibold">{{stats.availableLevels}}</span>
                         </div>
-
-                        <!-- bytes size of each downloaded fragment 
-<div class="flex flex-col p-1">
-<span class="text-sm text-gray-400 font-medium mb-0">Size of Fragment</span>
-<span id="buffered" class="text-base text-gray-100 font-semibold">{{this.stats.bytes}}</span>
-</div>
--->
 
                         <div class="flex flex-col p-1">
                             <span class="text-sm text-gray-400 font-medium mb-0">Total Video Frames</span>
@@ -283,7 +276,7 @@ export default defineComponent({
             height: 0,
             navElement: null,
             isFullScreen: false,
-            isOn: false,
+            isStreamShown: false,
             interval: null,
             stats: {
                 availableLevels: 0,
@@ -300,11 +293,11 @@ export default defineComponent({
     methods: {
         handleResize() {
             this.height = `${
-document.body.clientHeight -
-this.$refs.topMenu?.$el.clientHeight -
-this.getNavHeight() -
-this.$refs.timeline?.$el?.clientHeight ?? 0
-}px`;
+                document.body.clientHeight -
+                this.$refs.topMenu?.$el.clientHeight -
+                this.getNavHeight() -
+                this.$refs.timeline?.$el?.clientHeight ?? 0
+            }px`;
         },
         getNavHeight() {
             if (!this.navElement) {
@@ -330,9 +323,9 @@ this.$refs.timeline?.$el?.clientHeight ?? 0
             const dataUri = canvas.toDataURL("image/jpeg", 0.7);
 
             const timestampOfRequest = new Date()
-            .toString()
-            .split("GMT")[0]
-            .trim();
+                .toString()
+                .split("GMT")[0]
+                .trim();
 
             const link = document.createElement("a");
             link.style.display = "none";
@@ -361,7 +354,7 @@ this.$refs.timeline?.$el?.clientHeight ?? 0
         },
 
         openStatsTab(){
-            this.isOn = !this.isOn
+            this.isStreamShown = !this.isStreamShown
         },
         statsListener(streamUrl) {
 
@@ -372,8 +365,6 @@ this.$refs.timeline?.$el?.clientHeight ?? 0
             if (playerElement) {
                 playerElement._hls = isProxy(component.player) ? toRaw(component.player) : component.player
                 const hls = playerElement._hls
-
-                console.log("[Player]: HLS.js initialized", playerElement._hls)
 
 
                 hls.on(Hls.Events.FRAG_LOADED, (event, data) => {
