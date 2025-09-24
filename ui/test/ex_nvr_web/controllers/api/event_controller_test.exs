@@ -29,6 +29,8 @@ defmodule ExNVRWeb.Api.EventControllerTest do
     "motion_level" => 9000
   }
 
+  @generic_event_unsupported_media_type "location: kitchen"
+
   setup %{tmp_dir: tmp_dir} do
     device =
       camera_device_fixture(tmp_dir, %{
@@ -57,6 +59,7 @@ defmodule ExNVRWeb.Api.EventControllerTest do
 
     test "create a new generic event", %{conn: conn, device: device, token: token} do
       conn
+      |> put_req_header("content-type", "application/json")
       |> post(
         ~p"/api/devices/#{device.id}/events?type=my_type&token=#{token}",
         @generic_event
@@ -70,6 +73,20 @@ defmodule ExNVRWeb.Api.EventControllerTest do
       assert event.type == "my_type"
     end
 
+    test "return unsupported content type when content is not json", %{
+      conn: conn,
+      device: device,
+      token: token
+    } do
+      conn
+      |> put_req_header("content-type", "text/plain")
+      |> post(
+        ~p"/api/devices/#{device.id}/events?type=my_type&token=#{token}",
+        @generic_event_unsupported_media_type
+      )
+      |> response(415)
+    end
+
     test "return bad_argument when type is missing", %{
       conn: conn,
       device: device,
@@ -77,6 +94,7 @@ defmodule ExNVRWeb.Api.EventControllerTest do
     } do
       response =
         conn
+        |> put_req_header("content-type", "application/json")
         |> post(
           ~p"/api/devices/#{device.id}/events?token=#{token}",
           %{}
@@ -117,6 +135,7 @@ defmodule ExNVRWeb.Api.EventControllerTest do
       payload = %{"time" => dz_naive_time}
 
       conn
+      |> put_req_header("content-type", "application/json")
       |> post(
         ~p"/api/devices/#{device.id}/events?type=my_type&token=#{token}",
         payload
@@ -139,6 +158,7 @@ defmodule ExNVRWeb.Api.EventControllerTest do
       payload = %{"time" => dz_time}
 
       conn
+      |> put_req_header("content-type", "application/json")
       |> post(
         ~p"/api/devices/#{device.id}/events?type=my_type&token=#{token}",
         payload
@@ -157,6 +177,7 @@ defmodule ExNVRWeb.Api.EventControllerTest do
       token: token
     } do
       conn
+      |> put_req_header("content-type", "application/json")
       |> post(
         ~p"/api/devices/#{device.id}/events?type=my_type&token=#{token}",
         @generic_event

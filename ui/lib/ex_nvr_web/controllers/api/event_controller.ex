@@ -11,15 +11,22 @@ defmodule ExNVRWeb.API.EventController do
 
   @spec create(Conn.t(), map()) :: Conn.t()
   def create(conn, params) do
-    device = conn.assigns.device
+    headers =
+      Enum.into(conn.req_headers, %{})
 
-    event_params =
-      params
-      |> Map.put("metadata", conn.body_params)
-      |> Map.put("time", generic_event_time(params, device.timezone))
+    if headers["content-type"] == "application/json" do
+      device = conn.assigns.device
 
-    with {:ok, _event} <- Events.create_event(device, event_params) do
-      send_resp(conn, 201, "")
+      event_params =
+        params
+        |> Map.put("metadata", conn.body_params)
+        |> Map.put("time", generic_event_time(params, device.timezone))
+
+      with {:ok, _event} <- Events.create_event(device, event_params) do
+        send_resp(conn, 201, "")
+      end
+    else
+      send_resp(conn, 415, "Unsupported Content Type")
     end
   end
 
