@@ -8,13 +8,15 @@ typedef struct VideoConverter VideoConverter;
 struct VideoConverter {
   struct SwsContext *sws_ctx;
   AVFrame *frame;
+  AVFrame *scaled_frame;
+  int pad;
 };
 
 VideoConverter *video_converter_alloc();
 
 int video_converter_init(VideoConverter *converter, int in_width, int in_height,
                          enum AVPixelFormat in_format, int out_width,
-                         int out_height, enum AVPixelFormat out_format);
+                         int out_height, enum AVPixelFormat out_format, int pad);
 
 int video_converter_convert(VideoConverter *converter, AVFrame *src_frame);
 
