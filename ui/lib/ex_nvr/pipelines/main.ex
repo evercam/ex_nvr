@@ -393,13 +393,13 @@ defmodule ExNVR.Pipelines.Main do
   end
 
   defp build_device_spec(%{type: :webcam} = device, state) do
-    build_main_stream_storage_spec(state) ++
     [
-      child(:source, %Source.Webcam{
-        device: "/dev/video1", #the path to you usb(check ls /dev/video*)
-        framerate: 8
+      child(:source, %Source.Webcm{
+        # the path to you usb(check ls /dev/video*)
+        device: "/dev/video1",
+        framerate: 30
       })
-      |> via_out(:main_stream_output)
+      |> via_out(:output)
       |> child(:tee, Membrane.Tee)
       |> via_out(:push_output)
       |> via_in(Pad.ref(:main_stream, :video))
@@ -413,7 +413,6 @@ defmodule ExNVR.Pipelines.Main do
       })
     ]
   end
-
 
   defp build_device_spec(%{type: :ip} = device, _state) do
     [child(:rtsp_source, %Source.RTSP{device: device})]

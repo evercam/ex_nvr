@@ -1,9 +1,10 @@
-defmodule ExNvr.Pipeline.Source.Webcm do
+defmodule ExNVR.Pipeline.Source.Webcm do
   @moduledoc """
-    start camera
-    capture streams
+      start camera
+      capture streams
 
-    stream them as raw
+      stream them as raw
+
   """
   alias JSON.Encoder
   alias JSON.Encoder
@@ -22,9 +23,7 @@ defmodule ExNvr.Pipeline.Source.Webcm do
   @dest_time_base 90_000
   @original_time_base Membrane.Time.seconds(1)
   @profile :baseline
-  # options providing certain encoding
   @preset :medium
-  # tune encoder to particular type of source
   @tune nil
   @use_shm? false
   @max_b_frames 0
@@ -67,15 +66,14 @@ defmodule ExNvr.Pipeline.Source.Webcm do
       state = %{
         native: native,
         provider: nil,
-        init_time: nil,
+        init_time: Membrane.Time.monotonic_time(),
         framerate: options.framerate,
         width: nil,
         height: nil,
         pixel_format: nil,
         ffmpeg_params: %{},
         encoder_ref: nil,
-        keyframe_requested?: false,
-        init_time: Membrane.Time.monotonic_time()
+        keyframe_requested?: true
       }
 
       {[], state}
@@ -85,11 +83,8 @@ defmodule ExNvr.Pipeline.Source.Webcm do
   end
 
   @impl true
-  def handle_playing(ctx, state) do
-    {:ok, width, height, pixel_format} =
-      Native.stream_props(state.native)
-
-    with buffers <- flush_encoder_if_exists(state),
+  def handle_setup(_ctx, state) do
+    with {:ok, width, height, pixel_format} <- Native.stream_props(state.native),
          {:ok, encoder_ref} <-
            encoder_ref(%{
              width: width,
@@ -105,48 +100,63 @@ defmodule ExNvr.Pipeline.Source.Webcm do
           encoder_ref: encoder_ref
       }
 
-      stream_format = create_new_stream_format(state)
-      element_pid = self()
-
-      {:ok, provider} =
-        Membrane.UtilitySupervisor.start_link_child(
-          ctx.utility_supervisor,
-          Supervisor.child_spec({Task, fn -> frame_provider(state.native, element_pid) end}, [])
-        )
-
-      state = %{state | provider: provider}
-      actions = buffers ++ [stream_format: stream_format]
-      {actions, state}
+      {[], state}
     end
   end
 
   @impl true
-  def handle_info({:frame, frame}, _ctx, state) do
-    time =
-      (Membrane.Time.monotonic_time() - state.init_time)
-      |> Common.to_membrane_time_base_truncated()
+  def handle_playing(ctx, state) do
+    stream_format = create_new_stream_format(state)
+    element_pid = self()
 
-    # take the frames and convert them to the right pixel
-    {:ok, output_converter} =
-      PixelFormatConverter.Native.create(
-        state.width,
-        state.height,
-        pixel_format_to_atom(state.pixel_format),
-        :I420
+    # start child for frames reading
+    {:ok, provider} =
+      Membrane.UtilitySupervisor.start_link_child(
+        ctx.utility_supervisor,
+        Supervisor.child_spec({Task, fn -> frame_provider(state.native, element_pid) end}, [])
       )
 
-    {:ok, payload} =
-      PixelFormatConverter.Native.process(output_converter, frame)
+    state = %{state | provider: provider}
+    {[stream_format: stream_format], state}
+  end
 
-    buffer =
-      h264_encoder(state, payload)
-
+  @impl true
+  def handle_info({:frame, frame}, _ctx, state) do
+    handle_frame_convertion(state, frame)
     # try to encode the information
+  end
 
-    time = Membrane.Time.monotonic_time()
-    init_time = state.init_time || time
+  @impl true
+  def handle_end_of_stream(:input, _ctx, state) do
+    buffers = flush_encoder_if_exists(state)
+    actions = buffers ++ [end_of_stream: :output]
+    {actions, state}
+  end
 
-    {buffer, %{state | init_time: init_time}}
+  defp handle_frame_convertion(state, frame) do
+    with {:ok, output_converter} <-
+           PixelFormatConverter.Native.create(
+             state.width,
+             state.height,
+             pixel_format_to_atom(state.pixel_format),
+             :I420
+           ),
+         {:ok, payload} <- PixelFormatConverter.Native.process(output_converter, frame) do
+      buffer = h264_encoder(state, payload)
+      {buffer, state}
+    end
+  end
+
+  defp create_new_stream_format(state) do
+    {:output,
+     %H264{
+       alignment: :au,
+       stream_structure: :annexb,
+       framerate: state.framerate,
+       height: state.height,
+       width: state.width,
+       profile: nil
+     }}
   end
 
   defp frame_provider(native, target) do
@@ -159,31 +169,19 @@ defmodule ExNvr.Pipeline.Source.Webcm do
     end
   end
 
-  @impl true
-  def handle_end_of_stream(:input, _ctx, state) do
-    buffers = flush_encoder_if_exists(state)
-    actions = buffers ++ [end_of_stream: :output]
-    {actions, state}
-  end
-
-  defp create_new_stream_format(state) do
-    {:output,
-     %H264{
-       alignment: :au,
-       framerate: state.framerate,
-       height: state.height,
-       width: state.width,
-       profile: :baseline
-     }}
-  end
-
   def h264_encoder(state, payload) do
     time =
       (Membrane.Time.monotonic_time() - state.init_time)
-      |> Common.to_membrane_time_base_truncated()
+      |> Common.to_h264_time_base_truncated()
 
     with {:ok, dts, pts, frames} <-
-           En.Native.encode(payload, time, false, false, state.encoder_ref) do
+           En.Native.encode(
+             payload,
+             time,
+             @use_shm?,
+             state.keyframe_requested?,
+             state.encoder_ref
+           ) do
       wrap_frames(dts, pts, frames)
     end
   end
@@ -198,7 +196,7 @@ defmodule ExNvr.Pipeline.Source.Webcm do
       :I420,
       @present,
       @tune,
-      :baseline,
+      nil,
       @max_b_frames,
       @gop_size,
       1,
