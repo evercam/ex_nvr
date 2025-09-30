@@ -21,4 +21,9 @@ defmodule ExNVR.AV.VideoProcessor.NIF do
   def flush_encoder(_encoder), do: :erlang.nif_error(:undef)
 
   def flush_decoder(_decoder), do: :erlang.nif_error(:undef)
+
+  # webcam
+  def do_open(_url, _framerate), do: :erlang.nif_error(:undef)
+  def read_frame(_native), do: :erlang.nif_error(:undef)
+  def stream_props(_native), do: :erlang.nif_error(:undef)
 end

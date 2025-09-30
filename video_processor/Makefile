@@ -19,21 +19,21 @@ VIDEO_PROCESSOR_SO := $(PRIV_DIR)/libvideoprocessor.so
 # uncomment to compile with debug logs
 # DEBUG_LOGS = -DNVR_DEBUG=1
 
-HEADERS = $(DIR)/video_processor.h $(DIR)/encoder.h $(DIR)/decoder.h $(DIR)/video_converter.h $(DIR)/utils.h
-SOURCES = $(DIR)/video_processor.c $(DIR)/encoder.c $(DIR)/decoder.c $(DIR)/video_converter.c $(DIR)/utils.c
+HEADERS = $(DIR)/video_processor.h $(DIR)/encoder.h $(DIR)/decoder.h $(DIR)/video_converter.h $(DIR)/utils.h $(DIR)/camera_capture.h
+SOURCES = $(DIR)/video_processor.c $(DIR)/encoder.c $(DIR)/decoder.c $(DIR)/video_converter.c $(DIR)/utils.c $(DIR)/camera_capture.c
 
 CFLAGS += $(DEBUG_LOGS) -fPIC -shared
 
 CFLAGS += -fPIC -shared
-IFLAGS = -I$(ERTS_INCLUDE_DIR) -I$(DIR) $$(pkg-config --cflags libavcodec libavutil libswscale)
-LDFLAGS = $$(pkg-config --libs libavcodec libavutil libswscale)
+IFLAGS = -I$(ERTS_INCLUDE_DIR) -I$(DIR) $$(pkg-config --cflags libavcodec libavutil libswscale libavdevice libavformat)
+LDFLAGS = $$(pkg-config --libs libavcodec libavutil libswscale libavdevice libavformat)
 
 ifneq (,$(filter $(OS),linux Linux))
 	ifeq ($(ABI),gnu)
 		ifneq (,$(filter $(ARCH),x86_64 armv7l arm aarch64))
 			PRECOMPILED = true
 			IFLAGS = -I$(ERTS_INCLUDE_DIR) -I$(DIR) -I$(FFMPEG_DIR)/include
-			LDFLAGS = -L$(PRIV_DIR) -lavcodec -lavutil -lswscale -Wl,-rpath=\$$ORIGIN
+			LDFLAGS = -L$(PRIV_DIR) -lavcodec -lavutil -lswscale -lavdevice -lavformat -Wl,-rpath=\$$ORIGIN
 		endif
 	endif
 endif

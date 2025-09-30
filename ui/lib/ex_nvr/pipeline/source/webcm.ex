@@ -8,13 +8,14 @@ defmodule ExNVR.Pipeline.Source.Webcm do
   """
   alias JSON.Encoder
   alias JSON.Encoder
-  alias Membrane.RawVideo
   alias Membrane.CameraCapture.Native
+
+  alias ExNVR.AV.CameraCapture
   alias Membrane.FFmpeg.SWScale.PixelFormatConverter
 
   alias Membrane.H264.FFmpeg.Common
-  alias ExNVR.AV.{Encoder, Frame}
   alias Membrane.H264.FFmpeg.Encoder, as: En
+  alias ExNVR.AV.{Encoder, Frame}
   alias Membrane.H264
   use Membrane.Source
 
@@ -34,6 +35,9 @@ defmodule ExNVR.Pipeline.Source.Webcm do
   @ffmpeg_params %{}
   @present :medium
   @pixel_format :I420
+
+  @default_height 640
+  @default_width 360
 
   defmodule FFmpegParam do
     @moduledoc false
@@ -62,43 +66,50 @@ defmodule ExNVR.Pipeline.Source.Webcm do
 
   @impl true
   def handle_init(_ctx, %__MODULE__{} = options) do
-    with {:ok, native} <- Native.open(options.device, options.framerate) do
-      state = %{
-        native: native,
-        provider: nil,
-        init_time: Membrane.Time.monotonic_time(),
-        framerate: options.framerate,
-        width: nil,
-        height: nil,
-        pixel_format: nil,
-        ffmpeg_params: %{},
-        encoder_ref: nil,
-        keyframe_requested?: true
-      }
+    case CameraCapture.do_open(options.device, to_string(options.framerate)) do
+      {:ok, native} ->
+        state = %{
+          native: native,
+          provider: nil,
+          init_time: Membrane.Time.monotonic_time(),
+          framerate: options.framerate,
+          width: nil,
+          height: nil,
+          pixel_format: nil,
+          ffmpeg_params: %{},
+          encoder_ref: nil,
+          keyframe_requested?: true
+        }
 
-      {[], state}
-    else
-      {:error, reason} -> raise "Failed to initialize camera, reason: #{reason}"
+        {[], state}
+
+      {:error, reason} ->
+        raise "Failed to initialize camera, reason: #{reason}"
     end
   end
 
   @impl true
   def handle_setup(_ctx, state) do
-    with {:ok, width, height, pixel_format} <- Native.stream_props(state.native),
+    with {:ok, {width, height, pixel_format}} <-
+           CameraCapture.stream_props(state.native),
          {:ok, encoder_ref} <-
            encoder_ref(%{
-             width: width,
-             height: height,
+             width: default_if_zero(width, @default_width),
+             height: default_if_zero(height, @default_height),
              framerate: state.framerate,
              ffmpeg_params: state.ffmpeg_params
            }) do
-      state = %{
-        state
-        | width: width,
-          height: height,
-          pixel_format: pixel_format,
-          encoder_ref: encoder_ref
-      }
+      width = default_if_zero(width, @default_width)
+      height = default_if_zero(height, @default_height)
+
+      state =
+        %{
+          state
+          | width: width,
+            height: height,
+            pixel_format: to_string(pixel_format),
+            encoder_ref: encoder_ref
+        }
 
       {[], state}
     end
@@ -140,11 +151,13 @@ defmodule ExNVR.Pipeline.Source.Webcm do
              state.height,
              pixel_format_to_atom(state.pixel_format),
              :I420
-           ),
-         {:ok, payload} <- PixelFormatConverter.Native.process(output_converter, frame) do
-      buffer = h264_encoder(state, payload)
-      {buffer, state}
-    end
+           )
+
+    {:ok, payload} <-
+      PixelFormatConverter.Native.process output_converter, frame do
+        buffer = h264_encoder(state, payload)
+        {buffer, state}
+      end
   end
 
   defp create_new_stream_format(state) do
@@ -160,10 +173,11 @@ defmodule ExNVR.Pipeline.Source.Webcm do
   end
 
   defp frame_provider(native, target) do
-    with {:ok, frame} <- Native.read_packet(native) do
-      send(target, {:frame, frame})
-      frame_provider(native, target)
-    else
+    case CameraCapture.read_frame(native) do
+      {:ok, frame} ->
+        send(target, {:frame, frame})
+        frame_provider(native, target)
+
       {:error, reason} ->
         raise "Error when reading packet from camera: #{inspect(reason)}"
     end
@@ -228,12 +242,16 @@ defmodule ExNVR.Pipeline.Source.Webcm do
   defp flush_encoder_if_exists(%{encoder_ref: nil}), do: []
 
   defp flush_encoder_if_exists(%{encoder_ref: encoder_ref, use_shm?: use_shm?}) do
-    with {:ok, dts_list, pts_list, frames} <- Native.flush(use_shm?, encoder_ref) do
-      wrap_frames(dts_list, pts_list, frames)
-    else
-      {:error, reason} -> raise "Native encoder failed to flush: #{inspect(reason)}"
+    case Native.flush(use_shm?, encoder_ref) do
+      {:ok, dts_list, pts_list, frames} ->
+        wrap_frames(dts_list, pts_list, frames)
+
+      {:error, reason} ->
+        raise "Native encoder failed to flush: #{inspect(reason)}"
     end
   end
+
+  defp default_if_zero(value, default), do: if(value == 0, do: default, else: value)
 
   defp pixel_format_to_atom("yuv420p"), do: :I420
   defp pixel_format_to_atom("yuv422p"), do: :I422

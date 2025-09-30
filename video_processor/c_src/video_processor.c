@@ -2,6 +2,8 @@
 #define NVR_ENCODER_H
 
 #include "video_processor.h"
+#include "camera_capture.h"
+#include <erl_nif.h>
 #include <libavutil/imgutils.h>
 
 ErlNifResourceType *encoder_resource_type;
@@ -490,16 +492,27 @@ static ErlNifFunc funcs[] = {
     {"encode", 3, encode, ERL_DIRTY_JOB_CPU_BOUND},
     {"decode", 4, decode, ERL_DIRTY_JOB_CPU_BOUND},
     {"flush_encoder", 1, flush_encoder, ERL_DIRTY_JOB_CPU_BOUND},
-    {"flush_decoder", 1, flush_decoder, ERL_DIRTY_JOB_CPU_BOUND}};
+    {"flush_decoder", 1, flush_decoder, ERL_DIRTY_JOB_CPU_BOUND},
+    {"do_open", 2, do_open},
+    {"read_frame", 1, read_frame},
+    {"stream_props", 1, stream_props}
+
+};
+
 
 static int load(ErlNifEnv *env, void **priv, ERL_NIF_TERM load_info) {
   encoder_resource_type = enif_open_resource_type(
       env, NULL, "NvrEncoder", free_encoder, ERL_NIF_RT_CREATE, NULL);
+
   decoder_resource_type = enif_open_resource_type(
       env, NULL, "NvrDecoder", free_decoder, ERL_NIF_RT_CREATE, NULL);
+
+  camera_capture_resource_type = enif_open_resource_type(
+        env, NULL, "camera_capture_resource", camera_capture_destructor,
+        ERL_NIF_RT_CREATE, NULL);
+
   return 0;
 }
-
 ERL_NIF_INIT(Elixir.ExNVR.AV.VideoProcessor.NIF, funcs, &load, NULL, NULL,
              NULL);
 
