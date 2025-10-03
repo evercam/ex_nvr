@@ -2,12 +2,16 @@
 #define NVR_ENCODER_H
 
 #include "video_processor.h"
-#include "camera_capture.h"
+#include <erl_drv_nif.h>
 #include <erl_nif.h>
 #include <libavutil/imgutils.h>
+#include "h264_encoder.h"
+#include "pixel_converter.h"
+// #include "camera_capture.h"
 
 ErlNifResourceType *encoder_resource_type;
 ErlNifResourceType *decoder_resource_type;
+ErlNifResourceType *encoder_state_resource_type;
 
 static int get_profile(enum AVCodecID, const char *);
 static ERL_NIF_TERM packets_to_term(ErlNifEnv *env, Encoder *encoder);
@@ -487,29 +491,45 @@ void free_decoder(ErlNifEnv *env, void *obj) {
 }
 
 static ErlNifFunc funcs[] = {
-    {"new_encoder", 2, new_encoder},
-    {"new_decoder", 5, new_decoder},
-    {"encode", 3, encode, ERL_DIRTY_JOB_CPU_BOUND},
-    {"decode", 4, decode, ERL_DIRTY_JOB_CPU_BOUND},
-    {"flush_encoder", 1, flush_encoder, ERL_DIRTY_JOB_CPU_BOUND},
-    {"flush_decoder", 1, flush_decoder, ERL_DIRTY_JOB_CPU_BOUND},
-    {"do_open", 2, do_open},
-    {"read_frame", 1, read_frame},
-    {"stream_props", 1, stream_props}
+  {"new_encoder", 2, new_encoder},
+  {"new_decoder", 5, new_decoder},
+  {"h264_encode", 5, encode_nif},
+  {"create_encoder_ref", 12, create_encoder_ref},
+  {"encode", 3, encode, ERL_DIRTY_JOB_CPU_BOUND},
+  {"decode", 4, decode, ERL_DIRTY_JOB_CPU_BOUND},
+  {"flush_encoder", 1, flush_encoder, ERL_DIRTY_JOB_CPU_BOUND},
+  {"flush_decoder", 1, flush_decoder, ERL_DIRTY_JOB_CPU_BOUND},
+  {"create_converter", 4, nif_create},
+  {"convert_pixel", 2, nif_process}
+  //{"open_camera", 2, open_camera, 0},
+ // {"read_camera_frame", 1, read_camera_frame, ERL_DIRTY_JOB_CPU_BOUND},
+  //{"camera_stream_props", 1, camera_stream_props, 0}
 
 };
 
 
 static int load(ErlNifEnv *env, void **priv, ERL_NIF_TERM load_info) {
   encoder_resource_type = enif_open_resource_type(
-      env, NULL, "NvrEncoder", free_encoder, ERL_NIF_RT_CREATE, NULL);
+    env, NULL, "NvrEncoder", free_encoder, ERL_NIF_RT_CREATE, NULL);
 
   decoder_resource_type = enif_open_resource_type(
-      env, NULL, "NvrDecoder", free_decoder, ERL_NIF_RT_CREATE, NULL);
+    env, NULL, "NvrDecoder", free_decoder, ERL_NIF_RT_CREATE, NULL);
 
+  encoder_state_resource_type = enif_open_resource_type(
+    env, NULL, "encoder_state",
+    state_resource_destructor, ERL_NIF_RT_CREATE , NULL);
+
+
+  converter_state_type = enif_open_resource_type(
+    env, NULL, "encoder_state",
+    pixel_converter_resource_structor, ERL_NIF_RT_CREATE , NULL);
+
+  /**
   camera_capture_resource_type = enif_open_resource_type(
-        env, NULL, "camera_capture_resource", camera_capture_destructor,
-        ERL_NIF_RT_CREATE, NULL);
+    env, NULL, "camera_capture_resource", camera_capture_destructor,
+    ERL_NIF_RT_CREATE, NULL);
+
+   * */
 
   return 0;
 }

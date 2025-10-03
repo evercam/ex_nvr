@@ -19,8 +19,9 @@ VIDEO_PROCESSOR_SO := $(PRIV_DIR)/libvideoprocessor.so
 # uncomment to compile with debug logs
 # DEBUG_LOGS = -DNVR_DEBUG=1
 
-HEADERS = $(DIR)/video_processor.h $(DIR)/encoder.h $(DIR)/decoder.h $(DIR)/video_converter.h $(DIR)/utils.h $(DIR)/camera_capture.h
-SOURCES = $(DIR)/video_processor.c $(DIR)/encoder.c $(DIR)/decoder.c $(DIR)/video_converter.c $(DIR)/utils.c $(DIR)/camera_capture.c
+HEADERS = $(DIR)/video_processor.h $(DIR)/encoder.h $(DIR)/decoder.h $(DIR)/video_converter.h $(DIR)/utils.h  $(DIR)/h264_encoder.h $(DIR)/pixel_converter.h
+
+SOURCES = $(DIR)/video_processor.c $(DIR)/encoder.c $(DIR)/decoder.c $(DIR)/video_converter.c $(DIR)/utils.c $(DIR)/h264_encoder.c $(DIR)/pixel_converter.c
 
 CFLAGS += $(DEBUG_LOGS) -fPIC -shared
 
@@ -38,13 +39,15 @@ ifneq (,$(filter $(OS),linux Linux))
 	endif
 endif
 
-# Flags for MacOS
+#Flags for MacOS
 ifeq ($(OS),Darwin)
 	ifeq ($(ARCH),arm64)
 		IFLAGS += $$(pkg-config --cflags-only-I libavcodec libavutil libswscale)
 		LFLAGS += $$(pkg-config --libs-only-L libavcodec libavutil libswscale)
 		CFLAGS += -undefined dynamic_lookup
 	else
+		IFLAGS += $$(pkg-config --cflags-only-I libavcodec libavutil libswscale libavdevice libavformat)
+		LFLAGS += $$(pkg-config --libs-only-L libavcodec libavutil libswscale libavdevice libavformat)
 		CFLAGS += -undefined dynamic_lookup 
 	endif
 endif
@@ -69,9 +72,21 @@ download_ffmpeg:
 	fi
 
 $(VIDEO_PROCESSOR_SO): $(HEADERS) $(SOURCES)
-	mkdir -p $(PRIV_DIR)
+	mkdir -p $(PRIV_DIR);
+	mkdir -p $(PRIV_DIR)/camera_capture;
+
+
+	gcc -fPIC -shared \
+    $(pkg-config --cflags libavdevice libavformat libavcodec libavutil) \
+    c_src/camera_capture.c \
+    -o _build/dev/lib/video_processor/priv/camera_capture/camera_capture.so \
+    $(pkg-config --libs libavdevice libavformat libavcodec libavutil) \
+    -Wl,-rpath,'$$ORIGIN';
+
+
 	@if [ $(PRECOMPILED) = true ]; then \
 		cp -f $(FFMPEG_DIR)/lib/*.so* $(PRIV_DIR)/; \
+		cp -f $(FFMPEG_DIR)/lib/*.so* $(PRIV_DIR)/camera_capture; \
 	fi
 	$(CC) $(CFLAGS) $(IFLAGS) $(LFLAGS) $(SOURCES) -o $(VIDEO_PROCESSOR_SO) $(LDFLAGS)
 	@rm -f $(PRIV_DIR)/libav*.so $(PRIV_DIR)/libsw*.so

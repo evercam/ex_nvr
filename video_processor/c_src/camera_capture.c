@@ -8,10 +8,6 @@ const char *driver = "avfoundation";
 const char *driver = "v4l2";
 #endif
 
-typedef struct {
-    AVFormatContext *input_ctx;
-} CameraCaptureState;
-
 ErlNifResourceType *camera_capture_resource_type = NULL;
 
 // Resource destructor
@@ -22,19 +18,7 @@ void camera_capture_destructor(ErlNifEnv *env, void *obj) {
     }
 }
 
-static ERL_NIF_TERM make_error(ErlNifEnv *env, const char *reason) {
-    return enif_make_tuple2(env,
-        enif_make_atom(env, "error"),
-        enif_make_string(env, reason, ERL_NIF_LATIN1));
-}
-
-static ERL_NIF_TERM make_ok(ErlNifEnv *env, ERL_NIF_TERM value) {
-    return enif_make_tuple2(env,
-        enif_make_atom(env, "ok"),
-        value);
-}
-
-ERL_NIF_TERM do_open(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
+ERL_NIF_TERM open_camera(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
     ErlNifBinary url_bin, framerate_bin;
     char url[256];
     char framerate[32];
@@ -66,40 +50,40 @@ ERL_NIF_TERM do_open(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
     const AVInputFormat *input_format = av_find_input_format(driver);
     if (input_format == NULL) {
         enif_release_resource(state);
-        return make_error(env, "Could not open input");
+        return nif_error(env, "Could not open input");
     }
 
     AVDictionary *options = NULL;
     av_dict_set(&options, "framerate", framerate, 0);
-    av_dict_set(&options, "pixel_format", "nv12", 0);
+    // yuv420p as default -> if supported we can skip alll the pixel convertion
+    av_dict_set(&options, "pixel_format", "yuv420p", 0);  
 
     if (avformat_open_input(&state->input_ctx, url, input_format, &options) < 0) {
         av_dict_free(&options);
         enif_release_resource(state);
-        return make_error(env, "Could not open supplied url");
+        return nif_error(env, "Could not open supplied url");
     }
     av_dict_free(&options);
 
     if (avformat_find_stream_info(state->input_ctx, NULL) < 0) {
         avformat_close_input(&state->input_ctx);
         enif_release_resource(state);
-        return make_error(env, "Couldn't get stream info");
+        return nif_error(env, "Couldn't get stream info");
     }
 
     if (state->input_ctx->nb_streams == 0) {
         avformat_close_input(&state->input_ctx);
         enif_release_resource(state);
-        return make_error(env, "No streams found - at least one is required");
+        return nif_error(env, "No streams found - at least one is required");
     }
 
     ERL_NIF_TERM resource_term = enif_make_resource(env, state);
     enif_release_resource(state);
 
-    return make_ok(env, resource_term);
+    return nif_ok(env, resource_term);
 }
 
-// read_packet/1 - Reads a packet from the camera
-ERL_NIF_TERM read_frame(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
+ERL_NIF_TERM read_camera_frame(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
     CameraCaptureState *state;
     
     if (argc != 1 || 
@@ -107,9 +91,9 @@ ERL_NIF_TERM read_frame(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
         return enif_make_badarg(env);
     }
 
-    AVPacket *packet = av_packet_alloc();
+    AVPacket *packet =(AVPacket *) malloc(sizeof(AVPacket));
     if (!packet) {
-        return make_error(env, "Could not allocate packet");
+        return nif_error(env, "Could not allocate packet");
     }
 
     int res;
@@ -120,7 +104,7 @@ ERL_NIF_TERM read_frame(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
         char error_buf[AV_ERROR_MAX_STRING_SIZE];
         av_strerror(res, error_buf, sizeof(error_buf));
         av_packet_free(&packet);
-        return make_error(env, error_buf);
+        return nif_error(env, error_buf);
     }
 
     ERL_NIF_TERM binary_term;
@@ -129,10 +113,10 @@ ERL_NIF_TERM read_frame(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
 
     av_packet_free(&packet);
 
-    return make_ok(env, binary_term);
+    return nif_ok(env, binary_term);
 }
 
-ERL_NIF_TERM stream_props(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
+ ERL_NIF_TERM camera_stream_props(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
     CameraCaptureState *state;
     
     if (argc != 1 || 
@@ -148,20 +132,16 @@ ERL_NIF_TERM stream_props(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
         enif_make_int(env, codec_params->height),
         enif_make_string(env, pix_fmt_name ? pix_fmt_name : "unknown", ERL_NIF_LATIN1));
 
-    return make_ok(env, props);
+    return nif_ok(env, props);
 }
 
 
-
-// NIF function array
 static ErlNifFunc nif_funcs[] = {
-    {"do_open", 2, do_open, 0},
-    {"read_frame", 1, read_frame, 0},
-    {"stream_props", 1, stream_props, 0}
+    {"open_camera", 2, open_camera, 0},
+    {"read_camera_frame", 1, read_camera_frame, ERL_DIRTY_JOB_CPU_BOUND},
+    {"camera_stream_props", 1, camera_stream_props, 0}
 };
 
-// NIF initialization
-/**
 static int load(ErlNifEnv *env, void **priv_data, ERL_NIF_TERM load_info) {
     camera_capture_resource_type = enif_open_resource_type(
         env,
@@ -178,6 +158,5 @@ static int load(ErlNifEnv *env, void **priv_data, ERL_NIF_TERM load_info) {
     return 0;
 }
 
- * **/
+ERL_NIF_INIT(Elixir.ExNVR.AV.CameraCapture.NIF, nif_funcs, load, NULL, NULL, NULL)
 
-// ERL_NIF_INIT(Elixir.CameraCapture, nif_funcs, load, NULL, NULL, NULL)

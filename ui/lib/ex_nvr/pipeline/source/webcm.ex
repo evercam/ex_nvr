@@ -6,12 +6,8 @@ defmodule ExNVR.Pipeline.Source.Webcm do
       stream them as raw
 
   """
-  alias JSON.Encoder
-  alias JSON.Encoder
-  alias Membrane.CameraCapture.Native
-
   alias ExNVR.AV.CameraCapture
-  alias Membrane.FFmpeg.SWScale.PixelFormatConverter
+  alias ExNVR.AV.PixelConverter
 
   alias Membrane.H264.FFmpeg.Common
   alias Membrane.H264.FFmpeg.Encoder, as: En
@@ -66,7 +62,7 @@ defmodule ExNVR.Pipeline.Source.Webcm do
 
   @impl true
   def handle_init(_ctx, %__MODULE__{} = options) do
-    case CameraCapture.do_open(options.device, to_string(options.framerate)) do
+    case CameraCapture.open_camera(options.device, to_string(options.framerate)) do
       {:ok, native} ->
         state = %{
           native: native,
@@ -78,6 +74,7 @@ defmodule ExNVR.Pipeline.Source.Webcm do
           pixel_format: nil,
           ffmpeg_params: %{},
           encoder_ref: nil,
+          ref: nil,
           keyframe_requested?: true
         }
 
@@ -91,28 +88,44 @@ defmodule ExNVR.Pipeline.Source.Webcm do
   @impl true
   def handle_setup(_ctx, state) do
     with {:ok, {width, height, pixel_format}} <-
-           CameraCapture.stream_props(state.native),
-         {:ok, encoder_ref} <-
-           encoder_ref(%{
-             width: default_if_zero(width, @default_width),
-             height: default_if_zero(height, @default_height),
-             framerate: state.framerate,
-             ffmpeg_params: state.ffmpeg_params
-           }) do
-      width = default_if_zero(width, @default_width)
-      height = default_if_zero(height, @default_height)
+           CameraCapture.camera_stream_props(state.native)
 
-      state =
-        %{
-          state
-          | width: width,
-            height: height,
-            pixel_format: to_string(pixel_format),
-            encoder_ref: encoder_ref
-        }
+    {:ok, encoder_ref} <-
+      encoder_ref(%{
+        width: default_if_zero(width, @default_width),
+        height: default_if_zero(height, @default_height),
+        framerate: state.framerate,
+        ffmpeg_params: state.ffmpeg_params
+      }) do
+        width = default_if_zero(width, @default_width)
+        height = default_if_zero(height, @default_height)
 
-      {[], state}
-    end
+        opts = [
+          width: width,
+          height: height,
+          pix_fmt: ~c"I420",
+          preset: ~c"medium",
+          tune: ~c"zerolatency",
+          profile: ~c"baseline",
+          max_b_frames: 2,
+          gop_size: 20,
+          # numerator/denominator for frame timing
+          time_base: {1, state.framerate},
+          crf: 23,
+          sc_threshold: 40
+        ]
+
+        state =
+          %{
+            state
+            | width: width,
+              height: height,
+              pixel_format: to_string(pixel_format),
+              encoder_ref: encoder_ref
+          }
+
+        {[], state}
+      end
   end
 
   @impl true
@@ -145,19 +158,21 @@ defmodule ExNVR.Pipeline.Source.Webcm do
   end
 
   defp handle_frame_convertion(state, frame) do
+    time =
+      (Membrane.Time.monotonic_time() - state.init_time)
+      |> Common.to_h264_time_base_truncated()
+
     with {:ok, output_converter} <-
-           PixelFormatConverter.Native.create(
+           PixelConverter.create_converter(
              state.width,
              state.height,
-             pixel_format_to_atom(state.pixel_format),
-             :I420
-           )
-
-    {:ok, payload} <-
-      PixelFormatConverter.Native.process output_converter, frame do
-        buffer = h264_encoder(state, payload)
-        {buffer, state}
-      end
+             pixel_format_to_atom(state.pixel_format) |> Atom.to_charlist(),
+             ~c"I420"
+           ),
+         {:ok, payload} <- PixelConverter.convert_pixels(output_converter, frame) do
+      buffer = h264_encoder(state, payload)
+      {buffer, state}
+    end
   end
 
   defp create_new_stream_format(state) do
@@ -173,7 +188,7 @@ defmodule ExNVR.Pipeline.Source.Webcm do
   end
 
   defp frame_provider(native, target) do
-    case CameraCapture.read_frame(native) do
+    case CameraCapture.read_camera_frame(native) do
       {:ok, frame} ->
         send(target, {:frame, frame})
         frame_provider(native, target)
