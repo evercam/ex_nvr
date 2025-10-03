@@ -1,5 +1,4 @@
 #include "camera_capture.h"
-
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
 const char *driver = "dshow";
 #elif __APPLE__
@@ -18,11 +17,17 @@ void camera_capture_destructor(ErlNifEnv *env, void *obj) {
     }
 }
 
+
+
+// open/2 - Opens camera capture
 ERL_NIF_TERM open_camera(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
     ErlNifBinary url_bin, framerate_bin;
+    ERL_NIF_TERM ret;
     char url[256];
     char framerate[32];
-    
+
+    AVDictionary *options = NULL;
+
     if (argc != 2) {
         return enif_make_badarg(env);
     }
@@ -34,7 +39,6 @@ ERL_NIF_TERM open_camera(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
     memcpy(url, url_bin.data, url_bin.size);
     url[url_bin.size] = '\0';
 
-    // Get framerate binary
     if (!enif_inspect_binary(env, argv[1], &framerate_bin) || framerate_bin.size >= sizeof(framerate)) {
         return enif_make_badarg(env);
     }
@@ -43,46 +47,46 @@ ERL_NIF_TERM open_camera(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
 
     avdevice_register_all();
 
-    CameraCaptureState *state = enif_alloc_resource(camera_capture_resource_type, 
-                                                     sizeof(CameraCaptureState));
+    CameraCapture *state = enif_alloc_resource(camera_capture_resource_type, sizeof(CameraCapture));
     state->input_ctx = NULL;
 
-    const AVInputFormat *input_format = av_find_input_format(driver);
+    AVInputFormat *input_format = av_find_input_format(driver);
     if (input_format == NULL) {
-        enif_release_resource(state);
-        return nif_error(env, "Could not open input");
+        ret = nif_error(env, "Could not open input");
+        goto clean;
     }
 
-    AVDictionary *options = NULL;
     av_dict_set(&options, "framerate", framerate, 0);
     // yuv420p as default -> if supported we can skip alll the pixel convertion
     av_dict_set(&options, "pixel_format", "yuv420p", 0);  
+    av_dict_set(&options, "pixel_format", "yuv420p", 0);
 
     if (avformat_open_input(&state->input_ctx, url, input_format, &options) < 0) {
-        av_dict_free(&options);
-        enif_release_resource(state);
-        return nif_error(env, "Could not open supplied url");
+        avformat_close_input(&state->input_ctx);
+        ret = nif_error(env, "open_failed");
+        goto clean;
     }
-    av_dict_free(&options);
 
     if (avformat_find_stream_info(state->input_ctx, NULL) < 0) {
         avformat_close_input(&state->input_ctx);
-        enif_release_resource(state);
-        return nif_error(env, "Couldn't get stream info");
+        ret = nif_error(env, "find_stream_info_failed");
+        goto clean;
     }
 
     if (state->input_ctx->nb_streams == 0) {
-        avformat_close_input(&state->input_ctx);
-        enif_release_resource(state);
-        return nif_error(env, "No streams found - at least one is required");
+        ret = nif_error(env, "no_streams_found");
+        goto clean;
     }
 
-    ERL_NIF_TERM resource_term = enif_make_resource(env, state);
+    ret = nif_ok(env, enif_make_resource(env, state));
+clean:
+    if (options != NULL) av_dict_free(&options);
     enif_release_resource(state);
 
-    return nif_ok(env, resource_term);
+    return ret;
 }
 
+// read_packet/1 - Reads a packet from the camera
 ERL_NIF_TERM read_camera_frame(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
     CameraCaptureState *state;
     
@@ -94,11 +98,11 @@ ERL_NIF_TERM read_camera_frame(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv
     AVPacket *packet =(AVPacket *) malloc(sizeof(AVPacket));
     if (!packet) {
         return nif_error(env, "Could not allocate packet");
+        return nif_error(env, "Could not allocate packet");
     }
 
     int res;
-    while ((res = av_read_frame(state->input_ctx, packet)) == AVERROR(EAGAIN))
-        ;
+    while ((res = av_read_frame(state->input_ctx, packet)) == AVERROR(EAGAIN));
 
     if (res < 0) {
         char error_buf[AV_ERROR_MAX_STRING_SIZE];
@@ -116,6 +120,7 @@ ERL_NIF_TERM read_camera_frame(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv
     return nif_ok(env, binary_term);
 }
 
+// stream_props/1 - Gets stream properties
  ERL_NIF_TERM camera_stream_props(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
     CameraCaptureState *state;
     
@@ -136,12 +141,14 @@ ERL_NIF_TERM read_camera_frame(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv
 }
 
 
+// NIF function array
 static ErlNifFunc nif_funcs[] = {
     {"open_camera", 2, open_camera, 0},
     {"read_camera_frame", 1, read_camera_frame, ERL_DIRTY_JOB_CPU_BOUND},
     {"camera_stream_props", 1, camera_stream_props, 0}
 };
 
+// NIF initialization
 static int load(ErlNifEnv *env, void **priv_data, ERL_NIF_TERM load_info) {
     camera_capture_resource_type = enif_open_resource_type(
         env,
