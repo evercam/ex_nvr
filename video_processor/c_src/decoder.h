@@ -13,7 +13,7 @@ struct Decoder {
 
 Decoder *decoder_alloc();
 int decoder_init(Decoder *decoder, const AVCodec *codec);
+int decoder_init_by_parameters(Decoder *decoder, const AVCodecParameters *codec_params);
 int decoder_decode(Decoder *decoder, AVPacket *pkt);
 int decoder_flush(Decoder *decoder);
-void decoder_free_frame(Decoder *decoder);
 void decoder_free(Decoder **decoder);

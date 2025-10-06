@@ -1,21 +1,31 @@
 defmodule ExNVR.AV.CameraCapture do
   @moduledoc false
-  alias ExNVR.AV.CameraCapture.NIF
-  @type native() :: reference()
 
-  @spec open_camera(String.t(), String.t()) :: {:ok, native()} | {:error, term()}
+  alias ExNVR.AV.CameraCapture.NIF
+  alias ExNVR.AV.Frame
+
+  @spec open_camera(String.t(), String.t()) :: {:ok, reference()} | {:error, term()}
   def open_camera(device_url, framerate) do
     NIF.open_camera(device_url, framerate)
   end
 
-  @spec read_camera_frame(native()) :: {:ok, binary()} | {:error, term()}
+  @spec read_camera_frame(reference()) :: {:ok, Frame.t()} | {:error, term()}
   def read_camera_frame(native) do
-    NIF.read_camera_frame(native)
-  end
+    case NIF.read_camera_frame(native) do
+      {:ok, {payload, pix_fmt, widht, height, pts}} ->
+        frame =
+          Frame.new(payload,
+            type: :video,
+            format: pix_fmt,
+            width: widht,
+            height: height,
+            pts: pts
+          )
 
-  # stream various properties of a
-  @spec camera_stream_props(native()) :: {:ok, tuple()} | {:error, term()}
-  def camera_stream_props(native) do
-    NIF.camera_stream_props(native)
+        {:ok, frame}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
   end
 end

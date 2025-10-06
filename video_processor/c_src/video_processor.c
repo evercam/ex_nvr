@@ -2,15 +2,10 @@
 #define NVR_ENCODER_H
 
 #include "video_processor.h"
-#include <erl_drv_nif.h>
-#include <erl_nif.h>
 #include <libavutil/imgutils.h>
-#include "pixel_converter.h"
-// #include "camera_capture.h"
 
 ErlNifResourceType *encoder_resource_type;
 ErlNifResourceType *decoder_resource_type;
-// ErlNifResourceType *ENCODER_RESOURCE_TYPE;
 
 static int get_profile(enum AVCodecID, const char *);
 static ERL_NIF_TERM packets_to_term(ErlNifEnv *env, Encoder *encoder);
@@ -495,13 +490,7 @@ static ErlNifFunc funcs[] = {
   {"encode", 3, encode, ERL_DIRTY_JOB_CPU_BOUND},
   {"decode", 4, decode, ERL_DIRTY_JOB_CPU_BOUND},
   {"flush_encoder", 1, flush_encoder, ERL_DIRTY_JOB_CPU_BOUND},
-  {"flush_decoder", 1, flush_decoder, ERL_DIRTY_JOB_CPU_BOUND},
-  {"create_converter", 4, nif_create},
-  {"convert_pixel", 2, nif_process}
-  //{"open_camera", 2, open_camera, 0},
- // {"read_camera_frame", 1, read_camera_frame, ERL_DIRTY_JOB_CPU_BOUND},
-  //{"camera_stream_props", 1, camera_stream_props, 0}
-
+  {"flush_decoder", 1, flush_decoder, ERL_DIRTY_JOB_CPU_BOUND}
 };
 
 
@@ -512,21 +501,9 @@ static int load(ErlNifEnv *env, void **priv, ERL_NIF_TERM load_info) {
   decoder_resource_type = enif_open_resource_type(
     env, NULL, "NvrDecoder", free_decoder, ERL_NIF_RT_CREATE, NULL);
 
-  
-  converter_state_type = enif_open_resource_type(
-    env, NULL, "encoder_state",
-    pixel_converter_resource_structor, ERL_NIF_RT_CREATE , NULL);
-
-  /**
-  camera_capture_resource_type = enif_open_resource_type(
-    env, NULL, "camera_capture_resource", camera_capture_destructor,
-    ERL_NIF_RT_CREATE, NULL);
-
-   * */
-
   return 0;
 }
-ERL_NIF_INIT(Elixir.ExNVR.AV.VideoProcessor.NIF, funcs, &load, NULL, NULL,
-             NULL);
+
+ERL_NIF_INIT(Elixir.ExNVR.AV.VideoProcessor.NIF, funcs, &load, NULL, NULL, NULL);
 
 #endif // NVR_ENCODER_H

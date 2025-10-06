@@ -15,13 +15,19 @@ PRECOMPILED = false
 DIR := c_src
 PRIV_DIR := $(MIX_APP_PATH)/priv
 VIDEO_PROCESSOR_SO := $(PRIV_DIR)/libvideoprocessor.so
+CAMERA_CAPTURE_SO := $(PRIV_DIR)/libcameracapture.so
 
 # uncomment to compile with debug logs
 # DEBUG_LOGS = -DNVR_DEBUG=1
 
-HEADERS = $(DIR)/video_processor.h $(DIR)/encoder.h $(DIR)/decoder.h $(DIR)/video_converter.h $(DIR)/utils.h  $(DIR)/h264_encoder.h $(DIR)/pixel_converter.h
+COMMON_HEADERS = $(DIR)/encoder.h $(DIR)/decoder.h $(DIR)/video_converter.h $(DIR)/utils.h
+COMMON_SOURCES = $(DIR)/encoder.c $(DIR)/decoder.c $(DIR)/video_converter.c $(DIR)/utils.c
 
-SOURCES = $(DIR)/video_processor.c $(DIR)/encoder.c $(DIR)/decoder.c $(DIR)/video_converter.c $(DIR)/utils.c $(DIR)/h264_encoder.c $(DIR)/pixel_converter.c
+HEADERS = $(DIR)/video_processor.h $(COMMON_HEADERS)
+SOURCES = $(DIR)/video_processor.c $(COMMON_SOURCES)
+
+CAMERA_CAPTURE_HEADERS = $(DIR)/camera/camera_capture.h $(COMMON_HEADERS)
+CAMERA_CAPTURE_SOURCES = $(DIR)/camera/camera_capture.c $(COMMON_SOURCES)
 
 CFLAGS += $(DEBUG_LOGS) -fPIC -shared
 
@@ -41,15 +47,9 @@ endif
 
 #Flags for MacOS
 ifeq ($(OS),Darwin)
-	ifeq ($(ARCH),arm64)
-		IFLAGS += $$(pkg-config --cflags-only-I libavcodec libavutil libswscale)
-		LFLAGS += $$(pkg-config --libs-only-L libavcodec libavutil libswscale)
-		CFLAGS += -undefined dynamic_lookup
-	else
-		IFLAGS += $$(pkg-config --cflags-only-I libavcodec libavutil libswscale libavdevice libavformat)
-		LFLAGS += $$(pkg-config --libs-only-L libavcodec libavutil libswscale libavdevice libavformat)
-		CFLAGS += -undefined dynamic_lookup 
-	endif
+	IFLAGS += $$(pkg-config --cflags-only-I libavcodec libavutil libswscale libavdevice libavformat)
+	LFLAGS += $$(pkg-config --libs-only-L libavcodec libavutil libswscale libavdevice libavformat)
+	CFLAGS += -undefined dynamic_lookup
 endif
 
 # Flags for Fedora
@@ -60,7 +60,7 @@ ifneq ($(PRECOMPILED),true)
 	endif
 endif
 
-all: download_ffmpeg $(VIDEO_PROCESSOR_SO)
+all: download_ffmpeg $(VIDEO_PROCESSOR_SO) $(CAMERA_CAPTURE_SO)
 
 download_ffmpeg:
 	@if [ $(PRECOMPILED) = true ] && [ ! -d $(FFMPEG_DIR) ]; then \
@@ -73,24 +73,16 @@ download_ffmpeg:
 
 $(VIDEO_PROCESSOR_SO): $(HEADERS) $(SOURCES)
 	mkdir -p $(PRIV_DIR);
-	mkdir -p $(PRIV_DIR)/camera_capture;
-
-
-	gcc -fPIC -shared \
-    $(pkg-config --cflags libavdevice libavformat libavcodec libavutil) \
-    c_src/camera_capture.c \
-    -o _build/dev/lib/video_processor/priv/camera_capture/camera_capture.so \
-    $(pkg-config --libs libavdevice libavformat libavcodec libavutil) \
-    -Wl,-rpath,'$$ORIGIN';
-
 
 	@if [ $(PRECOMPILED) = true ]; then \
 		cp -f $(FFMPEG_DIR)/lib/*.so* $(PRIV_DIR)/; \
-		cp -f $(FFMPEG_DIR)/lib/*.so* $(PRIV_DIR)/camera_capture; \
 	fi
 	$(CC) $(CFLAGS) $(IFLAGS) $(LFLAGS) $(SOURCES) -o $(VIDEO_PROCESSOR_SO) $(LDFLAGS)
 	@rm -f $(PRIV_DIR)/libav*.so $(PRIV_DIR)/libsw*.so
 	@rm -f $(PRIV_DIR)/libav*.so.*.* $(PRIV_DIR)/libsw*.so.*.*
+
+$(CAMERA_CAPTURE_SO): $(CAMERA_CAPTURE_HEADERS) $(CAMERA_CAPTURE_SOURCES)
+	$(CC) $(CFLAGS) $(IFLAGS) $(LFLAGS) $(CAMERA_CAPTURE_SOURCES) -o $(CAMERA_CAPTURE_SO) $(LDFLAGS)
 
 format:
 	clang-format -i $(DIR)/*
@@ -98,5 +90,6 @@ format:
 clean:
 	@rm -f $(TEMP)/$(PRECOMPILED_FFMPEG_NAME)
 	@rm -rf $(TEMP)/ex_nvr/$(VERSION)
+	@rm -rf $(PRIV_DIR)/*
 
 .PHONY: format
