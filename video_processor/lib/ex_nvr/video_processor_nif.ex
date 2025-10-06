@@ -27,20 +27,14 @@ defmodule ExNVR.AV.VideoProcessor.NIF do
   def create_encoder_ref(
         _width,
         _height,
-        _pix_fmt,
-        _present,
-        _tune,
-        _profile,
-        _max_b_frames,
-        _gop_size,
-        _timebase_num,
-        _timebase_den,
-        _crf,
-        _sc_threshold
+        _bit,
+        _timebrase,
+        _gop,
+        _max_b_frames
       ),
       do: :erlang.nif_error(:undef)
 
-  def h264_encode(_encoder_ref, _payload, _time, _use_shm, _keyframe_requested),
+  def h264_encode(_encoder_ref, _raw_data),
     do: :erlang.nif_error(:undef)
 
   def create_converter(_width, _height, _old_format, _new_format), do: :erlang.nif_error(:undef)

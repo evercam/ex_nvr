@@ -1,39 +1,20 @@
 defmodule ExNVR.Pipeline.Source.Webcm do
   @moduledoc """
-      start camera
-      capture streams
-
-      stream them as raw
-
+    The system opens the webcam and captures frames in a raw format (such as YUY2, MJPEG, or NV12).
+    For our pipeline, we require the frames in I420 (YUV420P) format, which stores full-resolution brightness and sub-sampled color , making it efficient for compression.
+    Since webcams often don’t output I420 directly, we convert the frames to this format.
+    After conversion, the I420 frames are encoded into H.264, which is the format our pipeline consumes. 
   """
   alias ExNVR.AV.CameraCapture
   alias ExNVR.AV.PixelConverter
 
-  alias Membrane.H264.FFmpeg.Common
-  alias Membrane.H264.FFmpeg.Encoder, as: En
-  alias ExNVR.AV.{Encoder, Frame}
-  alias Membrane.H264
+  alias ExNVR.AV.{Encoder, Frame, Packet}
   use Membrane.Source
 
   alias Membrane.Buffer
 
   @dest_time_base 90_000
   @original_time_base Membrane.Time.seconds(1)
-  @profile :baseline
-  @preset :medium
-  @tune nil
-  @use_shm? false
-  @max_b_frames 0
-  @gop_size 32
-  @sc_threshold 30
-
-  @default_crf 23
-  @ffmpeg_params %{}
-  @present :medium
-  @pixel_format :I420
-
-  @default_height 640
-  @default_width 360
 
   defmodule FFmpegParam do
     @moduledoc false
@@ -73,8 +54,7 @@ defmodule ExNVR.Pipeline.Source.Webcm do
           height: nil,
           pixel_format: nil,
           ffmpeg_params: %{},
-          encoder_ref: nil,
-          ref: nil,
+          encoder: nil,
           keyframe_requested?: true
         }
 
@@ -88,44 +68,26 @@ defmodule ExNVR.Pipeline.Source.Webcm do
   @impl true
   def handle_setup(_ctx, state) do
     with {:ok, {width, height, pixel_format}} <-
-           CameraCapture.camera_stream_props(state.native)
-
-    {:ok, encoder_ref} <-
-      encoder_ref(%{
-        width: default_if_zero(width, @default_width),
-        height: default_if_zero(height, @default_height),
-        framerate: state.framerate,
-        ffmpeg_params: state.ffmpeg_params
-      }) do
-        width = default_if_zero(width, @default_width)
-        height = default_if_zero(height, @default_height)
-
-        opts = [
+           CameraCapture.camera_stream_props(state.native) do
+      encoder =
+        Encoder.new(:h264,
           width: width,
           height: height,
-          pix_fmt: ~c"I420",
-          preset: ~c"medium",
-          tune: ~c"zerolatency",
-          profile: ~c"baseline",
-          max_b_frames: 2,
-          gop_size: 20,
-          # numerator/denominator for frame timing
-          time_base: {1, state.framerate},
-          crf: 23,
-          sc_threshold: 40
-        ]
+          format: :yuv420p,
+          time_base: {1, @dest_time_base}
+        )
 
-        state =
-          %{
-            state
-            | width: width,
-              height: height,
-              pixel_format: to_string(pixel_format),
-              encoder_ref: encoder_ref
-          }
+      state =
+        %{
+          state
+          | width: width,
+            height: height,
+            pixel_format: to_string(pixel_format),
+            encoder: encoder
+        }
 
-        {[], state}
-      end
+      {[], state}
+    end
   end
 
   @impl true
@@ -147,20 +109,19 @@ defmodule ExNVR.Pipeline.Source.Webcm do
   @impl true
   def handle_info({:frame, frame}, _ctx, state) do
     handle_frame_convertion(state, frame)
-    # try to encode the information
   end
 
   @impl true
   def handle_end_of_stream(:input, _ctx, state) do
     buffers = flush_encoder_if_exists(state)
+
     actions = buffers ++ [end_of_stream: :output]
     {actions, state}
   end
 
   defp handle_frame_convertion(state, frame) do
     time =
-      (Membrane.Time.monotonic_time() - state.init_time)
-      |> Common.to_h264_time_base_truncated()
+      Membrane.Time.monotonic_time() - state.init_time
 
     with {:ok, output_converter} <-
            PixelConverter.create_converter(
@@ -200,69 +161,49 @@ defmodule ExNVR.Pipeline.Source.Webcm do
 
   def h264_encoder(state, payload) do
     time =
-      (Membrane.Time.monotonic_time() - state.init_time)
-      |> Common.to_h264_time_base_truncated()
+      Membrane.Time.monotonic_time() - state.init_time
 
-    with {:ok, dts, pts, frames} <-
-           En.Native.encode(
-             payload,
-             time,
-             @use_shm?,
-             state.keyframe_requested?,
-             state.encoder_ref
-           ) do
-      wrap_frames(dts, pts, frames)
+    frame = %Frame{
+      type: :video,
+      data: payload,
+      width: state.width,
+      height: state.height,
+      pts: time
+    }
+
+    case Encoder.encode(state.encoder, frame) do
+      [] ->
+        []
+
+      [packet] ->
+        wrap_frames(packet.dts, packet.pts, packet.data)
     end
-  end
-
-  def encoder_ref(state) do
-    ffmpeg_params =
-      Enum.map(state.ffmpeg_params, fn {key, value} -> %FFmpegParam{key: key, value: value} end)
-
-    En.Native.create(
-      state.width,
-      state.height,
-      :I420,
-      @present,
-      @tune,
-      nil,
-      @max_b_frames,
-      @gop_size,
-      1,
-      state.framerate,
-      @default_crf,
-      @sc_threshold,
-      ffmpeg_params
-    )
   end
 
   defp wrap_frames([], [], []), do: []
 
-  defp wrap_frames(dts_list, pts_list, frames) do
-    Enum.zip([dts_list, pts_list, frames])
-    |> Enum.map(fn {dts, pts, frame} ->
-      %Buffer{
-        pts: Common.to_membrane_time_base_truncated(pts),
-        dts: Common.to_membrane_time_base_truncated(dts),
-        payload: frame,
-        metadata: %{
-          h264: %{key_frame?: true},
-          timestamp: DateTime.utc_now()
-        }
+  defp wrap_frames(dts, pts, frames) do
+    %Buffer{
+      pts: pts,
+      dts: dts,
+      payload: frames,
+      metadata: %{
+        h264: %{key_frame?: true},
+        timestamp: DateTime.utc_now()
       }
-    end)
+    }
     |> then(&[buffer: {:output, &1}])
   end
 
-  defp flush_encoder_if_exists(%{encoder_ref: nil}), do: []
+  defp flush_encoder_if_exists(%{encoder: nil}), do: []
 
-  defp flush_encoder_if_exists(%{encoder_ref: encoder_ref, use_shm?: use_shm?}) do
-    case Native.flush(use_shm?, encoder_ref) do
-      {:ok, dts_list, pts_list, frames} ->
-        wrap_frames(dts_list, pts_list, frames)
+  defp flush_encoder_if_exists(%{encoder: encoder}) do
+    case Encoder.flush(encoder) do
+      [packet] ->
+        wrap_frames(packet.dts, packet.pts, packet.data)
 
-      {:error, reason} ->
-        raise "Native encoder failed to flush: #{inspect(reason)}"
+      [] ->
+        []
     end
   end
 

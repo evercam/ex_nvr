@@ -45,7 +45,10 @@
         />
       </div>
 
-      <div :if={@device_type == "ip" || @device_type == "webcam" || @device_type == "webcam"} class="flex flex-col">
+      <div
+        :if={@device_type == "ip" || @device_type == "webcam"}
+        class="flex flex-col"
+      >
         <div class="relative flex py-5 items-center">
           <span class="flex-shrink mr-4 text-black dark:text-white">Device Info</span>
           <div class="flex-grow border-t border-gray-400"></div>
@@ -70,7 +73,10 @@
           />
         </div>
       </div>
-      <div :if={@device_type == "ip" || @device_type == "webcam" || @device_type == "webcam"} class="flex flex-col">
+      <div
+        :if={@device_type == "ip" || @device_type == "webcam"}
+        class="flex flex-col"
+      >
         <div class="relative flex py-5 items-center">
           <span class="flex-shrink mr-4 text-black dark:text-white">Credentials</span>
           <div class="flex-grow border-t border-gray-400"></div>
@@ -95,12 +101,15 @@
       <div class="flex flex-col">
         <div class="flex flex-col">
           <.inputs_for :let={config} field={@device_form[:stream_config]}>
-            <div :if={@device_type == "ip" || @device_type == "webcam" || @device_type == "webcam"} class="relative flex py-5 items-center">
+            <div
+              :if={@device_type == "ip" || @device_type == "webcam" }
+              class="relative flex py-5 items-center"
+            >
               <span class="flex-shrink mr-4 text-black dark:text-white">Main Stream</span>
               <div class="flex-grow border-t border-gray-400"></div>
             </div>
             <.input
-:if={@device_type == "ip" || @device_type == "webcam" || @device_type == "webcam"}
+              :if={@device_type == "ip" || @device_type == "webcam"}
               field={config[:stream_uri]}
               id="config_stream_uri"
               type="text"
@@ -122,7 +131,10 @@
               id="config_profile_token"
               type="hidden"
             />
-            <div :if={@device_type == "ip" || @device_type == "webcam"} class="relative flex py-5 items-center">
+            <div
+              :if={@device_type == "ip" || @device_type == "webcam"}
+              class="relative flex py-5 items-center"
+            >
               <span class="flex-shrink mr-4 text-black dark:text-white">Sub Stream</span>
               <div class="flex-grow border-t border-gray-400"></div>
             </div>
@@ -157,7 +169,7 @@
             </label>
             <.live_file_input
               :if={@device_type == "file" && is_nil(@device.id)}
-              class="w-full dark:text-white dark:bg-gray-800 rounded-lg dark:border-gray-600 focus:border-none focus:outline-zinc-400 dark:border-gray-600 dark:focus:outline-blue-500 dark:focus:border-none"
+              class="w-full dark:text-white dark:bg-gray-800 rounded-lg  focus:border-none focus:outline-zinc-400 dark:border-gray-600 dark:focus:outline-blue-500 dark:focus:border-none"
               upload={@uploads.file_to_upload}
               required
             />
@@ -218,7 +230,10 @@
                   </div>
                 </div>
               </.input>
-              <div :if={@device_type == "ip" || @device_type == "webcam"} class="grid grid-cols-3 gap-5 items-center my-5">
+              <div
+                :if={@device_type == "ip" || @device_type == "webcam"}
+                class="grid grid-cols-3 gap-5 items-center my-5"
+              >
                 <span class="col-span-2">Full drive threshold:</span>
                 <.input
                   field={storage_config[:full_drive_threshold]}
@@ -256,7 +271,11 @@
             </div>
           </.inputs_for>
         </div>
-        <div :if={@device_type == "ip" || @device_type == "webcam"} id="snapshot-config" class="flex flex-col">
+        <div
+          :if={@device_type == "ip" || @device_type == "webcam"}
+          id="snapshot-config"
+          class="flex flex-col"
+        >
           <div class="relative flex py-5 items-center">
             <span class="flex-shrink mr-4 text-black dark:text-white">
               Snapshot Config
