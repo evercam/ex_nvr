@@ -12,12 +12,12 @@ defmodule ExNVR.AV.CameraCapture do
   @spec read_camera_frame(reference()) :: {:ok, Frame.t()} | {:error, term()}
   def read_camera_frame(native) do
     case NIF.read_camera_frame(native) do
-      {:ok, {payload, pix_fmt, widht, height, pts}} ->
+      {:ok, {payload, pix_fmt, width, height, pts}} ->
         frame =
           Frame.new(payload,
             type: :video,
             format: pix_fmt,
-            width: widht,
+            width: width,
             height: height,
             pts: pts
           )

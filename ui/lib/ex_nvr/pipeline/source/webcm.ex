@@ -6,15 +6,16 @@ defmodule ExNVR.Pipeline.Source.Webcm do
     After conversion, the I420 frames are encoded into H.264, which is the format our pipeline consumes. 
   """
   alias ExNVR.AV.CameraCapture
-  alias ExNVR.AV.PixelConverter
-
   alias ExNVR.AV.{Encoder, Frame, Packet}
   use Membrane.Source
 
   alias Membrane.Buffer
+  alias Membrane.H264
 
   @dest_time_base 90_000
   @original_time_base Membrane.Time.seconds(1)
+  @default_height 640
+  @default_width 420
 
   defmodule FFmpegParam do
     @moduledoc false
@@ -50,10 +51,9 @@ defmodule ExNVR.Pipeline.Source.Webcm do
           provider: nil,
           init_time: Membrane.Time.monotonic_time(),
           framerate: options.framerate,
-          width: nil,
-          height: nil,
-          pixel_format: nil,
-          ffmpeg_params: %{},
+          width: @default_width,
+          height: @default_height,
+          pixel_format: :yuv420p,
           encoder: nil,
           keyframe_requested?: true
         }
@@ -67,27 +67,21 @@ defmodule ExNVR.Pipeline.Source.Webcm do
 
   @impl true
   def handle_setup(_ctx, state) do
-    with {:ok, {width, height, pixel_format}} <-
-           CameraCapture.camera_stream_props(state.native) do
-      encoder =
-        Encoder.new(:h264,
-          width: width,
-          height: height,
-          format: :yuv420p,
-          time_base: {1, @dest_time_base}
-        )
+    encoder =
+      Encoder.new(:h264,
+        width: state.width,
+        height: state.height,
+        format: state.pixel_format,
+        time_base: {1, @dest_time_base}
+      )
 
-      state =
-        %{
-          state
-          | width: width,
-            height: height,
-            pixel_format: to_string(pixel_format),
-            encoder: encoder
-        }
+    state =
+      %{
+        state
+        | encoder: encoder
+      }
 
-      {[], state}
-    end
+    {[], %{state | encoder: encoder}}
   end
 
   @impl true
@@ -108,32 +102,10 @@ defmodule ExNVR.Pipeline.Source.Webcm do
 
   @impl true
   def handle_info({:frame, frame}, _ctx, state) do
-    handle_frame_convertion(state, frame)
-  end
+    # feed the frame to the encoder and it produces an entire frame
 
-  @impl true
-  def handle_end_of_stream(:input, _ctx, state) do
-    buffers = flush_encoder_if_exists(state)
-
-    actions = buffers ++ [end_of_stream: :output]
-    {actions, state}
-  end
-
-  defp handle_frame_convertion(state, frame) do
-    time =
-      Membrane.Time.monotonic_time() - state.init_time
-
-    with {:ok, output_converter} <-
-           PixelConverter.create_converter(
-             state.width,
-             state.height,
-             pixel_format_to_atom(state.pixel_format) |> Atom.to_charlist(),
-             ~c"I420"
-           ),
-         {:ok, payload} <- PixelConverter.convert_pixels(output_converter, frame) do
-      buffer = h264_encoder(state, payload)
-      {buffer, state}
-    end
+    buffer = h264_encoder(state, frame)
+    {buffer, %{state | width: frame.width, height: frame.height, pixel_format: frame.format}}
   end
 
   defp create_new_stream_format(state) do
@@ -159,18 +131,7 @@ defmodule ExNVR.Pipeline.Source.Webcm do
     end
   end
 
-  def h264_encoder(state, payload) do
-    time =
-      Membrane.Time.monotonic_time() - state.init_time
-
-    frame = %Frame{
-      type: :video,
-      data: payload,
-      width: state.width,
-      height: state.height,
-      pts: time
-    }
-
+  def h264_encoder(state, frame) do
     case Encoder.encode(state.encoder, frame) do
       [] ->
         []
@@ -206,18 +167,4 @@ defmodule ExNVR.Pipeline.Source.Webcm do
         []
     end
   end
-
-  defp default_if_zero(value, default), do: if(value == 0, do: default, else: value)
-
-  defp pixel_format_to_atom("yuv420p"), do: :I420
-  defp pixel_format_to_atom("yuv422p"), do: :I422
-  defp pixel_format_to_atom("yuv444p"), do: :I444
-  defp pixel_format_to_atom("rgb24"), do: :RGB
-  defp pixel_format_to_atom("rgba"), do: :RGBA
-  defp pixel_format_to_atom("yuyv422"), do: :YUY2
-  defp pixel_format_to_atom("nv12"), do: :NV12
-  defp pixel_format_to_atom("nv21"), do: :NV21
-
-  defp pixel_format_to_atom(pixel_format),
-    do: raise("unsupported pixel format #{inspect(pixel_format)}")
 end
