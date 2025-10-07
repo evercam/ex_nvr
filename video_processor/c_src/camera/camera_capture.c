@@ -102,8 +102,6 @@ ERL_NIF_TERM open_camera(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
         goto clean;
     }
 
-    printf("time base: %d/%d\n", state->decoder->c->time_base.num, state->decoder->c->time_base.den);
-
     ret = nif_ok(env, enif_make_resource(env, state));
 clean:
     if (options != NULL) av_dict_free(&options);
