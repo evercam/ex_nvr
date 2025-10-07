@@ -48,7 +48,6 @@ ERL_NIF_TERM open_camera(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
 
     const AVInputFormat *input_format = av_find_input_format(driver);
     if (input_format == NULL) {
-        printf("hello\n");
         ret = nif_error(env, "input_format_not_found");
         goto clean;
     }
