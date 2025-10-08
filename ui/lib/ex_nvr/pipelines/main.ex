@@ -396,8 +396,8 @@ defmodule ExNVR.Pipelines.Main do
     [
       child(:source, %Source.Webcm{
         # the path to you usb(check ls /dev/video*)
-        device: "/dev/video1",
-        framerate: 30
+        device: device.url,
+        framerate: device.stream_config.framerate
       })
       |> via_out(:output)
       |> child(:tee, Membrane.Tee)

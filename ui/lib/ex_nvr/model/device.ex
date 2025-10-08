@@ -60,7 +60,8 @@ defmodule ExNVR.Model.Device do
             third_profile_token: url(),
             filename: String.t(),
             temporary_path: Path.t(),
-            duration: Membrane.Time.t()
+            duration: Membrane.Time.t(),
+            framerate: String.t()
           }
 
     @primary_key false
@@ -78,6 +79,7 @@ defmodule ExNVR.Model.Device do
       field(:filename, :string)
       field(:temporary_path, :string, virtual: true)
       field(:duration, :integer)
+      field :framerate, :string
     end
 
     def changeset(struct, params, device_type) do
@@ -91,7 +93,8 @@ defmodule ExNVR.Model.Device do
         :sub_profile_token,
         :filename,
         :temporary_path,
-        :duration
+        :duration,
+        :framerate
       ])
       |> validate_device_config(device_type)
     end
@@ -113,7 +116,7 @@ defmodule ExNVR.Model.Device do
     end
 
     defp validate_device_config(changeset, :webcam) do
-      changeset
+      validate_required(changeset, [:framerate])
     end
 
     defp validate_uri(field, uri, protocl \\ "rtsp") do

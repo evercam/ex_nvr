@@ -14,8 +14,6 @@ defmodule ExNVR.Pipeline.Source.Webcm do
 
   @dest_time_base 90_000
   @original_time_base Membrane.Time.seconds(1)
-  @default_height 640
-  @default_width 420
 
   defmodule FFmpegParam do
     @moduledoc false
@@ -37,7 +35,7 @@ defmodule ExNVR.Pipeline.Source.Webcm do
     ],
     framerate: [
       spec: non_neg_integer(),
-      default: 30,
+      default: 20,
       description: "Framerate of device's output video stream"
     ]
   )
@@ -49,10 +47,9 @@ defmodule ExNVR.Pipeline.Source.Webcm do
         state = %{
           native: native,
           provider: nil,
-          init_time: Membrane.Time.monotonic_time(),
           framerate: options.framerate,
-          width: @default_width,
-          height: @default_height,
+          width: nil,
+          height: nil,
           pixel_format: :yuv420p,
           encoder: nil,
           keyframe_requested?: true
@@ -67,21 +64,28 @@ defmodule ExNVR.Pipeline.Source.Webcm do
 
   @impl true
   def handle_setup(_ctx, state) do
+    {:ok, frame} = CameraCapture.read_camera_frame(state.native)
+
     encoder =
       Encoder.new(:h264,
-        width: state.width,
-        height: state.height,
-        format: state.pixel_format,
-        time_base: {1, @dest_time_base}
+        width: frame.width,
+        height: frame.height,
+        format: :yuv420p,
+        time_base: {1, @dest_time_base},
+        gop_size: 32,
+        profile: "Baseline",
+        max_b_frames: 0
       )
 
     state =
       %{
         state
-        | encoder: encoder
+        | encoder: encoder,
+          width: frame.width,
+          height: frame.height
       }
 
-    {[], %{state | encoder: encoder}}
+    {[], state}
   end
 
   @impl true
@@ -116,7 +120,7 @@ defmodule ExNVR.Pipeline.Source.Webcm do
        framerate: state.framerate,
        height: state.height,
        width: state.width,
-       profile: nil
+       profile: :baseline
      }}
   end
 
@@ -154,6 +158,10 @@ defmodule ExNVR.Pipeline.Source.Webcm do
       }
     }
     |> then(&[buffer: {:output, &1}])
+  end
+
+  def to_h264_time_base_truncated(timestamp) do
+    (timestamp * @dest_time_base / Membrane.Time.second()) |> Ratio.trunc()
   end
 
   defp flush_encoder_if_exists(%{encoder: nil}), do: []
