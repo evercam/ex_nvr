@@ -7,7 +7,7 @@ FFMPEG_VERSION := 7.1.1
 
 TEMP ?= $(HOME)/.cache
 FFMPEG_DIR ?= $(TEMP)/ex_nvr/$(VERSION)/$(ARCH)/ffmpeg-$(FFMPEG_VERSION)
-PRECOMPILED_FFMPEG_LINK ?= https://github.com/evercam/ex_nvr_precompiled/releases/download/v$(VERSION)/ffmpeg-linux-$(ARCH)-$(FFMPEG_VERSION).tar.xz
+PRECOMPILED_FFMPEG_LINK ?= https://github.com/evercam/ex_nvr_precompiled/releases/download/v$(VERSION)/ffmpeg-$(OS)-$(ARCH)-$(FFMPEG_VERSION).tar.xz
 PRECOMPILED_FFMPEG_NAME ?= ffmpeg-linux-$(ARCH)-$(FFMPEG_VERSION).tar.xz
 
 PRECOMPILED = false
@@ -47,9 +47,9 @@ endif
 
 #Flags for MacOS
 ifeq ($(OS),Darwin)
-	IFLAGS += $$(pkg-config --cflags-only-I libavcodec libavutil libswscale libavdevice libavformat)
-	LFLAGS += $$(pkg-config --libs-only-L libavcodec libavutil libswscale libavdevice libavformat)
-	CFLAGS += -undefined dynamic_lookup
+   	IFLAGS += $$(pkg-config --cflags-only-I libavcodec libavutil libswscale libavdevice libavformat)
+   	LFLAGS += $$(pkg-config --libs-only-L libavcodec libavutil libswscale libavdevice libavformat)
+   	CFLAGS += -undefined dynamic_lookup
 endif
 
 # Flags for Fedora

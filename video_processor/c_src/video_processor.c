@@ -227,7 +227,7 @@ ERL_NIF_TERM encode(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
     return nif_raise(env, "failed_to_inspect_binary");
   }
 
-  ulong pts;
+  unsigned long pts;
   if (!enif_get_ulong(env, argv[2], &pts)) {
     return nif_raise(env, "failed_to_get_int");
   }
@@ -269,12 +269,12 @@ ERL_NIF_TERM decode(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
     return nif_raise(env, "couldnt_inspect_binary");
   }
 
-  ulong pts;
+  unsigned long pts;
   if (!enif_get_ulong(env, argv[2], &pts)) {
     return nif_raise(env, "couldnt_get_int");
   }
 
-  ulong dts;
+  unsigned long dts;
   if (!enif_get_ulong(env, argv[3], &dts)) {
     return nif_raise(env, "couldnt_get_int");
   }

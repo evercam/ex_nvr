@@ -173,7 +173,7 @@ void camera_capture_destructor(ErlNifEnv *env, void *obj) {
 }
 
 static ErlNifFunc funcs[] = {
-  {"open_camera", 2, open_camera},
+  {"open_camera", 2, open_camera, ERL_DIRTY_JOB_CPU_BOUND},
   {"read_camera_frame", 1, read_camera_frame, ERL_DIRTY_JOB_CPU_BOUND}
 };
 
