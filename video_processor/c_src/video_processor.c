@@ -11,7 +11,6 @@ static int get_profile(enum AVCodecID, const char *);
 static ERL_NIF_TERM packets_to_term(ErlNifEnv *env, Encoder *encoder);
 static ERL_NIF_TERM frames_to_term(ErlNifEnv *env, Decoder *encoder);
 static ERL_NIF_TERM nif_packet_to_term(ErlNifEnv *env, AVPacket *packet);
-static ERL_NIF_TERM nif_frame_to_term(ErlNifEnv *env, AVFrame *frame);
 static int convert_frames(struct NvrDecoder *);
 
 ERL_NIF_TERM new_encoder(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
@@ -438,27 +437,6 @@ static ERL_NIF_TERM nif_packet_to_term(ErlNifEnv *env, AVPacket *packet) {
   ERL_NIF_TERM is_keyframe =
       enif_make_atom(env, packet->flags & AV_PKT_FLAG_KEY ? "true" : "false");
   return enif_make_tuple(env, 4, data_term, dts, pts, is_keyframe);
-}
-
-static ERL_NIF_TERM nif_frame_to_term(ErlNifEnv *env, AVFrame *frame) {
-  ERL_NIF_TERM data_term;
-
-  int payload_size =
-      av_image_get_buffer_size(frame->format, frame->width, frame->height, 1);
-  unsigned char *ptr = enif_make_new_binary(env, payload_size, &data_term);
-
-  av_image_copy_to_buffer(ptr, payload_size,
-                          (const uint8_t *const *)frame->data,
-                          (const int *)frame->linesize, frame->format,
-                          frame->width, frame->height, 1);
-
-  ERL_NIF_TERM format_term =
-      enif_make_atom(env, av_get_pix_fmt_name(frame->format));
-  ERL_NIF_TERM height_term = enif_make_int(env, frame->height);
-  ERL_NIF_TERM width_term = enif_make_int(env, frame->width);
-  ERL_NIF_TERM pts_term = enif_make_int64(env, frame->pts);
-  return enif_make_tuple(env, 5, data_term, format_term, width_term,
-                         height_term, pts_term);
 }
 
 void free_encoder(ErlNifEnv *env, void *obj) {

@@ -1,4 +1,9 @@
+#pragma once
+
 #include <erl_nif.h>
+#include <libavutil/imgutils.h>
+#include <libavutil/frame.h>
+#include <string.h>
 
 #ifdef NVR_DEBUG
 #define NVR_LOG_DEBUG(X, ...)                                                  \
@@ -14,3 +19,5 @@ ERL_NIF_TERM nif_raise(ErlNifEnv *env, char *msg);
 
 int nif_get_atom(ErlNifEnv *env, ERL_NIF_TERM term, char **value);
 int nif_get_string(ErlNifEnv *env, ERL_NIF_TERM term, char **value);
+
+ERL_NIF_TERM nif_frame_to_term(ErlNifEnv *env, AVFrame *frame);
