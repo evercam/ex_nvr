@@ -2,12 +2,12 @@ ARCH := $(or $(TARGET_ARCH), $(shell uname -m))
 OS := $(or $(TARGET_OS), $(shell uname -s))
 ABI ?= gnu
 
-VERSION := 0.1.0
+VERSION := 0.2.0
 FFMPEG_VERSION := 7.1.1
 
 TEMP ?= $(HOME)/.cache
 FFMPEG_DIR ?= $(TEMP)/ex_nvr/$(VERSION)/$(ARCH)/ffmpeg-$(FFMPEG_VERSION)
-PRECOMPILED_FFMPEG_LINK ?= https://github.com/evercam/ex_nvr_precompiled/releases/download/v$(VERSION)/ffmpeg-linux-$(ARCH)-$(FFMPEG_VERSION).tar.xz
+PRECOMPILED_FFMPEG_LINK ?= https://github.com/evercam/ex_nvr_precompiled/releases/download/v$(VERSION)/ffmpeg-$(OS)-$(ARCH)-$(FFMPEG_VERSION).tar.xz
 PRECOMPILED_FFMPEG_NAME ?= ffmpeg-linux-$(ARCH)-$(FFMPEG_VERSION).tar.xz
 
 PRECOMPILED = false
@@ -47,9 +47,9 @@ endif
 
 #Flags for MacOS
 ifeq ($(OS),Darwin)
-	IFLAGS += $$(pkg-config --cflags-only-I libavcodec libavutil libswscale libavdevice libavformat)
-	LFLAGS += $$(pkg-config --libs-only-L libavcodec libavutil libswscale libavdevice libavformat)
-	CFLAGS += -undefined dynamic_lookup
+   	IFLAGS += $$(pkg-config --cflags-only-I libavcodec libavutil libswscale libavdevice libavformat)
+   	LFLAGS += $$(pkg-config --libs-only-L libavcodec libavutil libswscale libavdevice libavformat)
+   	CFLAGS += -undefined dynamic_lookup
 endif
 
 # Flags for Fedora
@@ -78,6 +78,9 @@ $(VIDEO_PROCESSOR_SO): $(HEADERS) $(SOURCES)
 		cp -f $(FFMPEG_DIR)/lib/*.so* $(PRIV_DIR)/; \
 	fi
 	$(CC) $(CFLAGS) $(IFLAGS) $(LFLAGS) $(SOURCES) -o $(VIDEO_PROCESSOR_SO) $(LDFLAGS)
+
+$(CAMERA_CAPTURE_SO): $(CAMERA_CAPTURE_HEADERS) $(CAMERA_CAPTURE_SOURCES)
+	$(CC) $(CFLAGS) $(IFLAGS) $(LFLAGS) $(CAMERA_CAPTURE_SOURCES) -o $(CAMERA_CAPTURE_SO) $(LDFLAGS)
 	@rm -f $(PRIV_DIR)/libav*.so $(PRIV_DIR)/libsw*.so
 	@rm -f $(PRIV_DIR)/libav*.so.*.* $(PRIV_DIR)/libsw*.so.*.*
 

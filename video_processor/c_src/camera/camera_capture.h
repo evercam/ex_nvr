@@ -5,7 +5,6 @@
 #pragma GCC diagnostic ignored "-Wextra"
 #include <libavdevice/avdevice.h>
 #include <libavformat/avformat.h>
-#include <libavcodec/avcodec.h>
 #include <libavutil/pixdesc.h>
 #include "../decoder.h"
 #include "../video_converter.h"

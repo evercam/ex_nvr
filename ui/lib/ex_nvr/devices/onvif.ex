@@ -67,19 +67,18 @@ defmodule ExNVR.Devices.Onvif do
 
   # Auto configure cameras
   @spec auto_configure(ExOnvif.Device.t()) :: AutoConfig.t()
-  def auto_configure(%{manufacturer: vendor} = onvif_device)
-      when vendor in ["HIKVISION", "Milesight Technology Co.,Ltd."] do
-    Logger.info("Auto configure #{vendor} camera")
-
-    %AutoConfig{}
-    |> do_configure_profiles(onvif_device)
-  end
-
   def auto_configure(%{manufacturer: "AXIS"} = onvif_device) do
     Logger.info("Auto configure AXIS camera")
 
     %AutoConfig{}
     |> maybe_create_and_configure_profiles(onvif_device)
+  end
+
+  def auto_configure(%{manufacturer: vendor} = onvif_device) do
+    Logger.info("Auto configure #{vendor} camera")
+
+    %AutoConfig{}
+    |> do_configure_profiles(onvif_device)
   end
 
   def auto_configure(_onvif_device), do: %AutoConfig{}
