@@ -12,6 +12,8 @@ defmodule ExNVR.Pipeline.Source.Webcm do
   alias Membrane.Buffer
   alias Membrane.H264
 
+  import ExMP4.Helper
+
   @dest_time_base 90_000
   @original_time_base Membrane.Time.seconds(1)
 
@@ -21,11 +23,10 @@ defmodule ExNVR.Pipeline.Source.Webcm do
     defstruct @enforce_keys
   end
 
-  def_output_pad(:output,
+  def_output_pad :output,
     accepted_format: %H264{alignment: :au},
     availability: :always,
     flow_control: :push
-  )
 
   def_options(
     device: [
@@ -50,9 +51,9 @@ defmodule ExNVR.Pipeline.Source.Webcm do
           framerate: options.framerate,
           width: nil,
           height: nil,
-          pixel_format: :yuv420p,
+          pixel_format: nil,
           encoder: nil,
-          keyframe_requested?: true
+          init_time: Membrane.Time.monotonic_time()
         }
 
         {[], state}
@@ -64,13 +65,14 @@ defmodule ExNVR.Pipeline.Source.Webcm do
 
   @impl true
   def handle_setup(_ctx, state) do
-    {:ok, frame} = CameraCapture.read_camera_frame(state.native)
+    {:ok, frame} =
+      CameraCapture.read_camera_frame(state.native)
 
     encoder =
       Encoder.new(:h264,
         width: frame.width,
         height: frame.height,
-        format: :yuv420p,
+        format: frame.format,
         time_base: {1, @dest_time_base},
         gop_size: 32,
         profile: "Baseline",
@@ -82,7 +84,8 @@ defmodule ExNVR.Pipeline.Source.Webcm do
         state
         | encoder: encoder,
           width: frame.width,
-          height: frame.height
+          height: frame.height,
+          pixel_format: frame.format
       }
 
     {[], state}
@@ -110,6 +113,12 @@ defmodule ExNVR.Pipeline.Source.Webcm do
 
     buffer = h264_encoder(state, frame)
     {buffer, %{state | width: frame.width, height: frame.height, pixel_format: frame.format}}
+  end
+
+  @impl true
+  def handle_terminate_request(_ctx, state) do
+    buffer = flush_encoder_if_exists(state)
+    {buffer, state}
   end
 
   defp create_new_stream_format(state) do
@@ -141,35 +150,36 @@ defmodule ExNVR.Pipeline.Source.Webcm do
         []
 
       [packet] ->
-        wrap_frames(packet.dts, packet.pts, packet.data)
+        wrap_frames(packet, state.init_time)
     end
   end
 
-  defp wrap_frames([], [], []), do: []
+  defp wrap_frames([], _state), do: []
 
-  defp wrap_frames(dts, pts, frames) do
+  defp wrap_frames(packet, init_time) do
+    time =
+      Membrane.Time.monotonic_time() - init_time
+
     %Buffer{
-      pts: pts,
-      dts: dts,
-      payload: frames,
+      dts: time,
+      pts: time,
+      payload: packet.data,
       metadata: %{
-        h264: %{key_frame?: true},
+        h264: %{key_frame?: packet.keyframe?},
         timestamp: DateTime.utc_now()
       }
     }
     |> then(&[buffer: {:output, &1}])
   end
 
-  def to_h264_time_base_truncated(timestamp) do
-    (timestamp * @dest_time_base / Membrane.Time.second()) |> Ratio.trunc()
-  end
-
   defp flush_encoder_if_exists(%{encoder: nil}), do: []
 
   defp flush_encoder_if_exists(%{encoder: encoder}) do
+    time = Membrane.Time.monotonic_time()
+
     case Encoder.flush(encoder) do
       [packet] ->
-        wrap_frames(packet.dts, packet.pts, packet.data)
+        wrap_frames(packet, time)
 
       [] ->
         []

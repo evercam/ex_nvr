@@ -20,55 +20,52 @@ defmodule ExNVR.Pipeline.Output.Storage do
 
   @recordings_event [:ex_nvr, :recordings, :stop]
 
-  def_input_pad(:input,
+  def_input_pad :input,
     accepted_format:
       any_of(
         %H264{alignment: :au},
         %H265{alignment: :au}
       )
-  )
 
-  def_options(
-    device: [
-      spec: Device.t(),
-      description: "The device where this video belongs"
-    ],
-    stream: [
-      spec: :high | :low,
-      default: :high,
-      description: """
-      The type of the stream to store.
-        * `high` - main stream
-        * `low` - sub stream
-      """
-    ],
-    target_segment_duration: [
-      spec: Time.t(),
-      default: Time.seconds(60),
-      description: """
-      The duration of each segment.
-      A segment may not have the exact duration specified here, since each
-      segment must start from a keyframe. The real segment duration may be
-      slightly bigger
-      """
-    ],
-    correct_timestamp: [
-      spec: boolean(),
-      default: false,
-      description: """
-      Segment duration are calculated from the frame duration usin RTP timestamps.
+  def_options device: [
+                spec: Device.t(),
+                description: "The device where this video belongs"
+              ],
+              stream: [
+                spec: :high | :low,
+                default: :high,
+                description: """
+                The type of the stream to store.
+                  * `high` - main stream
+                  * `low` - sub stream
+                """
+              ],
+              target_segment_duration: [
+                spec: Time.t(),
+                default: Time.seconds(60),
+                description: """
+                The duration of each segment.
+                A segment may not have the exact duration specified here, since each
+                segment must start from a keyframe. The real segment duration may be
+                slightly bigger
+                """
+              ],
+              correct_timestamp: [
+                spec: boolean(),
+                default: false,
+                description: """
+                Segment duration are calculated from the frame duration usin RTP timestamps.
 
-      Camera clocks are not accurate, in a long run it'll drift from the NVR time.
-      Setting this to `true` will correct the segment end date towards the wall clock of the server.
+                Camera clocks are not accurate, in a long run it'll drift from the NVR time.
+                Setting this to `true` will correct the segment end date towards the wall clock of the server.
 
-      The max error the date will be adjusted is in the range ± 30 ms.
-      """
-    ],
-    onvif_replay: [
-      spec: boolean(),
-      default: false
-    ]
-  )
+                The max error the date will be adjusted is in the range ± 30 ms.
+                """
+              ],
+              onvif_replay: [
+                spec: boolean(),
+                default: false
+              ]
 
   @impl true
   def handle_init(_ctx, opts) do
@@ -134,8 +131,7 @@ defmodule ExNVR.Pipeline.Output.Storage do
 
   @impl true
   def handle_buffer(:input, buffer, _ctx, %{current_segment: segment} = state) do
-    state =
-      write_data(state, buffer)
+    state = write_data(state, buffer)
 
     if Utils.keyframe(buffer) and Segment.duration(segment) >= state.target_duration do
       {state, discontinuity} =
@@ -246,11 +242,7 @@ defmodule ExNVR.Pipeline.Output.Storage do
 
   defp maybe_correct_timestamp(segment, true, %{first_segment?: false}, end_date) do
     # clap the time diff between -@time_error and @time_error
-    segment
-    |> IO.inspect(label: "segement")
-
-    time_diff =
-      end_date - Segment.end_date(segment)
+    time_diff = end_date - Segment.end_date(segment)
 
     if abs(time_diff) >= @time_drift_threshold do
       Membrane.Logger.warning("""
@@ -274,10 +266,7 @@ defmodule ExNVR.Pipeline.Output.Storage do
     Membrane.Logger.info("Start recording a new segment")
 
     start_date = Segment.start_date(segment)
-
-    recording_path =
-      recording_path(state, start_date)
-
+    recording_path = recording_path(state, start_date)
     File.mkdir_p!(Path.dirname(recording_path))
 
     writer =
@@ -289,9 +278,7 @@ defmodule ExNVR.Pipeline.Output.Storage do
   end
 
   defp write_data(%{track: track} = state, buffer) do
-    last_buffer =
-      state.last_buffer
-
+    last_buffer = state.last_buffer
     timescale = state.track.timescale
     duration = Buffer.get_dts_or_pts(buffer) - Buffer.get_dts_or_pts(last_buffer)
 
@@ -303,23 +290,8 @@ defmodule ExNVR.Pipeline.Output.Storage do
           {state, last_buffer.payload}
 
         track.media == :h264 ->
-          {{sps, pps}, au} =
-            MediaCodecs.H264.pop_parameter_sets(last_buffer.payload)
-
-          # avoids avcc from crushing when sps,pps == [] 
-          state =
-            if sps != [] and pps != [] do
-              %{
-                state
-                | track: %{
-                    state.track
-                    | priv_data: Box.Avcc.new(sps, pps)
-                  }
-              }
-            else
-              state
-            end
-
+          {{sps, pps}, au} = MediaCodecs.H264.pop_parameter_sets(last_buffer.payload)
+          state = %{state | track: %{state.track | priv_data: Box.Avcc.new(sps, pps)}}
           {state, au}
 
         track.media == :h265 ->

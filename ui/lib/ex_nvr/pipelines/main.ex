@@ -409,7 +409,7 @@ defmodule ExNVR.Pipelines.Main do
       |> child({:storage, :main_stream}, %Output.Storage{
         device: state.device,
         target_segment_duration: state.segment_duration,
-        correct_timestamp: false
+        correct_timestamp: true
       })
     ]
   end
