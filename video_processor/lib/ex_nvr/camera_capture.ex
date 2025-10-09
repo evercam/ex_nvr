@@ -4,9 +4,9 @@ defmodule ExNVR.AV.CameraCapture do
   alias ExNVR.AV.CameraCapture.NIF
   alias ExNVR.AV.Frame
 
-  @spec open_camera(String.t(), String.t()) :: {:ok, reference()} | {:error, term()}
+  @spec open_camera(String.t(), non_neg_integer()) :: {:ok, reference()} | {:error, term()}
   def open_camera(device_url, framerate) do
-    NIF.open_camera(device_url, framerate)
+    NIF.open_camera(device_url, to_string(framerate))
   end
 
   @spec read_camera_frame(reference()) :: {:ok, Frame.t()} | {:error, term()}
