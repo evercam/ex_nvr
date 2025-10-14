@@ -2,7 +2,7 @@ defmodule ExNVR.MixProject do
   use Mix.Project
 
   @app :ex_nvr
-  @version "0.23.0"
+  @version "0.24.0"
 
   def project do
     [
@@ -38,8 +38,7 @@ defmodule ExNVR.MixProject do
   defp deps do
     [
       {:video_processor, path: "../video_processor"},
-      {:media_codecs, "~> 0.8.0", override: true},
-      {:rtsp, "~> 0.4.0"},
+      {:rtsp, "~> 0.5.0"},
       {:ex_sdp, "~> 1.0"},
       {:bundlex, "~> 1.5", override: true},
       {:bcrypt_elixir, "~> 3.0"},
@@ -83,7 +82,7 @@ defmodule ExNVR.MixProject do
       {:flop_phoenix, "~> 0.24"},
       {:prom_ex, "~> 1.11.0"},
       {:circuits_uart, "~> 1.5"},
-      {:ex_onvif, "~> 0.7.1"},
+      {:ex_onvif, "~> 0.7.2"},
       {:slipstream, "~> 1.2.0"},
       {:live_vue, "~> 0.5.7"},
       {:sentry, "~> 11.0"},
@@ -91,7 +90,7 @@ defmodule ExNVR.MixProject do
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:phoenix_live_reload, "~> 1.2", only: [:dev, :test]},
       {:membrane_h26x_plugin, "~> 0.10", only: :test},
-      {:mimic, "~> 2.0.0", only: :test},
+      {:mimic, "~> 2.1", only: :test},
       {:faker, "~> 0.17", only: :test},
       {:bypass, "~> 2.1", only: :test},
       {:lazy_html, "~> 0.1.0", only: :test}
