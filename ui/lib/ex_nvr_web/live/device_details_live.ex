@@ -161,9 +161,8 @@ defmodule ExNVRWeb.DeviceDetailsLive do
   @spec format_stats(map()) :: map()
   def format_stats(stats) do
     %{
-      "Resolution" => "#{stats["height"]}x#{stats["width"]}",
+      "Resolution" => "#{stats["width"]}x#{stats["height"]}",
       "R-Frame Rate" => "#{stats["r_frame_rate"]}",
-      "AVG-Frame Rate" => "#{stats["avg_frame_rate"]}",
       "Color Primaries" => stats["color_primaries"],
       "color_transfer" => stats["color_transfer"],
       "Bits Per Raw Sample" => stats["bits_per_raw_sample"],
