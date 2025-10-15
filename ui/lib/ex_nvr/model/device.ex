@@ -61,7 +61,8 @@ defmodule ExNVR.Model.Device do
             filename: String.t(),
             temporary_path: Path.t(),
             duration: Membrane.Time.t(),
-            framerate: String.t()
+            framerate: String.t(),
+            resolution: String.t()
           }
 
     @primary_key false
@@ -80,6 +81,7 @@ defmodule ExNVR.Model.Device do
       field(:temporary_path, :string, virtual: true)
       field(:duration, :integer)
       field :framerate, :string
+      field :resolution, :string, default: "640x480"
     end
 
     def changeset(struct, params, device_type) do
@@ -94,7 +96,8 @@ defmodule ExNVR.Model.Device do
         :filename,
         :temporary_path,
         :duration,
-        :framerate
+        :framerate,
+        :resolution
       ])
       |> validate_device_config(device_type)
     end
@@ -116,7 +119,7 @@ defmodule ExNVR.Model.Device do
     end
 
     defp validate_device_config(changeset, :webcam) do
-      validate_required(changeset, [:framerate])
+      validate_required(changeset, [:framerate, :resolution])
     end
 
     defp validate_uri(field, uri, protocl \\ "rtsp") do

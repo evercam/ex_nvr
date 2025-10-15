@@ -38,12 +38,27 @@ defmodule ExNVR.Pipeline.Source.Webcm do
       spec: non_neg_integer(),
       default: 20,
       description: "Framerate of device's output video stream"
+    ],
+    width: [
+      spec: integer(),
+      default: 640,
+      description: "Width of the webcam frame"
+    ],
+    height: [
+      spec: integer(),
+      default: 480,
+      description: "The final output height of webcam frame"
     ]
   )
 
   @impl true
   def handle_init(_ctx, %__MODULE__{} = options) do
-    case CameraCapture.open_camera(options.device, to_string(options.framerate)) do
+    case CameraCapture.open_camera(
+           options.device,
+           to_string(options.framerate),
+           options.width,
+           options.height
+         ) do
       {:ok, native} ->
         state = %{
           native: native,
@@ -65,8 +80,7 @@ defmodule ExNVR.Pipeline.Source.Webcm do
 
   @impl true
   def handle_setup(_ctx, state) do
-    {:ok, frame} =
-      CameraCapture.read_camera_frame(state.native)
+    {:ok, frame} = CameraCapture.read_camera_frame(state.native)
 
     encoder =
       Encoder.new(:h264,

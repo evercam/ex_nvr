@@ -120,15 +120,34 @@
               placeholder="rtsp://camera1:554/video/stream1"
               required
             />
-            <.input
-              :if={@device_type == "webcam"}
-              field={config[:framerate]}
-              id="framerate"
-              type="text"
-              label="Framerate"
-              placeholder="30"
-              required
-            />
+            
+<!-- webcam configs, framerate, resolution -->
+            <div class="flex justify-between gap-5">
+              <.input
+                :if={@device_type == "webcam"}
+                field={config[:framerate]}
+                id="framerate"
+                type="text"
+                label="Framerate"
+                placeholder="20"
+                required
+              />
+              <.input
+                :if={@device_type == "webcam"}
+                field={config[:resolution]}
+                options={[
+                  {"640x480 (VGA)", "640x480"},
+                  {"1280x720 (HD)", "1280x720"},
+                  {"1920x1080 (Full HD)", "1920x1080"},
+                  {"2560x1440 (QHD)", "2560x1440"}
+                ]}
+                id="height"
+                type="select"
+                label="Height"
+                placeholder="720"
+                required
+              />
+            </div>
             <.input
               :if={@device_type == "ip"}
               field={config[:snapshot_uri]}
