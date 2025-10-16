@@ -30,6 +30,25 @@ int decoder_init(Decoder *decoder, const AVCodec *codec) {
   return avcodec_open2(decoder->c, decoder->codec, NULL);
 }
 
+int decoder_init_by_parameters(Decoder *decoder, const AVCodecParameters *codec_params) {
+    const AVCodec *codec = avcodec_find_decoder(codec_params->codec_id);
+    if (!codec) {
+        return -1;
+    }
+
+    decoder->codec = codec;
+    decoder->c = avcodec_alloc_context3(decoder->codec);
+    if (!decoder->c) {
+        return -1;
+    }
+
+    if (avcodec_parameters_to_context(decoder->c, codec_params) < 0) {
+        return -1;
+    }
+
+    return avcodec_open2(decoder->c, decoder->codec, NULL);
+}
+
 int decoder_decode(Decoder *decoder, AVPacket *pkt) {
   int ret;
   if (avcodec_send_packet(decoder->c, pkt) < 0) {

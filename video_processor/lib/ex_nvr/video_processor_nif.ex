@@ -11,7 +11,8 @@ defmodule ExNVR.AV.VideoProcessor.NIF do
 
   def new_encoder(_codec, _params), do: :erlang.nif_error(:undef)
 
-  def new_decoder(_codec, _out_width, _out_height, _out_format), do: :erlang.nif_error(:undef)
+  def new_decoder(_codec, _out_width, _out_height, _out_format, _pad?),
+    do: :erlang.nif_error(:undef)
 
   def encode(_encoder, _data, _pts), do: :erlang.nif_error(:undef)
 

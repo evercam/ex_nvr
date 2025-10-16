@@ -92,7 +92,106 @@
         </ERow>
         <ELayout ref="mainLayout" :height="height">
             <template #main>
+                <!-- stats  -->
+                <div
+                    v-if="isStreamShown"
+                    class="absolute z-10 top-5 left-5 max-w-sm bg-slate-800/70 rounded-2xl shadow-xl p-2"
+                >
+                    <div
+                        class="grid grid-cols-1 sm:grid-cols-2 gap-x-1 gap-y-1"
+                    >
+                        <div class="flex flex-col p-1">
+                            <span class="text-sm text-gray-400 font-medium mb-0"
+                                >Resolution</span
+                            >
+                            <span
+                                id="resolution"
+                                class="text-base text-gray-100 font-semibold"
+                                >{{ stats.resolution }}</span
+                            >
+                        </div>
+
+                        <div class="flex flex-col p-1">
+                            <span class="text-sm text-gray-400 font-medium mb-0"
+                                >Bitrate</span
+                            >
+                            <span
+                                id="bitrate"
+                                class="text-base text-gray-100 font-semibold"
+                                >{{ bitrate }}</span
+                            >
+                        </div>
+
+                        <div class="flex flex-col p-1">
+                            <span class="text-sm text-gray-400 font-medium mb-0"
+                                >Bandwidth</span
+                            >
+                            <span
+                                id="bandwidth"
+                                class="text-base text-gray-100 font-semibold"
+                                >{{ stats.bandwidth }}</span
+                            >
+                        </div>
+
+                        <div class="flex flex-col p-1">
+                            <span class="text-sm text-gray-400 font-medium mb-0"
+                                >Available Levels</span
+                            >
+                            <span
+                                id="frameRate"
+                                class="text-base text-gray-100 font-semibold"
+                                >{{ stats.availableLevels }}</span
+                            >
+                        </div>
+
+                        <div class="flex flex-col p-1">
+                            <span class="text-sm text-gray-400 font-medium mb-0"
+                                >Total Video Frames</span
+                            >
+                            <span
+                                id="totalVideoFrames"
+                                class="text-base text-gray-100 font-semibold"
+                                >{{ stats.totalVideoFrames }}</span
+                            >
+                        </div>
+
+                        <div class="flex flex-col p-1">
+                            <span class="text-sm text-gray-400 font-medium mb-0"
+                                >Corrupted Frames</span
+                            >
+                            <span
+                                id="decodedFrames"
+                                class="text-base text-gray-100 font-semibold"
+                                >{{ stats.corruptedFrames }}</span
+                            >
+                        </div>
+
+                        <div class="flex flex-col p-1">
+                            <span class="text-sm text-gray-400 font-medium mb-0"
+                                >Dropped Frames</span
+                            >
+                            <span
+                                id="droppedFrames"
+                                class="text-base text-gray-100 font-semibold"
+                                >{{ stats.droppedFrames }}</span
+                            >
+                        </div>
+
+                        <!-- Codec -->
+                        <div class="flex flex-col p-1">
+                            <span class="text-sm text-gray-400 font-medium mb-0"
+                                >Codec</span
+                            >
+                            <span
+                                id="codec"
+                                class="text-base text-gray-100 font-semibold"
+                                >{{ stats.codec }}</span
+                            >
+                        </div>
+                    </div>
+                </div>
                 <EVideoPlayer
+                    id="main"
                     v-if="liveViewEnabled"
                     ref="videoPlayer"
                     :sources="[
@@ -108,6 +207,7 @@
                         manifestLoadingTimeOut: 60000,
                     }"
                 />
+
                 <div
                     v-else
                     class="relative text-lg rounded-tr rounded-tl text-center bg-gray-200 dark:text-gray-200 w-full h-full dark:bg-gray-400 flex justify-center items-center d-flex"
@@ -117,7 +217,16 @@
             </template>
 
             <template #bottom-right>
-                <ECol class="mb-2 mr-2">
+                <ECol>
+                    <div class="mb-2">
+                        <button
+                            class="dark:bg-gray-800 dark:border-gray-600 text-white dark:text-white px-3.5 e-py-2.5 flex items-center dark:hover:bg-gray-600"
+                            @click="openStatsTab"
+                        >
+                            <i class="fa-solid fa-sliders"></i>
+                        </button>
+                    </div>
+
                     <button
                         class="dark:bg-gray-800 dark:border-gray-600 text-white dark:text-white px-3 e-py-1.5 flex items-center dark:hover:bg-gray-600"
                         @click="toggleFullscreen"
@@ -140,9 +249,10 @@
 </template>
 
 <script>
-import { defineComponent } from "vue";
+import { defineComponent, isProxy, toRaw } from "vue";
 import Timeline from "./Timeline.vue";
 import { makeFullScreen, exitFullScreen } from "@evercam/ui/vue3";
+import Hls from "hls.js";
 
 export default defineComponent({
     props: {
@@ -204,14 +314,31 @@ export default defineComponent({
     },
     watch: {
         url(value) {
-            this.$refs.videoPlayer?.initHls(value);
+            this.statsListener(value);
         },
+    },
+
+    mounted() {
+        const component = this.$refs.videoPlayer;
+        this.statsListener(this.url);
     },
     data() {
         return {
             height: 0,
             navElement: null,
             isFullScreen: false,
+            isStreamShown: false,
+            interval: null,
+            stats: {
+                availableLevels: 0,
+                resolution: "",
+                bandwidth: "", // rate at which a fragment finish downloading
+                totalVideoFrames: 0,
+                corruptedFrames: 0,
+                droppedFrames: 0,
+                codec: "",
+                bitrate: "",
+            },
         };
     },
     methods: {
@@ -240,8 +367,6 @@ export default defineComponent({
 
             canvas.width = player.videoWidth;
             canvas.height = player.videoHeight;
-            console.log("Current playback time (seconds):", player.currentTime);
-            console.log(this.$refs.videoPlayer?.$refs);
             canvas
                 .getContext("2d")
                 .drawImage(player, 0, 0, canvas.width, canvas.height);
@@ -278,8 +403,63 @@ export default defineComponent({
                 exitFullScreen();
             }
         },
+
+        openStatsTab() {
+            this.isStreamShown = !this.isStreamShown;
+        },
+        statsListener(streamUrl) {
+            const component = this.$refs.videoPlayer;
+            component?.initHls(streamUrl);
+            const playerElement = component?.$refs?.player;
+
+            if (playerElement) {
+                playerElement._hls = isProxy(component.player)
+                    ? toRaw(component.player)
+                    : component.player;
+                const hls = playerElement._hls;
+
+                hls.on(Hls.Events.FRAG_LOADED, (event, data) => {
+                    this.stats.bytes = data.stats.total;
+                    const duration = data.frag.duration;
+                    this.stats.bytes += data.stats.total;
+                });
+
+                hls.on(Hls.Events.LEVEL_LOADED, (event, data) => {
+                    const level = hls.levels[data.level];
+                    this.stats.bandwidth = convertBitrate(
+                        hls.bandwidthEstimate,
+                    );
+                    this.stats.resolution = `${level.width}x${level.height}`;
+                    this.stats.codec = level.videoCodec || level.codecs;
+                    this.bitrate = convertBitrate(level.bitrate);
+                    this.stats.availableLevels = hls.levels.length;
+                    // this.stats.frameRate = level.frameRate;
+                    this.stats.resolution = `${hls.levels[data.level].width}x${hls.levels[data.level].height}`;
+                });
+
+                // Playback State Events
+                setInterval(() => {
+                    const quality = playerElement.getVideoPlaybackQuality?.();
+                    if (quality) {
+                        this.stats.droppedFrames = quality.droppedVideoFrames;
+                        this.stats.totalVideoFrames = quality.totalVideoFrames;
+                        this.stats.corruptedVideoFrames =
+                            quality.corruptedVideoFrames;
+                    }
+                }, 2000);
+            }
+        },
     },
 });
+
+function convertBitrate(bitRate) {
+    const mbpsFactor = 1000 * 1000;
+    const bitRateMbps = bitRate / mbpsFactor;
+
+    return bitRateMbps < 1
+        ? `${(bitRateMbps * 1000).toFixed(2)} Kbps`
+        : `${bitRateMbps.toFixed(2)} Mbps`;
+}
 </script>
 
 <style lang="scss">
