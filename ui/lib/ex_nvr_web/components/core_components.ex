@@ -407,7 +407,7 @@ defmodule ExNVRWeb.CoreComponents do
   def input(%{type: "radio"} = assigns) do
     ~H"""
     <div phx-feedback-for={@name}>
-      <ul class="border border-gray-200 rounded-lg dark:border-gray-600">
+      <ul class="border border-gray-200 flex rounded-lg dark:border-gray-600">
         <li
           :for={option <- @options}
           class="p-2 w-full border-b border-gray-200 rounded-t-lg dark:border-gray-600"
@@ -423,11 +423,11 @@ defmodule ExNVRWeb.CoreComponents do
                   "dark:bg-gray-700 dark:border-gray-600 dark:focus:ring-blue-600",
                   "dark:ring-offset-gray-800 dark:focus:ring-offset-gray-80"
                 ]}
-                value={elem(option, 0)}
+                value={elem(option, 1)}
                 checked={elem(option, 0) == @value}
                 {@rest}
               />
-              {@label}
+              {elem(option, 0)}
             </label>
             {render_slot(@inner_block, option)}
           </div>
