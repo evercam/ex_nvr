@@ -1,5 +1,6 @@
 defmodule ExNVRWeb.RecordingListLive do
   @moduledoc false
+  alias ExNVR.RemovableStorage.Export
 
   require Logger
   use ExNVRWeb, :live_view
@@ -22,13 +23,16 @@ defmodule ExNVRWeb.RecordingListLive do
               phx-click={show_modal("copy-to-usb-modal")}
               class="absolute bg-blue-300 rounded-md bottom-0 py-2 px-3"
             >
-               Copy to Usb 
+              Copy to Usb
             </button>
           </div>
         </div>
 
-        <.modal id="copy-to-usb-modal" class="bg-gray-900/70 p-3 flex items-center justify-center ">
-          <div class="py-4">
+        <.modal
+          id="copy-to-usb-modal"
+          class="bg-gray-900/70 p-3 flex items-center justify-center  w-full"
+        >
+          <div class="py-4 w-full">
             <.form for={} phx-change="validate-export-to-usb-configs" phx-submit="export_to_usb">
               <!-- filters -> device, start date, end date -->
               <div class="flex justify-between gap-5">
@@ -36,6 +40,13 @@ defmodule ExNVRWeb.RecordingListLive do
                   :let={f}
                   form={to_form(@meta)}
                   fields={[
+                    device_id: [
+                      op: :==,
+                      type: "select",
+                      options: Enum.map(@devices, &{&1.name, &1.id}),
+                      prompt: "Choose your device",
+                      label: "Device"
+                    ],
                     start_date: [op: :>=, type: "datetime-local", label: "Start Date"],
                     end_date: [op: :<=, type: "datetime-local", label: "End Date"]
                   ]}
@@ -57,12 +68,12 @@ defmodule ExNVRWeb.RecordingListLive do
                 <.input
                   id="duration"
                   type="radio"
-                  name="duration"
+                  name="type"
                   value=""
                   label="Export format"
                   options={[
-                    {"One Min", "one"},
-                    {"Full Export", "full"}
+                    {"Export as One Min footage", "one"},
+                    {"Export as Full footage", "full"}
                   ]}
                 />
 
@@ -80,22 +91,22 @@ defmodule ExNVRWeb.RecordingListLive do
               </div>
               <!-- destination -->
               <div class="my-3">
-                <h2 class="mb-2 text-gray-300 text-sm">Usb</h2>
+                <h2 class="mb-2 text-gray-300 text-sm">Copy Usb</h2>
                 <div :if={@removable_device != nil}>
                   <%= for device <- @removable_device.partitions do %>
-                    <label class="flex items-center p-3 rounded-lg border border-gray-600 bg-gray-700 cursor-pointer">
+                    <label class="flex items-center p-3 mb-5  rounded-lg border border-gray-600 bg-gray-700 cursor-pointer">
                       <!--Radio -->
                       <input
                         type="radio"
                         name="destination"
-                        value={device.name}
+                        value={device.mountpoints}
                         class="form-radio h-4 w-4 mt-2 text-blue-500 border-gray-500 bg-gray-600"
                       />
-                      <span class="ml-2 text-sm">
-                        {List.first(device.mountpoints) || "/"}
+                      <span class="ml-2 text-sm text-gray-300">
+                        {device.mountpoints || "/"}
                       </span>
 
-                      <div class="flex-grow flex flex-col space-y-1 ml-3">
+                      <div class="grow flex flex-col space-y-1 ml-3">
                         <span class="text-xs text-gray-400 self-end">{device.size}</span>
                       </div>
                     </label>
@@ -309,6 +320,14 @@ defmodule ExNVRWeb.RecordingListLive do
     {:noreply, assign(socket, :removable_device, device)}
   end
 
+  def handle_info(:export_done, socket) do
+    {:noreply, put_flash(socket, :info, "Export completed successfully.")}
+  end
+
+  def handle_info({:export_failed, reason}, socket) do
+    {:noreply, put_flash(socket, :error, "Export failed: #{reason}")}
+  end
+
   @impl true
   def handle_info(_msg, socket) do
     params =
@@ -365,10 +384,9 @@ defmodule ExNVRWeb.RecordingListLive do
     {:noreply, assign(socket, :files_details, files_details)}
   end
 
+  # export to usb
   @impl true
   def handle_event("validate-export-to-usb-configs", params, socket) do
-    IO.inspect(params, label: "params")
-
     {:noreply,
      socket
      |> assign(custom: params["duration"])}
@@ -376,8 +394,38 @@ defmodule ExNVRWeb.RecordingListLive do
 
   @impl true
   def handle_event("export_to_usb", params, socket) do
-    IO.inspect(params, label: "export params")
-    {:noreply, socket}
+    {device_id, start_date, end_date} =
+      get_values(params["filters"])
+
+    device = Enum.find(socket.assigns.devices, &(&1.id == device_id))
+
+    socket = put_flash(socket, :info, "Exporting footage to usb..")
+
+    type =
+      String.to_atom(params["type"])
+      |> IO.inspect(label: "------>")
+
+    with {:ok, recordings} <-
+           Export.fetch_and_list_recordings(device, :high, start_date, end_date) do
+      Task.start(fn ->
+        case Export.concat_and_export_to_usb(
+               type,
+               params["destination"],
+               start_date,
+               end_date,
+               recordings,
+               device
+             ) do
+          {:ok, :complete} ->
+            send(self(), :export_done)
+
+          {:error, reason} ->
+            send(self(), {:export_failed, reason})
+        end
+      end)
+    end
+
+    {:noreply, redirect(socket, to: ~p"/recordings")}
   end
 
   defp load_recordings(params, socket) do
@@ -412,5 +460,16 @@ defmodule ExNVRWeb.RecordingListLive do
     date
     |> DateTime.shift_zone!(timezone)
     |> Calendar.strftime("%b %d, %Y %H:%M:%S %z")
+  end
+
+  def get_values(filters) do
+    f = fn field ->
+      filters
+      |> Map.values()
+      |> Enum.find(&(&1["field"] == field))
+      |> Map.get("value")
+    end
+
+    {f.("device_id"), f.("start_date"), f.("end_date")}
   end
 end

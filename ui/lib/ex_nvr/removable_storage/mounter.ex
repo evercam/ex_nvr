@@ -74,7 +74,7 @@ defmodule ExNvr.RemovableStorage.Mounter do
             Enum.map(disk["children"] || [], fn part ->
               %{
                 name: part["name"],
-                mountpoints: part["mountpoints"],
+                mountpoints: List.first(part["mountpoints"]),
                 size: part["size"]
               }
             end)
