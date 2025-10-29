@@ -70,13 +70,13 @@ defmodule ExNVR.Nerves.RUT.Scheduler do
   defp reverse_schedule(schedule, true) do
     schedule
     |> Enum.sort_by(&elem(&1, 0))
-    |> Map.new(fn {day, times} ->
-      new_intervals =
-        start_interval(List.first(times)) ++
-          between_intervals(times) ++ end_interval(List.last(times))
+    |> Map.new(fn {day, times} -> {day, reverse_times(times)} end)
+  end
 
-      {day, new_intervals}
-    end)
+  defp reverse_times([]), do: [%{start_time: ~T(00:00:00), end_time: ~T(23:59:59)}]
+
+  defp reverse_times(times) do
+    start_interval(List.first(times)) ++ between_intervals(times) ++ end_interval(List.last(times))
   end
 
   defp start_interval(first_interval) do
