@@ -140,7 +140,7 @@ defmodule ExNVR.Pipelines.Main do
         child(:hls_sink, %Output.HLS{
           location: Path.join(Utils.hls_dir(device.id), "live")
         })
-      ] ++ build_device_spec(device)
+      ] ++ build_device_spec(device, state)
 
     {:ok, pid} = StorageMonitor.start_link(device: device)
     state = %{state | storage_monitor: pid}
@@ -388,11 +388,24 @@ defmodule ExNVR.Pipelines.Main do
     {[terminate: :normal], state}
   end
 
-  defp build_device_spec(%{type: :file} = device) do
+  defp build_device_spec(%{type: :file} = device, _state) do
     [child(:file_source, %ExNVR.Pipeline.Source.File{device: device})]
   end
 
-  defp build_device_spec(device) do
+  defp build_device_spec(%{type: :webcam} = device, state) do
+    [width, height] = String.split(device.stream_config.resolution, "x")
+
+    [
+      child(:source, %Source.Webcam{
+        # the path to you usb(check ls /dev/video*)
+        device: device.url,
+        framerate: device.stream_config.framerate,
+        resolution: {String.to_integer(width), String.to_integer(height)}
+      })
+    ]
+  end
+
+  defp build_device_spec(%{type: :ip} = device, _state) do
     [child(:rtsp_source, %Source.RTSP{device: device})]
   end
 

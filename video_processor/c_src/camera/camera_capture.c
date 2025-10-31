@@ -18,8 +18,9 @@ ERL_NIF_TERM open_camera(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
     AVDictionary *options = NULL;
     char url[256];
     char framerate[32];
+    int height, width; 
 
-    if (argc != 2) {
+    if (argc != 4) {
         return enif_make_badarg(env);
     }
 
@@ -35,6 +36,14 @@ ERL_NIF_TERM open_camera(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
     memcpy(framerate, framerate_bin.data, framerate_bin.size);
     framerate[framerate_bin.size] = '\0';
 
+    if(!enif_get_int(env, argv[2], &width)) {
+        return enif_make_badarg(env);
+    }
+
+    if(!enif_get_int(env, argv[3], &height)) {
+        return enif_make_badarg(env);
+    }
+    
     CameraCapture *state = enif_alloc_resource(camera_capture_resource_type, sizeof(CameraCapture));
     state->input_ctx = NULL;
     state->decoder = NULL;
@@ -83,8 +92,8 @@ ERL_NIF_TERM open_camera(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
                                  codec_params->width,
                                  codec_params->height,
                                  codec_params->format,
-                                 codec_params->width,
-                                 codec_params->height,
+                                 width,
+                                 height,
                                  AV_PIX_FMT_YUV420P, 0) < 0) {
             ret = nif_error(env, "video_converter_init_failed");
             goto clean;
@@ -173,7 +182,7 @@ void camera_capture_destructor(ErlNifEnv *env, void *obj) {
 }
 
 static ErlNifFunc funcs[] = {
-  {"open_camera", 2, open_camera, ERL_DIRTY_JOB_CPU_BOUND},
+  {"open_camera", 4, open_camera, ERL_DIRTY_JOB_CPU_BOUND},
   {"read_camera_frame", 1, read_camera_frame, ERL_DIRTY_JOB_CPU_BOUND}
 };
 

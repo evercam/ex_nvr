@@ -87,6 +87,21 @@ defmodule ExNVR.DevicesTest do
              } = errors_on(changeset)
     end
 
+    test "requires stream config when type is webcam" do
+      {:error, changeset} =
+        Devices.create(%{
+          name: @valid_camera_name,
+          type: "webcam",
+          stream_config: %{},
+          settings: valid_device_settings()
+        })
+
+      assert %{
+               stream_config: %{framerate: ["can't be blank"]},
+               storage_config: ["can't be blank"]
+             } = errors_on(changeset)
+    end
+
     test "requires stream_uri" do
       {:error, changeset} =
         Devices.create(%{

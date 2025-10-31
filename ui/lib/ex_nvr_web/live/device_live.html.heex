@@ -31,7 +31,7 @@
           field={@device_form[:type]}
           id="device_type"
           type="select"
-          options={[{"IP Camera", "ip"}, {"File", "file"}]}
+          options={[{"IP Camera", "ip"}, {"File", "file"}, {"Webcam", "webcam"}]}
           label="Type"
           placeholder="Choose your device type"
           disabled={@device.id != nil}
@@ -45,9 +45,14 @@
         />
       </div>
 
-      <div :if={@device_type == "ip"} class="flex flex-col">
+      <div
+        :if={@device_type == "ip" || @device_type == "webcam"}
+        class="flex flex-col"
+      >
         <div class="relative flex py-5 items-center">
-          <span class="flex-shrink mr-4 text-black dark:text-white">Device Info</span>
+          <span class="flex-shrink mr-4 text-black dark:text-white">
+            Device Info
+          </span>
           <div class="flex-grow border-t border-gray-400"></div>
         </div>
         <div class="flex flex-col md:flex-row">
@@ -56,11 +61,12 @@
               field={@device_form[:url]}
               id="device_url"
               type="text"
-              label="HTTP url"
+              label="Device url"
               placeholder="http://192.168.1.100"
             />
           </div>
           <.input
+            :if={@device_type == "ip"}
             field={@device_form[:vendor]}
             id="device_vendor"
             type="select"
@@ -70,7 +76,10 @@
           />
         </div>
       </div>
-      <div :if={@device_type == "ip"} class="flex flex-col">
+      <div
+        :if={@device_type == "ip"}
+        class="flex flex-col"
+      >
         <div class="relative flex py-5 items-center">
           <span class="flex-shrink mr-4 text-black dark:text-white">Credentials</span>
           <div class="flex-grow border-t border-gray-400"></div>
@@ -95,7 +104,10 @@
       <div class="flex flex-col">
         <div class="flex flex-col">
           <.inputs_for :let={config} field={@device_form[:stream_config]}>
-            <div :if={@device_type == "ip"} class="relative flex py-5 items-center">
+            <div
+              :if={@device_type == "ip"}
+              class="relative flex py-5 items-center"
+            >
               <span class="flex-shrink mr-4 text-black dark:text-white">Main Stream</span>
               <div class="flex-grow border-t border-gray-400"></div>
             </div>
@@ -108,6 +120,34 @@
               placeholder="rtsp://camera1:554/video/stream1"
               required
             />
+            
+<!-- webcam configs, framerate, resolution -->
+            <div class="flex justify-between gap-5">
+              <.input
+                :if={@device_type == "webcam"}
+                field={config[:framerate]}
+                id="framerate"
+                type="text"
+                label="Framerate"
+                placeholder="20"
+                required
+              />
+              <.input
+                :if={@device_type == "webcam"}
+                field={config[:resolution]}
+                options={[
+                  {"640x480 (VGA)", "640x480"},
+                  {"1280x720 (HD)", "1280x720"},
+                  {"1920x1080 (Full HD)", "1920x1080"},
+                  {"2560x1440 (QHD)", "2560x1440"}
+                ]}
+                id="height"
+                type="select"
+                label="Height"
+                placeholder="720"
+                required
+              />
+            </div>
             <.input
               :if={@device_type == "ip"}
               field={config[:snapshot_uri]}
@@ -122,7 +162,10 @@
               id="config_profile_token"
               type="hidden"
             />
-            <div :if={@device_type == "ip"} class="relative flex py-5 items-center">
+            <div
+              :if={@device_type == "ip"}
+              class="relative flex py-5 items-center"
+            >
               <span class="flex-shrink mr-4 text-black dark:text-white">Sub Stream</span>
               <div class="flex-grow border-t border-gray-400"></div>
             </div>
@@ -148,6 +191,7 @@
               id="config_sub_profile_token"
               type="hidden"
             />
+
             <label
               :if={@device_type == "file" && is_nil(@device.id)}
               for={@uploads.file_to_upload.ref}
@@ -157,7 +201,7 @@
             </label>
             <.live_file_input
               :if={@device_type == "file" && is_nil(@device.id)}
-              class="w-full dark:text-white dark:bg-gray-800 rounded-lg dark:border-gray-600 focus:border-none focus:outline-zinc-400 dark:border-gray-600 dark:focus:outline-blue-500 dark:focus:border-none"
+              class="w-full dark:text-white dark:bg-gray-800 rounded-lg  focus:border-none focus:outline-zinc-400 dark:border-gray-600 dark:focus:outline-blue-500 dark:focus:border-none"
               upload={@uploads.file_to_upload}
               required
             />
@@ -218,7 +262,10 @@
                   </div>
                 </div>
               </.input>
-              <div :if={@device_type == "ip"} class="grid grid-cols-3 gap-5 items-center my-5">
+              <div
+                :if={@device_type == "ip" || @device_type == "webcam"}
+                class="grid grid-cols-3 gap-5 items-center my-5"
+              >
                 <span class="col-span-2">Full drive threshold:</span>
                 <.input
                   field={storage_config[:full_drive_threshold]}
@@ -256,7 +303,11 @@
             </div>
           </.inputs_for>
         </div>
-        <div :if={@device_type == "ip"} id="snapshot-config" class="flex flex-col">
+        <div
+          :if={@device_type == "ip"}
+          id="snapshot-config"
+          class="flex flex-col"
+        >
           <div class="relative flex py-5 items-center">
             <span class="flex-shrink mr-4 text-black dark:text-white">
               Snapshot Config

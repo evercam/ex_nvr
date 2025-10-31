@@ -30,8 +30,8 @@ defmodule ExNVR.Model.Device do
 
     @primary_key false
     embedded_schema do
-      field :username, :string
-      field :password, :string
+      field(:username, :string)
+      field(:password, :string)
     end
 
     @spec changeset(t(), map()) :: Ecto.Changeset.t()
@@ -60,7 +60,9 @@ defmodule ExNVR.Model.Device do
             third_profile_token: url(),
             filename: String.t(),
             temporary_path: Path.t(),
-            duration: Membrane.Time.t()
+            duration: Membrane.Time.t(),
+            framerate: String.t(),
+            resolution: String.t()
           }
 
     @primary_key false
@@ -78,6 +80,8 @@ defmodule ExNVR.Model.Device do
       field :filename, :string
       field :temporary_path, :string, virtual: true
       field :duration, :integer
+      field :framerate, :string
+      field :resolution, :string, default: "640x480"
     end
 
     def changeset(struct, params, device_type) do
@@ -91,7 +95,9 @@ defmodule ExNVR.Model.Device do
         :sub_profile_token,
         :filename,
         :temporary_path,
-        :duration
+        :duration,
+        :framerate,
+        :resolution
       ])
       |> validate_device_config(device_type)
     end
@@ -110,6 +116,10 @@ defmodule ExNVR.Model.Device do
 
     defp validate_device_config(changeset, :file) do
       validate_required(changeset, [:filename, :duration])
+    end
+
+    defp validate_device_config(changeset, :webcam) do
+      validate_required(changeset, [:framerate, :resolution])
     end
 
     defp validate_uri(field, uri, protocl \\ "rtsp") do
@@ -141,8 +151,8 @@ defmodule ExNVR.Model.Device do
 
     @primary_key false
     embedded_schema do
-      field :generate_bif, :boolean, default: true
-      field :enable_lpr, :boolean, default: false
+      field(:generate_bif, :boolean, default: true)
+      field(:enable_lpr, :boolean, default: false)
     end
 
     @spec changeset(t(), map()) :: Ecto.Changeset.t()
@@ -153,20 +163,20 @@ defmodule ExNVR.Model.Device do
 
   @primary_key {:id, :binary_id, autogenerate: true}
   schema "devices" do
-    field :name, :string
-    field :type, Ecto.Enum, values: [:ip, :file], default: :ip
-    field :timezone, :string, default: "UTC"
-    field :state, Ecto.Enum, values: @states, default: :recording
-    field :vendor, :string
-    field :mac, :string
-    field :url, :string
-    field :model, :string
+    field(:name, :string)
+    field(:type, Ecto.Enum, values: [:ip, :file, :webcam], default: :ip)
+    field(:timezone, :string, default: "UTC")
+    field(:state, Ecto.Enum, values: @states, default: :recording)
+    field(:vendor, :string)
+    field(:mac, :string)
+    field(:url, :string)
+    field(:model, :string)
 
-    embeds_one :credentials, Credentials, source: :credentials, on_replace: :update
-    embeds_one :stream_config, StreamConfig, source: :config, on_replace: :update
-    embeds_one :settings, Settings, on_replace: :update
-    embeds_one :storage_config, StorageConfig, on_replace: :update
-    embeds_one :snapshot_config, SnapshotConfig, on_replace: :update
+    embeds_one(:credentials, Credentials, source: :credentials, on_replace: :update)
+    embeds_one(:stream_config, StreamConfig, source: :config, on_replace: :update)
+    embeds_one(:settings, Settings, on_replace: :update)
+    embeds_one(:storage_config, StorageConfig, on_replace: :update)
+    embeds_one(:snapshot_config, SnapshotConfig, on_replace: :update)
 
     timestamps(type: :utc_datetime_usec)
   end
