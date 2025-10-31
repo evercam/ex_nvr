@@ -68,18 +68,18 @@ defmodule ExNVR.Model.Device do
     @primary_key false
     embedded_schema do
       # I guess we need better names
-      field(:stream_uri, :string)
-      field(:snapshot_uri, :string)
-      field(:profile_token, :string)
-      field(:sub_stream_uri, :string)
-      field(:sub_snapshot_uri, :string)
-      field(:sub_profile_token, :string)
-      field(:third_stream_uri, :string)
-      field(:third_profile_token, :string)
+      field :stream_uri, :string
+      field :snapshot_uri, :string
+      field :profile_token, :string
+      field :sub_stream_uri, :string
+      field :sub_snapshot_uri, :string
+      field :sub_profile_token, :string
+      field :third_stream_uri, :string
+      field :third_profile_token, :string
       # File settings
-      field(:filename, :string)
-      field(:temporary_path, :string, virtual: true)
-      field(:duration, :integer)
+      field :filename, :string
+      field :temporary_path, :string, virtual: true
+      field :duration, :integer
       field :framerate, :string
       field :resolution, :string, default: "640x480"
     end

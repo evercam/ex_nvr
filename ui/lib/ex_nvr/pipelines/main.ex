@@ -396,24 +396,11 @@ defmodule ExNVR.Pipelines.Main do
     [width, height] = String.split(device.stream_config.resolution, "x")
 
     [
-      child(:source, %Source.Webcm{
+      child(:source, %Source.Webcam{
         # the path to you usb(check ls /dev/video*)
         device: device.url,
         framerate: device.stream_config.framerate,
-        width: String.to_integer(width),
-        height: String.to_integer(height)
-      })
-      |> via_out(:output)
-      |> child(:tee, Membrane.Tee)
-      |> via_out(:push_output)
-      |> via_in(Pad.ref(:main_stream, :video))
-      |> get_child(:hls_sink),
-      get_child(:tee)
-      |> via_out(:push_output)
-      |> child({:storage, :main_stream}, %Output.Storage{
-        device: state.device,
-        target_segment_duration: state.segment_duration,
-        correct_timestamp: true
+        resolution: {String.to_integer(width), String.to_integer(height)}
       })
     ]
   end

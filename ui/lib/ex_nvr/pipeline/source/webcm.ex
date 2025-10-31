@@ -1,18 +1,15 @@
-defmodule ExNVR.Pipeline.Source.Webcm do
+defmodule ExNVR.Pipeline.Source.Webcam do
   @moduledoc """
-    The system opens the webcam and captures frames in a raw format (such as YUY2, MJPEG, or NV12).
-    For our pipeline, we require the frames in I420 (YUV420P) format, which stores full-resolution brightness and sub-sampled color , making it efficient for compression.
-    Since webcams often don’t output I420 directly, we convert the frames to this format.
-    After conversion, the I420 frames are encoded into H.264, which is the format our pipeline consumes. 
+    A Membrane element that captures frames from a camera, encodes them to H.264
   """
-  alias ExNVR.AV.CameraCapture
-  alias ExNVR.AV.{Encoder, Frame, Packet}
   use Membrane.Source
 
+  import ExMP4.Helper
+
+  alias ExNVR.AV.CameraCapture
+  alias ExNVR.AV.{Encoder, Frame, Packet}
   alias Membrane.Buffer
   alias Membrane.H264
-
-  import ExMP4.Helper
 
   @dest_time_base 90_000
   @original_time_base Membrane.Time.seconds(1)
@@ -23,9 +20,9 @@ defmodule ExNVR.Pipeline.Source.Webcm do
     defstruct @enforce_keys
   end
 
-  def_output_pad :output,
+  def_output_pad :main_stream_output,
     accepted_format: %H264{alignment: :au},
-    availability: :always,
+    availability: :on_request,
     flow_control: :push
 
   def_options(
@@ -36,28 +33,25 @@ defmodule ExNVR.Pipeline.Source.Webcm do
     ],
     framerate: [
       spec: non_neg_integer(),
-      default: 20,
+      default: 8,
       description: "Framerate of device's output video stream"
     ],
-    width: [
-      spec: integer(),
-      default: 640,
-      description: "Width of the webcam frame"
-    ],
-    height: [
-      spec: integer(),
-      default: 480,
-      description: "The final output height of webcam frame"
+    resolution: [
+      spec: {integer(), integer()},
+      default: nil,
+      description: "Width and height(wxh)"
     ]
   )
 
   @impl true
   def handle_init(_ctx, %__MODULE__{} = options) do
+    {width, height} = options.resolution
+
     case CameraCapture.open_camera(
            options.device,
            to_string(options.framerate),
-           options.width,
-           options.height
+           width,
+           height
          ) do
       {:ok, native} ->
         state = %{
@@ -68,6 +62,8 @@ defmodule ExNVR.Pipeline.Source.Webcm do
           height: nil,
           pixel_format: nil,
           encoder: nil,
+          track: nil,
+          pad: nil,
           init_time: Membrane.Time.monotonic_time()
         }
 
@@ -105,28 +101,47 @@ defmodule ExNVR.Pipeline.Source.Webcm do
     {[], state}
   end
 
+  # handle_playing should notify parent about tracks
   @impl true
   def handle_playing(ctx, state) do
-    stream_format = create_new_stream_format(state)
     element_pid = self()
 
-    # start child for frames reading
     {:ok, provider} =
       Membrane.UtilitySupervisor.start_link_child(
         ctx.utility_supervisor,
         Supervisor.child_spec({Task, fn -> frame_provider(state.native, element_pid) end}, [])
       )
 
-    state = %{state | provider: provider}
-    {[stream_format: stream_format], state}
+    track =
+      ExNVR.Pipeline.Track.new(:video, :h264)
+
+    state = %{state | provider: provider, track: track}
+
+    action = [
+      notify_parent:
+        {:main_stream,
+         %{
+           1 => track
+         }}
+    ]
+
+    {action, state}
+  end
+
+  def handle_pad_added(Pad.ref(:main_stream_output, track_id) = pad, ctx, state) do
+    {[stream_format: {pad, create_stream_format(state)}], %{state | pad: pad}}
   end
 
   @impl true
   def handle_info({:frame, frame}, _ctx, state) do
     # feed the frame to the encoder and it produces an entire frame
 
-    buffer = h264_encoder(state, frame)
-    {buffer, %{state | width: frame.width, height: frame.height, pixel_format: frame.format}}
+    buffer =
+      state.encoder
+      |> Encoder.encode(frame)
+      |> Enum.map(&wrap_into_buffer(&1, state.init_time))
+
+    {[buffer: {state.pad, buffer}], state}
   end
 
   @impl true
@@ -135,16 +150,15 @@ defmodule ExNVR.Pipeline.Source.Webcm do
     {buffer, state}
   end
 
-  defp create_new_stream_format(state) do
-    {:output,
-     %H264{
-       alignment: :au,
-       stream_structure: :annexb,
-       framerate: state.framerate,
-       height: state.height,
-       width: state.width,
-       profile: :baseline
-     }}
+  defp create_stream_format(state) do
+    %H264{
+      alignment: :au,
+      stream_structure: :annexb,
+      framerate: state.framerate,
+      height: state.height,
+      width: state.width,
+      profile: :baseline
+    }
   end
 
   defp frame_provider(native, target) do
@@ -158,19 +172,9 @@ defmodule ExNVR.Pipeline.Source.Webcm do
     end
   end
 
-  def h264_encoder(state, frame) do
-    case Encoder.encode(state.encoder, frame) do
-      [] ->
-        []
+  defp wrap_into_buffer([], _state), do: []
 
-      [packet] ->
-        wrap_frames(packet, state.init_time)
-    end
-  end
-
-  defp wrap_frames([], _state), do: []
-
-  defp wrap_frames(packet, init_time) do
+  defp wrap_into_buffer(packet, init_time) do
     time =
       Membrane.Time.monotonic_time() - init_time
 
@@ -183,7 +187,6 @@ defmodule ExNVR.Pipeline.Source.Webcm do
         timestamp: DateTime.utc_now()
       }
     }
-    |> then(&[buffer: {:output, &1}])
   end
 
   defp flush_encoder_if_exists(%{encoder: nil}), do: []
@@ -193,7 +196,7 @@ defmodule ExNVR.Pipeline.Source.Webcm do
 
     case Encoder.flush(encoder) do
       [packet] ->
-        wrap_frames(packet, time)
+        wrap_into_buffer(packet, time)
 
       [] ->
         []
