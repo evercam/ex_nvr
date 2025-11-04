@@ -137,17 +137,19 @@ defmodule ExNVR.Nerves.RUT.Scheduler do
         end
       end)
 
-    first_instance = List.first(new_instances)
-    last_instance = List.last(new_instances)
+    last_instance = List.first(new_instances)
+    first_instance = List.last(new_instances)
 
-    if first_instance != last_instance and collapse?(first_instance, last_instance) do
-      first_instance = %Instance{
-        first_instance
-        | end_day: last_instance.end_day,
-          end_time: last_instance.end_time
+    # Check if we can collapse last instance with the first instance
+    # The list is in the reverse order.
+    if first_instance != last_instance and collapse?(last_instance, first_instance) do
+      last_instance = %Instance{
+        last_instance
+        | end_day: first_instance.end_day,
+          end_time: first_instance.end_time
       }
 
-      Enum.reverse([first_instance | Enum.slice(new_instances, 1..-2//1)])
+      Enum.reverse([last_instance | Enum.slice(new_instances, 1..-2//1)])
     else
       Enum.reverse(new_instances)
     end
