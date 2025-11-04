@@ -7,8 +7,8 @@ defmodule ExNVR.Recordings do
   alias __MODULE__.VideoAssembler
   alias Ecto.Multi
   alias ExMP4.{BitStreamFilter, Reader}
-  alias ExNVR.Model.{Device, Recording, Run}
   alias ExNVR.{AV, Repo}
+  alias ExNVR.Model.{Device, Recording, Run}
   alias Phoenix.PubSub
 
   @recordings_topic "recordings"
