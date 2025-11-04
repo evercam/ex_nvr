@@ -28,8 +28,8 @@ defmodule ExNVR.Pipeline.Output.Socket do
   require ExNVR.Utils
 
   alias ExNVR.AV.Decoder
-  alias Membrane.Time
   alias Membrane.{H264, H265}
+  alias Membrane.Time
 
   def_input_pad :input, accepted_format: any_of(%H264{alignment: :au}, %H265{alignment: :au})
 

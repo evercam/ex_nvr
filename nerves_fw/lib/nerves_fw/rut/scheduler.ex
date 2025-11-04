@@ -76,7 +76,8 @@ defmodule ExNVR.Nerves.RUT.Scheduler do
   defp reverse_times([]), do: [%{start_time: ~T(00:00:00), end_time: ~T(23:59:59)}]
 
   defp reverse_times(times) do
-    start_interval(List.first(times)) ++ between_intervals(times) ++ end_interval(List.last(times))
+    start_interval(List.first(times)) ++
+      between_intervals(times) ++ end_interval(List.last(times))
   end
 
   defp start_interval(first_interval) do
@@ -122,10 +123,8 @@ defmodule ExNVR.Nerves.RUT.Scheduler do
 
   defp combine_instances([first_instance | rest]) do
     new_instances =
-      rest
-      |> Enum.reduce([first_instance], fn instance2, [instance1 | rest] ->
-        if instance1.end_day == instance2.start_day and
-             Time.compare(instance1.end_time, instance2.start_time) == :eq do
+      Enum.reduce(rest, [first_instance], fn instance2, [instance1 | rest] ->
+        if collapse?(instance1, instance2) do
           instance1 = %Instance{
             instance1
             | end_day: instance2.end_day,
@@ -137,8 +136,27 @@ defmodule ExNVR.Nerves.RUT.Scheduler do
           [instance2, instance1 | rest]
         end
       end)
-      |> Enum.reverse()
 
-    new_instances
+    last_instance = List.first(new_instances)
+    first_instance = List.last(new_instances)
+
+    # Check if we can collapse last instance with the first instance
+    # The list is in the reverse order.
+    if first_instance != last_instance and collapse?(last_instance, first_instance) do
+      last_instance = %Instance{
+        last_instance
+        | end_day: first_instance.end_day,
+          end_time: first_instance.end_time
+      }
+
+      Enum.reverse([last_instance | Enum.slice(new_instances, 1..-2//1)])
+    else
+      Enum.reverse(new_instances)
+    end
+  end
+
+  defp collapse?(instance1, instance2) do
+    instance1.end_day == instance2.start_day and
+      Time.compare(instance1.end_time, instance2.start_time) == :eq
   end
 end

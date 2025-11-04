@@ -7,9 +7,9 @@ defmodule ExNVR.Devices do
 
   alias __MODULE__.{Onvif, Supervisor}
   alias Ecto.Multi
-  alias ExNVR.Model.{Device, Recording, Run}
-  alias ExNVR.{HTTP, Pipelines, Repo}
   alias ExNVR.Devices.Cameras.HttpClient.{Axis, Hik, Milesight}
+  alias ExNVR.{HTTP, Pipelines, Repo}
+  alias ExNVR.Model.{Device, Recording, Run}
 
   import Ecto.Query
 

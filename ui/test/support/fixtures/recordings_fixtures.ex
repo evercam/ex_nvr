@@ -4,8 +4,8 @@ defmodule ExNVR.RecordingsFixtures do
   entities via the `ExNVR.Recordings` context.
   """
 
-  alias ExNVR.Repo
   alias ExNVR.Model.{Device, Recording, Run}
+  alias ExNVR.Repo
 
   @typep attr :: map() | keyword()
 
