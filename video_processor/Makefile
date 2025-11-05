@@ -84,9 +84,6 @@ $(CAMERA_CAPTURE_SO): $(CAMERA_CAPTURE_HEADERS) $(CAMERA_CAPTURE_SOURCES)
 	@rm -f $(PRIV_DIR)/libav*.so $(PRIV_DIR)/libsw*.so
 	@rm -f $(PRIV_DIR)/libav*.so.*.* $(PRIV_DIR)/libsw*.so.*.*
 
-$(CAMERA_CAPTURE_SO): $(CAMERA_CAPTURE_HEADERS) $(CAMERA_CAPTURE_SOURCES)
-	$(CC) $(CFLAGS) $(IFLAGS) $(LFLAGS) $(CAMERA_CAPTURE_SOURCES) -o $(CAMERA_CAPTURE_SO) $(LDFLAGS)
-
 format:
 	clang-format -i $(DIR)/*
 
