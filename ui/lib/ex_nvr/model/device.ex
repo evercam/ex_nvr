@@ -30,8 +30,8 @@ defmodule ExNVR.Model.Device do
 
     @primary_key false
     embedded_schema do
-      field(:username, :string)
-      field(:password, :string)
+      field :username, :string
+      field :password, :string
     end
 
     @spec changeset(t(), map()) :: Ecto.Changeset.t()
@@ -151,8 +151,8 @@ defmodule ExNVR.Model.Device do
 
     @primary_key false
     embedded_schema do
-      field(:generate_bif, :boolean, default: true)
-      field(:enable_lpr, :boolean, default: false)
+      field :generate_bif, :boolean, default: true
+      field :enable_lpr, :boolean, default: false
     end
 
     @spec changeset(t(), map()) :: Ecto.Changeset.t()
@@ -163,20 +163,20 @@ defmodule ExNVR.Model.Device do
 
   @primary_key {:id, :binary_id, autogenerate: true}
   schema "devices" do
-    field(:name, :string)
-    field(:type, Ecto.Enum, values: [:ip, :file, :webcam], default: :ip)
-    field(:timezone, :string, default: "UTC")
-    field(:state, Ecto.Enum, values: @states, default: :recording)
-    field(:vendor, :string)
-    field(:mac, :string)
-    field(:url, :string)
-    field(:model, :string)
+    field :name, :string
+    field :type, Ecto.Enum, values: [:ip, :file, :webcam], default: :ip
+    field :timezone, :string, default: "UTC"
+    field :state, Ecto.Enum, values: @states, default: :recording
+    field :vendor, :string
+    field :mac, :string
+    field :url, :string
+    field :model, :string
 
-    embeds_one(:credentials, Credentials, source: :credentials, on_replace: :update)
-    embeds_one(:stream_config, StreamConfig, source: :config, on_replace: :update)
-    embeds_one(:settings, Settings, on_replace: :update)
-    embeds_one(:storage_config, StorageConfig, on_replace: :update)
-    embeds_one(:snapshot_config, SnapshotConfig, on_replace: :update)
+    embeds_one :credentials, Credentials, source: :credentials, on_replace: :update
+    embeds_one :stream_config, StreamConfig, source: :config, on_replace: :update
+    embeds_one :settings, Settings, on_replace: :update
+    embeds_one :storage_config, StorageConfig, on_replace: :update
+    embeds_one :snapshot_config, SnapshotConfig, on_replace: :update
 
     timestamps(type: :utc_datetime_usec)
   end

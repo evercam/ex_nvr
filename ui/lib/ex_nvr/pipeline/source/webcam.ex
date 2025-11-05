@@ -4,55 +4,38 @@ defmodule ExNVR.Pipeline.Source.Webcam do
   """
   use Membrane.Source
 
-  import ExMP4.Helper
-
-  alias ExNVR.AV.CameraCapture
-  alias ExNVR.AV.{Encoder, Frame, Packet}
-  alias Membrane.Buffer
-  alias Membrane.H264
+  alias ExNVR.AV.{CameraCapture, Encoder}
+  alias Membrane.{Buffer, H264}
 
   @dest_time_base 90_000
-  @original_time_base Membrane.Time.seconds(1)
-
-  defmodule FFmpegParam do
-    @moduledoc false
-    @enforce_keys [:key, :value]
-    defstruct @enforce_keys
-  end
+  # @original_time_base Membrane.Time.seconds(1)
 
   def_output_pad :main_stream_output,
     accepted_format: %H264{alignment: :au},
     availability: :on_request,
     flow_control: :push
 
-  def_options(
-    device: [
-      spec: String.t(),
-      default: "default",
-      description: "Name of the device used to capture video"
-    ],
-    framerate: [
-      spec: non_neg_integer(),
-      default: 8,
-      description: "Framerate of device's output video stream"
-    ],
-    resolution: [
-      spec: {integer(), integer()},
-      default: nil,
-      description: "Width and height(wxh)"
-    ]
-  )
+  def_options device: [
+                spec: String.t(),
+                default: "default",
+                description: "Name of the device used to capture video"
+              ],
+              framerate: [
+                spec: non_neg_integer(),
+                default: 8,
+                description: "Framerate of device's output video stream"
+              ],
+              resolution: [
+                spec: {integer(), integer()},
+                default: nil,
+                description: "Width and height(wxh)"
+              ]
 
   @impl true
   def handle_init(_ctx, %__MODULE__{} = options) do
     {width, height} = options.resolution
 
-    case CameraCapture.open_camera(
-           options.device,
-           to_string(options.framerate),
-           width,
-           height
-         ) do
+    case CameraCapture.open_camera(options.device, options.framerate, width, height) do
       {:ok, native} ->
         state = %{
           native: native,
@@ -62,8 +45,6 @@ defmodule ExNVR.Pipeline.Source.Webcam do
           height: nil,
           pixel_format: nil,
           encoder: nil,
-          track: nil,
-          pad: nil,
           init_time: Membrane.Time.monotonic_time()
         }
 
@@ -101,7 +82,6 @@ defmodule ExNVR.Pipeline.Source.Webcam do
     {[], state}
   end
 
-  # handle_playing should notify parent about tracks
   @impl true
   def handle_playing(ctx, state) do
     element_pid = self()
@@ -112,42 +92,23 @@ defmodule ExNVR.Pipeline.Source.Webcam do
         Supervisor.child_spec({Task, fn -> frame_provider(state.native, element_pid) end}, [])
       )
 
-    track =
-      ExNVR.Pipeline.Track.new(:video, :h264)
-
-    state = %{state | provider: provider, track: track}
-
-    action = [
-      notify_parent:
-        {:main_stream,
-         %{
-           1 => track
-         }}
-    ]
-
-    {action, state}
+    track = ExNVR.Pipeline.Track.new(:video, :h264)
+    {[notify_parent: {:main_stream, %{1 => track}}], %{state | provider: provider}}
   end
 
-  def handle_pad_added(Pad.ref(:main_stream_output, track_id) = pad, ctx, state) do
-    {[stream_format: {pad, create_stream_format(state)}], %{state | pad: pad}}
+  @impl true
+  def handle_pad_added(Pad.ref(:main_stream_output, 1) = pad, _ctx, state) do
+    {[stream_format: {pad, create_stream_format(state)}], state}
   end
 
   @impl true
   def handle_info({:frame, frame}, _ctx, state) do
-    # feed the frame to the encoder and it produces an entire frame
-
-    buffer =
+    buffers =
       state.encoder
       |> Encoder.encode(frame)
       |> Enum.map(&wrap_into_buffer(&1, state.init_time))
 
-    {[buffer: {state.pad, buffer}], state}
-  end
-
-  @impl true
-  def handle_terminate_request(_ctx, state) do
-    buffer = flush_encoder_if_exists(state)
-    {buffer, state}
+    {[buffer: {Pad.ref(:main_stream_output, 1), buffers}], state}
   end
 
   defp create_stream_format(state) do
@@ -172,11 +133,8 @@ defmodule ExNVR.Pipeline.Source.Webcam do
     end
   end
 
-  defp wrap_into_buffer([], _state), do: []
-
   defp wrap_into_buffer(packet, init_time) do
-    time =
-      Membrane.Time.monotonic_time() - init_time
+    time = Membrane.Time.monotonic_time() - init_time
 
     %Buffer{
       dts: time,
@@ -187,19 +145,5 @@ defmodule ExNVR.Pipeline.Source.Webcam do
         timestamp: DateTime.utc_now()
       }
     }
-  end
-
-  defp flush_encoder_if_exists(%{encoder: nil}), do: []
-
-  defp flush_encoder_if_exists(%{encoder: encoder}) do
-    time = Membrane.Time.monotonic_time()
-
-    case Encoder.flush(encoder) do
-      [packet] ->
-        wrap_into_buffer(packet, time)
-
-      [] ->
-        []
-    end
   end
 end

@@ -392,12 +392,11 @@ defmodule ExNVR.Pipelines.Main do
     [child(:file_source, %ExNVR.Pipeline.Source.File{device: device})]
   end
 
-  defp build_device_spec(%{type: :webcam} = device, state) do
+  defp build_device_spec(%{type: :webcam} = device, _state) do
     [width, height] = String.split(device.stream_config.resolution, "x")
 
     [
       child(:source, %Source.Webcam{
-        # the path to you usb(check ls /dev/video*)
         device: device.url,
         framerate: device.stream_config.framerate,
         resolution: {String.to_integer(width), String.to_integer(height)}
