@@ -21,3 +21,5 @@ video_processor-*.tar
 
 # Temporary files, for example, from tests.
 /tmp/
+
+/c_src/byte_track/build/

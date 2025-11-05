@@ -11,7 +11,12 @@ defmodule ExNVR.AV.VideoProcessor.MixProject do
       compilers: [:elixir_make] ++ Mix.compilers(),
       start_permanent: Mix.env() == :prod,
       deps: deps(),
-      make_clean: ["clean"]
+      make_clean: ["clean"],
+      make_env: fn ->
+        %{
+          "FINE_INCLUDE_DIR" => Fine.include_dir()
+        }
+      end
     ]
   end
 
@@ -26,6 +31,7 @@ defmodule ExNVR.AV.VideoProcessor.MixProject do
   defp deps do
     [
       {:elixir_make, "~> 0.9", runtime: false},
+      {:fine, "~> 0.1.0", runtime: false},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false}
     ]
   end
