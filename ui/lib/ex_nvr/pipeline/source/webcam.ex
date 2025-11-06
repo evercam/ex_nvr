@@ -5,6 +5,7 @@ defmodule ExNVR.Pipeline.Source.Webcam do
   use Membrane.Source
 
   alias ExNVR.AV.{CameraCapture, Encoder}
+  alias ExNVR.Pipeline.Track
   alias Membrane.{Buffer, H264}
 
   @dest_time_base 90_000
@@ -92,8 +93,8 @@ defmodule ExNVR.Pipeline.Source.Webcam do
         Supervisor.child_spec({Task, fn -> frame_provider(state.native, element_pid) end}, [])
       )
 
-    track = ExNVR.Pipeline.Track.new(:video, :h264)
-    {[notify_parent: {:main_stream, %{1 => track}}], %{state | provider: provider}}
+    {[notify_parent: {:main_stream, %{1 => Track.new(:video, :h264)}}],
+     %{state | provider: provider}}
   end
 
   @impl true
