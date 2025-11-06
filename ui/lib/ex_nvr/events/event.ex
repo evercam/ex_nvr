@@ -36,9 +36,9 @@ defmodule ExNVR.Events.Event do
   @foreign_key_type :binary_id
   @derive {Jason.Encoder, except: [:device, :__meta__]}
   schema "events" do
-    field(:time, :utc_datetime_usec, autogenerate: {DateTime, :utc_now, []})
-    field(:type, :string)
-    field(:metadata, :map, default: %{})
+    field :time, :utc_datetime_usec, autogenerate: {DateTime, :utc_now, []}
+    field :type, :string
+    field :metadata, :map, default: %{}
 
     belongs_to(:device, ExNVR.Model.Device)
 

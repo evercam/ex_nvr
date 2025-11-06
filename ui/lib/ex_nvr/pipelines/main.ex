@@ -392,7 +392,19 @@ defmodule ExNVR.Pipelines.Main do
     [child(:file_source, %ExNVR.Pipeline.Source.File{device: device})]
   end
 
-  defp build_device_spec(device) do
+  defp build_device_spec(%{type: :webcam} = device) do
+    [width, height] = String.split(device.stream_config.resolution, "x")
+
+    [
+      child(:source, %Source.Webcam{
+        device: device.url,
+        framerate: device.stream_config.framerate,
+        resolution: {String.to_integer(width), String.to_integer(height)}
+      })
+    ]
+  end
+
+  defp build_device_spec(%{type: :ip} = device) do
     [child(:rtsp_source, %Source.RTSP{device: device})]
   end
 

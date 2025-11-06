@@ -1,8 +1,9 @@
 #pragma once
 
-#include "decoder.h"
 #include "encoder.h"
+#include "decoder.h"
 #include "video_converter.h"
+#include "utils.h"
 
 struct NvrEncoder {
   Encoder *encoder;

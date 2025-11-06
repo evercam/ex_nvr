@@ -463,22 +463,25 @@ void free_decoder(ErlNifEnv *env, void *obj) {
 }
 
 static ErlNifFunc funcs[] = {
-    {"new_encoder", 2, new_encoder},
-    {"new_decoder", 5, new_decoder},
-    {"encode", 3, encode, ERL_DIRTY_JOB_CPU_BOUND},
-    {"decode", 4, decode, ERL_DIRTY_JOB_CPU_BOUND},
-    {"flush_encoder", 1, flush_encoder, ERL_DIRTY_JOB_CPU_BOUND},
-    {"flush_decoder", 1, flush_decoder, ERL_DIRTY_JOB_CPU_BOUND}};
+  {"new_encoder", 2, new_encoder},
+  {"new_decoder", 5, new_decoder},
+  {"encode", 3, encode, ERL_DIRTY_JOB_CPU_BOUND},
+  {"decode", 4, decode, ERL_DIRTY_JOB_CPU_BOUND},
+  {"flush_encoder", 1, flush_encoder, ERL_DIRTY_JOB_CPU_BOUND},
+  {"flush_decoder", 1, flush_decoder, ERL_DIRTY_JOB_CPU_BOUND}
+};
+
 
 static int load(ErlNifEnv *env, void **priv, ERL_NIF_TERM load_info) {
   encoder_resource_type = enif_open_resource_type(
-      env, NULL, "NvrEncoder", free_encoder, ERL_NIF_RT_CREATE, NULL);
+    env, NULL, "NvrEncoder", free_encoder, ERL_NIF_RT_CREATE, NULL);
+
   decoder_resource_type = enif_open_resource_type(
-      env, NULL, "NvrDecoder", free_decoder, ERL_NIF_RT_CREATE, NULL);
+    env, NULL, "NvrDecoder", free_decoder, ERL_NIF_RT_CREATE, NULL);
+
   return 0;
 }
 
-ERL_NIF_INIT(Elixir.ExNVR.AV.VideoProcessor.NIF, funcs, &load, NULL, NULL,
-             NULL);
+ERL_NIF_INIT(Elixir.ExNVR.AV.VideoProcessor.NIF, funcs, &load, NULL, NULL, NULL);
 
 #endif // NVR_ENCODER_H

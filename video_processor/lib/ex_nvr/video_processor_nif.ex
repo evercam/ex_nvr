@@ -15,10 +15,7 @@ defmodule ExNVR.AV.VideoProcessor.NIF do
     do: :erlang.nif_error(:undef)
 
   def encode(_encoder, _data, _pts), do: :erlang.nif_error(:undef)
-
   def decode(_decoder, _data, _dts, _pts), do: :erlang.nif_error(:undef)
-
   def flush_encoder(_encoder), do: :erlang.nif_error(:undef)
-
   def flush_decoder(_decoder), do: :erlang.nif_error(:undef)
 end

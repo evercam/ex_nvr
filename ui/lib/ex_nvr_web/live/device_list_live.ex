@@ -192,6 +192,7 @@ defmodule ExNVRWeb.DeviceListLive do
 
   defp get_type_label(:ip), do: "IP Camera"
   defp get_type_label(:file), do: "File"
+  defp get_type_label(:webcam), do: "Webcam"
 
   defp unauthorized(socket, reply) do
     socket
