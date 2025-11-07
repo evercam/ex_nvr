@@ -14,7 +14,7 @@ defmodule ExNVR.AV.ByteTrack.NIF do
     :erlang.nif_error(:nif_not_loaded)
   end
 
-  def update(_tracker, _detections) do
+  def update(_detections, _tracker) do
     :erlang.nif_error(:nif_not_loaded)
   end
 end

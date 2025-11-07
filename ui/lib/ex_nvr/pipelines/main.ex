@@ -441,6 +441,11 @@ defmodule ExNVR.Pipelines.Main do
       |> child({:stats_reporter, :sub_stream}, %VideoStreamStatReporter{
         device_id: device.id,
         stream: :low
+      }),
+      get_child({:tee, :sub_stream})
+      |> via_out(:push_output)
+      |> child(:object_detector, %ExNVR.Pipeline.Output.ObjectDetector{
+        hef_file: "/root/yolov11l.hef"
       })
     ] ++
       build_sub_stream_storage_spec(device) ++

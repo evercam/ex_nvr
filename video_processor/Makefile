@@ -19,7 +19,7 @@ BYTE_TRACK_BUILD = $(BYTE_TRACK_DIR)/build
 
 VIDEO_PROCESSOR_SO := $(PRIV_DIR)/libvideoprocessor.so
 CAMERA_CAPTURE_SO := $(PRIV_DIR)/libcameracapture.so
-BYTE_TRACKER_SO := $(PRIV_DIR)/libbytetracker.so
+BYTE_TRACKER_SO := $(PRIV_DIR)/libbytetrack.so
 HAILO_SO = $(PRIV_DIR)/libhailo.so
 
 # uncomment to compile with debug logs
@@ -92,12 +92,12 @@ $(CAMERA_CAPTURE_SO): $(CAMERA_CAPTURE_HEADERS) $(CAMERA_CAPTURE_SOURCES)
 	@rm -f $(PRIV_DIR)/libav*.so $(PRIV_DIR)/libsw*.so
 	@rm -f $(PRIV_DIR)/libav*.so.*.* $(PRIV_DIR)/libsw*.so.*.*
 
-${BYTE_TRACKER_SO}:
-	# rm -rf $(BYTE_TRACK_BUILD)
+${BYTE_TRACKER_SO}: ${BYTE_TRACKER_SO}
+	rm -rf $(BYTE_TRACK_BUILD)
 	mkdir -p $(BYTE_TRACK_BUILD)
 	cd $(BYTE_TRACK_BUILD) && cmake -DFINE_INCLUDE_DIR=$(FINE_INCLUDE_DIR) -DERTS_INCLUDE_DIR=$(ERTS_INCLUDE_DIR) ..
 	cd $(BYTE_TRACK_BUILD) && make -j4
-	cp $(BYTE_TRACK_BUILD)/libbytetrack.so $(PRIV_DIR)/libbytetrack.so
+	cp $(BYTE_TRACK_BUILD)/libbytetrack.so ${BYTE_TRACKER_SO}
 
 $(HAILO_SO): $(HAILO_SOURCES) $(HAILO_SOURCES)
 	$(CXX) $(HAILO_CFLAGS) $(HAILO_SOURCES) -o $(HAILO_SO) $(HAILO_LDFLAGS)
