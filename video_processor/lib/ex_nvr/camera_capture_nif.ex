@@ -9,6 +9,7 @@ defmodule ExNVR.AV.CameraCapture.NIF do
     :ok = :erlang.load_nif(path, 0)
   end
 
+  def list(), do: :erlang.nif_error(:undef)
   def open_camera(_url, _framerate, _width, _height), do: :erlang.nif_error(:undef)
   def read_camera_frame(_native), do: :erlang.nif_error(:undef)
 end

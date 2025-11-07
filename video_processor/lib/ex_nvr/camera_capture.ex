@@ -4,6 +4,13 @@ defmodule ExNVR.AV.CameraCapture do
   alias ExNVR.AV.CameraCapture.NIF
   alias ExNVR.AV.Frame
 
+  @spec list() :: [%{name: String.t(), description: String.t()}]
+  def list() do
+    Enum.map(NIF.list(), fn {device_url, device_desc} ->
+      %{name: to_string(device_url), description: to_string(device_desc)}
+    end)
+  end
+
   @spec open_camera(String.t(), non_neg_integer(), integer(), integer()) ::
           {:ok, reference()} | {:error, term()}
   def open_camera(device_url, framerate, width, height) do

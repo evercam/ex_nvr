@@ -72,7 +72,6 @@ ERL_NIF_TERM new_encoder(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
       goto clean;
     }
 
-    enif_free(config_name);
     enif_map_iterator_next(env, &iter);
   }
 
@@ -120,13 +119,13 @@ ERL_NIF_TERM new_encoder(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
 
 clean:
   // clean encoder
-  if (!codec_name)
+  if (codec_name)
     enif_free(codec_name);
-  if (!format)
+  if (format)
     enif_free(format);
-  if (!config_name)
+  if (config_name)
     enif_free(config_name);
-  if (!profile)
+  if (profile)
     enif_free(profile);
   enif_map_iterator_destroy(env, &iter);
 

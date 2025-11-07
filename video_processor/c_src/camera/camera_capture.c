@@ -1,5 +1,7 @@
 #include "camera_capture.h"
+#include <erl_nif.h>
 #include <libavcodec/avcodec.h>
+#include <libavdevice/avdevice.h>
 #include <stdio.h>
 
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
@@ -12,13 +14,45 @@ const char *driver = "v4l2";
 
 ErlNifResourceType *camera_capture_resource_type = NULL;
 
+ERL_NIF_TERM list(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
+    ERL_NIF_TERM ret;
+
+    avdevice_register_all();
+
+    const AVInputFormat *input_format = av_find_input_format(driver);
+    if (input_format == NULL) {
+        return nif_error(env, "input_format_not_found");
+    }
+
+    AVDeviceInfoList *device_list = NULL;
+    if (avdevice_list_input_sources(input_format, NULL, NULL, &device_list) < 0) {
+        ret = nif_error(env, "list_input_sources_failed");
+        goto clean;
+    }
+
+    ERL_NIF_TERM *devices = enif_alloc(device_list->nb_devices * sizeof(ERL_NIF_TERM));
+    for (int i = 0; i < device_list->nb_devices; i++) {
+        AVDeviceInfo *device_info = device_list->devices[i];
+        devices[i] = enif_make_tuple2(env,
+            enif_make_string(env, device_info->device_name, ERL_NIF_LATIN1),
+            enif_make_string(env, device_info->device_description, ERL_NIF_LATIN1));
+    }
+
+    ret = enif_make_list_from_array(env, devices, device_list->nb_devices);
+    enif_free(devices);
+clean:
+    if (device_list) avdevice_free_list_devices(&device_list);
+
+    return ret;
+}
+
 ERL_NIF_TERM open_camera(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
     ErlNifBinary url_bin, framerate_bin;
     ERL_NIF_TERM ret;
     AVDictionary *options = NULL;
     char url[256];
     char framerate[32];
-    int height, width; 
+    int height, width;
 
     if (argc != 4) {
         return enif_make_badarg(env);
@@ -43,7 +77,7 @@ ERL_NIF_TERM open_camera(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
     if(!enif_get_int(env, argv[3], &height)) {
         return enif_make_badarg(env);
     }
-    
+
     CameraCapture *state = enif_alloc_resource(camera_capture_resource_type, sizeof(CameraCapture));
     state->input_ctx = NULL;
     state->decoder = NULL;
@@ -182,6 +216,7 @@ void camera_capture_destructor(ErlNifEnv *env, void *obj) {
 }
 
 static ErlNifFunc funcs[] = {
+  {"list", 0, list},
   {"open_camera", 4, open_camera, ERL_DIRTY_JOB_CPU_BOUND},
   {"read_camera_frame", 1, read_camera_frame, ERL_DIRTY_JOB_CPU_BOUND}
 };
