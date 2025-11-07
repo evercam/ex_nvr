@@ -429,7 +429,7 @@ defmodule ExNVR.Pipelines.Main do
         |> child(:webrtc, %Output.WebRTC{ice_servers: state.ice_servers}),
         get_child(:tee)
         |> via_out(:push_output)
-        |> child(:object_detector, %ExNVR.Pipeline.Output.ObjectDetector{
+        |> child(:object_detector, %ExNVR.Pipeline.Output.ObjectDetection{
           hef_file: "/root/yolov11l.hef"
         })
       ]
