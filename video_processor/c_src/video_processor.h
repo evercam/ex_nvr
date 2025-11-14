@@ -20,3 +20,8 @@ struct NvrDecoder {
   int pad;
   enum AVPixelFormat out_format;
 };
+
+struct NvrConverter {
+  VideoConverter *video_converter;
+  AVFrame *frame;
+};
