@@ -63,6 +63,10 @@ ERL_NIF_TERM new_encoder(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
       err = enif_get_int(env, value, &encoder_config.max_b_frames);
     } else if (strcmp(config_name, "profile") == 0) {
       err = nif_get_string(env, value, &profile);
+    } else if (strcmp(config_name, "preset") == 0) {
+      err = nif_get_atom(env, value, &encoder_config.preset);
+    } else if (strcmp(config_name, "tune") == 0) {
+      err = nif_get_atom(env, value, &encoder_config.tune);
     } else {
       ret = nif_raise(env, "unknown_config_key");
       goto clean;
@@ -128,6 +132,11 @@ clean:
     enif_free(config_name);
   if (profile)
     enif_free(profile);
+  if (encoder_config.preset)
+    enif_free(encoder_config.preset);
+  if (encoder_config.tune)
+    enif_free(encoder_config.tune);
+  
   enif_map_iterator_destroy(env, &iter);
 
   return ret;
