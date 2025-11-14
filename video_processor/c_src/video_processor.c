@@ -136,7 +136,7 @@ clean:
     enif_free(encoder_config.preset);
   if (encoder_config.tune)
     enif_free(encoder_config.tune);
-  
+
   enif_map_iterator_destroy(env, &iter);
 
   return ret;

@@ -1,4 +1,4 @@
-defmodule ExNVR.AV.ViodeoProcessorTest do
+defmodule ExNVR.AV.VideoProcessorTest do
   use ExUnit.Case, async: true
 
   alias ExNVR.AV.VideoProcessor
