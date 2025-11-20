@@ -70,6 +70,12 @@ defmodule ExNVR.SystemSettingsTest do
                action: :nothing,
                timezone: "Africa/Algiers"
              }
+
+    assert {:ok, settings} =
+             SystemSettings.update(pid, %{"kit_serial" => "my_kit", "configured" => "true"})
+
+    assert settings.kit_serial == "my_kit"
+    assert settings.configured
   end
 
   test "ignore wrong settings" do
