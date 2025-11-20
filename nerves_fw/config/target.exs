@@ -61,11 +61,6 @@ if enable_ssl do
     ]
 end
 
-config :ex_nvr_fw, :remote_configurer,
-  url: System.get_env("REMOTE_CONFIGURER_URL", "http://localhost:4000"),
-  token: System.get_env("REMOTE_CONFIGURER_TOKEN"),
-  api_version: System.get_env("REMOTE_CONFIGURER_VERSION")
-
 config :logger, backends: [RingLogger]
 
 config :logger, RingLogger, level: :info
