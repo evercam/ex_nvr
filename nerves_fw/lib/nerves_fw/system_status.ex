@@ -56,8 +56,8 @@ defmodule ExNVR.Nerves.SystemStatus do
   end
 
   defp hostname do
-    case Nerves.Runtime.KV.get("nerves_evercam_id") do
-      "" -> :inet.gethostname() |> elem(1) |> List.to_string()
+    case Nerves.SystemSettings.get_settings().kit_serial do
+      nil -> :inet.gethostname() |> elem(1) |> List.to_string()
       evercam_id -> evercam_id
     end
   end

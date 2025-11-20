@@ -16,7 +16,7 @@ defmodule ExNVR.Nerves.RemoteConfigurer do
   require Logger
 
   alias ExNVR.{Accounts, RemoteConnection}
-  alias ExNVR.Nerves.{DiskMounter, GrafanaAgent, Netbird}
+  alias ExNVR.Nerves.{DiskMounter, GrafanaAgent, Netbird, SystemSettings}
   alias Nerves.Runtime
 
   @netbird_mangement_url "https://vpn.evercam.io"
@@ -32,10 +32,19 @@ defmodule ExNVR.Nerves.RemoteConfigurer do
 
   @impl true
   def init(config) do
-    if File.exists?(@config_completed_file) do
-      :ignore
+    settings =
+      if File.exists?(@config_completed_file) do
+        # TODO: following code will be deleted in the next version
+        kit_serial = Runtime.KV.get("nerves_evercam_id")
+        SystemSettings.update!(%{"configured" => true, "kit_serial" => kit_serial})
+      else
+        SystemSettings.get_settings()
+      end
+
+    if is_nil(settings.kit_serial) or not settings.configured do
+      {:ok, %{kit_serial: settings.kit_serial}, {:continue, :configure}}
     else
-      {:ok, %{}, {:continue, :configure}}
+      :ignore
     end
   end
 
@@ -48,6 +57,7 @@ defmodule ExNVR.Nerves.RemoteConfigurer do
   defp configure(state) do
     if _pid = Process.whereis(RemoteConnection) do
       payload = %{
+        kit_serial: state.kit_serial,
         mac_address: VintageNet.get(["interface", "eth0", "mac_address"]),
         serial_number: Runtime.serial_number(),
         device_name: Runtime.KV.get("a.nerves_fw_platform"),
@@ -58,8 +68,7 @@ defmodule ExNVR.Nerves.RemoteConfigurer do
         {:ok, params} ->
           Logger.info("Received configuration from remote server, applying...")
           do_configure(params)
-          finalize_config()
-          File.touch!(@config_completed_file)
+          finalize_config(params)
           {:stop, :normal, state}
 
         {:error, _reason} ->
@@ -159,8 +168,9 @@ defmodule ExNVR.Nerves.RemoteConfigurer do
     GrafanaAgent.reconfigure(config)
   end
 
-  defp finalize_config() do
+  defp finalize_config(kit_serial) do
     :ok = RemoteConnection.push_and_wait("config-completed", %{}, @call_timeout)
+    SystemSettings.update!(%{"configured" => true, "kit_serial" => kit_serial})
   end
 
   defp get_disk_first_part(path) do
