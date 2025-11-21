@@ -20,6 +20,7 @@ defmodule ExNVRWeb.RecordingListLive do
           <.filter_form meta={@meta} devices={@devices} id="recording-filter-form" />
           <div class="relative min-w-40">
             <button
+              :if={@usb_detected}
               phx-click={show_modal("copy-to-usb-modal")}
               class="absolute bg-blue-300 rounded-md bottom-0 py-2 px-3"
             >
@@ -312,12 +313,17 @@ defmodule ExNVRWeb.RecordingListLive do
        sort_params: %{},
        files_details: %{},
        removable_device: nil,
+       usb_detected: false,
        custom: nil
      )}
   end
 
-  def handle_info({:usb, device}, socket) do
-    {:noreply, assign(socket, :removable_device, device)}
+  def handle_info({:usb, device}, socket) when device != nil do
+    {:noreply,
+     socket
+     |> assign(:removable_device, device)
+     |> assign(:usb_detected, true)
+     |> put_flash(:info, "Usb Detected")}
   end
 
   def handle_info(:export_done, socket) do

@@ -159,12 +159,6 @@ defmodule ExNVRWeb.Components.Sidebar do
             icon: "hero-circle-stack-solid",
             href: ~p"/remote-storages",
             role: :admin
-          },
-          %{
-            label: "Removable Storages",
-            icon: "hero-server-solid",
-            href: ~p"/removable-storage",
-            role: :admin
           }
         ],
         [
@@ -227,12 +221,6 @@ defmodule ExNVRWeb.Components.Sidebar do
             label: "Remote Storages",
             icon: "hero-circle-stack-solid",
             href: ~p"/remote-storages",
-            role: :admin
-          },
-          %{
-            label: "Removable Storage",
-            icon: "hero-server-solid",
-            href: ~p"/removable-storage",
             role: :admin
           }
         ],
