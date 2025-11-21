@@ -52,12 +52,9 @@ defmodule ExNVR.RemoteConnection do
   def handle_call({:push_and_wait, event, payload, timeout}, _from, socket) do
     Logger.info("Pushing event and waiting for reply: #{event}")
 
-    with {:ok, ref} <- push(socket, @topic, event, payload, timeout),
-         {:ok, reply} <- await_reply(ref, timeout) do
-      {:reply, {:ok, reply}, socket}
-    else
-      {:error, error} ->
-        {:reply, {:error, error}, socket}
+    case push(socket, @topic, event, payload, timeout) do
+      {:ok, ref} -> {:reply, await_reply(ref, timeout), socket}
+      error -> {:reply, error, socket}
     end
   end
 
@@ -121,6 +118,14 @@ defmodule ExNVR.RemoteConnection do
   def handle_disconnect(_reason, socket) do
     :timer.cancel(socket.assigns[:timer_ref])
     reconnect(socket)
+  end
+
+  defp get_reply(ref, timeout) do
+    case await_reply(ref, timeout) do
+      :ok -> :ok
+      {:ok, reply} -> {:ok, reply}
+      {:error, reason} -> {:error, reason}
+    end
   end
 
   defp run_command(cmd, args, ref) do
