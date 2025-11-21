@@ -31,7 +31,7 @@ defmodule ExNVR.Nerves.RemoteConfigurer do
   end
 
   @impl true
-  def init(config) do
+  def init(_config) do
     settings =
       if File.exists?(@config_completed_file) do
         # TODO: following code will be deleted in the next version
@@ -65,10 +65,15 @@ defmodule ExNVR.Nerves.RemoteConfigurer do
       }
 
       case RemoteConnection.push_and_wait("register-kit", payload, @call_timeout) do
+        :ok ->
+          Logger.info("Device already configured, finalizing...")
+          finalize_config(state.kit_serial)
+          {:stop, :normal, state}
+
         {:ok, params} ->
           Logger.info("Received configuration from remote server, applying...")
           do_configure(params)
-          finalize_config(params)
+          finalize_config(params["serial"])
           {:stop, :normal, state}
 
         {:error, _reason} ->
@@ -169,8 +174,9 @@ defmodule ExNVR.Nerves.RemoteConfigurer do
   end
 
   defp finalize_config(kit_serial) do
+    SystemSettings.update!(%{"kit_serial" => kit_serial})
     :ok = RemoteConnection.push_and_wait("config-completed", %{}, @call_timeout)
-    SystemSettings.update!(%{"configured" => true, "kit_serial" => kit_serial})
+    SystemSettings.update!(%{"configured" => true})
   end
 
   defp get_disk_first_part(path) do
