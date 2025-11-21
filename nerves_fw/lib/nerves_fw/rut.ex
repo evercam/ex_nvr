@@ -84,7 +84,7 @@ defmodule ExNVR.Nerves.RUT do
 
       client
       |> Req.post(url: "/bulk", json: bulk_body)
-      |> handle_response()
+      |> handle_response(true)
     end
   end
 
@@ -98,14 +98,23 @@ defmodule ExNVR.Nerves.RUT do
     end
   end
 
-  defp handle_response({:ok, %Req.Response{status: status, body: body}})
-       when status >= 200 or status < 300 do
-    {:ok, body["data"]}
+  defp handle_response(response, bulk \\ false)
+
+  defp handle_response({:ok, %Req.Response{body: %{"success" => true} = body}}, bulk) do
+    if bulk and Enum.any?(body["data"], &(&1["success"] == false)) do
+      {:error, body["data"]}
+    else
+      {:ok, body["data"]}
+    end
   end
 
-  defp handle_response({:ok, %Req.Response{body: body}}) do
-    {:error, body["errors"]}
+  defp handle_response({:ok, %Req.Response{body: %{"success" => false} = body}}, _bulk) do
+    {:ok, body["errors"]}
   end
 
-  defp handle_response(other), do: other
+  defp handle_response({:ok, %Req.Response{body: body}}, _bulk) do
+    {:error, body}
+  end
+
+  defp handle_response(other, _bulk), do: other
 end

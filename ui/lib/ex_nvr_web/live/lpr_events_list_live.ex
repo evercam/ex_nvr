@@ -3,8 +3,8 @@ defmodule ExNVRWeb.LPREventsListLive do
 
   use ExNVRWeb, :live_view
 
-  alias ExNVRWeb.Router.Helpers, as: Routes
   alias ExNVR.{Devices, Events}
+  alias ExNVRWeb.Router.Helpers, as: Routes
 
   @default_plate_image_path "priv/static/images/no_plate_image.jpg"
 

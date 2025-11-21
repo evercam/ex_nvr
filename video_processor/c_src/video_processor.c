@@ -6,6 +6,7 @@
 
 ErlNifResourceType *encoder_resource_type;
 ErlNifResourceType *decoder_resource_type;
+ErlNifResourceType *converter_resource_type;
 
 static int get_profile(enum AVCodecID, const char *);
 static ERL_NIF_TERM packets_to_term(ErlNifEnv *env, Encoder *encoder);
@@ -62,6 +63,10 @@ ERL_NIF_TERM new_encoder(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
       err = enif_get_int(env, value, &encoder_config.max_b_frames);
     } else if (strcmp(config_name, "profile") == 0) {
       err = nif_get_string(env, value, &profile);
+    } else if (strcmp(config_name, "preset") == 0) {
+      err = nif_get_atom(env, value, &encoder_config.preset);
+    } else if (strcmp(config_name, "tune") == 0) {
+      err = nif_get_atom(env, value, &encoder_config.tune);
     } else {
       ret = nif_raise(env, "unknown_config_key");
       goto clean;
@@ -72,7 +77,6 @@ ERL_NIF_TERM new_encoder(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
       goto clean;
     }
 
-    enif_free(config_name);
     enif_map_iterator_next(env, &iter);
   }
 
@@ -120,14 +124,19 @@ ERL_NIF_TERM new_encoder(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
 
 clean:
   // clean encoder
-  if (!codec_name)
+  if (codec_name)
     enif_free(codec_name);
-  if (!format)
+  if (format)
     enif_free(format);
-  if (!config_name)
+  if (config_name)
     enif_free(config_name);
-  if (!profile)
+  if (profile)
     enif_free(profile);
+  if (encoder_config.preset)
+    enif_free(encoder_config.preset);
+  if (encoder_config.tune)
+    enif_free(encoder_config.tune);
+
   enif_map_iterator_destroy(env, &iter);
 
   return ret;
@@ -200,10 +209,87 @@ ERL_NIF_TERM new_decoder(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   enif_release_resource(nvr_decoder);
 
 clean:
-  if (!codec_name)
+  if (codec_name)
     enif_free(codec_name);
 
-  if (!out_format)
+  if (out_format)
+    enif_free(out_format);
+
+  return ret;
+}
+
+ERL_NIF_TERM new_converter(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
+  if (argc != 7) {
+    return nif_raise(env, "invalid_arg_count");
+  }
+
+  ERL_NIF_TERM ret;
+  char *in_format = NULL, *out_format = NULL;
+  int in_width, in_height, out_width, out_height, pad;
+
+  if (!enif_get_int(env, argv[0], &in_width)) {
+    ret = nif_raise(env, "failed_to_get_int");
+    goto clean;
+  }
+
+  if (!enif_get_int(env, argv[1], &in_height)) {
+    ret = nif_raise(env, "failed_to_get_int");
+    goto clean;
+  }
+
+  if (!nif_get_atom(env, argv[2], &in_format)) {
+    ret = nif_raise(env, "failed_to_get_atom");
+    goto clean;
+  }
+
+  if (!enif_get_int(env, argv[3], &out_width)) {
+    ret = nif_raise(env, "failed_to_get_int");
+    goto clean;
+  }
+
+  if (!enif_get_int(env, argv[4], &out_height)) {
+    ret = nif_raise(env, "failed_to_get_int");
+    goto clean;
+  }
+
+  if (!nif_get_atom(env, argv[5], &out_format)) {
+    ret = nif_raise(env, "failed_to_get_atom");
+    goto clean;
+  }
+
+  if (!enif_get_int(env, argv[6], &pad)) {
+    ret = nif_raise(env, "failed_to_get_int");
+    goto clean;
+  }
+
+  enum AVPixelFormat in_pix_fmt = av_get_pix_fmt(in_format);
+  enum AVPixelFormat out_pix_fmt = av_get_pix_fmt(out_format);
+
+  struct NvrConverter *nvr_converter =
+      enif_alloc_resource(converter_resource_type, sizeof(struct NvrConverter));
+
+
+  nvr_converter->video_converter = video_converter_alloc();
+  nvr_converter->frame = av_frame_alloc();
+  nvr_converter->frame->width = in_width;
+  nvr_converter->frame->height = in_height;
+  nvr_converter->frame->format = in_pix_fmt;
+
+  if (video_converter_init(nvr_converter->video_converter, in_width, in_height,
+                           in_pix_fmt, out_width, out_height, out_pix_fmt,
+                           pad) < 0) {
+    ret = nif_raise(env, "failed_to_init_converter");
+    goto clean;
+  }
+
+  ret = enif_make_resource(env, nvr_converter);
+  enif_release_resource(nvr_converter);
+
+clean:
+  if (in_format)
+    enif_free(in_format);
+
+  if (out_format)
     enif_free(out_format);
 
   return ret;
@@ -295,6 +381,41 @@ ERL_NIF_TERM decode(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
 
   return frames_to_term(env, nvr_decoder->decoder);
 }
+
+ERL_NIF_TERM convert(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
+  int ret;
+
+  if (argc != 2) {
+    return nif_raise(env, "invalid_arg_count");
+  }
+
+  struct NvrConverter *nvr_converter;
+  if (!enif_get_resource(env, argv[0], converter_resource_type,
+                         (void **)&nvr_converter)) {
+    return nif_raise(env, "invalid_resource");
+  }
+
+  ErlNifBinary input;
+  if (!enif_inspect_binary(env, argv[1], &input)) {
+    return nif_raise(env, "failed_to_inspect_binary");
+  }
+
+  AVFrame *frame = nvr_converter->frame;
+
+  ret = av_image_fill_arrays(frame->data, frame->linesize, input.data,
+                             frame->format, frame->width, frame->height, 1);
+  if (ret < 0) {
+    return nif_raise(env, "failed_to_fill_arrays");
+  }
+
+  ret = video_converter_convert(nvr_converter->video_converter, frame);
+  if (ret < 0) {
+    return nif_raise(env, "failed_to_convert");
+  }
+
+  return nif_frame_to_term(env, nvr_converter->video_converter->frame);
+}
+
 
 ERL_NIF_TERM flush_encoder(ErlNifEnv *env, int argc,
                            const ERL_NIF_TERM argv[]) {
@@ -462,23 +583,41 @@ void free_decoder(ErlNifEnv *env, void *obj) {
   }
 }
 
+void free_converter(ErlNifEnv *env, void *obj) {
+  NVR_LOG_DEBUG("Freeing Converter object");
+  struct NvrConverter *nvr_converter = (struct NvrConverter *)obj;
+
+  video_converter_free(&nvr_converter->video_converter);
+
+  if (nvr_converter->frame != NULL) {
+    av_frame_free(&nvr_converter->frame);
+  }
+}
+
 static ErlNifFunc funcs[] = {
-    {"new_encoder", 2, new_encoder},
-    {"new_decoder", 5, new_decoder},
-    {"encode", 3, encode, ERL_DIRTY_JOB_CPU_BOUND},
-    {"decode", 4, decode, ERL_DIRTY_JOB_CPU_BOUND},
-    {"flush_encoder", 1, flush_encoder, ERL_DIRTY_JOB_CPU_BOUND},
-    {"flush_decoder", 1, flush_decoder, ERL_DIRTY_JOB_CPU_BOUND}};
+  {"new_encoder", 2, new_encoder},
+  {"new_decoder", 5, new_decoder},
+  {"new_converter", 7, new_converter},
+  {"encode", 3, encode, ERL_DIRTY_JOB_CPU_BOUND},
+  {"decode", 4, decode, ERL_DIRTY_JOB_CPU_BOUND},
+  {"convert", 2, convert, ERL_DIRTY_JOB_CPU_BOUND},
+  {"flush_encoder", 1, flush_encoder, ERL_DIRTY_JOB_CPU_BOUND},
+  {"flush_decoder", 1, flush_decoder, ERL_DIRTY_JOB_CPU_BOUND}
+};
 
 static int load(ErlNifEnv *env, void **priv, ERL_NIF_TERM load_info) {
   encoder_resource_type = enif_open_resource_type(
-      env, NULL, "NvrEncoder", free_encoder, ERL_NIF_RT_CREATE, NULL);
+    env, NULL, "NvrEncoder", free_encoder, ERL_NIF_RT_CREATE, NULL);
+
   decoder_resource_type = enif_open_resource_type(
-      env, NULL, "NvrDecoder", free_decoder, ERL_NIF_RT_CREATE, NULL);
+    env, NULL, "NvrDecoder", free_decoder, ERL_NIF_RT_CREATE, NULL);
+
+  converter_resource_type = enif_open_resource_type(
+    env, NULL, "NvrConverter", free_converter, ERL_NIF_RT_CREATE, NULL);
+
   return 0;
 }
 
-ERL_NIF_INIT(Elixir.ExNVR.AV.VideoProcessor.NIF, funcs, &load, NULL, NULL,
-             NULL);
+ERL_NIF_INIT(Elixir.ExNVR.AV.VideoProcessor.NIF, funcs, &load, NULL, NULL, NULL);
 
 #endif // NVR_ENCODER_H

@@ -26,6 +26,8 @@ struct EncoderConfig {
   int gop_size;
   int max_b_frames;
   int profile;
+  char *preset;
+  char *tune;
 };
 
 Encoder *encoder_alloc();

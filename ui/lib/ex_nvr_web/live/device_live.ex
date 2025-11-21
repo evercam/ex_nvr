@@ -118,7 +118,8 @@ defmodule ExNVRWeb.DeviceLive do
     end
   end
 
-  defp handle_uploaded_file(_socket, %{"type" => "ip"} = device_params) do
+  defp handle_uploaded_file(_socket, %{"type" => type} = device_params)
+       when type in ["ip", "webcam"] do
     device_params
   end
 
