@@ -80,6 +80,10 @@ $(VIDEO_PROCESSOR_SO): $(HEADERS) $(SOURCES)
 	$(CC) $(CFLAGS) $(IFLAGS) $(LFLAGS) $(SOURCES) -o $(VIDEO_PROCESSOR_SO) $(LDFLAGS)
 
 $(CAMERA_CAPTURE_SO): $(CAMERA_CAPTURE_HEADERS) $(CAMERA_CAPTURE_SOURCES)
+	@if [ $(PRECOMPILED) = true ]; then \
+		cp -f $(FFMPEG_DIR)/lib/*.so* $(PRIV_DIR)/; \
+	fi
+	
 	$(CC) $(CFLAGS) $(IFLAGS) $(LFLAGS) $(CAMERA_CAPTURE_SOURCES) -o $(CAMERA_CAPTURE_SO) $(LDFLAGS)
 	@rm -f $(PRIV_DIR)/libav*.so $(PRIV_DIR)/libsw*.so
 	@rm -f $(PRIV_DIR)/libav*.so.*.* $(PRIV_DIR)/libsw*.so.*.*

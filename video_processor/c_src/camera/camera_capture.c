@@ -13,34 +13,23 @@ const char *driver = "v4l2";
 ErlNifResourceType *camera_capture_resource_type = NULL;
 
 ERL_NIF_TERM open_camera(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
-    ErlNifBinary url_bin, framerate_bin;
     ERL_NIF_TERM ret;
     AVDictionary *options = NULL;
-    char url[256];
-    char framerate[32];
-    int height, width; 
+    char *url = NULL, *framerate = NULL, *resolution = NULL;
 
-    if (argc != 4) {
+    if (argc != 3) {
         return enif_make_badarg(env);
     }
 
-    if (!enif_inspect_binary(env, argv[0], &url_bin) || url_bin.size >= sizeof(url)) {
-        return enif_make_badarg(env);
-    }
-    memcpy(url, url_bin.data, url_bin.size);
-    url[url_bin.size] = '\0';
-
-    if (!enif_inspect_binary(env, argv[1], &framerate_bin) || framerate_bin.size >= sizeof(framerate)) {
-        return enif_make_badarg(env);
-    }
-    memcpy(framerate, framerate_bin.data, framerate_bin.size);
-    framerate[framerate_bin.size] = '\0';
-
-    if(!enif_get_int(env, argv[2], &width)) {
+    if (!nif_get_string(env, argv[0], &url)) {
         return enif_make_badarg(env);
     }
 
-    if(!enif_get_int(env, argv[3], &height)) {
+    if (!nif_get_string(env, argv[1], &framerate)) {
+        return enif_make_badarg(env);
+    }
+
+    if(!nif_get_string(env, argv[2], &resolution)) {
         return enif_make_badarg(env);
     }
     
@@ -61,11 +50,17 @@ ERL_NIF_TERM open_camera(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
     av_dict_set(&options, "framerate", framerate, 0);
     av_dict_set(&options, "pixel_format", "yuv420p", 0);
 
+    if (strcmp(resolution, "nil") != 0) {
+        av_dict_set(&options, "video_size", resolution, 0);
+    }
+
     if (avformat_open_input(&state->input_ctx, url, input_format, &options) < 0) {
         avformat_close_input(&state->input_ctx);
         ret = nif_error(env, "open_failed");
         goto clean;
     }
+
+    state->input_ctx->flags |= AVFMT_FLAG_GENPTS;
 
     if (avformat_find_stream_info(state->input_ctx, NULL) < 0) {
         avformat_close_input(&state->input_ctx);
@@ -80,6 +75,11 @@ ERL_NIF_TERM open_camera(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
 
     // Init video converter if the pixel format is not yuv420p
     AVCodecParameters *codec_params = state->input_ctx->streams[0]->codecpar;
+    if (!codec_params) {
+        ret = nif_error(env, "codec_params_not_found");
+        goto clean;
+    }
+
     state->decoder = decoder_alloc();
     if (decoder_init_by_parameters(state->decoder, codec_params) < 0) {
         ret = nif_error(env, "decoder_init_failed");
@@ -92,8 +92,8 @@ ERL_NIF_TERM open_camera(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
                                  codec_params->width,
                                  codec_params->height,
                                  codec_params->format,
-                                 width,
-                                 height,
+                                 -1,
+                                 -1,
                                  AV_PIX_FMT_YUV420P, 0) < 0) {
             ret = nif_error(env, "video_converter_init_failed");
             goto clean;
@@ -110,6 +110,9 @@ ERL_NIF_TERM open_camera(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
 
     ret = nif_ok(env, enif_make_resource(env, state));
 clean:
+    if (url) enif_free(url);
+    if (framerate) enif_free(framerate);
+    if (resolution) enif_free(resolution);
     if (options != NULL) av_dict_free(&options);
     enif_release_resource(state);
 
@@ -162,6 +165,28 @@ clean:
     return ret;
 }
 
+ERL_NIF_TERM get_stream_properties(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
+    CameraCapture *state;
+    if (argc != 1 ||
+        !enif_get_resource(env, argv[0], camera_capture_resource_type, (void **)&state)) {
+        return enif_make_badarg(env);
+    }
+
+    AVCodecParameters *codec_params = state->input_ctx->streams[0]->codecpar;
+    if (!codec_params) {
+        return nif_error(env, "codec_params_not_found");
+    }
+
+    ERL_NIF_TERM width = enif_make_int(env, codec_params->width);
+    ERL_NIF_TERM height = enif_make_int(env, codec_params->height);
+    ERL_NIF_TERM time_base = enif_make_tuple2(env, 
+        enif_make_int(env, state->input_ctx->streams[0]->time_base.num),
+        enif_make_int(env, state->input_ctx->streams[0]->time_base.den)
+    );
+
+    return nif_ok(env, enif_make_tuple3(env, width, height, time_base));
+}
+
 void camera_capture_destructor(ErlNifEnv *env, void *obj) {
     CameraCapture *state = (CameraCapture *)obj;
     if (state->input_ctx != NULL) {
@@ -182,16 +207,17 @@ void camera_capture_destructor(ErlNifEnv *env, void *obj) {
 }
 
 static ErlNifFunc funcs[] = {
-  {"open_camera", 4, open_camera, ERL_DIRTY_JOB_CPU_BOUND},
-  {"read_camera_frame", 1, read_camera_frame, ERL_DIRTY_JOB_CPU_BOUND}
+    {"open_camera", 3, open_camera, ERL_DIRTY_JOB_CPU_BOUND},
+    {"read_camera_frame", 1, read_camera_frame, ERL_DIRTY_JOB_CPU_BOUND},
+    {"get_stream_properties", 1, get_stream_properties}
 };
 
 static int load(ErlNifEnv *env, void **priv, ERL_NIF_TERM load_info) {
-  camera_capture_resource_type = enif_open_resource_type(
-    env, NULL, "camera_capture_resource", camera_capture_destructor,
-    ERL_NIF_RT_CREATE, NULL);
+    camera_capture_resource_type = enif_open_resource_type(
+        env, NULL, "camera_capture_resource", camera_capture_destructor,
+        ERL_NIF_RT_CREATE, NULL);
 
-  return 0;
+    return 0;
 }
 
 ERL_NIF_INIT(Elixir.ExNVR.AV.CameraCapture.NIF, funcs, &load, NULL, NULL, NULL);
