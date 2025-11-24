@@ -153,7 +153,7 @@ defmodule ExNVRWeb.DeviceLiveTest do
       assert created_device.name == "My Device"
       assert created_device.type == :webcam
       assert created_device.storage_config.address == "/tmp"
-      assert created_device.stream_config.framerate == "20"
+      assert created_device.stream_config.framerate == 20.0
       assert created_device.stream_config.resolution == "1280x720"
 
       assert Phoenix.Flash.get(conn.assigns.flash, :info) == "Device created successfully"

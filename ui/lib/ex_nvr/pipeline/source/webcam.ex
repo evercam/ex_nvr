@@ -8,8 +8,7 @@ defmodule ExNVR.Pipeline.Source.Webcam do
   alias ExNVR.Pipeline.Track
   alias Membrane.{Buffer, H264}
 
-  @dest_time_base 90_000
-  # @original_time_base Membrane.Time.seconds(1)
+  @time_base Membrane.Time.seconds(1)
 
   def_output_pad :main_stream_output,
     accepted_format: %H264{alignment: :au},
@@ -27,61 +26,62 @@ defmodule ExNVR.Pipeline.Source.Webcam do
                 description: "Framerate of device's output video stream"
               ],
               resolution: [
-                spec: {integer(), integer()},
+                spec: String.t() | nil,
                 default: nil,
-                description: "Width and height(wxh)"
+                description: "Width and height in WIDTHxHEIGHT format"
               ]
 
   @impl true
   def handle_init(_ctx, %__MODULE__{} = options) do
-    {width, height} = options.resolution
-
-    case CameraCapture.open_camera(options.device, options.framerate, width, height) do
-      {:ok, native} ->
-        state = %{
-          native: native,
-          provider: nil,
-          framerate: options.framerate,
-          width: nil,
-          height: nil,
-          pixel_format: nil,
-          encoder: nil,
-          init_time: Membrane.Time.monotonic_time()
-        }
-
-        {[], state}
-
-      {:error, reason} ->
-        raise "Failed to initialize camera, reason: #{reason}"
-    end
+    {[],
+     %{
+       native: nil,
+       provider: nil,
+       encoder: nil,
+       timebase: nil,
+       stream_format: nil,
+       linked?: false,
+       resolution: options.resolution,
+       framerate: options.framerate,
+       device: options.device
+     }}
   end
 
   @impl true
   def handle_setup(_ctx, state) do
-    {:ok, frame} = CameraCapture.read_camera_frame(state.native)
+    with {:ok, ref} <- CameraCapture.open_camera(state.device, state.framerate, state.resolution),
+         {:ok, stream_props} <- CameraCapture.get_stream_properties(ref) do
+      {width, height, timebase} = stream_props
 
-    encoder =
-      Encoder.new(:h264,
-        width: frame.width,
-        height: frame.height,
-        format: frame.format,
-        time_base: {1, @dest_time_base},
-        gop_size: 32,
-        profile: "Baseline",
-        max_b_frames: 0
-      )
+      encoder =
+        Encoder.new(:h264,
+          width: width,
+          height: height,
+          format: :yuv420p,
+          time_base: timebase,
+          gop_size: 32,
+          profile: "Baseline",
+          max_b_frames: 0,
+          tune: :zerolatency,
+          preset: :fast
+        )
 
-    state =
-      %{
-        state
-        | encoder: encoder,
-          width: frame.width,
-          height: frame.height,
-          pixel_format: frame.format
-      }
-
-    {[], state}
+      {[],
+       %{
+         state
+         | native: ref,
+           encoder: encoder,
+           stream_format: create_stream_format(width, height),
+           timebase: timebase
+       }}
+    else
+      {:error, reason} ->
+        {[notify_parent: {:stream_failed, reason}], state}
+    end
   end
+
+  @impl true
+  def handle_playing(_ctx, %{native: nil} = state), do: {[], state}
 
   @impl true
   def handle_playing(ctx, state) do
@@ -99,26 +99,27 @@ defmodule ExNVR.Pipeline.Source.Webcam do
 
   @impl true
   def handle_pad_added(Pad.ref(:main_stream_output, 1) = pad, _ctx, state) do
-    {[stream_format: {pad, create_stream_format(state)}], state}
+    {[stream_format: {pad, state.stream_format}], %{state | linked?: true}}
   end
 
   @impl true
+  def handle_info({:frame, _frame}, _ctx, %{linked?: false} = state), do: {[], state}
+
   def handle_info({:frame, frame}, _ctx, state) do
     buffers =
       state.encoder
       |> Encoder.encode(frame)
-      |> Enum.map(&wrap_into_buffer(&1, state.init_time))
+      |> Enum.map(&wrap_into_buffer(&1, state.timebase))
 
     {[buffer: {Pad.ref(:main_stream_output, 1), buffers}], state}
   end
 
-  defp create_stream_format(state) do
+  defp create_stream_format(width, height) do
     %H264{
       alignment: :au,
       stream_structure: :annexb,
-      framerate: state.framerate,
-      height: state.height,
-      width: state.width,
+      height: height,
+      width: width,
       profile: :baseline
     }
   end
@@ -134,12 +135,10 @@ defmodule ExNVR.Pipeline.Source.Webcam do
     end
   end
 
-  defp wrap_into_buffer(packet, init_time) do
-    time = Membrane.Time.monotonic_time() - init_time
-
+  defp wrap_into_buffer(packet, {num, den}) do
     %Buffer{
-      dts: time,
-      pts: time,
+      dts: div(packet.pts * @time_base * num, den),
+      pts: div(packet.pts * @time_base * num, den),
       payload: packet.data,
       metadata: %{
         h264: %{key_frame?: packet.keyframe?},

@@ -87,21 +87,6 @@ defmodule ExNVR.DevicesTest do
              } = errors_on(changeset)
     end
 
-    test "requires stream config when type is webcam" do
-      {:error, changeset} =
-        Devices.create(%{
-          name: @valid_camera_name,
-          type: "webcam",
-          stream_config: %{},
-          settings: valid_device_settings()
-        })
-
-      assert %{
-               stream_config: %{framerate: ["can't be blank"]},
-               storage_config: ["can't be blank"]
-             } = errors_on(changeset)
-    end
-
     test "requires stream_uri" do
       {:error, changeset} =
         Devices.create(%{
@@ -262,6 +247,23 @@ defmodule ExNVR.DevicesTest do
 
       assert %{snapshot_config: %{schedule: ["Schedule time intervals must not overlap"]}} =
                errors_on(changeset)
+    end
+
+    test "validate framerate and resolution" do
+      {:error, changeset} =
+        Devices.create(%{
+          name: @valid_camera_name,
+          type: "webcam",
+          stream_config: %{framerate: 4.5, resolution: "1920"},
+          settings: valid_device_settings()
+        })
+
+      assert %{
+               stream_config: %{
+                 framerate: ["must be greater than or equal to 5"],
+                 resolution: ["should be in WIDTHxHEIGHT format"]
+               }
+             } = errors_on(changeset)
     end
 
     test "create a new device", %{tmp_dir: tmp_dir} do

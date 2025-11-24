@@ -127,25 +127,20 @@
                 :if={@device_type == "webcam"}
                 field={config[:framerate]}
                 id="framerate"
-                type="text"
+                type="number"
+                step="0.01"
+                min="5"
                 label="Framerate"
-                placeholder="20"
+                placeholder="e.g, 30 or 29.97"
                 required
               />
               <.input
                 :if={@device_type == "webcam"}
                 field={config[:resolution]}
-                options={[
-                  {"640x480 (VGA)", "640x480"},
-                  {"1280x720 (HD)", "1280x720"},
-                  {"1920x1080 (Full HD)", "1920x1080"},
-                  {"2560x1440 (QHD)", "2560x1440"}
-                ]}
-                id="height"
-                type="select"
-                label="Height"
-                placeholder="720"
-                required
+                id="resolution"
+                type="text"
+                label="Resolution"
+                placeholder="e.g, 1920x1080"
               />
             </div>
             <.input
