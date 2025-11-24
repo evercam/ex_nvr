@@ -26,48 +26,62 @@ defmodule ExNVR.Pipeline.Source.Webcam do
                 description: "Framerate of device's output video stream"
               ],
               resolution: [
-                spec: {integer(), integer()},
+                spec: String.t() | nil,
                 default: nil,
-                description: "Width and height(wxh)"
+                description: "Width and height in WIDTHxHEIGHT format"
               ]
 
   @impl true
   def handle_init(_ctx, %__MODULE__{} = options) do
-    {w, h} = options.resolution
-    case CameraCapture.open_camera(options.device, options.framerate, "#{w}x#{h}") do
-      {:ok, native} ->
-        {[], %{native: native, provider: nil, encoder: nil, timebase: nil, stream_format: nil, linked?: false}}
-
-      {:error, reason} ->
-        raise "Failed to initialize camera, reason: #{reason}"
-    end
+    {[],
+     %{
+       native: nil,
+       provider: nil,
+       encoder: nil,
+       timebase: nil,
+       stream_format: nil,
+       linked?: false,
+       resolution: options.resolution,
+       framerate: options.framerate,
+       device: options.device
+     }}
   end
 
   @impl true
   def handle_setup(_ctx, state) do
-    {:ok, {width, height, timebase}} = CameraCapture.get_stream_properties(state.native)
+    with {:ok, ref} <- CameraCapture.open_camera(state.device, state.framerate, state.resolution),
+         {:ok, stream_props} <- CameraCapture.get_stream_properties(ref) do
+      {width, height, timebase} = stream_props
 
-    encoder =
-      Encoder.new(:h264,
-        width: width,
-        height: height,
-        format: :yuv420p,
-        time_base: timebase,
-        gop_size: 32,
-        profile: "Baseline",
-        max_b_frames: 0,
-        tune: :zerolatency,
-        preset: :fast
-      )
+      encoder =
+        Encoder.new(:h264,
+          width: width,
+          height: height,
+          format: :yuv420p,
+          time_base: timebase,
+          gop_size: 32,
+          profile: "Baseline",
+          max_b_frames: 0,
+          tune: :zerolatency,
+          preset: :fast
+        )
 
-    {[],
-     %{
-       state
-       | encoder: encoder,
-         stream_format: create_stream_format(width, height),
-         timebase: timebase
-     }}
+      {[],
+       %{
+         state
+         | native: ref,
+           encoder: encoder,
+           stream_format: create_stream_format(width, height),
+           timebase: timebase
+       }}
+    else
+      {:error, reason} ->
+        {[notify_parent: {:stream_failed, reason}], state}
+    end
   end
+
+  @impl true
+  def handle_playing(_ctx, %{native: nil} = state), do: {[], state}
 
   @impl true
   def handle_playing(ctx, state) do

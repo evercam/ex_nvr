@@ -80,8 +80,8 @@ defmodule ExNVR.Model.Device do
       field :filename, :string
       field :temporary_path, :string, virtual: true
       field :duration, :integer
-      field :framerate, :string
-      field :resolution, :string, default: "640x480"
+      field :framerate, :float, default: 8.0
+      field :resolution, :string
     end
 
     def changeset(struct, params, device_type) do
@@ -119,7 +119,10 @@ defmodule ExNVR.Model.Device do
     end
 
     defp validate_device_config(changeset, :webcam) do
-      validate_required(changeset, [:framerate, :resolution])
+      changeset
+      |> validate_required([:framerate])
+      |> validate_number(:framerate, greater_than_or_equal_to: 5, less_than_or_equal_to: 30)
+      |> validate_format(:resolution, ~r/^\d+x\d+$/, message: "should be in WIDTHxHEIGHT format")
     end
 
     defp validate_uri(field, uri, protocl \\ "rtsp") do
