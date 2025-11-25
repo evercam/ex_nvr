@@ -24,7 +24,7 @@ defmodule ExNVRWeb.RecordingListLive do
               phx-click={show_modal("copy-to-usb-modal")}
               class="absolute bg-blue-300 rounded-md bottom-0 py-2 px-3"
             >
-              Copy to Usb
+              Export
             </button>
           </div>
         </div>
@@ -409,27 +409,14 @@ defmodule ExNVRWeb.RecordingListLive do
 
     type =
       String.to_atom(params["type"])
-      |> IO.inspect(label: "------>")
 
-    with {:ok, recordings} <-
-           Export.fetch_and_list_recordings(device, :high, start_date, end_date) do
-      Task.start(fn ->
-        case Export.concat_and_export_to_usb(
-               type,
-               params["destination"],
-               start_date,
-               end_date,
-               recordings,
-               device
-             ) do
-          {:ok, :complete} ->
-            send(self(), :export_done)
-
-          {:error, reason} ->
-            send(self(), {:export_failed, reason})
-        end
-      end)
-    end
+    ExNVR.Recordings.Export.export_to_usb(
+      type,
+      device,
+      start_date,
+      end_date,
+      params["destination"]
+    )
 
     {:noreply, redirect(socket, to: ~p"/recordings")}
   end
