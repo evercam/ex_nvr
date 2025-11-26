@@ -44,7 +44,7 @@ There's currently no automated docker build for `arm/v7` since building the imag
 the workaround is to build the image on the target host itself
 
 ```bash
-docker build -t ex_nvr:0.24.0 -f Dockerfile .
+docker build -t ex_nvr:0.25.0 -f Dockerfile .
 ```
 
 ### Releases

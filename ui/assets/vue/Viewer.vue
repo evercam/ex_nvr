@@ -314,12 +314,12 @@ export default defineComponent({
     },
     watch: {
         url(value) {
-            this.statsListener(value);
+            this.startStreaming(value);
         },
     },
 
     mounted() {
-        this.startListener(this.url);
+        this.startStreaming(this.url);
     },
     data() {
         return {
@@ -402,17 +402,13 @@ export default defineComponent({
                 exitFullScreen();
             }
         },
-
         openStatsTab() {
             this.isStreamShown = !this.isStreamShown;
         },
-        startListener(streamUrl) {
+        startStreaming(streamUrl) {
             const component = this.$refs.videoPlayer;
             component?.initHls(streamUrl);
             const playerElement = component?.$refs?.player;
-
-            console.log("Starting stats listener");
-            console.log("Player Element:", playerElement);
 
             if (playerElement) {
                 playerElement._hls = isProxy(component.player)
