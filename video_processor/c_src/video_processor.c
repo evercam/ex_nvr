@@ -505,7 +505,6 @@ static int convert_frames(struct NvrDecoder *nvr_decoder) {
       }
       av_frame_unref(decoder->frames[i]);
       av_frame_ref(decoder->frames[i], nvr_decoder->video_converter->frame);
-      av_frame_unref(nvr_decoder->video_converter->frame);
     }
   }
 

@@ -63,9 +63,11 @@ int video_converter_init(VideoConverter *converter, int in_width, int in_height,
     dst_frame->width = out_width;
     dst_frame->height = out_height;
 
-    int ret = av_frame_get_buffer(dst_frame, 0);
-    if (ret < 0) {
-      return ret;
+    if (converter->pad) {
+      int ret = av_frame_get_buffer(dst_frame, 0);
+      if (ret < 0) {
+        return ret;
+      }
     }
   }
 
@@ -91,11 +93,10 @@ int video_converter_convert(VideoConverter *converter, AVFrame *frame) {
   converter->frame->pts = frame->pts;
   converter->scaled_frame->pts = frame->pts;
 
-  // is this (const uint8_t * const*) cast really correct?
   ret = sws_scale(converter->sws_ctx, (const uint8_t *const *)frame->data,
-                  frame->linesize, 0, frame->height,
-                  converter->scaled_frame->data,
-                  converter->scaled_frame->linesize);
+                    frame->linesize, 0, frame->height,
+                    converter->scaled_frame->data,
+                    converter->scaled_frame->linesize);
 
   if (ret < 0) {
     return ret;
@@ -104,9 +105,8 @@ int video_converter_convert(VideoConverter *converter, AVFrame *frame) {
   if (converter->pad) {
     return add_padding(converter->scaled_frame, converter->frame);
   } else {
-    ret = av_frame_ref(converter->frame, converter->scaled_frame);
-    av_frame_unref(converter->scaled_frame);
-    return ret;
+    av_frame_unref(converter->frame);
+    return av_frame_ref(converter->frame, converter->scaled_frame);
   }
 }
 
@@ -119,6 +119,10 @@ void video_converter_free(struct VideoConverter **converter) {
 
     if (vc->frame != NULL) {
       av_frame_free(&(*converter)->frame);
+    }
+
+    if (vc->scaled_frame != NULL) {
+      av_frame_free(&(*converter)->scaled_frame);
     }
 
     enif_free(vc);
@@ -141,8 +145,6 @@ int add_padding(AVFrame *scaled_frame, AVFrame *dst_frame) {
                         scaled_frame->data[0], scaled_frame->linesize[0],
                         scaled_frame->linesize[0], scaled_frame->height);
   }
-
-  av_frame_unref(scaled_frame);
 
   return 0;
 }
