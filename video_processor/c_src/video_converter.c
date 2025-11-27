@@ -104,7 +104,8 @@ int video_converter_convert(VideoConverter *converter, AVFrame *frame) {
   if (converter->pad) {
     return add_padding(converter->scaled_frame, converter->frame);
   } else {
-    return av_frame_ref(converter->frame, converter->scaled_frame);
+    converter->frame = converter->scaled_frame;
+    return 0;
   }
 }
 
@@ -139,6 +140,8 @@ int add_padding(AVFrame *scaled_frame, AVFrame *dst_frame) {
                         scaled_frame->data[0], scaled_frame->linesize[0],
                         scaled_frame->linesize[0], scaled_frame->height);
   }
+
+  av_frame_unref(scaled_frame);
 
   return 0;
 }
