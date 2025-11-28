@@ -1,5 +1,6 @@
 defmodule ExNVRWeb.RecordingListLive do
   @moduledoc false
+  alias ExNVR.RemovableStorage.Export
 
   require Logger
   use ExNVRWeb, :live_view
@@ -13,7 +14,118 @@ defmodule ExNVRWeb.RecordingListLive do
   def render(assigns) do
     ~H"""
     <div class="grow e-m-8">
-      <.filter_form meta={@meta} devices={@devices} id="recording-filter-form" />
+      <div>
+        <!-- filters -->
+        <div class="flex gap-5">
+          <.filter_form meta={@meta} devices={@devices} id="recording-filter-form" />
+          <div class="relative min-w-40">
+            <button
+              :if={@usb_detected}
+              phx-click={show_modal("copy-to-usb-modal")}
+              class="absolute bg-blue-300 rounded-md bottom-0 py-2 px-3"
+            >
+              Export
+            </button>
+          </div>
+        </div>
+
+        <.modal
+          id="copy-to-usb-modal"
+          class="bg-gray-900/70 p-3 flex items-center justify-center  w-full"
+        >
+          <div class="py-4 w-full">
+            <.form for={} phx-change="validate-export-to-usb-configs" phx-submit="export_to_usb">
+              <!-- filters -> device, start date, end date -->
+              <div class="flex justify-between gap-5">
+                <Flop.Phoenix.filter_fields
+                  :let={f}
+                  form={to_form(@meta)}
+                  fields={[
+                    device_id: [
+                      op: :==,
+                      type: "select",
+                      options: Enum.map(@devices, &{&1.name, &1.id}),
+                      prompt: "Choose your device",
+                      label: "Device"
+                    ],
+                    start_date: [op: :>=, type: "datetime-local", label: "Start Date"],
+                    end_date: [op: :<=, type: "datetime-local", label: "End Date"]
+                  ]}
+                >
+                  <div>
+                    <.input
+                      class="border rounded p-1"
+                      field={f.field}
+                      type={f.type}
+                      label={f.label}
+                      phx-debounce="500"
+                      {f.rest}
+                    />
+                  </div>
+                </Flop.Phoenix.filter_fields>
+              </div>
+              <div class="my-3">
+                <h2 class="mb-2 text-gray-300 text-sm">Export format</h2>
+                <.input
+                  id="duration"
+                  type="radio"
+                  name="type"
+                  value=""
+                  label="Export format"
+                  options={[
+                    {"Export as One Min footage", "one"},
+                    {"Export as Full footage", "full"}
+                  ]}
+                />
+
+                <div>
+                  <.input
+                    :if={@custom == "custom"}
+                    class=""
+                    id="custom"
+                    type="text"
+                    name="custom_duration"
+                    value=""
+                    placeholder="Time in days"
+                  />
+                </div>
+              </div>
+              <!-- destination -->
+              <div class="my-3">
+                <h2 class="mb-2 text-gray-300 text-sm">Copy Usb</h2>
+                <div :if={@removable_device != nil}>
+                  <%= for device <- @removable_device.partitions do %>
+                    <label class="flex items-center p-3 mb-5  rounded-lg border border-gray-600 bg-gray-700 cursor-pointer">
+                      <!--Radio -->
+                      <input
+                        type="radio"
+                        name="destination"
+                        value={device.mountpoints}
+                        class="form-radio h-4 w-4 mt-2 text-blue-500 border-gray-500 bg-gray-600"
+                      />
+                      <span class="ml-2 text-sm text-gray-300">
+                        {device.mountpoints || "/"}
+                      </span>
+
+                      <div class="grow flex flex-col space-y-1 ml-3">
+                        <span class="text-xs text-gray-400 self-end">{device.size}</span>
+                      </div>
+                    </label>
+                  <% end %>
+                </div>
+                <h2 :if={@removable_device == nil}>No usb detected</h2>
+              </div>
+
+              <button
+                type="submit"
+                class="px-4 py-2 bg-blue-600 text-sm rounded-lg hover:bg-blue-500 transition text-white"
+              >
+                Export Footage
+              </button>
+            </.form>
+          </div>
+        </.modal>
+      </div>
 
       <Flop.Phoenix.table
         id="recordings"
@@ -190,6 +302,7 @@ defmodule ExNVRWeb.RecordingListLive do
 
   @impl true
   def mount(params, _session, socket) do
+    Phoenix.PubSub.subscribe(ExNVR.PubSub, "removable_storage_topic")
     Recordings.subscribe_to_recording_events()
 
     {:ok,
@@ -198,8 +311,27 @@ defmodule ExNVRWeb.RecordingListLive do
        filter_params: params,
        pagination_params: %{},
        sort_params: %{},
-       files_details: %{}
+       files_details: %{},
+       removable_device: nil,
+       usb_detected: false,
+       custom: nil
      )}
+  end
+
+  def handle_info({:usb, device}, socket) when device != nil do
+    {:noreply,
+     socket
+     |> assign(:removable_device, device)
+     |> assign(:usb_detected, true)
+     |> put_flash(:info, "Usb Detected")}
+  end
+
+  def handle_info(:export_done, socket) do
+    {:noreply, put_flash(socket, :info, "Export completed successfully.")}
+  end
+
+  def handle_info({:export_failed, reason}, socket) do
+    {:noreply, put_flash(socket, :error, "Export failed: #{reason}")}
   end
 
   @impl true
@@ -258,6 +390,37 @@ defmodule ExNVRWeb.RecordingListLive do
     {:noreply, assign(socket, :files_details, files_details)}
   end
 
+  # export to usb
+  @impl true
+  def handle_event("validate-export-to-usb-configs", params, socket) do
+    {:noreply,
+     socket
+     |> assign(custom: params["duration"])}
+  end
+
+  @impl true
+  def handle_event("export_to_usb", params, socket) do
+    {device_id, start_date, end_date} =
+      get_values(params["filters"])
+
+    device = Enum.find(socket.assigns.devices, &(&1.id == device_id))
+
+    socket = put_flash(socket, :info, "Exporting footage to usb..")
+
+    type =
+      String.to_atom(params["type"])
+
+    ExNVR.Recordings.Export.export_to_usb(
+      type,
+      device,
+      start_date,
+      end_date,
+      params["destination"]
+    )
+
+    {:noreply, redirect(socket, to: ~p"/recordings")}
+  end
+
   defp load_recordings(params, socket) do
     sort_params = Map.take(params, ["order_by", "order_directions"])
 
@@ -290,5 +453,16 @@ defmodule ExNVRWeb.RecordingListLive do
     date
     |> DateTime.shift_zone!(timezone)
     |> Calendar.strftime("%b %d, %Y %H:%M:%S %z")
+  end
+
+  def get_values(filters) do
+    f = fn field ->
+      filters
+      |> Map.values()
+      |> Enum.find(&(&1["field"] == field))
+      |> Map.get("value")
+    end
+
+    {f.("device_id"), f.("start_date"), f.("end_date")}
   end
 end
