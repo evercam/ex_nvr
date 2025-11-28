@@ -5,7 +5,7 @@ defmodule ExNvr.RemovableStorage.Mounter do
   """
 
   @poll_interval 3000
-  @mount_points "/data/usb"
+  @mount_points "./data/usb"
 
   require Logger
 
@@ -35,17 +35,16 @@ defmodule ExNvr.RemovableStorage.Mounter do
   end
 
   def handle_cast({:mount, device}, state) do
-    unless File.exists?(@mount_points), do: File.touch(@mount_points)
+    unless File.exists?(@mount_points),
+      do: File.touch(@mount_points)
 
-    System.cmd("ls", ["la"])
-
-    add_mountpoint(device)
     {:noreply, state}
     # mount the device
   end
 
   def add_mountpoint(device) do
-    {output, exit_code} = System.cmd("mount", ["/dev/#{device}", @mount_points])
+    {output, exit_code} =
+      System.cmd("mount", ["/dev/#{device}", @mount_points])
 
     if exit_code != 0 do
       Logger.error("""
@@ -72,6 +71,10 @@ defmodule ExNvr.RemovableStorage.Mounter do
           size: disk["size"],
           partitions:
             Enum.map(disk["children"] || [], fn part ->
+              if List.first(part["mountpoints"]) == nil do
+                mount(part["name"])
+              end
+
               %{
                 name: part["name"],
                 mountpoints: List.first(part["mountpoints"]),

@@ -1,11 +1,6 @@
 defmodule ExNVR.Recordings.Export do
   @moduledoc """
     This module contains func for grouping samples into chunks of 1 hr, 
-    ability to know which chuck has not been copied yet
-    report a progress ar when copying to external usb
-    
-    fetch the recordings from that date
-    group them by sixy times
     
   """
 
@@ -65,7 +60,8 @@ defmodule ExNVR.Recordings.Export do
       Enum.at(rec, finish - 1).end_date
 
     dest =
-      dest <> "/rec_#{DateTime.to_string(start_date)}_to_#{DateTime.to_string(end_date)}.mp4"
+      (dest <> "/rec_#{DateTime.to_string(start_date)}_to_#{DateTime.to_string(end_date)}.mp4")
+      |> IO.inspect(label: "-----> destination<")
 
     rec_length =
       rec

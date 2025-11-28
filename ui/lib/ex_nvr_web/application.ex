@@ -25,6 +25,7 @@ defmodule ExNVRWeb.Application do
         ExNVRWeb.Telemetry,
         ExNVRWeb.Endpoint,
         ExNVRWeb.PromEx,
+        {ExNVRWeb.ETSServer, []},
         {ExNVRWeb.HlsStreamingMonitor, []},
         {ExNvr.RemovableStorage.Mounter, []},
         {DynamicSupervisor, [name: ExNVR.Hardware.Supervisor, strategy: :one_for_one]},
