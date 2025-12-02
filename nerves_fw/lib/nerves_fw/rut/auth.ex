@@ -4,7 +4,7 @@ defmodule ExNVR.Nerves.RUT.Auth do
 
   use GenServer
 
-  alias ExNVR.Nerves.SystemSettings
+  alias ExNVR.Nerves.{SystemSettings, Utils}
 
   @login_path "/api/login"
   @receive_timeout to_timeout(second: 10)
@@ -77,7 +77,7 @@ defmodule ExNVR.Nerves.RUT.Auth do
 
   defp do_authenticate(state) do
     with :ok <- check_credentials(state),
-         {:ok, gateway} <- get_default_gateway() do
+         {:ok, gateway} <- Utils.get_default_gateway() do
       authenticate("http://" <> gateway, state.username, state.password)
     end
   end
@@ -86,22 +86,6 @@ defmodule ExNVR.Nerves.RUT.Auth do
     if not is_nil(state.username) and not is_nil(state.password),
       do: :ok,
       else: {:error, :no_credentials}
-  end
-
-  defp get_default_gateway do
-    case System.cmd("ip", ["route"], stderr_to_stdout: true) do
-      {output, 0} ->
-        String.split(output, "\n")
-        |> Enum.find("", &String.starts_with?(&1, "default"))
-        |> String.split(" ")
-        |> case do
-          ["default", "via", gateway | _rest] -> {:ok, gateway}
-          _other -> {:error, :no_gateway}
-        end
-
-      {error, _exit_status} ->
-        {:error, error}
-    end
   end
 
   defp authenticate(base_url, username, password) do

@@ -15,33 +15,36 @@ defmodule ExNVR.Nerves.RemoteConfigurer do
 
   require Logger
 
-  alias ExNVR.Accounts
-  alias ExNVR.Nerves.{DiskMounter, GrafanaAgent, Netbird}
+  alias ExNVR.{Accounts, RemoteConnection}
+  alias ExNVR.Nerves.{DiskMounter, GrafanaAgent, Netbird, SystemSettings, Utils}
   alias Nerves.Runtime
-  alias Req.Response
 
   @netbird_mangement_url "https://vpn.evercam.io"
   @mountpoint "/data/media"
-  @admin_user "admin@evercam.io"
   @default_admin_user "admin@localhost"
   @config_completed_file "/data/.kit_config"
+  @call_timeout to_timeout(second: 20)
+  @config_version "1.0"
 
   def start_link(config) do
     GenServer.start_link(__MODULE__, config, name: __MODULE__)
   end
 
   @impl true
-  def init(config) do
-    state = %{
-      url: config[:url],
-      token: config[:token],
-      api_version: config[:api_version]
-    }
+  def init(_config) do
+    settings =
+      if File.exists?(@config_completed_file) do
+        # TODO: following code will be deleted in the next version
+        kit_serial = Runtime.KV.get("nerves_evercam_id")
+        SystemSettings.update!(%{"configured" => true, "kit_serial" => kit_serial})
+      else
+        SystemSettings.get_settings()
+      end
 
-    if File.exists?(@config_completed_file) do
-      :ignore
+    if is_nil(settings.kit_serial) or not settings.configured do
+      {:ok, %{kit_serial: settings.kit_serial}, {:continue, :configure}}
     else
-      {:ok, state, {:continue, :configure}}
+      :ignore
     end
   end
 
@@ -52,46 +55,41 @@ defmodule ExNVR.Nerves.RemoteConfigurer do
   def handle_info(:configure, state), do: configure(state)
 
   defp configure(state) do
-    case Req.get(url(state),
-           params: [version: state.api_version],
-           headers: [{"x-api-key", state.token}]
-         ) do
-      {:ok, %Response{status: 200, body: config}} ->
-        do_configure(config)
-        finalize_config(state, config)
-        File.touch!(@config_completed_file)
-        {:stop, :normal, state}
+    with pid when is_pid(pid) <- Process.whereis(RemoteConnection),
+         {:ok, gateway} <- Utils.get_default_gateway(),
+         {:ok, mac_addr} <- Utils.get_mac_address(gateway) do
+      payload = %{
+        kit_serial: state.kit_serial,
+        mac_address: VintageNet.get(["interface", "eth0", "mac_address"]),
+        serial_number: Runtime.serial_number(),
+        device_name: Runtime.KV.get("a.nerves_fw_platform"),
+        version: @config_version,
+        gateway_mac_address: mac_addr
+      }
 
-      {:ok, %Response{status: 204}} ->
-        Logger.info("Already configured, ignore")
-        {:stop, :normal, state}
+      case RemoteConnection.push_and_wait("register-kit", payload, @call_timeout) do
+        :ok ->
+          Logger.info("Device already configured, finalizing...")
+          finalize_config(state.kit_serial)
+          {:stop, :normal, state}
 
+        {:ok, params} ->
+          Logger.info("Received configuration from remote server, applying...")
+          do_configure(params)
+          finalize_config(params["serial"])
+          {:stop, :normal, state}
+
+        {:error, _reason} ->
+          Logger.info("Failed to get configuration remotely, retrying...")
+          Process.send_after(self(), :configure, :timer.seconds(5))
+          {:noreply, state}
+      end
+    else
       error ->
-        log_error(error)
+        Logger.info("Failed to send request #{inspect(error)}, retrying...")
         Process.send_after(self(), :configure, :timer.seconds(10))
         {:noreply, state}
     end
-  end
-
-  defp url(state), do: String.replace(state.url, ":id", kit_id())
-
-  defp kit_id do
-    kit_id = Nerves.Runtime.KV.get("nerves_evercam_id")
-
-    if kit_id == "" do
-      {:ok, hostname} = :inet.gethostname()
-      List.to_string(hostname)
-    else
-      kit_id
-    end
-  end
-
-  defp log_error({:ok, %Response{status: status, body: body}}) do
-    Logger.error("[RemoteConfigurer] Received status: #{status} with content: #{inspect(body)}")
-  end
-
-  defp log_error({:error, reason}) do
-    Logger.error("[RemoteConfigurer] Failed to contact remote server: #{inspect(reason)}")
   end
 
   defp do_configure(config) do
@@ -103,7 +101,7 @@ defmodule ExNVR.Nerves.RemoteConfigurer do
 
   defp connect_to_netbird!(config) do
     Logger.info("[RemoteConfigurer] Connect to Netbird management server")
-    {:ok, _} = Netbird.up(@netbird_mangement_url, config["vpn_setup_key"], kit_id())
+    {:ok, _} = Netbird.up(@netbird_mangement_url, config["vpn_setup_key"], config["serial"])
   end
 
   def format_hdd! do
@@ -146,9 +144,11 @@ defmodule ExNVR.Nerves.RemoteConfigurer do
       Accounts.delete_user(user)
     end
 
-    unless Accounts.get_user_by_email(@admin_user) do
+    admin_user = config["ex_nvr_username"]
+
+    unless Accounts.get_user_by_email(admin_user) do
       params = %{
-        email: "admin@evercam.io",
+        email: admin_user,
         password: config["ex_nvr_password"],
         role: :admin,
         first_name: "Admin",
@@ -170,22 +170,16 @@ defmodule ExNVR.Nerves.RemoteConfigurer do
         loki_url: config["loki_url"],
         loki_username: config["loki_username"],
         loki_password: config["loki_password"],
-        kit_id: kit_id()
+        kit_id: config["serial"]
       )
 
     GrafanaAgent.reconfigure(config)
   end
 
-  defp finalize_config(state, config) do
-    body = %{
-      mac_address: VintageNet.get(["interface", "eth0", "mac_address"]),
-      serial_number: Runtime.serial_number(),
-      device_name: Runtime.KV.get("a.nerves_fw_platform"),
-      username: @admin_user,
-      password: config["ex_nvr_password"]
-    }
-
-    Req.post!(url(state), headers: [{"x-api-key", state.token}], json: body)
+  defp finalize_config(kit_serial) do
+    SystemSettings.update!(%{"kit_serial" => kit_serial})
+    :ok = RemoteConnection.push_and_wait("config-completed", %{}, @call_timeout)
+    SystemSettings.update!(%{"configured" => true})
   end
 
   defp get_disk_first_part(path) do
