@@ -16,7 +16,7 @@ defmodule ExNVR.Nerves.RemoteConfigurer do
   require Logger
 
   alias ExNVR.{Accounts, RemoteConnection}
-  alias ExNVR.Nerves.{DiskMounter, GrafanaAgent, Netbird, SystemSettings}
+  alias ExNVR.Nerves.{DiskMounter, GrafanaAgent, Netbird, SystemSettings, Utils}
   alias Nerves.Runtime
 
   @netbird_mangement_url "https://vpn.evercam.io"
@@ -55,13 +55,16 @@ defmodule ExNVR.Nerves.RemoteConfigurer do
   def handle_info(:configure, state), do: configure(state)
 
   defp configure(state) do
-    if _pid = Process.whereis(RemoteConnection) do
+    with pid when is_pid(pid) <- Process.whereis(RemoteConnection),
+         {:ok, gateway} <- Utils.get_default_gateway(),
+         {:ok, mac_addr} <- Utils.get_mac_address(gateway) do
       payload = %{
         kit_serial: state.kit_serial,
         mac_address: VintageNet.get(["interface", "eth0", "mac_address"]),
         serial_number: Runtime.serial_number(),
         device_name: Runtime.KV.get("a.nerves_fw_platform"),
-        version: @config_version
+        version: @config_version,
+        gateway_mac_address: mac_addr
       }
 
       case RemoteConnection.push_and_wait("register-kit", payload, @call_timeout) do
@@ -82,9 +85,10 @@ defmodule ExNVR.Nerves.RemoteConfigurer do
           {:noreply, state}
       end
     else
-      Logger.info("RemoteConnection process not alive, retrying...")
-      Process.send_after(self(), :configure, :timer.seconds(5))
-      {:noreply, state}
+      error ->
+        Logger.info("Failed to send request #{inspect(error)}, retrying...")
+        Process.send_after(self(), :configure, :timer.seconds(10))
+        {:noreply, state}
     end
   end
 
