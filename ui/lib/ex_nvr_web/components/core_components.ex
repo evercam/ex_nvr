@@ -423,7 +423,7 @@ defmodule ExNVRWeb.CoreComponents do
                   "dark:bg-gray-700 dark:border-gray-600 dark:focus:ring-blue-600",
                   "dark:ring-offset-gray-800 dark:focus:ring-offset-gray-80"
                 ]}
-                value={elem(option, 1)}
+                value={elem(option, 0)}
                 checked={elem(option, 0) == @value}
                 {@rest}
               />

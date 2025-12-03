@@ -20,7 +20,6 @@ defmodule ExNVRWeb.RecordingListLive do
           <.filter_form meta={@meta} devices={@devices} id="recording-filter-form" />
           <div class="relative min-w-40">
             <button
-              :if={@usb_detected}
               phx-click={show_modal("copy-to-usb-modal")}
               class="absolute bg-blue-300 rounded-md bottom-0 py-2 px-3"
             >
@@ -33,10 +32,77 @@ defmodule ExNVRWeb.RecordingListLive do
           id="copy-to-usb-modal"
           class="bg-gray-900/70 p-3 flex items-center justify-center  w-full"
         >
-          <div class="py-4 w-full">
-            <.form for={} phx-change="validate-export-to-usb-configs" phx-submit="export_to_usb">
+          <div class="p-5 w-[60rem]">
+
+    <!-- stepperr -->
+
+            <ol class="flex items-center w-full text-sm font-medium text-center text-body sm:text-base">
+              <li class="flex md:w-full items-center text-fg-brand sm:after:content-[''] after:w-full after:h-1 after:border-b  after:border-gray-500 after:border-px after:hidden sm:after:inline-block after:mx-6 xl:after:mx-10">
+                <span class=" text-white flex items-center after:content-['/'] sm:after:hidden after:mx-2 after:text-fg-disabled">
+                  <svg
+                    class="w-5 h-5 me-1.5 bg-blue-500 rounded-full"
+                    aria-hidden="true"
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="24"
+                    height="24"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke="currentColor"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M8.5 11.5 11 14l4-4m6 2a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+                    />
+                  </svg>
+                  <span class="font-bold"> Format </span>
+                </span>
+              </li>
+              <li class="flex md:w-full items-center after:content-[''] after:w-full after:h-1 after:border-b after:border-gray-500 after:border-px after:hidden sm:after:inline-block after:mx-6 xl:after:mx-10">
+                <span class="flex items-center after:content-['/'] sm:after:hidden after:mx-2 after:text-fg-disabled">
+                  <span class={
+                  "me-2 rounded-full h-6 w-6 text-white flex items-center justify-center " <>
+                    if @step >= 2, do: "bg-blue-500", else: "bg-gray-500"
+                    }>
+                    2
+                  </span>
+
+                  <span class={[
+                    "font-bold",
+                    (@step >= 2 && "text-white") || "text-gray-500"
+                  ]}>
+                    Destination
+                  </span>
+                </span>
+              </li>
+              <li class="flex items-center">
+                <span class={
+                  "me-2 rounded-full h-6 w-6 text-white flex items-center justify-center " <>
+                    if @step == 3, do: "bg-blue-500", else: "bg-gray-500"
+                    }>
+                  3
+                </span>
+
+                <span class={[
+                  "font-bold",
+                  (@step == 3 && "text-white") || "text-gray-500"
+                ]}>
+                  Confirmation
+                </span>
+              </li>
+            </ol>
+
+    <!-- export to usb form -->
+
+            <.form
+              for={}
+              phx-change="validate-export-to-usb-configs"
+              phx-submit="export_to_usb"
+              class="mt-5"
+            >
               <!-- filters -> device, start date, end date -->
-              <div class="flex justify-between gap-5">
+              <div class="flex justify-between gap-5 hidden bg-red-300">
                 <Flop.Phoenix.filter_fields
                   :let={f}
                   form={to_form(@meta)}
@@ -64,7 +130,9 @@ defmodule ExNVRWeb.RecordingListLive do
                   </div>
                 </Flop.Phoenix.filter_fields>
               </div>
-              <div class="my-3">
+
+    <!-- export format -->
+              <div :if={@step == 1} class="my-3">
                 <h2 class="mb-2 text-gray-300 text-sm">Export format</h2>
                 <.input
                   id="duration"
@@ -91,9 +159,24 @@ defmodule ExNVRWeb.RecordingListLive do
                 </div>
               </div>
               <!-- destination -->
-              <div class="my-3">
-                <h2 class="mb-2 text-gray-300 text-sm">Copy Usb</h2>
-                <div :if={@removable_device != nil}>
+              <div :if={@step == 2} class="my-3">
+                <label> Select Destination </label>
+                <.input
+                  id="export_to"
+                  type="radio"
+                  name="export_to"
+                  value=""
+                  label="Export format"
+                  options={[
+                    {"USB", "usb"},
+                    {"Remote Storage", "remote"}
+                  ]}
+                />
+
+                <h2 :if={@export_to == "USB"} class="mb-2 text-gray-300 text-sm mt-5">
+                  Select Your USB
+                </h2>
+                <div :if={@removable_device != nil && @export_to == "USB"}>
                   <%= for device <- @removable_device.partitions do %>
                     <label class="flex items-center p-3 mb-5  rounded-lg border border-gray-600 bg-gray-700 cursor-pointer">
                       <!--Radio -->
@@ -113,7 +196,20 @@ defmodule ExNVRWeb.RecordingListLive do
                     </label>
                   <% end %>
                 </div>
-                <h2 :if={@removable_device == nil}>No usb detected</h2>
+                <h2 :if={@removable_device == nil && @export_to == "USB"}>No usb detected</h2>
+                <h1>{@export_to}</h1>
+              </div>
+
+    <!-- confirmation -->
+              <div :if={@step == 3} class="my-3">
+                <.input
+                  type="text"
+                  id="confirmation"
+                  value=""
+                  name="save_as"
+                  class="border-b-2 border-gray-300  bg-transparent focus:outline-none "
+                  label="Input the name you want your footage to be saved as."
+                />
               </div>
 
               <button
@@ -123,6 +219,10 @@ defmodule ExNVRWeb.RecordingListLive do
                 Export Footage
               </button>
             </.form>
+            <div class="flex justify-end text-blue-500 gap-5 font-bold">
+              <button phx-click="prev"> PREV</button>
+              <button phx-click="next"> NEXT</button>
+            </div>
           </div>
         </.modal>
       </div>
@@ -314,7 +414,10 @@ defmodule ExNVRWeb.RecordingListLive do
        files_details: %{},
        removable_device: nil,
        usb_detected: false,
-       custom: nil
+       custom: nil,
+       step: 1,
+       export_to: nil,
+       type: nil
      )}
   end
 
@@ -395,7 +498,9 @@ defmodule ExNVRWeb.RecordingListLive do
   def handle_event("validate-export-to-usb-configs", params, socket) do
     {:noreply,
      socket
-     |> assign(custom: params["duration"])}
+     |> assign(custom: params["duration"])
+     |> assign(export_to: params["export_to"])
+     |> assign(type: params["type"])}
   end
 
   @impl true
@@ -419,6 +524,18 @@ defmodule ExNVRWeb.RecordingListLive do
     )
 
     {:noreply, redirect(socket, to: ~p"/recordings")}
+  end
+
+  def handle_event("next", params, socket) do
+    {:noreply,
+     socket
+     |> update(:step, &min(&1 + 1, 3))
+     |> update_assigns("type", params)
+     |> update_assigns("export_to", params)}
+  end
+
+  def handle_event("prev", _params, socket) do
+    {:noreply, update(socket, :step, &max(&1 - 1, 1))}
   end
 
   defp load_recordings(params, socket) do
@@ -464,5 +581,16 @@ defmodule ExNVRWeb.RecordingListLive do
     end
 
     {f.("device_id"), f.("start_date"), f.("end_date")}
+  end
+
+  def update_assigns(socket, param, params) do
+    case params[param] do
+      nil ->
+        socket
+
+      par ->
+        socket
+        |> assign(String.to_atom(param), par)
+    end
   end
 end
