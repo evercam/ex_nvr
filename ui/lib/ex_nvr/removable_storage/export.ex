@@ -16,7 +16,6 @@ defmodule ExNVR.RemovableStorage.Export do
   def fetch_and_list_recordings(device, stream, start_date, end_date) do
     recordings =
       Recordings.get_recordings_between(device.id, stream, start_date, end_date)
-      |> IO.inspect(label: "reco")
 
     response =
       recordings

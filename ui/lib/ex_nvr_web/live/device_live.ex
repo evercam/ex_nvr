@@ -184,7 +184,7 @@ defmodule ExNVRWeb.DeviceLive do
     end
   end
 
-  defp get_disks_data do
+  def get_disks_data do
     if Application.get_env(:ex_nvr, :env) == :test do
       [{"/tmp", {1_000_000, 1}}]
     else

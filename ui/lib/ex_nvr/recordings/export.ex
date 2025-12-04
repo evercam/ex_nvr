@@ -1,6 +1,7 @@
 defmodule ExNVR.Recordings.Export do
   @moduledoc """
     This module contains func for grouping samples into chunks of 1 hr, 
+    exporting them to destination(removable device)
     
   """
 
@@ -20,18 +21,12 @@ defmodule ExNVR.Recordings.Export do
           String.t()
         ) :: :ok
   def export_to_usb(:full, device, start_date, end_date, dest) do
-    # list of map
     rec =
       Recordings.get_recordings_between(device.id, start_date, end_date)
 
-    rec
-    |> Enum.chunk_every(40)
-    |> length()
-
-    start = 0
-    finish = if length(rec) < 60, do: length(rec), else: 60
-
-    copy(device, rec, start, finish, dest, 1)
+    {:ok, start_date, _} = DateTime.from_iso8601(start_date <> ":00Z")
+    {:ok, end_date, _} = DateTime.from_iso8601(end_date <> ":00Z")
+    copy_to_usb(device, start_date, end_date, dest, false)
   end
 
   def export_to_usb(:one, device, start_date, end_date, dest) do
@@ -42,6 +37,75 @@ defmodule ExNVR.Recordings.Export do
         "#{dest}/#{format_date(rec.start_date)}_to_#{format_date(rec.end_date)}"
       ])
     end)
+  end
+
+  # when you search recordings to databases they come in a default limit of 50
+
+  def copy_to_usb(device, start_date, end_date, dest, done) when done == false do
+    Recordings.get_recordings_between(device.id, start_date, end_date)
+    |> case do
+      [] ->
+        Phoenix.PubSub.broadcast(
+          ExNVR.PubSub,
+          "export_notifacation",
+          {:progress, %{done: true}}
+        )
+
+        copy_to_usb(
+          device,
+          start_date,
+          end_date,
+          dest,
+          true
+        )
+
+      rec ->
+        Phoenix.PubSub.broadcast(
+          ExNVR.PubSub,
+          "export_notifacation",
+          {:progress, %{done: false}}
+        )
+
+        new_dest =
+          (dest <>
+             "/rec_#{start_date}_to_#{end_date}.mp4")
+          |> String.replace(":", "-")
+
+        start_date =
+          if start_date != nil && is_binary(start_date) do
+            {:ok, start_date, _} = DateTime.from_iso8601(start_date)
+            start_date
+          else
+            start_date
+          end
+
+        VideoAssembler.assemble(device, :high, start_date, end_date, 3_600, new_dest)
+
+        start_date =
+          List.last(rec).end_date
+          |> DateTime.to_string()
+
+        copy_to_usb(
+          device,
+          start_date,
+          end_date,
+          dest,
+          false
+        )
+    end
+  end
+
+  def copy_to_usb(_device, _start_date, _end_date, _dest, done) when done == true, do: :ok
+
+  def copy(device, start_date, end_date) do
+    rec =
+      Recordings.get_recordings_between(device.id, start_date, end_date)
+
+    # perform the export operations
+
+    start_date = List.last(rec).end_date
+
+    copy(device, start_date, end_date)
   end
 
   @spec copy(
@@ -59,9 +123,9 @@ defmodule ExNVR.Recordings.Export do
     end_date =
       Enum.at(rec, finish - 1).end_date
 
-    dest =
+    new_dest =
       (dest <> "/rec_#{DateTime.to_string(start_date)}_to_#{DateTime.to_string(end_date)}.mp4")
-      |> IO.inspect(label: "-----> destination<")
+      |> String.replace(":", "-")
 
     rec_length =
       rec
@@ -69,7 +133,7 @@ defmodule ExNVR.Recordings.Export do
       |> length()
 
     finished_date =
-      VideoAssembler.assemble(device, :high, start_date, end_date, 3_600, dest)
+      VideoAssembler.assemble(device, :high, start_date, end_date, 3_600, new_dest)
 
     Phoenix.PubSub.broadcast(
       ExNVR.PubSub,
@@ -78,7 +142,7 @@ defmodule ExNVR.Recordings.Export do
     )
 
     counter = counter + 1
-    copy(device, rec, start + finish + 1, finish + 60, dest, counter)
+    copy(device, rec, start + finish + 1, finish + 20, dest, counter + 1)
   end
 
   defp copy(_device, rec, _start, finish, _dest, _counter)
