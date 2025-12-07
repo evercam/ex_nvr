@@ -26,7 +26,10 @@ defmodule ExNVR.Recordings.Export do
 
     {:ok, start_date, _} = DateTime.from_iso8601(start_date <> ":00Z")
     {:ok, end_date, _} = DateTime.from_iso8601(end_date <> ":00Z")
-    copy_to_usb(device, start_date, end_date, dest, false)
+
+    number_of_rec = Recordings.count_number_of_recordings(device.id, :high, start_date, end_date)
+
+    copy_to_usb(device, start_date, end_date, dest, number_of_rec, 50, false)
   end
 
   def export_to_usb(:one, device, start_date, end_date, dest) do
@@ -41,31 +44,22 @@ defmodule ExNVR.Recordings.Export do
 
   # when you search recordings to databases they come in a default limit of 50
 
-  def copy_to_usb(device, start_date, end_date, dest, done) when done == false do
+  def copy_to_usb(device, start_date, end_date, dest, number_of_rec, limit, done)
+      when done == false do
     Recordings.get_recordings_between(device.id, start_date, end_date)
     |> case do
       [] ->
-        Phoenix.PubSub.broadcast(
-          ExNVR.PubSub,
-          "export_notifacation",
-          {:progress, %{done: true}}
-        )
-
         copy_to_usb(
           device,
           start_date,
           end_date,
           dest,
+          number_of_rec,
+          limit,
           true
         )
 
       rec ->
-        Phoenix.PubSub.broadcast(
-          ExNVR.PubSub,
-          "export_notifacation",
-          {:progress, %{done: false}}
-        )
-
         new_dest =
           (dest <>
              "/rec_#{start_date}_to_#{end_date}.mp4")
@@ -85,17 +79,32 @@ defmodule ExNVR.Recordings.Export do
           List.last(rec).end_date
           |> DateTime.to_string()
 
+        # the number of recordings == real number - limit, 50, to get the percentage download
+        percentage =
+          (limit / number_of_rec * 100)
+          |> min(100)
+
+        Phoenix.PubSub.broadcast(
+          ExNVR.PubSub,
+          "export_notifacation",
+          {:progress, %{export_progress_percentage: round(percentage)}}
+        )
+
         copy_to_usb(
           device,
           start_date,
           end_date,
           dest,
+          number_of_rec,
+          limit + 50,
           false
         )
     end
   end
 
-  def copy_to_usb(_device, _start_date, _end_date, _dest, done) when done == true, do: :ok
+  def copy_to_usb(_device, _start_date, _end_date, _dest, _number_of_rec, _limit, done)
+      when done == true,
+      do: :ok
 
   def copy(device, start_date, end_date) do
     rec =

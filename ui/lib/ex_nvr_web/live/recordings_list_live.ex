@@ -21,8 +21,7 @@ defmodule ExNVRWeb.RecordingListLive do
           <div class="relative min-w-40 mb-4">
             <button
               phx-click={show_modal("copy-to-usb-modal")}
-              class={"absolute bottom-0 py-2 px-3 flex gap-2 rounded-md " <>
-         if @export_done, do: "bg-blue-500 text-white", else: "bg-green-500 text-white"}
+              class="absolute bottom-0 py-2 px-3 flex gap-2 rounded-md bg-blue-500 text-white "
             >
               <p>Export</p>
 
@@ -41,6 +40,20 @@ defmodule ExNVRWeb.RecordingListLive do
                 />
               </svg>
             </button>
+          </div>
+        </div>
+
+        <div>
+          <div
+            :if={@export_started}
+            class="w-full my-5 bg-gray-400 rounded-full"
+          >
+            <div
+              class="bg-blue-500 text-xs font-bold text-white text-center p-0.5 leading-none rounded-full h-4 flex items-center justify-center"
+              style={"width: #{@export_progress_percentage}%"}
+            >
+              {@export_progress_percentage}%
+            </div>
           </div>
         </div>
 
@@ -229,15 +242,15 @@ defmodule ExNVRWeb.RecordingListLive do
                   label="Export format"
                   errors={@errors}
                   options={[
-                    {"USB", "usb"},
+                    {"External Drive", "usb"},
                     {"Remote Storage", "remote"}
                   ]}
                 />
 
-                <h2 :if={@export_to == "USB"} class="mb-2 text-gray-300 text-sm mt-5">
-                  Select Your USB
+                <h2 :if={@export_to == "External Drive"} class="mb-2 text-gray-300 text-sm mt-5">
+                  Select Your External Drive
                 </h2>
-                <div :if={@removable_device != nil && @export_to == "USB"}>
+                <div :if={@removable_device != nil && @export_to == "External Drive"}>
                   <%= for device <- @removable_device.partitions do %>
                     <label class="flex items-center p-3 mb-5  rounded-lg border border-gray-600 bg-gray-700 cursor-pointer">
                       <!--Radio -->
@@ -260,7 +273,9 @@ defmodule ExNVRWeb.RecordingListLive do
                     <p class="text-red-500 text-sm">{@errors[:usb_size]}</p>
                   <% end %>
                 </div>
-                <h2 :if={@removable_device == nil && @export_to == "USB"}>No usb detected</h2>
+                <h2 :if={@removable_device == nil && @export_to == "External Drive"}>
+                  No usb detected
+                </h2>
               </div>
               
     <!-- confirmation -->
@@ -464,6 +479,7 @@ defmodule ExNVRWeb.RecordingListLive do
   def mount(params, _session, socket) do
     Phoenix.PubSub.subscribe(ExNVR.PubSub, "removable_storage_topic")
     Phoenix.PubSub.subscribe(ExNVR.PubSub, "export_notifacation")
+    Phoenix.PubSub.subscribe(ExNVR.PubSub, "here")
     Recordings.subscribe_to_recording_events()
 
     {:ok,
@@ -481,10 +497,12 @@ defmodule ExNVRWeb.RecordingListLive do
        type: nil,
        errors: %{},
        total_rec_size: nil,
-       export_done: true
+       export_started: false,
+       export_progress_percentage: 0
      )}
   end
 
+  @impl true
   def handle_info({:usb, device}, socket) when device != nil do
     {:noreply,
      socket
@@ -493,16 +511,19 @@ defmodule ExNVRWeb.RecordingListLive do
      |> put_flash(:info, "Usb Detected")}
   end
 
-  def handle_info(:export_done, socket) do
-    {:noreply, put_flash(socket, :info, "Export completed successfully.")}
-  end
-
+  @impl true
   def handle_info({:export_failed, reason}, socket) do
     {:noreply, put_flash(socket, :error, "Export failed: #{reason}")}
   end
 
-  def handle_info({:progress, %{done: done}}, socket) do
-    {:noreply, assign(socket, export_done: true)}
+  @impl true
+  def handle_info({:progress, %{export_progress_percentage: percentage}}, socket) do
+    {:noreply,
+     socket
+     |> assign(
+       export_progress_percentage: percentage,
+       export_started: percentage != 100
+     )}
   end
 
   @impl true
@@ -526,10 +547,6 @@ defmodule ExNVRWeb.RecordingListLive do
      |> assign(:filter_params, filter_params)
      |> assign(:pagination_params, %{})
      |> push_patch(to: Routes.recording_list_path(socket, :list, filter_params))}
-  end
-
-  def handle_event("op", params, socket) do
-    {:noreply, socket}
   end
 
   @impl true
@@ -582,6 +599,8 @@ defmodule ExNVRWeb.RecordingListLive do
 
   @impl true
   def handle_event("export_to_usb", params, socket) do
+    Phoenix.PubSub.subscribe(ExNVR.PubSub, "export_notifacation")
+
     type =
       case socket.assigns.type do
         "Export as 1-Minute Segments" -> :one
@@ -593,15 +612,17 @@ defmodule ExNVRWeb.RecordingListLive do
 
     device = Enum.find(socket.assigns.devices, &(&1.id == device_id))
 
-    socket = put_flash(socket, :info, "Exporting footage to usb..")
+    Task.start(fn ->
+      ExNVR.Recordings.Export.export_to_usb(
+        type,
+        device,
+        start_date,
+        end_date,
+        socket.assigns.destination
+      )
+    end)
 
-    ExNVR.Recordings.Export.export_to_usb(
-      type,
-      device,
-      start_date,
-      end_date,
-      socket.assigns.destination
-    )
+    socket = assign(socket, :export_started, true)
 
     {:noreply, redirect(socket, to: ~p"/recordings")}
   end
