@@ -35,11 +35,14 @@ defmodule ExNvr.RemovableStorage.Mounter do
   end
 
   def handle_cast({:mount, device}, state) do
-    unless File.exists?(@mount_points),
-      do: File.mkdir_p!(@mount_points)
+    mountpoint =
+      @mount_points <> String.slice(UUID.uuid4(), 0, 6)
+
+    unless File.exists?(mountpoint),
+      do: File.mkdir_p!(mountpoint)
 
     {output, exit_code} =
-      System.cmd("mount", ["/dev/#{device}", @mount_points])
+      System.cmd("mount", ["/dev/#{device}", mountpoint])
 
     if exit_code != 0 do
       Logger.error("""
@@ -50,18 +53,6 @@ defmodule ExNvr.RemovableStorage.Mounter do
 
     {:noreply, state}
     # mount the device
-  end
-
-  def add_mountpoint(device) do
-    {output, exit_code} =
-      System.cmd("mount", ["/dev/#{device}", @mount_points])
-
-    if exit_code != 0 do
-      Logger.error("""
-        Could not mount device to data/usb
-      Error: #{output}
-      """)
-    end
   end
 
   def listener do
