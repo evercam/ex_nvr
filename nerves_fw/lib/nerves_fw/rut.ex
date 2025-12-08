@@ -88,6 +88,33 @@ defmodule ExNVR.Nerves.RUT do
     end
   end
 
+  def change_password_firstlogin(new_password) do
+    with {:ok, client} <- Auth.get_client() do
+      body = %{
+        password: new_password,
+        password_confirm: new_password
+      }
+
+      client
+      |> Req.post(url: "/system/actions/change_password_firstlogin", json: %{data: body})
+      |> handle_response()
+    end
+  end
+
+  def users_config() do
+    with {:ok, client} <- Auth.get_client() do
+      do_request(client, "/users/config")
+    end
+  end
+
+  def update_user_config(id, config) do
+    with {:ok, client} <- Auth.get_client() do
+      client
+      |> Req.put(url: "/users/config/#{id}", json: %{data: config})
+      |> handle_response()
+    end
+  end
+
   defp do_request(client, url, response_handler \\ &Function.identity/1) do
     client
     |> Req.get(url: url)
@@ -109,7 +136,7 @@ defmodule ExNVR.Nerves.RUT do
   end
 
   defp handle_response({:ok, %Req.Response{body: %{"success" => false} = body}}, _bulk) do
-    {:ok, body["errors"]}
+    {:error, body["errors"]}
   end
 
   defp handle_response({:ok, %Req.Response{body: body}}, _bulk) do
