@@ -123,7 +123,17 @@ config :vintage_net,
        type: VintageNetEthernet,
        ipv4: %{method: :dhcp}
      }},
-    {"wlan0", %{type: VintageNetWiFi}}
+    {"wlan0", %{type: VintageNetWiFi}},
+    {"type",
+     %{
+       type: VintageNetQMI,
+       vintage_net_qmi: %{
+         service_providers: [
+           %{apn: "safaricom"},
+           %{apn: "internet"}
+         ]
+       }
+     }}
   ]
 
 config :mdns_lite,
@@ -158,7 +168,7 @@ config :mdns_lite,
   ]
 
 config :nerves_hub_link,
-  connect: true,
+  connect: false,
   host: URI.parse(System.fetch_env!("NERVES_HUB_DEVICES_URI")).host,
   remote_iex: true,
   shared_secret: [

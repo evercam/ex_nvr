@@ -43,6 +43,7 @@ defmodule NervesFw.MixProject do
       {:ex_nvr, path: "../ui", env: env},
       {:circuits_gpio, "~> 2.1"},
       {:circuits_i2c, "~> 2.0"},
+      {:vintage_net_qmi, "~> 0.4.4"},
 
       # Allow Nerves.Runtime on host to support development, testing and CI.
       # See config/host.exs for usage.
