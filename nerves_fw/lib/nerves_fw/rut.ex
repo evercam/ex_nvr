@@ -101,7 +101,7 @@ defmodule ExNVR.Nerves.RUT do
     end
   end
 
-  def users_config() do
+  def users_config do
     with {:ok, client} <- Auth.get_client() do
       do_request(client, "/users/config")
     end
@@ -116,7 +116,7 @@ defmodule ExNVR.Nerves.RUT do
   end
 
   # download the latest stable firmware
-  def fota_download() do
+  def fota_download do
     with {:ok, client} <- Auth.get_client() do
       client
       |> Req.post(url: "/firmware/actions/fota_download")
@@ -134,7 +134,7 @@ defmodule ExNVR.Nerves.RUT do
     end
   end
 
-  def get_firewall_zones() do
+  def get_firewall_zones do
     with {:ok, client} <- Auth.get_client() do
       do_request(client, "/firewall/zones/config")
     end
