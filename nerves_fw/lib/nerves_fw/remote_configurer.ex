@@ -144,7 +144,7 @@ defmodule ExNVR.Nerves.RemoteConfigurer do
 
     case Accounts.get_user_by_email(@default_admin_user) do
       nil -> :ok
-      user ->  Accounts.delete_user(user)
+      user -> Accounts.delete_user(user)
     end
 
     unless Accounts.get_user_by_email(@admin_user) do
