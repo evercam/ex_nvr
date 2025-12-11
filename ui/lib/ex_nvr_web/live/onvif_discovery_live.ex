@@ -413,8 +413,9 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
 
   def handle_event("authenticate-device", params, socket) do
     devices = socket.assigns.devices
+    idx = Enum.find_index(devices, &(&1.id == params["id"]))
 
-    if idx = Enum.find_index(devices, &(&1.id == params["id"])) do
+    if idx != nil do
       camera_details = Enum.at(devices, idx)
 
       case ExOnvif.Device.init(camera_details.probe, params["username"], params["password"]) do
@@ -444,10 +445,9 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
   def handle_event("show-details", params, socket) do
     devices = socket.assigns.devices
 
-    if device = Enum.find(devices, &(&1.id == params["id"])) do
-      {:noreply, assign(socket, selected_device: device)}
-    else
-      {:noreply, socket}
+    case Enum.find(devices, &(&1.id == params["id"])) do
+      nil -> {:noreply, socket}
+      device -> {:noreply, assign(socket, selected_device: device)}
     end
   end
 
