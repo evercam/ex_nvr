@@ -214,7 +214,7 @@ defmodule ExNVR.Nerves.RemoteConfigurer do
   end
 
   defp update_router_password(curr_passwd, new_passwd) do
-    with {:error, _} <- RUT.change_password_firstlogin(new_password),
+    with {:error, _} <- RUT.change_password_firstlogin(new_passwd),
          {:error, _} <- update_user_password(@router_username, curr_passwd, new_passwd) do
       {:error, :failed_to_update_router_password}
     else
