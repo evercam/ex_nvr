@@ -190,7 +190,7 @@ defmodule ExNVR.Nerves.RemoteConfigurer do
     curr_passwd = curr_passwd || passwd
 
     with {:ok, info} <- RUT.system_information(),
-         info <- %{serial_number: info["serial"], model: info["model"]},
+         info <- %{serial_number: info.serial, model: info.model},
          {:ok, new_config} <- RemoteConnection.push_and_wait("router-info", info),
          :ok <- update_router_password(curr_passwd, new_config["password"]) do
       Logger.info("[RemoteConfigurer] Router configured successfully")
@@ -218,7 +218,7 @@ defmodule ExNVR.Nerves.RemoteConfigurer do
          {:error, _} <- update_user_password(@router_username, curr_passwd, new_passwd) do
       {:error, :failed_to_update_router_password}
     else
-      {:ok, _config} ->
+      _ok ->
         SystemSettings.update!(%{
           "router" => %{"username" => @router_username, "password" => new_passwd}
         })
