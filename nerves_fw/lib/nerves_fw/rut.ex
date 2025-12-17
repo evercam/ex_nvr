@@ -6,24 +6,18 @@ defmodule ExNVR.Nerves.RUT do
   alias __MODULE__.{Auth, Scheduler, SystemInformation}
 
   def system_information do
-    with {:ok, client} <- Auth.get_client() do
-      do_request(client, "/system/device/status", fn data ->
-        %SystemInformation{
-          mac: data["mnfinfo"]["mac"],
-          serial: data["mnfinfo"]["serial"],
-          name: data["static"]["device_name"],
-          model: data["static"]["model"],
-          fw_version: data["static"]["fw_version"]
-        }
-      end)
-    end
+    do_request(nil, "/system/device/status", fn data ->
+      %SystemInformation{
+        mac: data["mnfinfo"]["mac"],
+        serial: data["mnfinfo"]["serial"],
+        name: data["static"]["device_name"],
+        model: data["static"]["model"],
+        fw_version: data["static"]["fw_version"]
+      }
+    end)
   end
 
-  def io_status do
-    with {:ok, client} <- Auth.get_client() do
-      do_request(client, "/io/status")
-    end
-  end
+  def io_status, do: do_request(nil, "/io/status")
 
   def scheduler do
     with {:ok, client} <- Auth.get_client(),
@@ -101,11 +95,7 @@ defmodule ExNVR.Nerves.RUT do
     end
   end
 
-  def users_config do
-    with {:ok, client} <- Auth.get_client() do
-      do_request(client, "/users/config")
-    end
-  end
+  def users_config, do: do_request(nil, "/users/config")
 
   def update_user_config(id, config) do
     with {:ok, client} <- Auth.get_client() do
@@ -134,10 +124,18 @@ defmodule ExNVR.Nerves.RUT do
     end
   end
 
-  def get_firewall_zones do
+  def factory_reset(user_defaults \\ false) do
     with {:ok, client} <- Auth.get_client() do
-      do_request(client, "/firewall/zones/config")
+      body = %{user_defaults: if(user_defaults, do: "1", else: "0")}
+
+      client
+      |> Req.post(url: "/firmware/actions/factory_reset", json: %{data: body})
+      |> handle_response()
     end
+  end
+
+  def get_firewall_zones do
+    do_request(nil, "/firewall/zones/config")
   end
 
   def create_firewall_zone(zone_config) do
@@ -148,7 +146,38 @@ defmodule ExNVR.Nerves.RUT do
     end
   end
 
-  defp do_request(client, url, response_handler \\ &Function.identity/1) do
+  # Reboot Schedule
+  def get_reboot_schedule() do
+    do_request(nil, "/auto_reboot/scheduler/config")
+  end
+
+  def create_reboot_schedule(params) do
+    with {:ok, client} <- Auth.get_client() do
+      client
+      |> Req.post(url: "/auto_reboot/scheduler/config", json: %{data: params})
+      |> handle_response()
+    end
+  end
+
+  def delete_reboot_schedule([]), do: {:ok, []}
+
+  def delete_reboot_schedule(ids) do
+    with {:ok, client} <- Auth.get_client() do
+      client
+      |> Req.delete(url: "/auto_reboot/scheduler/config", json: %{data: ids})
+      |> handle_response()
+    end
+  end
+
+  defp do_request(client, url, response_handler \\ &Function.identity/1)
+
+  defp do_request(nil, url, response_handler) do
+    with {:ok, client} <- Auth.get_client() do
+      do_request(client, url, response_handler)
+    end
+  end
+
+  defp do_request(client, url, response_handler) do
     client
     |> Req.get(url: url)
     |> handle_response()

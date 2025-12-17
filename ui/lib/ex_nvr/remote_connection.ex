@@ -120,14 +120,6 @@ defmodule ExNVR.RemoteConnection do
     reconnect(socket)
   end
 
-  defp get_reply(ref, timeout) do
-    case await_reply(ref, timeout) do
-      :ok -> :ok
-      {:ok, reply} -> {:ok, reply}
-      {:error, reason} -> {:error, reason}
-    end
-  end
-
   defp run_command(cmd, args, ref) do
     pid = self()
 

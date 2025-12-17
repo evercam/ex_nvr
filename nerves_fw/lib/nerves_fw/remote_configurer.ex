@@ -15,6 +15,7 @@ defmodule ExNVR.Nerves.RemoteConfigurer do
 
   require Logger
 
+  alias __MODULE__.Router
   alias ExNVR.{Accounts, RemoteConnection}
   alias ExNVR.Nerves.{DiskMounter, GrafanaAgent, Netbird, RUT, SystemSettings, Utils}
   alias Nerves.Runtime
@@ -98,7 +99,7 @@ defmodule ExNVR.Nerves.RemoteConfigurer do
     format_hdd!()
     create_user!(config)
     configure_grafana_agent!(config)
-    configure_router(config["gateway_config"])
+    Router.configure(config["gateway_config"])
   end
 
   defp connect_to_netbird!(config) do
@@ -179,27 +180,6 @@ defmodule ExNVR.Nerves.RemoteConfigurer do
     GrafanaAgent.reconfigure(config)
   end
 
-  defp configure_router(%{"default_password" => passwd}) do
-    Logger.info("[RemoteConfigurer] Configure router")
-    curr_passwd = SystemSettings.get_settings().router.password
-
-    if is_nil(curr_passwd) do
-      SystemSettings.update!(%{"router" => %{"password" => passwd, "username" => @router_username}})
-    end
-
-    curr_passwd = curr_passwd || passwd
-
-    with {:ok, info} <- RUT.system_information(),
-         info <- %{serial_number: info.serial, model: info.model},
-         {:ok, new_config} <- RemoteConnection.push_and_wait("router-info", info),
-         :ok <- update_router_password(curr_passwd, new_config["password"]) do
-      Logger.info("[RemoteConfigurer] Router configured successfully")
-      :ok
-    end
-  end
-
-  defp configure_router(nil), do: :ok
-
   defp finalize_config(kit_serial) do
     SystemSettings.update!(%{"kit_serial" => kit_serial})
     :ok = RemoteConnection.push_and_wait("config-completed", %{}, @call_timeout)
@@ -211,33 +191,5 @@ defmodule ExNVR.Nerves.RemoteConfigurer do
     |> Enum.find(&(&1.path == path))
     |> Map.get(:parts)
     |> List.first()
-  end
-
-  defp update_router_password(curr_passwd, new_passwd) do
-    with {:error, _} <- RUT.change_password_firstlogin(new_passwd),
-         {:error, _} <- update_user_password(@router_username, curr_passwd, new_passwd) do
-      {:error, :failed_to_update_router_password}
-    else
-      _ok ->
-        SystemSettings.update!(%{
-          "router" => %{"username" => @router_username, "password" => new_passwd}
-        })
-
-        :ok
-    end
-  end
-
-  defp update_user_password(username, current_pass, new_password) do
-    with {:ok, users} <- RUT.users_config() do
-      user = Enum.find(users, &(&1["username"] == username))
-
-      config = %{
-        current_password: current_pass,
-        password: new_password,
-        password_confirm: new_password
-      }
-
-      RUT.update_user_config(user["id"], config)
-    end
   end
 end
