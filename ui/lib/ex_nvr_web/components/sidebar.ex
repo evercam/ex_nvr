@@ -3,8 +3,8 @@ defmodule ExNVRWeb.Components.Sidebar do
 
   use ExNVRWeb, :live_component
 
-  attr(:current_user, :map, required: false)
-  attr(:current_path, :string, default: nil)
+  attr :current_user, :map, required: false
+  attr :current_path, :string, default: nil
 
   def sidebar(assigns) do
     role = assigns.current_user && assigns.current_user.role
@@ -42,9 +42,9 @@ defmodule ExNVRWeb.Components.Sidebar do
     """
   end
 
-  attr(:items, :list, required: true)
-  attr(:current_path, :string, default: nil)
-  attr(:border, :boolean, default: false)
+  attr :items, :list, required: true
+  attr :current_path, :string, default: nil
+  attr :border, :boolean, default: false
 
   defp sidebar_group(assigns) do
     class =
@@ -71,14 +71,14 @@ defmodule ExNVRWeb.Components.Sidebar do
     """
   end
 
-  attr(:label, :string, required: true)
-  attr(:icon, :string, required: true)
-  attr(:href, :string, default: nil)
-  attr(:target, :string, default: nil)
-  attr(:children, :list, default: [])
-  attr(:current_path, :string, default: nil)
-  attr(:is_active, :boolean, default: false)
-  attr(:role, :atom, default: nil)
+  attr :label, :string, required: true
+  attr :icon, :string, required: true
+  attr :href, :string, default: nil
+  attr :target, :string, default: nil
+  attr :children, :list, default: []
+  attr :current_path, :string, default: nil
+  attr :is_active, :boolean, default: false
+  attr :role, :atom, default: nil
 
   defp sidebar_item(assigns) do
     active? = active?(assigns.href, assigns.current_path)
