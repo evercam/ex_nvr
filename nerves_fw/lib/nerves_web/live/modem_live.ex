@@ -7,7 +7,7 @@ defmodule ExNVR.NervesWeb.ModemLive do
       <div class="max-w-[1400px] mx-auto">
         
     <!-- HEADER -->
-        <div class="mb-8">
+        <div class="mb-8 flex justify-between">
           <div class="flex items-center gap-3 mb-2">
             <div class="w-10 h-10 rounded-full bg-blue-500/20 dark:bg-blue-500/30 flex items-center justify-center">
               <svg class="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -24,6 +24,40 @@ defmodule ExNVR.NervesWeb.ModemLive do
               <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Modem Status</h1>
               <p class="text-sm text-gray-500 dark:text-gray-400">Wireless Interface</p>
             </div>
+          </div>
+
+          <div class="flex gap-3 justify-end">
+            <button
+              phx-click="refresh"
+              class="px-6 py-3 bg-gray-900 hover:bg-gray-800 dark:bg-gray-100 dark:hover:bg-gray-200 text-white dark:text-gray-900 rounded-lg font-medium transition-colors flex items-center gap-2"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                >
+                </path>
+              </svg>
+              Refresh
+            </button>
+
+            <button
+              phx-click="reboot"
+              class="px-6 py-3 bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-600 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M6 18L18 6M6 6l12 12"
+                >
+                </path>
+              </svg>
+              Reboot Modem
+            </button>
           </div>
         </div>
         
@@ -356,6 +390,9 @@ defmodule ExNVR.NervesWeb.ModemLive do
                 <th class="px-6 py-3 text-left text-sm font-medium text-gray-600 max-w-20 dark:text-gray-400">
                   Message
                 </th>
+                <th class="px-6 py-3 text-left text-sm font-medium text-gray-600 max-w-20 dark:text-gray-400">
+                  Received
+                </th>
                 <th class="px-6 py-3 text-left text-sm font-medium text-gray-600 dark:text-gray-400">
                   Timestamp
                 </th>
@@ -375,7 +412,13 @@ defmodule ExNVR.NervesWeb.ModemLive do
                   <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400 truncate max-w-20">
                     {message["message"]}
                   </td>
-                  <td class="px-6 py-4 text-sm text-gray-500">{message["timestamp"]}</td>
+                  <td class="px-6 py-4 text-sm text-gray-500">
+                    {format_sms_timestamp(message["timestamp"]).received}
+                  </td>
+                  <td class="px-6 py-4 text-sm text-gray-500">
+                    {format_sms_timestamp(message["timestamp"]).timestamp}
+                  </td>
+
                   <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400 text-right">
                     {message["status"]}
                   </td>
@@ -383,41 +426,6 @@ defmodule ExNVR.NervesWeb.ModemLive do
               <% end %>
             </tbody>
           </table>
-        </div>
-        
-    <!-- ACTION BUTTONS -->
-        <div class="flex gap-3 justify-end">
-          <button
-            phx-click="refresh"
-            class="px-6 py-3 bg-gray-900 hover:bg-gray-800 dark:bg-gray-100 dark:hover:bg-gray-200 text-white dark:text-gray-900 rounded-lg font-medium transition-colors flex items-center gap-2"
-          >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-              >
-              </path>
-            </svg>
-            Refresh
-          </button>
-
-          <button
-            phx-click="reboot"
-            class="px-6 py-3 bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-600 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
-          >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M6 18L18 6M6 6l12 12"
-              >
-              </path>
-            </svg>
-            Reboot Modem
-          </button>
         </div>
       </div>
     </div>
@@ -453,7 +461,6 @@ defmodule ExNVR.NervesWeb.ModemLive do
   end
 
   def handle_info({:modem_messages, data}, socket) do
-    IO.inspect(label: "data")
     {:noreply, assign(socket, messages: [data | socket.assigns.messages])}
   end
 
@@ -498,5 +505,53 @@ defmodule ExNVR.NervesWeb.ModemLive do
       value
     end
     |> VintageNet.IP.ip_to_string()
+  end
+
+  def format_sms_timestamp(at_timestamp) do
+    [date_part, time_part] = String.split(at_timestamp, ",")
+    [day, month, year_short] = String.split(date_part, "/")
+    year = "20" <> year_short
+
+    # Handle timezone like +12 -> +12:00
+    {time_str, tz_offset} =
+      case String.split(time_part, "+") do
+        [t, tz] -> {t, tz}
+        _ -> {time_part, "00"}
+      end
+
+    iso_string = "#{year}-#{month}-#{day}T#{time_str}+#{tz_offset}:00"
+
+    {:ok, dt, _offset} = DateTime.from_iso8601(iso_string)
+
+    timestamp =
+      dt
+      |> Calendar.strftime("%d %b %Y %H%M")
+      |> String.downcase()
+
+    now = DateTime.utc_now()
+    date_diff = Date.diff(Date.utc_today(), DateTime.to_date(dt))
+
+    received =
+      cond do
+        date_diff == 0 ->
+          minutes_ago = DateTime.diff(now, dt, :minute)
+
+          cond do
+            minutes_ago < 1 -> "just now"
+            minutes_ago < 60 -> "#{minutes_ago} min ago"
+            true -> "today"
+          end
+
+        date_diff == 1 ->
+          "yesterday"
+
+        date_diff > 1 ->
+          "#{date_diff} days ago"
+      end
+
+    %{
+      received: received,
+      timestamp: timestamp
+    }
   end
 end
