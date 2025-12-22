@@ -308,7 +308,6 @@ defmodule ExNVRWeb.RecordingListLive do
 
     duration =
       Recordings.count_number_of_recordings(device, :high, start_date, end_date)
-      |> IO.inspect(label: "--->")
 
     Recordings.VideoAssembler.assemble(
       device,
@@ -407,12 +406,6 @@ defmodule ExNVRWeb.RecordingListLive do
 
     total_rec_size =
       get_total_recording_size(device, start_date, end_date, 0, false)
-
-    Enum.reduce(recordings, 0, fn rec, acc ->
-      {:ok, details} = Recordings.details(device, rec)
-
-      acc + details.size
-    end)
 
     socket = assign(socket, :total_rec_size, (total_rec_size / 1_000_000) |> Float.floor(2))
 
