@@ -1,6 +1,5 @@
 defmodule ExNVRWeb.RecordingListLive do
   @moduledoc false
-  alias ExNVR.RemovableStorage.Export
 
   require Logger
   use ExNVRWeb, :live_view
@@ -229,7 +228,6 @@ defmodule ExNVRWeb.RecordingListLive do
        pagination_params: %{},
        sort_params: %{},
        files_details: %{},
-       removable_device: nil,
        type: nil,
        errors: %{}
      )}
@@ -321,16 +319,6 @@ defmodule ExNVRWeb.RecordingListLive do
     {:noreply, put_flash(socket, :info, "Exported to #{destination}")}
   end
 
-  def handle_event("next", _params, socket) do
-    {:noreply,
-     socket
-     |> update(:step, &min(&1 + 1, 3))}
-  end
-
-  def handle_event("prev", _params, socket) do
-    {:noreply, update(socket, :step, &max(&1 - 1, 1))}
-  end
-
   defp load_recordings(params, socket) do
     sort_params = Map.take(params, ["order_by", "order_directions"])
 
@@ -375,100 +363,6 @@ defmodule ExNVRWeb.RecordingListLive do
 
     {f.("device_id"), f.("start_date"), f.("end_date")}
   end
-
-  def update_assigns(socket, param, params) when param in ["type", "export_to"] do
-    case params[param] do
-      nil ->
-        socket
-
-      par ->
-        socket
-        |> assign(String.to_atom(param), par)
-    end
-  end
-
-  def update_assigns(socket, "destination", params) do
-    device =
-      Enum.find(socket.assigns.devices, &(&1.id == params["filters"]["0"]["value"]))
-
-    device_id = params["filters"]["0"]["value"]
-    start_date = params["filters"]["1"]["value"]
-
-    end_date = params["filters"]["2"]["value"]
-
-    recordings =
-      Recordings.get_recordings_between(
-        device_id,
-        :high,
-        start_date,
-        end_date
-      )
-
-    total_rec_size =
-      get_total_recording_size(device, start_date, end_date, 0, false)
-
-    socket = assign(socket, :total_rec_size, (total_rec_size / 1_000_000) |> Float.floor(2))
-
-    case params["destination"] do
-      nil ->
-        socket
-
-      dest ->
-        disk_size =
-          ExNVRWeb.DeviceLive.get_disks_data()
-          |> Enum.find(fn {path, _sizes} ->
-            nil
-            path == params["destination"]
-          end)
-          |> then(fn {_path, {size, _used}} -> size end)
-
-        errors =
-          if total_rec_size > disk_size * 1024 do
-            Map.put(socket.assigns.errors, :usb_size, "No enough space in the removable disk")
-          else
-            socket.assigns.errors
-          end
-
-        socket
-        |> assign(:destination, dest)
-        |> assign(:errors, errors)
-    end
-  end
-
-  @spec get_recording_sizes(binary(), map()) :: non_neg_integer()
-  def get_recording_sizes(device_id, rec) do
-    {:ok, stats} =
-      Recordings.recording_path(device_id, rec.stream, rec)
-      |> File.stat()
-
-    stats.size
-  end
-
-  def get_total_recording_size(device, start_date, end_date, size, done) when done == false do
-    recordings =
-      Recordings.get_recordings_between(device.id, :high, start_date, end_date)
-
-    case recordings do
-      [] ->
-        get_total_recording_size(device, start_date, end_date, size, true)
-
-      rec ->
-        size =
-          size +
-            Enum.reduce(rec, 0, fn rec, acc ->
-              {:ok, details} = Recordings.details(device, rec)
-
-              acc + details.size
-            end)
-
-        start_date = List.last(rec).end_date
-
-        get_total_recording_size(device, start_date, end_date, size, false)
-    end
-  end
-
-  def get_total_recording_size(_device, _start_date, _end_date, size, done) when done == true,
-    do: size
 
   def format_date(date) do
     {:ok, date, _} = DateTime.from_iso8601(date <> ":00Z")
