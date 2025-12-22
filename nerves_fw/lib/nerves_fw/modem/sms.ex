@@ -1,7 +1,11 @@
 defmodule ExNVR.Nerves.Modem.Sms do
+  @moduledoc """
+    configurations to a modem via AT commands
+    recieving and sending sms
+  """
   use GenServer
 
-  @port "/dev/ttyUSB2"
+  @port "ttyUSB2"
   @baud 115_200
 
   ## Public API
@@ -96,6 +100,7 @@ defmodule ExNVR.Nerves.Modem.Sms do
     case extract_message(data) do
       {:ok, sms} ->
         Phoenix.PubSub.broadcast(ExNVR.Nerves.PubSub, "messages", {:modem_messages, sms})
+
         {:noreply, Map.put(state, :last_sms, sms)}
 
       _ ->
