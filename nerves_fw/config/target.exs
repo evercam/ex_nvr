@@ -123,17 +123,7 @@ config :vintage_net,
        type: VintageNetEthernet,
        ipv4: %{method: :dhcp}
      }},
-    {"wlan0", %{type: VintageNetWiFi}},
-    {"type",
-     %{
-       type: VintageNetQMI,
-       vintage_net_qmi: %{
-         service_providers: [
-           %{apn: "safaricom"},
-           %{apn: "internet"}
-         ]
-       }
-     }}
+    {"wlan0", %{type: VintageNetWiFi}}
   ]
 
 config :mdns_lite,
