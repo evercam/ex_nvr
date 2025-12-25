@@ -1,12 +1,14 @@
 defmodule ExNVR.Nerves.RemoteConfigurer.Router do
   @moduledoc false
-  # Router configuration
 
   require Logger
 
-  alias ExNVR.Nerves.{RUT, SystemSettings}
+  alias ExNVR.Nerves.SystemSettings
+  alias ExNVR.RemoteConnection
 
-  defp configure_router(%{"default_password" => passwd}) do
+  @router_username "admin"
+
+  def configure_router(%{"default_password" => passwd}) do
     Logger.info("[RemoteConfigurer] Configure router")
     curr_passwd = SystemSettings.get_settings().router.password
 
@@ -20,64 +22,88 @@ defmodule ExNVR.Nerves.RemoteConfigurer.Router do
 
     with {:ok, info} <- RUT.system_information(),
          info <- %{serial_number: info.serial, model: info.model},
-         {:ok, new_config} <- RemoteConnection.push_and_wait("router-info", info),
-         :ok <- update_router_password(curr_passwd, new_config["password"]) do
-      Logger.info("[RemoteConfigurer] Router updated password successfully")
-      :ok
-    end
+         {:ok, new_config} <- RemoteConnection.push_and_wait("router-info", info) do
+      case do_configure(curr_passwd, new_config) do
+        {:ok, output} ->
+          SystemSettings.update!(%{
+            "router" => %{"password" => new_config["password"], "username" => @router_username}
+          })
 
-    # other config
-    case set_auto_reboot_schedule() do
-      {:ok, _} ->
-        Logger.info("[RemoteConfigurer] Router auto reboot schedule set successfully")
-        :ok
+          Logger.info("""
+          [RemoteConfigurer] Router configuration output:
+          #{output}
+          """)
 
-      {:error, reason} ->
-        Logger.error("[RemoteConfigurer] Failed to set router auto reboot schedule: #{inspect(reason)}")
-        :error
+        {:error, reason} ->
+          Logger.error("""
+          [RemoteConfigurer] Router configuration failed:
+          #{inspect(reason)}
+          """)
+      end
     end
   end
 
-  defp configure_router(_) do
+  def configure_router(_) do
     Logger.warning("[RemoteConfigurer] No default password provided for router configuration")
   end
 
-  defp update_router_password(curr_passwd, new_passwd) do
-    with {:error, _} <- RUT.change_password_firstlogin(new_passwd),
-         {:error, _} <- update_user_password(@router_username, curr_passwd, new_passwd) do
-      {:error, :failed_to_update_router_password}
-    else
-      _ok ->
-        SystemSettings.update!(%{
-          "router" => %{"username" => @router_username, "password" => new_passwd}
-        })
+  defp do_configure(password, new_config) do
+    ip_addr = ExNVR.Nerves.Utils.get_default_gateway()
 
-        :ok
+    ssh_params = [
+      user: ~c"root",
+      password: to_charlist(password),
+      user_interaction: false,
+      silently_accept_hosts: true
+    ]
+
+    with {:ok, ref} <- :ssh.connect(String.to_charlist(ip_addr), 22, ssh_params),
+         {:ok, channel} <- :ssh_connection.session_channel(ref, 5000) do
+      params = assigns_from_config(new_config)
+      cmd_path = Path.join(:code.priv_dir(:ex_nvr_fw), "router/config.eex")
+      do_exec(ref, channel, EEx.eval_file(cmd_path, assigns: params))
     end
   end
 
-  defp update_user_password(username, current_pass, new_password) do
-    with {:ok, users} <- RUT.users_config() do
-      user = Enum.find(users, &(&1["username"] == username))
+  defp do_exec(ref, channel, cmds) do
+    case :ssh_connection.exec(ref, channel, cmds, :infinity) do
+      :success ->
+        check_output(ref, channel)
 
-      config = %{
-        current_password: current_pass,
-        password: new_password,
-        password_confirm: new_password
-      }
+      :failure ->
+        {:error, :exec_failed}
 
-      RUT.update_user_config(user["id"], config)
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 
-  def set_auto_reboot_schedule() do
-    days = ["tue", "wed", "thu", "fri", "sat", "sun", "mon"]
-    params = %{enable: "1", action: "1", period: "week", days: days, time: ["00:30"]}
+  defp check_output(ref, channel, acc \\ <<>>) do
+    receive do
+      {:ssh_cm, ^ref, {:data, ^channel, _type, data}} ->
+        check_output(ref, channel, <<acc::binary, data::binary>>)
 
-    with {:ok, schedules} <- RUT.get_reboot_schedule(),
-         {:ok, _ids} <- RUT.delete_reboot_schedule(Enum.map(schedules, & &1["id"])),
-         {:ok, result} <- RUT.create_reboot_schedule(params) do
-      result
+      {:ssh_cm, ^ref, {:closed, ^channel}} ->
+        {:ok, acc}
+
+      {:ssh_cm, ^ref, {:exit_status, ^channel, status}} ->
+        status = if status != 0, do: :error, else: :ok
+        {status, acc}
     end
+  end
+
+  defp assigns_from_config(config) do
+    params = [
+      wifi_password: config["password"],
+      password: config["password"],
+      timezone: config["timezone"] || "UTC",
+      lan_address: config["lan_address"] || "192.168.8.1",
+      configure_wg?: config["wg_private_key"] != nil,
+      wg_private_key: config["wg_private_key"],
+      wg_public_key: config["wg_public_key"],
+      wg_address: config["wg_address"],
+      wg_server_ip: config["wg_server_ip"],
+      wg_server_public_key: config["wg_server_public_key"]
+    ]
   end
 end

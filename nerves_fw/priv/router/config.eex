@@ -1,0 +1,207 @@
+SOURCE='wireguard'
+
+#set periodic reboot
+
+while uci -q delete periodic_reboot.@reboot_instance[]; do :; done
+uci set periodic_reboot.periodic_reboot=periodic_reboot
+uci add periodic_reboot reboot_instance
+uci set periodic_reboot.@reboot_instance[0].period='week'
+uci set periodic_reboot.@reboot_instance[0].days='tue,wed,thu,fri,mon,sat,sun'
+uci set periodic_reboot.@reboot_instance[0].action='1'
+uci set periodic_reboot.@reboot_instance[0].time='00:30'
+uci set periodic_reboot.@reboot_instance[0].enable='1'
+uci commit periodic_reboot
+
+# connect to wireguard
+# # Create WG firewall Zone.
+uci set firewall.wireguard=zone
+uci set firewall.wireguard.name='wireguard'
+uci set firewall.wireguard.input='ACCEPT'
+uci set firewall.wireguard.output='ACCEPT'
+uci set firewall.wireguard.forward='REJECT'
+uci set firewall.wireguard.masq='1'
+uci set firewall.wireguard.mtu_fix='0'
+uci set firewall.wireguard.log='0'
+uci set firewall.wireguard.conntrack='0'
+uci set firewall.wireguard.device='wg_+'
+uci set firewall.wireguard.network='wg_tun0'
+uci commit firewall
+
+<%= if @configure_wg? do %>
+# Create WG interface
+
+uci set network.wg_tun0=interface
+uci set network.wg_tun0.proto='wireguard'
+uci set network.wg_tun0.disabled='0'
+uci set network.wg_tun0.private_key=<%= @wg_private_key %>
+uci set network.wg_tun0.public_key=<%= @wg_public_key %>
+uci set network.wg_tun0.listen_port='51820'
+uci set network.wg_tun0.addresses=<%= @wg_address %>
+
+# Delete old eventual peers.
+while uci -q delete network.@wireguard_wg_wireguard[]; do :; done
+while uci -q delete network.@wireguard_wg_tun0[]; do :; done
+
+# Add new peer (Evercam WG server).
+uci add network wireguard_wg_tun0
+uci set network.@wireguard_wg_tun0[0].description='Evercam WireGuard Server'
+uci set network.@wireguard_wg_tun0[0].public_key='<%= @wg_server_public_key %>'
+uci set network.@wireguard_wg_tun0[0].endpoint_host='<%= @wg_server_ip %>'
+uci set network.@wireguard_wg_tun0[0].allowed_ips='0.0.0.0/0'
+uci set network.@wireguard_wg_tun0[0].endpoint_port='51820'
+uci set network.@wireguard_wg_tun0[0].persistent_keepalive='25'
+
+<% end %>
+
+api put /date_time/ntp/client/config/ntpclient "$(cat <<EOF
+{
+  "data": {
+    ".type": "ntpclient",
+    "zoneName": "<%= @timezone %>",
+    "gps_sync": "0"
+  }
+}
+EOF
+)"
+
+# root and UI password change
+echo -e "<%= @password %>\n<%= @password %>" | passwd admin
+echo -e "<%= @password %>\n<%= @password %>" | passwd root
+uci set vuci.main.firstlogin='0' && uci commit && /etc/init.d/vuci reload
+
+# delete Factory PF rules
+while uci -q delete firewall.@redirect[]; do :; done
+
+# add 4 PF rules
+for i in $(seq 1 4); do uci add firewall redirect; done
+
+# add CAMERA 01 RTSP PF rule
+uci set firewall.@redirect[0].name="$(echo $SOURCE | tr 'a-z' 'A-Z')_to_RTSP"
+uci set firewall.@redirect[0].proto='tcp udp'
+uci set firewall.@redirect[0].src_dport='9100'
+uci set firewall.@redirect[0].dest_ip='192.168.8.101'
+uci set firewall.@redirect[0].dest_port='554'
+uci set firewall.@redirect[0].target='DNAT'
+uci set firewall.@redirect[0].src=$SOURCE
+uci set firewall.@redirect[0].dest='lan'
+uci set firewall.@redirect[0].enabled='1'
+
+  # add CAMERA 01 HTTP PF rule
+uci set firewall.@redirect[1].name="$(echo $SOURCE | tr 'a-z' 'A-Z')_to_CAM"
+uci set firewall.@redirect[1].proto='tcp udp'
+uci set firewall.@redirect[1].src_dport='65001'
+uci set firewall.@redirect[1].dest_ip='192.168.8.101'
+uci set firewall.@redirect[1].dest_port='80'
+uci set firewall.@redirect[1].target='DNAT'
+uci set firewall.@redirect[1].src=$SOURCE
+uci set firewall.@redirect[1].dest='lan'
+uci set firewall.@redirect[1].enabled='1'
+
+  # add CAMERA 02 HTTP PF rule
+uci set firewall.@redirect[2].name="$(echo $SOURCE | tr 'a-z' 'A-Z')_to_CAM2"
+uci set firewall.@redirect[2].proto='tcp udp'
+uci set firewall.@redirect[2].src_dport='65002'
+uci set firewall.@redirect[2].dest_ip='192.168.8.102'
+uci set firewall.@redirect[2].dest_port='80'
+uci set firewall.@redirect[2].target='DNAT'
+uci set firewall.@redirect[2].src=$SOURCE
+uci set firewall.@redirect[2].dest='lan'
+uci set firewall.@redirect[2].enabled='1'
+
+# add SSH PF rule
+uci set firewall.@redirect[3].name="$(echo $SOURCE | tr 'a-z' 'A-Z')_to_PI_SSH"
+uci set firewall.@redirect[3].proto='tcp udp'
+uci set firewall.@redirect[3].src_dport='65000'
+uci set firewall.@redirect[3].dest_ip='192.168.8.100'
+uci set firewall.@redirect[3].dest_port='22'
+uci set firewall.@redirect[3].target='DNAT'
+uci set firewall.@redirect[3].src=$SOURCE
+uci set firewall.@redirect[3].dest='lan'
+uci set firewall.@redirect[3].enabled='1'
+
+# commit changes and reload firewall
+uci commit firewall
+
+# delete Factory PF rules
+while uci -q delete ping_reboot.@ping_reboot[]; do :; done
+
+# add 4 PF rules
+for i in $(seq 1 2); do uci add ping_reboot ping_reboot; done
+
+# reboot if failing internet
+uci set ping_reboot.@ping_reboot[0].action='1'
+uci set ping_reboot.@ping_reboot[0].time='30'
+uci set ping_reboot.@ping_reboot[0].host='8.8.8.8'
+uci set ping_reboot.@ping_reboot[0].retry='2'
+uci set ping_reboot.@ping_reboot[0].fail_counter='0'
+uci set ping_reboot.@ping_reboot[0].packet_size='56'
+uci set ping_reboot.@ping_reboot[0].time_out='5'
+uci set ping_reboot.@ping_reboot[0].interface='1'
+uci set ping_reboot.@ping_reboot[0].stop_action='0'
+uci set ping_reboot.@ping_reboot[0].enable='1'
+uci set ping_reboot.@ping_reboot[0].type='ping'
+
+# reboot if failing mobile connection
+uci set ping_reboot.@ping_reboot[1].action='2'
+uci set ping_reboot.@ping_reboot[1].time='15'
+uci set ping_reboot.@ping_reboot[1].host='1.1.1.1'
+uci set ping_reboot.@ping_reboot[1].retry='2'
+uci set ping_reboot.@ping_reboot[1].fail_counter='0'
+uci set ping_reboot.@ping_reboot[1].packet_size='56'
+uci set ping_reboot.@ping_reboot[1].time_out='5'
+uci set ping_reboot.@ping_reboot[1].interface='1'
+uci set ping_reboot.@ping_reboot[1].stop_action='0'
+uci set ping_reboot.@ping_reboot[1].enable='1'
+uci set ping_reboot.@ping_reboot[1].type='ping'
+
+uci commit ping_reboot
+/etc/init.d/ping_reboot reload
+
+
+# Set no authorisation on reboot, status and vpnstatus
+uci set sms_utils.@rule[0].authorization='no'
+uci set sms_utils.@rule[1].authorization='no'
+uci commit sms_utils
+
+# disable blocking
+uci set ip_blockd.@globals[0].enabled='0'
+uci set ip_blockd.@globals[0].reboot_clear='1'
+uci commit ip_blockd
+
+#Disable SMS IO State
+uci set sms_utils.@rule[3].enabled='0'
+uci commit sms_utils
+
+
+# Disable HTTPS redirect
+# Disable HTTPS redirect in uHTTPd config
+CONFIG_FILE="/etc/config/uhttpd"
+
+# Backup original config
+cp "$CONFIG_FILE" "${CONFIG_FILE}.bak"
+
+# Check if redirect_https is set; if so, modify it, else add it
+if uci get uhttpd.main.redirect_https >/dev/null 2>&1; then
+  uci set uhttpd.main.redirect_https='0'
+else
+  uci add_list uhttpd.main.redirect_https='0'
+fi
+
+# Commit changes and restart web service
+uci commit uhttpd
+/etc/init.d/uhttpd restart
+
+# wireless password change
+uci set wireless.@wifi-iface[0].key=<%= @wifi_password %>
+uci commit wireless
+
+# Change Network LAN subnet
+uci set network.lan.ipaddr=<%= @lan_address %>
+#uci commit network.lan
+
+/etc/init.d/firewall reload
+/etc/init.d/network reload
+
+# Firmware upgrade
+/etc/init.d/dfota start
+rut_fota -f -s -k

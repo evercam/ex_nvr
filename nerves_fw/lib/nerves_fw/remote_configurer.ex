@@ -23,7 +23,6 @@ defmodule ExNVR.Nerves.RemoteConfigurer do
   @netbird_mangement_url "https://vpn.evercam.io"
   @mountpoint "/data/media"
   @default_admin_user "admin@localhost"
-  @router_username "admin"
   @config_completed_file "/data/.kit_config"
   @call_timeout to_timeout(second: 20)
   @config_version "1.0"
