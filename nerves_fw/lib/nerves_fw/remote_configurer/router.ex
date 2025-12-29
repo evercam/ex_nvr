@@ -3,19 +3,18 @@ defmodule ExNVR.Nerves.RemoteConfigurer.Router do
 
   require Logger
 
-  alias ExNVR.Nerves.SystemSettings
+  alias ExNVR.Nerves.{RUT, SystemSettings}
   alias ExNVR.RemoteConnection
 
   @router_username "admin"
 
-  def configure_router(%{"default_password" => passwd}) do
+  def configure(%{"default_password" => passwd}) do
     Logger.info("[RemoteConfigurer] start configuring router")
     curr_passwd = SystemSettings.get_settings().router.password
 
     if is_nil(curr_passwd) do
-      SystemSettings.update!(%{
-        "router" => %{"password" => passwd, "username" => @router_username}
-      })
+      Logger.info("[RemoteConfigurer] setting default router credentials")
+      SystemSettings.update!(%{router: %{password: passwd, username: @router_username}})
     end
 
     curr_passwd = curr_passwd || passwd
@@ -43,12 +42,12 @@ defmodule ExNVR.Nerves.RemoteConfigurer.Router do
     end
   end
 
-  def configure_router(_) do
+  def configure(_) do
     Logger.warning("[RemoteConfigurer] No default password provided for router configuration")
   end
 
   defp do_configure(password, new_config) do
-    ip_addr = ExNVR.Nerves.Utils.get_default_gateway()
+    {:ok, ip_addr} = ExNVR.Nerves.Utils.get_default_gateway()
 
     ssh_params = [
       user: ~c"root",
@@ -102,12 +101,12 @@ defmodule ExNVR.Nerves.RemoteConfigurer.Router do
       password: config["password"],
       timezone: config["timezone"] || "UTC",
       lan_address: config["lan_address"] || "192.168.8.1",
-      configure_wg?: config["wg_private_key"] != nil,
-      wg_private_key: config["wg_private_key"],
-      wg_public_key: config["wg_public_key"],
-      wg_address: config["wg_address"],
-      wg_server_ip: config["wg_server_ip"],
-      wg_server_public_key: config["wg_server_public_key"]
+      configure_wg?: config["private_key"] != nil,
+      wg_private_key: config["private_key"],
+      wg_public_key: config["public_key"],
+      wg_address: config["peer_ip"],
+      wg_server_ip: config["server_ip"],
+      wg_server_public_key: config["server_public_key"]
     ]
   end
 end
