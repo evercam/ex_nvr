@@ -196,7 +196,7 @@ uci set wireless.@wifi-iface[0].key=<%= @wifi_password %>
 uci commit wireless
 
 # Change Network LAN subnet
-uci set network.lan.ipaddr=<%= @lan_address %>
+#uci set network.lan.ipaddr=<%= @lan_address %>
 #uci commit network.lan
 
 /etc/init.d/firewall reload

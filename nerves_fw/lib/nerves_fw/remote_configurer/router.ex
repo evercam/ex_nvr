@@ -9,7 +9,7 @@ defmodule ExNVR.Nerves.RemoteConfigurer.Router do
   @router_username "admin"
 
   def configure_router(%{"default_password" => passwd}) do
-    Logger.info("[RemoteConfigurer] Configure router")
+    Logger.info("[RemoteConfigurer] start configuring router")
     curr_passwd = SystemSettings.get_settings().router.password
 
     if is_nil(curr_passwd) do
