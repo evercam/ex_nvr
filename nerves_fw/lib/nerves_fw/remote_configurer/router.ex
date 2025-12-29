@@ -57,10 +57,14 @@ defmodule ExNVR.Nerves.RemoteConfigurer.Router do
       silently_accept_hosts: true
     ]
 
+    Logger.info("[RemoteConfigurer] Connecting to router at #{ip_addr} via SSH")
+
     with {:ok, ref} <- :ssh.connect(String.to_charlist(ip_addr), 22, ssh_params),
          {:ok, channel} <- :ssh_connection.session_channel(ref, 5000) do
       params = assigns_from_config(new_config)
       cmd_path = Path.join(:code.priv_dir(:ex_nvr_fw), "router/config.eex")
+
+      Logger.info("[RemoteConfigurer] Executing router configuration script")
       do_exec(ref, channel, EEx.eval_file(cmd_path, assigns: params))
     end
   end
