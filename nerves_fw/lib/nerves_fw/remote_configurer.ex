@@ -35,6 +35,7 @@ defmodule ExNVR.Nerves.RemoteConfigurer do
   def init(_config) do
     settings =
       if File.exists?(@config_completed_file) do
+        # credo:disable-for-next-line
         # TODO: following code will be deleted in the next version
         kit_serial = Runtime.KV.get("nerves_evercam_id")
         SystemSettings.update!(%{"configured" => true, "kit_serial" => kit_serial})

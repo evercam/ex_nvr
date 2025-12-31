@@ -147,7 +147,7 @@ defmodule ExNVR.Nerves.RUT do
   end
 
   # Reboot Schedule
-  def get_reboot_schedule() do
+  def get_reboot_schedule do
     do_request(nil, "/auto_reboot/scheduler/config")
   end
 

@@ -3,7 +3,7 @@ defmodule ExNVR.Nerves.RemoteConfigurer.Router do
 
   require Logger
 
-  alias ExNVR.Nerves.{RUT, SystemSettings}
+  alias ExNVR.Nerves.{RUT, SystemSettings, Utils}
   alias ExNVR.RemoteConnection
 
   @router_username "admin"
@@ -47,7 +47,7 @@ defmodule ExNVR.Nerves.RemoteConfigurer.Router do
   end
 
   defp do_configure(password, new_config) do
-    {:ok, ip_addr} = ExNVR.Nerves.Utils.get_default_gateway()
+    {:ok, ip_addr} = Nerves.Utils.get_default_gateway()
 
     ssh_params = [
       user: ~c"root",

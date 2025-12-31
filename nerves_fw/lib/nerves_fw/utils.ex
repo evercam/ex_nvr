@@ -32,8 +32,8 @@ defmodule ExNVR.Nerves.Utils do
     end
   end
 
-  @spec hostname() :: String.t() | nil
-  def hostname() do
+  @spec hostname :: String.t() | nil
+  def hostname do
     case :inet.gethostname() do
       {:ok, hostname} -> to_string(hostname)
       {:error, _} -> nil
