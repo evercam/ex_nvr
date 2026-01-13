@@ -47,7 +47,7 @@ defmodule ExNVR.Nerves.RemoteConfigurer.Router do
   end
 
   defp do_configure(password, new_config) do
-    {:ok, ip_addr} = Nerves.Utils.get_default_gateway()
+    {:ok, ip_addr} = Utils.get_default_gateway()
 
     ssh_params = [
       user: ~c"root",
