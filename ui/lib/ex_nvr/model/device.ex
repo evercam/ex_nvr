@@ -60,7 +60,9 @@ defmodule ExNVR.Model.Device do
             third_profile_token: url(),
             filename: String.t(),
             temporary_path: Path.t(),
-            duration: Membrane.Time.t()
+            duration: Membrane.Time.t(),
+            framerate: String.t(),
+            resolution: String.t()
           }
 
     @primary_key false
@@ -78,6 +80,8 @@ defmodule ExNVR.Model.Device do
       field :filename, :string
       field :temporary_path, :string, virtual: true
       field :duration, :integer
+      field :framerate, :float, default: 8.0
+      field :resolution, :string
     end
 
     def changeset(struct, params, device_type) do
@@ -91,7 +95,9 @@ defmodule ExNVR.Model.Device do
         :sub_profile_token,
         :filename,
         :temporary_path,
-        :duration
+        :duration,
+        :framerate,
+        :resolution
       ])
       |> validate_device_config(device_type)
     end
@@ -110,6 +116,13 @@ defmodule ExNVR.Model.Device do
 
     defp validate_device_config(changeset, :file) do
       validate_required(changeset, [:filename, :duration])
+    end
+
+    defp validate_device_config(changeset, :webcam) do
+      changeset
+      |> validate_required([:framerate])
+      |> validate_number(:framerate, greater_than_or_equal_to: 5, less_than_or_equal_to: 30)
+      |> validate_format(:resolution, ~r/^\d+x\d+$/, message: "should be in WIDTHxHEIGHT format")
     end
 
     defp validate_uri(field, uri, protocl \\ "rtsp") do
@@ -154,7 +167,7 @@ defmodule ExNVR.Model.Device do
   @primary_key {:id, :binary_id, autogenerate: true}
   schema "devices" do
     field :name, :string
-    field :type, Ecto.Enum, values: [:ip, :file], default: :ip
+    field :type, Ecto.Enum, values: [:ip, :file, :webcam], default: :ip
     field :timezone, :string, default: "UTC"
     field :state, Ecto.Enum, values: @states, default: :recording
     field :vendor, :string

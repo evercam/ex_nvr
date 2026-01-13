@@ -106,17 +106,16 @@ defmodule ExNVR.Nerves.RUT.Auth do
 
   defp authenticate(base_url, username, password) do
     url = base_url <> @login_path
-    conn_opts = [transport_opts: [verify: :verify_none]]
+    conn_opts = [timeout: @connect_timeout, transport_opts: [verify: :verify_none]]
 
     resp =
       Req.new(url: url)
       |> track_redirected()
       |> Req.post(
         json: %{username: username, password: password},
-        connect_options: conn_opts,
         retry: false,
         receive_timeout: @receive_timeout,
-        connect_options: [timeout: @connect_timeout]
+        connect_options: conn_opts
       )
 
     case resp do

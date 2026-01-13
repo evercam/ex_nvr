@@ -198,6 +198,12 @@ defmodule ExNVR.Pipelines.Main do
   end
 
   @impl true
+  def handle_child_notification({:stream_failed, reason}, :webcam, _ctx, state) do
+    Membrane.Logger.error("Webcam stream failed: #{inspect(reason)}")
+    {[], maybe_update_device_and_report(state, :failed)}
+  end
+
+  @impl true
   def handle_child_notification({:snapshot, snapshot}, _element, _ctx, state) do
     state.live_snapshot_waiting_pids
     |> Enum.map(&{:reply_to, {&1, {:ok, snapshot}}})
@@ -392,7 +398,17 @@ defmodule ExNVR.Pipelines.Main do
     [child(:file_source, %ExNVR.Pipeline.Source.File{device: device})]
   end
 
-  defp build_device_spec(device) do
+  defp build_device_spec(%{type: :webcam} = device) do
+    [
+      child(:webcam, %Source.Webcam{
+        device: device.url,
+        framerate: device.stream_config.framerate,
+        resolution: device.stream_config.resolution
+      })
+    ]
+  end
+
+  defp build_device_spec(%{type: :ip} = device) do
     [child(:rtsp_source, %Source.RTSP{device: device})]
   end
 

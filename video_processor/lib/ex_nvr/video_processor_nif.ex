@@ -14,11 +14,20 @@ defmodule ExNVR.AV.VideoProcessor.NIF do
   def new_decoder(_codec, _out_width, _out_height, _out_format, _pad?),
     do: :erlang.nif_error(:undef)
 
+  def new_converter(
+        _in_width,
+        _in_height,
+        _in_format,
+        _out_width,
+        _out_height,
+        _out_format,
+        _pad?
+      ),
+      do: :erlang.nif_error(:undef)
+
   def encode(_encoder, _data, _pts), do: :erlang.nif_error(:undef)
-
   def decode(_decoder, _data, _dts, _pts), do: :erlang.nif_error(:undef)
-
+  def convert(_converter, _data), do: :erlang.nif_error(:undef)
   def flush_encoder(_encoder), do: :erlang.nif_error(:undef)
-
   def flush_decoder(_decoder), do: :erlang.nif_error(:undef)
 end

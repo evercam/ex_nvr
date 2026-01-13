@@ -4,9 +4,10 @@ defmodule ExNVR.AV.CameraCapture do
   alias ExNVR.AV.CameraCapture.NIF
   alias ExNVR.AV.Frame
 
-  @spec open_camera(String.t(), non_neg_integer()) :: {:ok, reference()} | {:error, term()}
-  def open_camera(device_url, framerate) do
-    NIF.open_camera(device_url, to_string(framerate))
+  @spec open_camera(String.t(), non_neg_integer(), String.t()) ::
+          {:ok, reference()} | {:error, term()}
+  def open_camera(device_url, framerate, resolution) do
+    NIF.open_camera(device_url, to_string(framerate), resolution)
   end
 
   @spec read_camera_frame(reference()) :: {:ok, Frame.t()} | {:error, term()}
@@ -28,4 +29,7 @@ defmodule ExNVR.AV.CameraCapture do
         {:error, reason}
     end
   end
+
+  @spec get_stream_properties(reference()) :: map()
+  def get_stream_properties(native), do: NIF.get_stream_properties(native)
 end

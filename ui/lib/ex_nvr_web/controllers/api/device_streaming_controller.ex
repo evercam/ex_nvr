@@ -8,9 +8,9 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
   require Logger
 
   alias Ecto.Changeset
+  alias ExNVR.{Devices, HLS, Recordings, Utils}
   alias ExNVR.Model.Device
   alias ExNVR.Pipelines.{HlsPlayback, Main}
-  alias ExNVR.{Devices, HLS, Recordings, Utils}
 
   @type return_t :: Plug.Conn.t() | {:error, Changeset.t()}
 

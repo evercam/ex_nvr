@@ -101,6 +101,7 @@ defmodule ExNVR.Hardware.Victron do
         }
 
   @derive Jason.Encoder
+  # credo:disable-for-next-line
   defstruct [
     :v,
     :vpv,

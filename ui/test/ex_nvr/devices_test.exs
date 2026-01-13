@@ -249,6 +249,23 @@ defmodule ExNVR.DevicesTest do
                errors_on(changeset)
     end
 
+    test "validate framerate and resolution" do
+      {:error, changeset} =
+        Devices.create(%{
+          name: @valid_camera_name,
+          type: "webcam",
+          stream_config: %{framerate: 4.5, resolution: "1920"},
+          settings: valid_device_settings()
+        })
+
+      assert %{
+               stream_config: %{
+                 framerate: ["must be greater than or equal to 5"],
+                 resolution: ["should be in WIDTHxHEIGHT format"]
+               }
+             } = errors_on(changeset)
+    end
+
     test "create a new device", %{tmp_dir: tmp_dir} do
       {:ok, device} =
         Devices.create(

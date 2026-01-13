@@ -314,13 +314,12 @@ export default defineComponent({
     },
     watch: {
         url(value) {
-            this.statsListener(value);
+            this.startStreaming(value);
         },
     },
 
     mounted() {
-        const component = this.$refs.videoPlayer;
-        this.statsListener(this.url);
+        this.startStreaming(this.url);
     },
     data() {
         return {
@@ -403,11 +402,10 @@ export default defineComponent({
                 exitFullScreen();
             }
         },
-
         openStatsTab() {
             this.isStreamShown = !this.isStreamShown;
         },
-        statsListener(streamUrl) {
+        startStreaming(streamUrl) {
             const component = this.$refs.videoPlayer;
             component?.initHls(streamUrl);
             const playerElement = component?.$refs?.player;

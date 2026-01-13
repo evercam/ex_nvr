@@ -126,6 +126,39 @@ defmodule ExNVRWeb.DeviceLiveTest do
       assert Phoenix.Flash.get(conn.assigns.flash, :info) == "Device created successfully"
     end
 
+    test "create a new webcam device", %{conn: conn} do
+      {:ok, lv, _} = live(conn, ~p"/devices/new")
+
+      render_change(lv, :validate, %{"device" => %{"type" => "webcam"}})
+
+      {:ok, conn} =
+        lv
+        |> form("#device_form", %{
+          "device" => %{
+            "name" => "My Device",
+            "type" => "webcam",
+            "stream_config" => %{
+              "framerate" => "20",
+              "resolution" => "1280x720"
+            },
+            "storage_config" => %{
+              "address" => "/tmp"
+            }
+          }
+        })
+        |> render_submit()
+        |> follow_redirect(conn, ~p"/devices")
+
+      assert([created_device] = Devices.list())
+      assert created_device.name == "My Device"
+      assert created_device.type == :webcam
+      assert created_device.storage_config.address == "/tmp"
+      assert created_device.stream_config.framerate == 20.0
+      assert created_device.stream_config.resolution == "1280x720"
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) == "Device created successfully"
+    end
+
     test "renders errors on form submission", %{conn: conn} do
       {:ok, lv, _} = live(conn, ~p"/devices/new")
 

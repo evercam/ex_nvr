@@ -142,8 +142,9 @@ defmodule ExNVR.Nerves.RemoteConfigurer do
   defp create_user!(config) do
     Logger.info("[RemoteConfigurer] Create admin user")
 
-    if user = Accounts.get_user_by_email(@default_admin_user) do
-      Accounts.delete_user(user)
+    case Accounts.get_user_by_email(@default_admin_user) do
+      nil -> :ok
+      user -> Accounts.delete_user(user)
     end
 
     unless Accounts.get_user_by_email(@admin_user) do

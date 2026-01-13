@@ -5,9 +5,9 @@ defmodule ExNVR.Devices.SnapshotUploader do
 
   require Logger
 
+  alias ExNVR.{Devices, RemoteStorages}
   alias ExNVR.Model.Device
   alias ExNVR.RemoteStorage
-  alias ExNVR.{Devices, RemoteStorages}
   alias ExNVR.RemoteStorages.Store
 
   def start_link(options) do

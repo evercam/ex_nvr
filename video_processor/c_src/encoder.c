@@ -16,6 +16,7 @@ Encoder *encoder_alloc() {
 }
 
 int encoder_init(Encoder *encoder, struct EncoderConfig *config) {
+  AVDictionary *opts = NULL;
   encoder->codec = config->codec;
 
   encoder->c = avcodec_alloc_context3(encoder->codec);
@@ -40,7 +41,17 @@ int encoder_init(Encoder *encoder, struct EncoderConfig *config) {
     encoder->c->profile = config->profile;
   }
 
-  return avcodec_open2(encoder->c, encoder->codec, NULL);
+  if (config->preset) {
+    av_dict_set(&opts, "preset", config->preset, 0);
+  }
+
+  if (config->tune) {
+    av_dict_set(&opts, "tune", config->tune, 0);
+  }
+
+  int ret = avcodec_open2(encoder->c, encoder->codec, &opts);
+  av_dict_free(&opts);
+  return ret;
 }
 
 int encoder_encode(Encoder *encoder, AVFrame *frame) {
