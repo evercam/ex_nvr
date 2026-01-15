@@ -98,36 +98,6 @@ defmodule ExNVR.Utils do
     end
   end
 
-  # ffprope + elixir
-  @spec get_stats_from_ffprobe(String.t()) :: {:ok, String.t()}
-  def get_stats_from_ffprobe(m3u8_path) do
-    System.cmd(ffprobe_path(), [
-      "-v",
-      "quiet",
-      "-print_format",
-      "json",
-      "-show_streams",
-      m3u8_path
-    ])
-    |> case do
-      {output, 0} ->
-        %{"streams" => [camera_stream_stats]} = Jason.decode!(output)
-        camera_stream_stats
-    end
-  end
-
-  # ffprobe_path
-  @spec ffprobe_path :: String.t()
-  def ffprobe_path do
-    case System.find_executable("ffprobe") do
-      nil ->
-        raise "Install FFmpeg"
-
-      ffprobe_path ->
-        ffprobe_path
-    end
-  end
-
   # Streaming & Codecs utilities
   defguard keyframe(buffer)
            when (is_map_key(buffer.metadata, :h264) and buffer.metadata.h264.key_frame?) or

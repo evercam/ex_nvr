@@ -47,8 +47,6 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
         if String.ends_with?(segment_name, ".m3u8") do
           ExNVRWeb.HlsStreamingMonitor.update_last_access_time(stream_id)
 
-          broadcast_stream_info(segment_name, full_path)
-
           full_path
           |> File.read!()
           |> HLS.Processor.add_query_params(:media_playlist,
@@ -63,24 +61,6 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
       false ->
         {:error, :not_found}
     end
-  end
-
-  @spec broadcast_stream_info(String.t(), Path.t()) :: :ok
-  def broadcast_stream_info(segment_name, m3u8_file_path) do
-    Task.start(fn ->
-      stream_name =
-        segment_name
-        |> Path.rootname()
-        |> String.to_atom()
-
-      camera_stream_stats = ExNVR.Utils.get_stats_from_ffprobe(m3u8_file_path)
-
-      Phoenix.PubSub.broadcast(
-        ExNVR.PubSub,
-        "stream_info",
-        {stream_name, camera_stream_stats}
-      )
-    end)
   end
 
   @spec snapshot(Plug.Conn.t(), map()) :: return_t()

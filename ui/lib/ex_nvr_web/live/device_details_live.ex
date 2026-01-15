@@ -112,8 +112,8 @@ defmodule ExNVRWeb.DeviceDetailsLive do
      assign(socket,
        device: device,
        active_tab: active_tab,
-       main_stream_stats: %{},
-       sub_stream_stats: %{}
+       main_stream_stats: nil,
+       sub_stream_stats: nil
      )}
   end
 
@@ -128,9 +128,9 @@ defmodule ExNVRWeb.DeviceDetailsLive do
   @impl true
   def handle_info({:tab_changed, %{tab: tab}}, socket) do
     if tab == "stats" do
-      Phoenix.PubSub.subscribe(ExNVR.PubSub, "stream_info")
+      Phoenix.PubSub.subscribe(ExNVR.PubSub, "stats")
     else
-      Phoenix.PubSub.unsubscribe(ExNVR.PubSub, "stream_info")
+      Phoenix.PubSub.unsubscribe(ExNVR.PubSub, "stats")
     end
 
     params =
@@ -149,13 +149,13 @@ defmodule ExNVRWeb.DeviceDetailsLive do
   end
 
   @impl true
-  def handle_info({:main_stream, message}, socket) do
-    {:noreply, assign(socket, main_stream_stats: format_stats(message))}
+  def handle_info({:video_stats, {:high, stats}}, socket) do
+    {:noreply, assign(socket, :main_stream_stats, stats)}
   end
 
   @impl true
-  def handle_info({:sub_stream, message}, socket) do
-    {:noreply, assign(socket, sub_stream_stats: format_stats(message))}
+  def handle_info({:video_stats, {:low, stats}}, socket) do
+    {:noreply, assign(socket, :sub_stream_stats, stats)}
   end
 
   @spec format_stats(map()) :: map()
