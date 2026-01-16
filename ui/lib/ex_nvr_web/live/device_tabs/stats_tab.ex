@@ -1,7 +1,7 @@
 defmodule ExNVRWeb.DeviceTabs.StatsTab do
   use ExNVRWeb, :live_component
 
-  alias ExNVR.Model.Device
+  import ExNVRWeb.ViewUtils
 
   @moduledoc false
 
@@ -91,8 +91,7 @@ defmodule ExNVRWeb.DeviceTabs.StatsTab do
                   Bitrate
                 </div>
                 <div class="text-lg font-bold text-cyan-600 dark:text-cyan-400">
-                  {Float.round(@main_stream_stats.avg_bitrate / 1000, 1)}
-                  <span class="text-sm text-gray-500 dark:text-gray-400">Kbps</span>
+                  {humanize_bitrate(@main_stream_stats.avg_bitrate)}
                 </div>
               </div>
               <div class="text-center">
@@ -100,7 +99,7 @@ defmodule ExNVRWeb.DeviceTabs.StatsTab do
                   Total Size
                 </div>
                 <div class="text-lg font-bold text-cyan-600 dark:text-cyan-400">
-                  {Float.round(@main_stream_stats.total_bytes / 1_048_576, 2)} MB
+                  {humanize_size(@main_stream_stats.total_bytes)}
                 </div>
               </div>
             </div>
@@ -227,8 +226,7 @@ defmodule ExNVRWeb.DeviceTabs.StatsTab do
                   Bitrate
                 </div>
                 <div class="text-lg font-bold text-amber-500 dark:text-amber-400">
-                  {Float.round(@sub_stream_stats.avg_bitrate / 1000, 1)}
-                  <span class="text-sm text-gray-500 dark:text-gray-400">Kbps</span>
+                  {humanize_bitrate(@sub_stream_stats.avg_bitrate)}
                 </div>
               </div>
 
@@ -237,7 +235,7 @@ defmodule ExNVRWeb.DeviceTabs.StatsTab do
                   Total Size
                 </div>
                 <div class="text-lg font-bold text-cyan-600 dark:text-cyan-400">
-                  {Float.round(@sub_stream_stats.total_bytes / 1_048_576, 2)} MB
+                  {humanize_size(@sub_stream_stats.total_bytes)}
                 </div>
               </div>
             </div>
