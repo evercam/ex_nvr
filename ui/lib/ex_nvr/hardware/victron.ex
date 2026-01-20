@@ -157,6 +157,10 @@ defmodule ExNVR.Hardware.Victron do
     GenServer.start_link(__MODULE__, options[:port], name: options[:name])
   end
 
+  def write(pid, data) do
+    GenServer.call(pid, {:write, data})
+  end
+
   @impl true
   def init(serial_port) do
     {:ok, pid} = Circuits.UART.start_link()
@@ -167,7 +171,8 @@ defmodule ExNVR.Hardware.Victron do
       data: %__MODULE__{},
       timer: nil,
       restart_timer: nil,
-      datetime: DateTime.utc_now()
+      datetime: DateTime.utc_now(),
+      unprocessed_data: <<>>
     }
 
     {:ok, state, {:continue, :probe}}
@@ -189,8 +194,15 @@ defmodule ExNVR.Hardware.Victron do
   end
 
   @impl true
+  def handle_call({:write, data}, _from, state) do
+    :ok = Circuits.UART.write(state.pid, data)
+    {:reply, :ok, state}
+  end
+
+  @impl true
   def handle_info({:circuits_uart, _port, message}, state) do
-    state = %{state | data: do_handle_message(state.data, message), datetime: DateTime.utc_now()}
+    {data, unprocessed} = do_handle_message(state.data, :text, state.unprocessed_data <> message)
+    state = %{state | data: data, datetime: DateTime.utc_now(), unprocessed_data: unprocessed}
     {:noreply, state}
   end
 
@@ -241,13 +253,7 @@ defmodule ExNVR.Hardware.Victron do
     :timer.cancel(state.timer)
   end
 
-  defp uart_options(active \\ false) do
-    [
-      active: active,
-      speed: @speed,
-      framing: {Circuits.UART.Framing.Line, separator: "\r\n"}
-    ]
-  end
+  defp uart_options(active \\ false), do: [active: active, speed: @speed]
 
   defp victron_device?(state, max_attemots \\ 3)
 
@@ -264,11 +270,53 @@ defmodule ExNVR.Hardware.Victron do
     end
   end
 
-  defp do_handle_message(%__MODULE__{} = data, message) do
-    case String.split(message, "\t") do
-      [key, value] -> do_handle_value(data, String.downcase(key), value)
-      _other -> data
+  defp do_handle_message(%__MODULE__{} = state, :hex, message) do
+    case String.split(message, "\n", parts: 2) do
+      [message, rest] ->
+        mode = if String.starts_with?(rest, ":"), do: :hex, else: :text
+
+        state
+        |> parse_hex_message(message)
+        |> do_handle_message(mode, rest)
+
+      [incomplete] ->
+        {state, incomplete}
     end
+  end
+
+  defp do_handle_message(%__MODULE__{} = data, :text, message) do
+    case String.split(message, "\r\n", parts: 2) do
+      [line, rest] ->
+        # check if there'a any hex message
+        {line, hex} =
+          case String.split(line, ":", parts: 2) do
+            [line, hex] -> {line, hex}
+            _ -> {line, nil}
+          end
+
+        data =
+          case String.split(line, "\t") do
+            [key, value] -> do_handle_value(data, String.downcase(key), value)
+            _other -> data
+          end
+
+        if hex,
+          do: do_handle_message(data, :hex, hex <> rest),
+          else: do_handle_message(data, :text, rest)
+
+      [incomplete] ->
+        {data, incomplete}
+    end
+  end
+
+  defp parse_hex_message(state, <<"A", _rest::binary>>) do
+    Logger.debug("[Victron] hex: ignore asynchronous message")
+    states
+  end
+
+  defp parse_hex_message(state, message) do
+    Logger.info("Victron hex message received: #{inspect(message, limit: :infinity)}")
+    state
   end
 
   defp do_handle_value(data, "pid", value), do: %{data | pid: value}
