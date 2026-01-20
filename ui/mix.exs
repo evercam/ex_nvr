@@ -81,7 +81,7 @@ defmodule ExNVR.MixProject do
       {:flop_phoenix, "~> 0.24"},
       {:prom_ex, "~> 1.11.0"},
       {:circuits_uart, "~> 1.5"},
-      {:ex_onvif, "~> 0.7.2"},
+      {:ex_onvif, "~> 0.8.0"},
       {:slipstream, "~> 1.2.0"},
       {:live_vue, "~> 0.5.7"},
       {:sentry, "~> 11.0"},
