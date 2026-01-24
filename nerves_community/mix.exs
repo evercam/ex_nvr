@@ -1,8 +1,8 @@
 defmodule ExNVR.Nerves.MixProject do
   use Mix.Project
 
-  @app :base_fw
-  @version "0.24.0"
+  @app :exnvr_fw
+  @version "0.25.1"
   @all_targets [:rpi4, :rpi5]
 
   def project do
@@ -21,11 +21,13 @@ defmodule ExNVR.Nerves.MixProject do
   def application do
     [
       extra_applications: [:logger, :runtime_tools],
-      mod: {BaseFw.Application, []}
+      mod: {ExNVR.Nerves.Application, []}
     ]
   end
 
   defp deps do
+    env = if Mix.env() == :prod, do: :prod, else: :dev
+
     [
       {:nerves, "~> 1.10", runtime: false},
       {:shoehorn, "~> 0.9.1"},
@@ -33,12 +35,15 @@ defmodule ExNVR.Nerves.MixProject do
       {:toolshed, "~> 0.4.0"},
       {:nerves_runtime, "~> 0.13.0"},
       {:nerves_pack, "~> 0.7.1", targets: @all_targets},
+      {:ex_nvr, path: "../ui", env: env},
+      {:circuits_gpio, "~> 2.1"},
+      {:circuits_i2c, "~> 2.0"},
 
       {:ex_nvr_system_rpi4,
-       github: "evercam/ex_nvr_system_rpi4", tag: "v1.31.2", runtime: false, targets: :rpi4},
+       github: "evercam/ex_nvr_system_rpi4", tag: "v1.31.3", runtime: false, targets: :rpi4},
       {:ex_nvr_system_rpi5,
        github: "evercam/ex_nvr_system_rpi5",
-       tag: "v0.6.2",
+       tag: "v0.6.3",
        runtime: false,
        targets: [:rpi5]}
     ]

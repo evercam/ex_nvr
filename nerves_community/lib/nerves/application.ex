@@ -9,6 +9,8 @@ defmodule ExNVR.Nerves.Application do
       [
       ] ++ target_children()
 
+    ExNVR.Release.migrate()
+
     opts = [strategy: :one_for_one, name: ExNVR.Nerves.Supervisor]
     Supervisor.start_link(children, opts)
   end
@@ -20,7 +22,7 @@ defmodule ExNVR.Nerves.Application do
     end
   else
     defp target_children() do
-      []
+      [{ExNVR.Nerves.DiskMounter, []}]
     end
   end
 end
