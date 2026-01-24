@@ -60,4 +60,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ex_nvr_${{ matrix.target }}.fw
-          path: _build/${{ matrix.target }}_prod/nerves/images/exnvr_fw.fw
+          path: ./nerves_community/_build/${{ matrix.target }}_prod/nerves/images/exnvr_fw.fw
