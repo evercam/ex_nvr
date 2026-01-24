@@ -6,8 +6,6 @@ on:
   #     - "v*"
 
 jobs:
-  matrix:
-
   firmware:
     runs-on: ubuntu-latest
     defaults:
