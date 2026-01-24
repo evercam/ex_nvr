@@ -1,0 +1,60 @@
+name: nerves
+
+on:
+  # push:
+  #   tags:
+  #     - "v*"
+
+jobs:
+  matrix:
+
+  firmware:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./nerves_community
+    strategy:
+      matrix:
+        target: [rpi4, rpi5]
+    env:
+      MIX_ENV: prod
+      MIX_TARGET: ${{ matrix.target }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: erlef/setup-beam@v1.18
+        with:
+          otp-version: 27.3.3
+          elixir-version: 1.18.3
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update && \
+          sudo apt-get -y install npm wget build-essential automake autoconf git squashfs-tools ssh-askpass \
+                                  pkg-config curl libmnl-dev libssl-dev libncurses5-dev help2man libconfuse-dev \
+                                  libarchive-dev libsrtp2-dev
+
+      - name: Install fwup
+        run: |
+          wget https://github.com/fwup-home/fwup/releases/download/v1.13.2/fwup_1.13.2_amd64.deb && \
+          sudo dpkg -i fwup_1.13.2_amd64.deb && \
+          rm fwup_1.13.2_amd64.deb
+
+      - name: Install Nerves
+        run: |
+          mix local.hex --force && \
+          mix local.rebar --force && \
+          mix archive.install hex nerves_bootstrap --force
+
+      - name: Build assets
+        run: mix do deps.get, cmd --cd assets npm install, assets.deploy
+        working-directory: ./ui
+
+      - name: Create firmware
+        run: mix firmware
+
+      - name: Artifact upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: ex_nvr_${{ matrix.target }}.fw
+          path: _build/${{ matrix.target }}_prod/nerves/images/exnvr_fw.fw

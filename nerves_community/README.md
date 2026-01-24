@@ -1,6 +1,6 @@
 # ExNVR Nerves Image
 
-A nerves firmware for ExNVR.
+Community nerves image for `ExNVR`.
 
 ## Supported Platforms
 
@@ -19,3 +19,13 @@ To start your Nerves app:
   * Install dependencies with `mix deps.get`
   * Create firmware with `mix firmware`
   * Burn to an SD card with `mix burn`
+
+## Default Configuration
+
+This image comes with a default configuration that includes:
+
+  * SSH access enabled with default user `exnvr` and password `nerves`
+  * Network configuration via DHCP
+  * ExNVR default config described in readme.
+  
+This image is unsuitable for production use.
