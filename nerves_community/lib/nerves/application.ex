@@ -10,6 +10,7 @@ defmodule ExNVR.Nerves.Application do
       ] ++ target_children()
 
     ExNVR.Release.migrate()
+    ExNVR.start()
 
     opts = [strategy: :one_for_one, name: ExNVR.Nerves.Supervisor]
     Supervisor.start_link(children, opts)
