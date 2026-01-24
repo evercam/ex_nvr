@@ -19,6 +19,8 @@ jobs:
       MIX_TARGET: ${{ matrix.target }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
 
       - uses: erlef/setup-beam@v1.18
         with:
