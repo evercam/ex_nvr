@@ -50,6 +50,9 @@ jobs:
         run: mix do deps.get, cmd --cd assets npm install, assets.deploy
         working-directory: ./ui
 
+      - name: Get deps
+        run: mix do deps.get
+
       - name: Create firmware
         run: mix firmware
 
