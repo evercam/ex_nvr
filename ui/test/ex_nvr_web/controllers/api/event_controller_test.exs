@@ -165,7 +165,7 @@ defmodule ExNVRWeb.Api.EventControllerTest do
 
       {:ok, {[event], _}} = ExNVR.Events.list_events(%{})
 
-      assert DateTime.diff(event.time, event.inserted_at) == 0
+      assert DateTime.diff(event.inserted_at, event.time) == 0
     end
   end
 
