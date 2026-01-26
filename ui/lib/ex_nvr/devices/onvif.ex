@@ -193,9 +193,10 @@ defmodule ExNVR.Devices.Onvif do
         Enum.find(configs, &(&1.encoding == :h264))
 
     frame_rate = select_frame_rate(config.frame_rates_supported)
+    %VideoEncoder{} = video_encoder_configuration = profile.video_encoder_configuration
 
     video_encoder = %VideoEncoder{
-      profile.video_encoder_configuration
+      video_encoder_configuration
       | encoding: config.encoding,
         gov_length: trunc(frame_rate * gov_length_coeff),
         quality: select_quality(onvif_device, config.quality_range),

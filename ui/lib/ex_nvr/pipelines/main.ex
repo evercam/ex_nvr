@@ -222,13 +222,23 @@ defmodule ExNVR.Pipelines.Main do
   end
 
   @impl true
-  def handle_child_notification({:stats, stats}, {:stats_reporter, :main_stream}, _ctx, state) do
+  def handle_child_notification(
+        {:stats, stats},
+        {:stats_reporter, :main_stream},
+        _ctx,
+        %State{} = state
+      ) do
     track = state.main_stream_video_track
     {[], %State{state | main_stream_video_track: %{track | stats: stats}}}
   end
 
   @impl true
-  def handle_child_notification({:stats, stats}, {:stats_reporter, :sub_stream}, _ctx, state) do
+  def handle_child_notification(
+        {:stats, stats},
+        {:stats_reporter, :sub_stream},
+        _ctx,
+        %State{} = state
+      ) do
     track = state.sub_stream_video_track
     {[], %State{state | sub_stream_video_track: %{track | stats: stats}}}
   end

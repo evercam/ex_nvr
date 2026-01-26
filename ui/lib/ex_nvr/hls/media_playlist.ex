@@ -34,11 +34,7 @@ defmodule ExNVR.HLS.MediaPlaylist do
 
   @spec add_init_header(t(), String.t()) :: t()
   def add_init_header(%__MODULE__{playlist: playlist} = state, uri) do
-    new_playlist = %MediaPlaylist{
-      playlist
-      | timeline: [%Tags.MediaInit{uri: uri} | playlist.timeline]
-    }
-
+    new_playlist = %{playlist | timeline: [%Tags.MediaInit{uri: uri} | playlist.timeline]}
     %{state | playlist: new_playlist}
   end
 
@@ -54,11 +50,7 @@ defmodule ExNVR.HLS.MediaPlaylist do
 
   @spec add_discontinuity(t()) :: t()
   def add_discontinuity(%__MODULE__{playlist: playlist} = state) do
-    new_playlist = %MediaPlaylist{
-      playlist
-      | timeline: [%Tags.Discontinuity{} | playlist.timeline]
-    }
-
+    new_playlist = %{playlist | timeline: [%Tags.Discontinuity{} | playlist.timeline]}
     %{state | playlist: new_playlist}
   end
 
@@ -68,12 +60,12 @@ defmodule ExNVR.HLS.MediaPlaylist do
   end
 
   defp do_add_segment(playlist, segment) do
-    %MediaPlaylist{
+    %{
       playlist
       | timeline: [
           %Tags.Segment{uri: segment.uri, duration: segment.duration} | playlist.timeline
         ],
-        info: %MediaPlaylist.Info{
+        info: %{
           playlist.info
           | target_duration: max(playlist.info.target_duration, round(segment.duration))
         }

@@ -378,7 +378,7 @@ defmodule ExNVR.Model.Device do
   defp do_build_uri(stream_uri, userinfo) do
     stream_uri
     |> URI.parse()
-    |> then(&%URI{&1 | userinfo: userinfo})
+    |> then(&%{&1 | userinfo: userinfo})
     |> URI.to_string()
   end
 end

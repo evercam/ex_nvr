@@ -392,7 +392,7 @@ defmodule ExNVR.Pipeline.Output.Storage do
   end
 
   defp run_from_segment(state, segment, end_run?) do
-    run = %Run{
+    run = %{
       state.run
       | end_date: Membrane.Time.to_datetime(segment.end_date),
         active: not end_run?

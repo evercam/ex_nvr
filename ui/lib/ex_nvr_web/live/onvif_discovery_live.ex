@@ -90,7 +90,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
           </.simple_form>
         </div>
       </div>
-      
+
     <!-- Device Discovery Section -->
       <div class="w-3/4 flex justify-between items-center bg-white p-5 border rounded-lg dark:border-gray-600 dark:bg-gray-950 dark:text-white mr-5">
         <div class="flex items-center space-x-2">
@@ -107,7 +107,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
           <.icon name="hero-magnifying-glass-solid" class="w-4 h-4 mr-2" /> Scan Network
         </.button>
       </div>
-      
+
     <!-- Device List Section -->
       <div class="w-3/4 flex flex-col space-y-5 bg-white p-5 border rounded-lg dark:border-gray-600 dark:bg-gray-950 dark:text-white mr-5">
         <span class="text-md font-bold">
@@ -146,7 +146,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
       </div>
 
       <.separator :if={@selected_device} class="w-3/4 mr-5" />
-      
+
     <!-- Device Details Section -->
       <div :if={@selected_device} class="w-3/4 flex flex-col space-y-2 mr-5">
         <div class="flex justify-between items-center border rounded-lg bg-white dark:border-gray-600 dark:bg-gray-950 dark:text-white p-5">
@@ -416,7 +416,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
     idx = Enum.find_index(devices, &(&1.id == params["id"]))
 
     if idx != nil do
-      camera_details = Enum.at(devices, idx)
+      %CameraDetails{} = camera_details = Enum.at(devices, idx)
 
       case ExOnvif.Device.init(camera_details.probe, params["username"], params["password"]) do
         {:ok, onvif_device} ->
