@@ -94,6 +94,11 @@ ERL_NIF_TERM new_encoder(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
     goto clean;
   }
 
+  if (format == NULL) {
+    ret = nif_raise(env, "missing_format");
+    goto clean;
+  }
+
   encoder_config.format = av_get_pix_fmt(format);
   if (encoder_config.format == AV_PIX_FMT_NONE) {
     ret = nif_raise(env, "unknown_format");

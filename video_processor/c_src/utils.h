@@ -13,6 +13,10 @@
 #define NVR_LOG_DEBUG(...)
 #endif
 
+#ifndef FF_PROFILE_UNKNOWN
+#define FF_PROFILE_UNKNOWN AV_PROFILE_UNKNOWN
+#endif
+
 ERL_NIF_TERM nif_ok(ErlNifEnv *env, ERL_NIF_TERM data_term);
 ERL_NIF_TERM nif_error(ErlNifEnv *env, char *reason);
 ERL_NIF_TERM nif_raise(ErlNifEnv *env, char *msg);
