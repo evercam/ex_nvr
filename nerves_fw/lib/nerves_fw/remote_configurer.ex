@@ -123,7 +123,7 @@ defmodule ExNVR.Nerves.RemoteConfigurer do
         Logger.info("[RemoteConfigurer] create ext4 filesystem on device: #{drive.path}")
 
         part = get_disk_first_part(drive.path)
-        {_output, 0} = System.cmd("mkfs.ext4", ["-m", "1", part.path], stderr_to_stdout: true)
+        {_output, 0} = System.cmd("mkfs.ext4", ["-m", "0.1", part.path], stderr_to_stdout: true)
 
         Logger.info("[RemoteConfigurer] Create mountpoint directory: #{@mountpoint}")
 

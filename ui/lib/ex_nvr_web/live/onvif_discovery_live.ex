@@ -416,7 +416,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
     idx = Enum.find_index(devices, &(&1.id == params["id"]))
 
     if idx != nil do
-      camera_details = Enum.at(devices, idx)
+      %CameraDetails{} = camera_details = Enum.at(devices, idx)
 
       case ExOnvif.Device.init(camera_details.probe, params["username"], params["password"]) do
         {:ok, onvif_device} ->

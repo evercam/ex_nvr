@@ -38,9 +38,8 @@ defmodule ExNVR.MixProject do
   defp deps do
     [
       {:video_processor, path: "../video_processor"},
-      {:rtsp, "~> 0.7.0"},
+      {:rtsp, "~> 0.8.0"},
       {:ex_sdp, "~> 1.0"},
-      {:bundlex, "~> 1.5", override: true},
       {:bcrypt_elixir, "~> 3.0"},
       {:phoenix_pubsub, "~> 2.1"},
       {:ecto_sql, "~> 3.12"},

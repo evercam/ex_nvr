@@ -1,4 +1,4 @@
-FROM 114786593061.dkr.ecr.eu-west-1.amazonaws.com/ex-nvr/elixir-1.18.3-erlang-27.3.3:latest
+FROM 114786593061.dkr.ecr.eu-west-1.amazonaws.com/ex-nvr/elixir-1.19.5-erlang-28.1.1:latest
 
 # install build dependencies
 RUN apt-get update && apt-get install -y libsrtp2-dev \

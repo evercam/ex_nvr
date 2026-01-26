@@ -1,4 +1,4 @@
-FROM elixir:1.18.4-otp-27-alpine AS build
+FROM elixir:1.19.5-otp-28-alpine AS build
 
 # install build dependencies
 RUN \
@@ -44,10 +44,10 @@ RUN mix deps.get
 RUN mix deps.compile
 
 # compile and build release
-RUN mix do compile, sentry.package_source_code, release
+RUN mix do compile + sentry.package_source_code + release
 
 # prepare release image
-FROM alpine:3.22.1 AS app
+FROM alpine:3.23.2 AS app
 
 # install runtime dependencies
 RUN \

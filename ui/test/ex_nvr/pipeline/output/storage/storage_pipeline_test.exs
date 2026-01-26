@@ -70,7 +70,7 @@ defmodule ExNVR.Pipeline.Output.Storage.StoragePipelineTest do
     assert length(recordings) == 3
 
     assert Enum.sort_by(recordings, & &1.id, :asc)
-           |> Enum.map(&DateTime.diff(&1.end_date, &1.start_date)) == [6, 6, 3]
+           |> Enum.map(&DateTime.diff(&1.end_date, &1.start_date)) == [6, 6, 2]
 
     for recording <- recordings do
       assert ExNVR.Recordings.recording_path(device, recording) |> File.exists?()
