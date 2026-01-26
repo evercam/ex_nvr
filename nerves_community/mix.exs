@@ -38,14 +38,10 @@ defmodule ExNVR.Nerves.MixProject do
       {:ex_nvr, path: "../ui", env: env},
       {:circuits_gpio, "~> 2.1"},
       {:circuits_i2c, "~> 2.0"},
-
       {:ex_nvr_system_rpi4,
        github: "evercam/ex_nvr_system_rpi4", tag: "v1.31.3", runtime: false, targets: :rpi4},
       {:ex_nvr_system_rpi5,
-       github: "evercam/ex_nvr_system_rpi5",
-       tag: "v0.6.3",
-       runtime: false,
-       targets: [:rpi5]}
+       github: "evercam/ex_nvr_system_rpi5", tag: "v0.6.3", runtime: false, targets: [:rpi5]}
     ]
   end
 

@@ -1,4 +1,4 @@
-defmodule ExNVR.Nerves.DiskMounter do
+defmodule ExNVR.Nerves.BlockManager do
   @moduledoc """
   Module responsible for mounting hard drives on `fstab` file.
   """
@@ -28,6 +28,35 @@ defmodule ExNVR.Nerves.DiskMounter do
 
   def umount(lazy? \\ true) do
     GenServer.call(__MODULE__, {:umount, lazy?})
+  end
+
+  @doc """
+  Format the given disk path with ext4 filesystem and mount it to the given mountpoint.
+
+  ## Options
+
+    * `:force` - Force formatting even if the disk already has a filesystem (default: `false`)
+    * `:mountpoint` - The mountpoint where the disk will be mounted (default: `"/root/media"`)
+  """
+  @spec format(String.t(), keyword()) :: :ok | {:error, atom()}
+  def format(path, options \\ []) do
+    force? = Keyword.get(options, :force, false)
+
+    case Enum.find(ExNVR.Disk.list_drives!(), &(&1.path == path)) do
+      nil ->
+        {:error, :not_found}
+
+      disk ->
+        if ExNVR.Disk.has_filesystem?(disk) and not force? do
+          Logger.error(
+            "[DiskMounter] Device #{path} already has a filesystem. Use force: true to override."
+          )
+
+          {:error, :has_filesystem}
+        else
+          do_format(disk, Keyword.get(options, :mountpoint, "/root/media"))
+        end
+    end
   end
 
   @impl true
@@ -120,6 +149,35 @@ defmodule ExNVR.Nerves.DiskMounter do
   @impl true
   def handle_info(_event, state) do
     {:noreply, state}
+  end
+
+  defp do_format(drive, mountpoint) do
+    Logger.info("[RemoteConfigurer] delete all partitions on device: #{drive.path}")
+    {_output, 0} = System.cmd("sgdisk", ["--zap-all", drive.path], stderr_to_stdout: true)
+
+    Logger.info("[RemoteConfigurer] create new partition on device: #{drive.path}")
+    {_output, 0} = System.cmd("sgdisk", ["--new=1:0:0", drive.path], stderr_to_stdout: true)
+
+    Logger.info("[RemoteConfigurer] create ext4 filesystem on device: #{drive.path}")
+
+    part = get_disk_first_part(drive.path)
+    {_output, 0} = System.cmd("mkfs.ext4", ["-m", "0.1", part.path], stderr_to_stdout: true)
+
+    Logger.info("[RemoteConfigurer] Create mountpoint directory: #{mountpoint}")
+
+    if not File.exists?(mountpoint), do: File.mkdir_p!(mountpoint)
+
+    Logger.info("[RemoteConfigurer] Add mountpoint to fstab and mount it")
+
+    part = get_disk_first_part(drive.path)
+    :ok = add_fstab_entry(part.fs.uuid, mountpoint, :ext4)
+  end
+
+  defp get_disk_first_part(path) do
+    ExNVR.Disk.list_drives!()
+    |> Enum.find(&(&1.path == path))
+    |> Map.get(:parts)
+    |> List.first()
   end
 
   defp mount_all(state) do

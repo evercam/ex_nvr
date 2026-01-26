@@ -29,3 +29,16 @@ This image comes with a default configuration that includes:
   * ExNVR default config described in readme.
   
 This image is unsuitable for production use.
+
+## Storage Config
+
+Nerves images don't include `systemd` or `udev` by default to manage block storags and mountpoints. This job is done by a GenServer `ExNVR.Nerves.BlockManager` it listens for new block devices and mount them according to the configuration in `/root/fstab`.
+
+In case you plug in a new hdd, you can format it using:
+```elixir
+# mountpoint is by default: /root/media if not provided
+# you can use force: true to override existing filesystem
+ExNVR.Nerves.BlockManager.format("/dev/sda1", mountpoint: "/root/mnt")
+```
+
+In all cases, this will delete all partitions, create a new single partition table, format it to ext4, mount it and adding an entry in fstab configuration.

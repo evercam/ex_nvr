@@ -5,9 +5,7 @@ defmodule ExNVR.Nerves.Application do
 
   @impl true
   def start(_type, _args) do
-    children =
-      [
-      ] ++ target_children()
+    children = target_children()
 
     ExNVR.Release.migrate()
     ExNVR.start()
@@ -23,7 +21,7 @@ defmodule ExNVR.Nerves.Application do
     end
   else
     defp target_children() do
-      [{ExNVR.Nerves.DiskMounter, []}]
+      [{ExNVR.Nerves.BlockManager, []}]
     end
   end
 end
