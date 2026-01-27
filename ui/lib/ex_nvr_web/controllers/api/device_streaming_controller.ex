@@ -21,7 +21,7 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
     with {:ok, params} <- validate_hls_stream_params(params),
          query_params <- [stream_id: Utils.generate_token(), live: is_nil(params.pos)],
          {:ok, path} <- start_hls_pipeline(conn.assigns.device, params, query_params[:stream_id]),
-         {:ok, manifest_file} <- File.read(Path.join(path, "index.m3u8")) do
+         {:ok, manifest_file} <- File.read(Path.join(path, "master.m3u8")) do
       conn
       |> put_resp_content_type("application/vnd.apple.mpegurl")
       |> send_resp(
@@ -35,12 +35,13 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
   @spec hls_stream_segment(Plug.Conn.t(), map()) :: return_t()
   def hls_stream_segment(
         conn,
-        %{"stream_id" => stream_id, "segment_name" => segment_name} = params
+        %{"stream_id" => stream_id, "path" => segment_path} = params
       ) do
     folder = if params["live"] == "true", do: "live", else: stream_id
     base_path = Path.join(Utils.hls_dir(conn.assigns.device.id), folder)
-    {:ok, segment_name} = Path.safe_relative(segment_name, base_path)
-    full_path = Path.join(base_path, segment_name)
+    segment_path = Path.join(segment_path)
+    {:ok, segment_name} = Path.safe_relative(segment_path, base_path)
+    full_path = Path.join(base_path, segment_path)
 
     case File.exists?(full_path) do
       true ->

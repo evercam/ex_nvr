@@ -6,9 +6,9 @@ defmodule ExNVR.Utils do
   @unix_socket_dir "/tmp/sockets"
 
   @spec hls_dir(Device.id() | nil) :: Path.t()
-  def hls_dir(device_id \\ nil) do
+  def hls_dir(device_id \\ nil, stream \\ :high) do
     dir = Application.get_env(:ex_nvr, :hls_directory)
-    if device_id, do: Path.join(dir, device_id), else: dir
+    if device_id, do: Path.join([dir, device_id, to_string(stream)]), else: dir
   end
 
   @spec unix_socket_dir :: Path.t()
