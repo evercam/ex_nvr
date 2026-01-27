@@ -119,7 +119,7 @@ defmodule ExNVR.Pipeline.Output.Storage do
     state =
       %{
         state
-        | current_segment: Time.from_datetime(buffer.metadata.timestamp) |> Segment.new(),
+        | current_segment: Segment.new(Time.milliseconds(buffer.metadata.timestamp)),
           first_segment?: not state.onvif_replay,
           last_buffer: buffer,
           monotonic_start_time: System.monotonic_time()
@@ -222,7 +222,7 @@ defmodule ExNVR.Pipeline.Output.Storage do
   end
 
   defp finalize_segment(%{current_segment: segment} = state, end_date, correct_timestamp) do
-    end_date = Time.from_datetime(end_date)
+    end_date = Time.milliseconds(end_date)
     monotonic_duration = Time.monotonic_time() - state.monotonic_start_time
 
     {segment, discontinuity?} =
