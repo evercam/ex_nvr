@@ -171,6 +171,16 @@ defmodule ExNVRWeb.Components.Sidebar do
         ],
         [
           %{
+            label: "Networking",
+            icon: "hero-globe-alt-solid",
+            children: [
+              %{label: "Modem", icon: "hero-wifi-solid", href: ~p"/networking/modem"},
+              %{label: "Vpn", icon: "hero-lock-closed-solid", href: ~p"/networking/vpn1"}
+            ]
+          }
+        ],
+        [
+          %{
             label: "Live Dashboard",
             icon: "hero-chart-bar-solid",
             href: ~p"/live-dashboard",
