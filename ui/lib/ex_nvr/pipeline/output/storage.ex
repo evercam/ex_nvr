@@ -213,7 +213,7 @@ defmodule ExNVR.Pipeline.Output.Storage do
 
   defp handle_discontinuity(state) do
     old_segment = state.current_segment
-    {state, _discontinuity} = finalize_segment(state, DateTime.utc_now(), false)
+    {state, _discontinuity} = finalize_segment(state, System.os_time(:millisecond), false)
 
     state
     |> close_file(true)

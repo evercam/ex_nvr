@@ -29,7 +29,7 @@ defmodule ExNVRWeb.API.DeviceStreamingControllerTest do
     setup %{device: device} do
       Path.join(ExNVR.Utils.hls_dir(device.id), "live")
       |> tap(&File.mkdir_p!/1)
-      |> Path.join("index.m3u8")
+      |> Path.join("master.m3u8")
       |> File.write!(@manifest)
 
       :ok
