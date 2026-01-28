@@ -192,7 +192,7 @@ uci commit uhttpd
 /etc/init.d/uhttpd restart
 
 # wireless password change
-uci set wireless.@wifi-iface[0].key=<%= @wifi_password %>
+uci set wireless.@wifi-iface[0].key='<%= @wifi_password %>'
 uci commit wireless
 
 # Change Network LAN subnet
