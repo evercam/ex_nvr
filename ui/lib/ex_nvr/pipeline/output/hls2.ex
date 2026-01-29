@@ -11,13 +11,7 @@ defmodule ExNVR.Pipeline.Output.HLS2 do
   alias ExNVR.Utils
   alias Membrane.{Buffer, Event, H264, H265, ResourceGuard}
 
-  def_input_pad :video,
-    accepted_format: any_of(%H264{alignment: :au}, %H265{alignment: :au})
-    # availability: :on_request
-
-  # def_input_pad :sub_stream,
-  #   accepted_format: any_of(%H264{alignment: :au}, %H265{alignment: :au}),
-  #   availability: :on_request
+  def_input_pad :video, accepted_format: any_of(%H264{alignment: :au}, %H265{alignment: :au})
 
   def_options location: [
                 spec: Path.t(),
@@ -35,16 +29,23 @@ defmodule ExNVR.Pipeline.Output.HLS2 do
       File.rm_rf!(options.location)
     end)
 
-    writer = HLX.Writer.new!(storage_dir: options.location, type: :master, max_segments: 6)
-    variant = %{name: :video, last_buffer: nil}
-    {[], %{variants: %{video: variant}, location: options.location, writer: writer}}
-  end
+    pid = self()
 
-  # @impl true
-  # def handle_pad_added(Pad.ref(variant_name, _ref), _ctx, state) do
-  #   variant = %{name: variant_name, last_buffer: nil}
-  #   {[], %{state | variants: Map.put(state.variants, variant_name, variant)}}
-  # end
+    writer =
+      HLX.Writer.new!(
+        storage_dir: options.location,
+        type: :master,
+        max_segments: 6,
+        on_segment_created: fn _id, segment ->
+          send(pid, {:hls_segment_created, segment})
+        end
+      )
+
+    variant = %{name: :video, last_buffer: nil}
+
+    {[],
+     %{variants: %{video: variant}, location: options.location, writer: writer, playable?: false}}
+  end
 
   @impl true
   def handle_stream_format(:video, stream_format, ctx, state) do
@@ -88,6 +89,15 @@ defmodule ExNVR.Pipeline.Output.HLS2 do
     {[], state}
   end
 
+  @impl true
+  def handle_info({:hls_segment_created, _segment}, _ctx, %{playable?: false} = state) do
+    {[notify_parent: {:track_playable, nil}], %{state | playable?: true}}
+  end
+
+  def handle_info({:hls_segment_created, _segment}, _ctx, state) do
+    {[], state}
+  end
+
   defp do_handle_buffer(state, %{last_buffer: nil} = variant, buffer)
        when Utils.keyframe(buffer) do
     variant = %{variant | last_buffer: buffer}
@@ -115,7 +125,14 @@ defmodule ExNVR.Pipeline.Output.HLS2 do
 
   defp handle_discontinuity(state, variant_name) do
     writer = HLX.Writer.add_discontinuity(state.writer, variant_name)
-    variants = Map.update!(state.variants, String.to_existing_atom(variant_name), &%{&1 | last_buffer: nil})
+
+    variants =
+      Map.update!(
+        state.variants,
+        String.to_existing_atom(variant_name),
+        &%{&1 | last_buffer: nil}
+      )
+
     %{state | writer: writer, variants: variants}
   end
 

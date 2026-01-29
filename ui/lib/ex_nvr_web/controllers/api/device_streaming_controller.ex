@@ -261,7 +261,7 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
         {:error, :not_found}
 
       stream ->
-        path = Utils.hls_dir(device.id) |> Path.join(stream_id)
+        path = device.id |> Utils.hls_dir(nil) |> Path.join(stream_id)
 
         pipeline_options = [
           device: device,
