@@ -103,10 +103,10 @@ defmodule ExNVR.Pipelines.MainPipelineTest do
     # HLS
     hls_dir = Path.join(Utils.hls_dir(device.id), "live")
 
-    assert_pipeline_notified(pid, :hls_sink, {:track_playable, :main_stream})
+    assert_pipeline_notified(pid, :hls_sink, {:track_playable, nil})
 
     assert File.exists?(hls_dir)
-    assert Path.join(hls_dir, "*.mp4") |> Path.wildcard() |> length() == 1
+    assert Path.join([hls_dir, "video", "*.mp4"]) |> Path.wildcard() |> length() == 1
 
     assert :ok = Testing.Pipeline.terminate(pid)
   end

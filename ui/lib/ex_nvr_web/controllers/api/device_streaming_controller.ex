@@ -25,11 +25,7 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
          {:ok, manifest_file} <- File.read(Path.join(path, "master.m3u8")) do
       conn
       |> put_resp_content_type("application/vnd.apple.mpegurl", nil)
-      |> send_resp(
-        200,
-        remove_unused_stream(manifest_file, params)
-        |> HLS.Processor.add_query_params(:playlist, query_params)
-      )
+      |> send_resp(200, HLS.Processor.add_query_params(manifest_file, :playlist, query_params))
     end
   end
 
@@ -174,7 +170,7 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
       duration: :integer
     }
 
-    {%{pos: nil, stream: nil, resolution: nil, duration: 0}, types}
+    {%{pos: nil, stream: :high, resolution: nil, duration: 0}, types}
     |> Changeset.cast(params, Map.keys(types))
     |> Changeset.validate_inclusion(:resolution, [240, 480, 640, 720, 1080])
     |> Changeset.validate_number(:duration, greater_than_or_equal_to: 5)
@@ -300,16 +296,6 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
         :error
     end
   end
-
-  defp remove_unused_stream(manifest_file, %{pos: pos}) when not is_nil(pos), do: manifest_file
-
-  defp remove_unused_stream(manifest_file, %{stream: :high}),
-    do: HLS.Processor.delete_stream(manifest_file, "sub_stream")
-
-  defp remove_unused_stream(manifest_file, %{stream: :low}),
-    do: HLS.Processor.delete_stream(manifest_file, "main_stream")
-
-  defp remove_unused_stream(manifest_file, _params), do: manifest_file
 
   defp download_dir do
     default_dir = Path.join(System.tmp_dir!(), "ex_nvr_downloads")

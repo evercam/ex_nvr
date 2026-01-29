@@ -73,7 +73,7 @@ defmodule ExNVR.Pipelines.HlsPlayback do
       |> child(:realtimer, Elements.Realtimer)
       |> add_transcoding_spec(id, state.resolution)
       |> via_in(:video)
-      |> child(:sink, %Output.HLS2{location: state.directory})
+      |> child(:sink, %Output.HLS{location: state.directory})
     ]
 
     {[spec: spec], state}

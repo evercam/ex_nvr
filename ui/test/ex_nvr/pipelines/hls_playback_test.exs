@@ -34,7 +34,7 @@ defmodule ExNVR.Pipelines.HlsPlaybackTest do
 
       HlsPlayback.start_streaming(pid)
 
-      assert_pipeline_notified(pid, :sink, {:track_playable, :main_stream})
+      assert_pipeline_notified(pid, :sink, {:track_playable, nil})
 
       check_hls_playlist(dir, 2)
 
@@ -46,7 +46,7 @@ defmodule ExNVR.Pipelines.HlsPlaybackTest do
 
       HlsPlayback.start_streaming(pid)
 
-      assert_pipeline_notified(pid, :sink, {:track_playable, :main_stream})
+      assert_pipeline_notified(pid, :sink, {:track_playable, nil})
 
       check_hls_playlist(dir, 2)
 

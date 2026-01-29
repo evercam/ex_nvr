@@ -421,7 +421,7 @@ defmodule ExNVR.Pipelines.Main do
         get_child(:tee)
         |> via_out(:push_output)
         |> via_in(:video)
-        |> child(:hls_sink, %Output.HLS2{
+        |> child(:hls_sink, %Output.HLS{
           location: Path.join(Utils.hls_dir(state.device.id), "live")
         }),
         # |> get_child(:hls_sink),
@@ -445,7 +445,7 @@ defmodule ExNVR.Pipelines.Main do
       get_child({:tee, :sub_stream})
       |> via_out(:push_output)
       |> via_in(:video)
-      |> child({:hls_sink, :sub_stream}, %Output.HLS2{
+      |> child({:hls_sink, :sub_stream}, %Output.HLS{
         location: Path.join(Utils.hls_dir(device.id, :low), "live")
       }),
       get_child({:tee, :sub_stream})
