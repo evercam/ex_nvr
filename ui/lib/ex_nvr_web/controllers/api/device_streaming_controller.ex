@@ -11,6 +11,7 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
   alias ExNVR.{Devices, HLS, Recordings, Utils}
   alias ExNVR.Model.Device
   alias ExNVR.Pipelines.{HlsPlayback, Main}
+  alias ExNVRWeb.HlsStreamingMonitor
 
   @type return_t :: Plug.Conn.t() | {:error, Changeset.t()}
 
@@ -23,7 +24,7 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
          {:ok, path} <- start_hls_pipeline(conn.assigns.device, params, query_params[:stream_id]),
          {:ok, manifest_file} <- File.read(Path.join(path, "master.m3u8")) do
       conn
-      |> put_resp_content_type("application/vnd.apple.mpegurl")
+      |> put_resp_content_type("application/vnd.apple.mpegurl", nil)
       |> send_resp(
         200,
         remove_unused_stream(manifest_file, params)
@@ -37,16 +38,15 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
         conn,
         %{"stream_id" => stream_id, "path" => segment_path} = params
       ) do
-    folder = if params["live"] == "true", do: "live", else: stream_id
-    base_path = Path.join(Utils.hls_dir(conn.assigns.device.id), folder)
+    {:ok, base_dir} = HlsStreamingMonitor.path(stream_id)
     segment_path = Path.join(segment_path)
-    {:ok, segment_name} = Path.safe_relative(segment_path, base_path)
-    full_path = Path.join(base_path, segment_path)
+    {:ok, segment_name} = Path.safe_relative(segment_path, base_dir)
+    full_path = Path.join(base_dir, segment_path)
 
     case File.exists?(full_path) do
       true ->
         if String.ends_with?(segment_name, ".m3u8") do
-          ExNVRWeb.HlsStreamingMonitor.update_last_access_time(stream_id)
+          HlsStreamingMonitor.update_last_access_time(stream_id)
 
           full_path
           |> File.read!()
@@ -249,9 +249,10 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
     |> Changeset.apply_action(:create)
   end
 
-  defp start_hls_pipeline(device, %{pos: nil}, stream_id) do
-    ExNVRWeb.HlsStreamingMonitor.register(stream_id, fn -> :ok end)
-    {:ok, Path.join(Utils.hls_dir(device.id), "live")}
+  defp start_hls_pipeline(device, %{pos: nil} = params, stream_id) do
+    path = Path.join(Utils.hls_dir(device.id, params.stream), "live")
+    HlsStreamingMonitor.register(stream_id, path, fn -> :ok end)
+    {:ok, path}
   end
 
   defp start_hls_pipeline(device, params, stream_id) do
@@ -274,7 +275,7 @@ defmodule ExNVRWeb.API.DeviceStreamingController do
 
         {:ok, _, pid} = HlsPlayback.start(pipeline_options)
 
-        ExNVRWeb.HlsStreamingMonitor.register(stream_id, fn -> HlsPlayback.stop_streaming(pid) end)
+        HlsStreamingMonitor.register(stream_id, path, fn -> HlsPlayback.stop_streaming(pid) end)
 
         :ok = HlsPlayback.start_streaming(pid)
 
