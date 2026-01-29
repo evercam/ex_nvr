@@ -27,8 +27,9 @@ defmodule ExNVR.Pipeline.Output.Storage.StoragePipelineTest do
     def handle_buffer(:input, buffer, _ctx, state) do
       # flatten metadata to match the format created by `ex_nvr_rtsp`
       metadata =
-        update_nalus_metadata(buffer.metadata)
-        |> Map.put(:timestamp, DateTime.utc_now())
+        buffer.metadata
+        |> update_nalus_metadata()
+        |> Map.put(:timestamp, System.os_time(:millisecond))
 
       buffer = %{buffer | metadata: metadata}
       {[buffer: {:output, buffer}], state}

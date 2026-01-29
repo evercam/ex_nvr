@@ -66,13 +66,13 @@ defmodule ExNVR.Pipelines.HlsPlayback do
   end
 
   @impl true
-  def handle_child_notification({:new_track, id, track}, :source, _ctx, state) do
+  def handle_child_notification({:new_track, id, _track}, :source, _ctx, state) do
     spec = [
       get_child(:source)
       |> via_out(Pad.ref(:video, id))
       |> child(:realtimer, Elements.Realtimer)
       |> add_transcoding_spec(id, state.resolution)
-      |> via_in(Pad.ref(:main_stream, track.type))
+      |> via_in(:video)
       |> child(:sink, %Output.HLS{location: state.directory})
     ]
 

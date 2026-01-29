@@ -135,13 +135,6 @@ defmodule ExNVR.Pipelines.Main do
 
   @impl true
   def handle_setup(_ctx, %{device: device} = state) do
-    spec =
-      [
-        child(:hls_sink, %Output.HLS{
-          location: Path.join(Utils.hls_dir(device.id), "live")
-        })
-      ] ++ build_device_spec(device)
-
     {:ok, pid} = StorageMonitor.start_link(device: device)
     state = %{state | storage_monitor: pid}
 
@@ -149,7 +142,7 @@ defmodule ExNVR.Pipelines.Main do
     # may happens on application crash
     device_state = if state.device.type == :file, do: :streaming, else: :failed
     Recordings.deactivate_runs(state.device)
-    {[spec: spec], maybe_update_device_and_report(state, device_state)}
+    {[spec: build_device_spec(device)], maybe_update_device_and_report(state, device_state)}
   end
 
   @impl true
@@ -427,8 +420,11 @@ defmodule ExNVR.Pipelines.Main do
       [
         get_child(:tee)
         |> via_out(:push_output)
-        |> via_in(Pad.ref(:main_stream, :video))
-        |> get_child(:hls_sink),
+        |> via_in(:video)
+        |> child(:hls_sink, %Output.HLS{
+          location: Path.join(Utils.hls_dir(state.device.id), "live")
+        }),
+        # |> get_child(:hls_sink),
         get_child(:tee)
         |> via_out(:push_output)
         |> child({:snapshooter, :main_stream}, ExNVR.Elements.CVSBufferer),
@@ -448,8 +444,10 @@ defmodule ExNVR.Pipelines.Main do
     [
       get_child({:tee, :sub_stream})
       |> via_out(:push_output)
-      |> via_in(Pad.ref(:sub_stream, :video))
-      |> get_child(:hls_sink),
+      |> via_in(:video)
+      |> child({:hls_sink, :sub_stream}, %Output.HLS{
+        location: Path.join(Utils.hls_dir(device.id, :low), "live")
+      }),
       get_child({:tee, :sub_stream})
       |> via_out(:push_output)
       |> child({:stats_reporter, :sub_stream}, %VideoStreamStatReporter{

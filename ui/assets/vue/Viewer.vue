@@ -204,6 +204,8 @@
                     :pause-on-click="false"
                     :video-options="videoOptions"
                     :hls-options="{
+                        liveSyncDurationCount: 3,
+                        liveMaxLatencyDurationCount: 6,
                         manifestLoadingTimeOut: 60000,
                     }"
                 />
