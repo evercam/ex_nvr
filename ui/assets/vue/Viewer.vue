@@ -92,6 +92,7 @@
         </ERow>
         <ELayout ref="mainLayout" :height="height">
             <template #main>
+	<div class="h-full relative">
                 <!-- stats  -->
                 <div
                     v-if="isStreamShown"
@@ -190,6 +191,26 @@
                         </div>
                     </div>
                 </div>
+
+		<div class=" p-4 z-10 absolute right-5 ">
+			<div class=" flex justify-center ">
+ 			    <button @click="upPTZ" class="w-12 h-12 bg-gray-800 backdrop-blur-md text-white text-lg rounded-xl flex items-center justify-center shadow-lg border border-gray-700 hover:bg-gray-700 active:scale-95 transition"><i class="fa-solid fa-angle-up"></i></button>
+                
+			</div>
+
+		<div class="flex justify-between gap-2 my-2">
+		    <button @click="leftPTZ" class="w-12 h-12 bg-gray-800 backdrop-blur-md text-white text-lg rounded-xl flex items-center justify-center shadow-lg border border-gray-700 hover:bg-gray-700 active:scale-95 transition"><i class="fa-solid fa-angle-left" > </i></button>
+
+ 		    <button @click="homePTZ" class="w-12 h-12 bg-gray-800 backdrop-blur-md text-white text-lg rounded-xl flex items-center justify-center shadow-lg border border-gray-700 hover:bg-gray-700 active:scale-95 transition"><i class="fa-solid fa-house"></i></button>
+
+ 			<button @click="rightPTZ" class="w-12 h-12 bg-gray-800 backdrop-blur-md text-white text-lg rounded-xl flex items-center justify-center shadow-lg border border-gray-700 hover:bg-gray-700 active:scale-95 transition"><i class="fa-solid fa-angle-right" ></i></button>
+		</div>
+
+		<div class=" flex justify-center">
+			 <button @click="downPTZ" class="w-12 h-12 bg-gray-800 backdrop-blur-md text-white text-lg rounded-xl flex items-center justify-center shadow-lg border border-gray-700 hover:bg-gray-700 active:scale-95 transition"><i class="fa-solid fa-angle-down"></i></button>
+		</div>
+
+		</div>
                 <EVideoPlayer
                     id="main"
                     v-if="liveViewEnabled"
@@ -214,6 +235,7 @@
                 >
                     Device is not recording, live view is not available
                 </div>
+				</div>
             </template>
 
             <template #bottom-right>
@@ -250,6 +272,7 @@
 
 <script>
 import { defineComponent, isProxy, toRaw } from "vue";
+import {useLiveVue} from "live_vue"
 import Timeline from "./Timeline.vue";
 import { makeFullScreen, exitFullScreen } from "@evercam/ui/vue3";
 import Hls from "hls.js";
@@ -340,7 +363,7 @@ export default defineComponent({
             },
         };
     },
-    methods: {
+    methods: {		
         handleResize() {
             this.height = `${
                 document.body.clientHeight -
@@ -403,8 +426,28 @@ export default defineComponent({
             }
         },
         openStatsTab() {
-            this.isStreamShown = !this.isStreamShown;
+		this.isStreamShown = !this.isStreamShown
         },
+	    upPTZ(){
+		    const live = useLiveVue()
+		    live.pushEvent("up")
+	    },
+	    leftPTZ(){
+		    const live = useLiveVue()
+		    live.pushEvent("left")
+	    },
+	    rightPTZ(){
+		    const live = useLiveVue()
+		    live.pushEvent("right")
+		},
+	    downPTZ(){
+		    const live = useLiveVue()
+		    live.pushEvent("down")
+	    },
+	    homePTZ(){
+			console.log("homepreset")
+		},
+
         startStreaming(streamUrl) {
             const component = this.$refs.videoPlayer;
             component?.initHls(streamUrl);
