@@ -45,6 +45,7 @@ defmodule ExNVRWeb.DashboardLive do
           device={Map.take(@current_device, [:id, :name, :timezone])}
           live-view-enabled={@live_view_enabled?}
           start-date={@start_date}
+          enable-ptz={!is_nil(@onvif_device)}
           v-on:switch_stream={JS.push("switch_stream")}
           v-on:switch_device={JS.push("switch_device")}
           v-on:show-download-modal={show_modal("download-modal")}
@@ -211,6 +212,28 @@ defmodule ExNVRWeb.DashboardLive do
     move_ptz(onvif_device, %{x: new_x, y: y, zoom: zoom})
 
     {:noreply, assign(socket, :ptz_status, %{x: new_x, y: y, zoom: zoom})}
+  end
+
+  def handle_event("zoom", %{"zoom_in" => zoom_in, "zoom_out" => zoom_out}, socket) do
+    onvif_device = socket.assigns.onvif_device
+
+    %{x: x, y: y, zoom: zoom} = socket.assigns.ptz_status
+
+    new_zoom =
+      cond do
+        zoom_in ->
+          clamp(zoom + @ptz_move_step)
+
+        zoom_out ->
+          clamp(zoom - @ptz_move_step)
+
+        true ->
+          zoom
+      end
+
+    move_ptz(onvif_device, %{x: x, y: y, zoom: new_zoom})
+
+    {:noreply, assign(socket, :ptz_status, %{x: x, y: y, zoom: new_zoom})}
   end
 
   def handle_event("switch_device", %{"device" => device_id}, socket) do
@@ -469,6 +492,7 @@ defmodule ExNVRWeb.DashboardLive do
     end
   end
 
+  @spec get_status(Ecto.Changeset.t()) :: {ptz(), ExOnvif.Device.t()} | {nil, nil}
   defp get_status(device) do
     with {:ok, onvif_device} <- ExNVR.Devices.Onvif.onvif_device(device),
          {:ok, status} <-
@@ -481,6 +505,8 @@ defmodule ExNVRWeb.DashboardLive do
         },
         onvif_device
       }
+    else
+      {:error, :not_camera} -> {nil, nil}
     end
   end
 
