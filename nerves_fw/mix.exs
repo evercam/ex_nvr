@@ -15,12 +15,14 @@ defmodule NervesFw.MixProject do
       elixirc_paths: elixirc_paths(Mix.env()),
       deps: deps(),
       aliases: aliases(),
-      releases: [{@app, release()}],
-      preferred_cli_target: [run: :host, test: :host]
+      releases: [{@app, release()}]
     ]
   end
 
-  # Run "mix help compile.app" to learn about applications.
+  def cli do
+    [preferred_cli_target: [run: :host, test: :host]]
+  end
+
   def application do
     [
       mod: {ExNVR.Nerves.Application, []},
@@ -28,7 +30,6 @@ defmodule NervesFw.MixProject do
     ]
   end
 
-  # Run "mix help deps" to learn about dependencies.
   defp deps do
     env = if Mix.env() == :prod, do: :prod, else: :dev
 
@@ -51,12 +52,6 @@ defmodule NervesFw.MixProject do
       # Dependencies for all targets except :host
       {:nerves_pack, "~> 0.7.0", targets: @all_targets},
       {:mimic, "~> 2.1", only: :test},
-
-      # Dependencies for specific targets
-      # NOTE: It's generally low risk and recommended to follow minor version
-      # bumps to Nerves systems. Since these include Linux kernel and Erlang
-      # version updates, please review their release notes in case
-      # changes to your application are needed.
       {:ex_nvr_system_rpi4,
        github: "evercam/ex_nvr_system_rpi4", tag: "v1.33.0", runtime: false, targets: :ex_nvr_rpi4},
       {:ex_nvr_system_rpi5,

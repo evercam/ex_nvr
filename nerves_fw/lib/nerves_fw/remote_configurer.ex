@@ -15,9 +15,9 @@ defmodule ExNVR.Nerves.RemoteConfigurer do
 
   require Logger
 
-  alias __MODULE__.Router
+  alias __MODULE__.{Router, Step}
   alias ExNVR.{Accounts, RemoteConnection}
-  alias ExNVR.Nerves.{DiskMounter, GrafanaAgent, Netbird, RUT, SystemSettings, Utils}
+  alias ExNVR.Nerves.{DiskMounter, GrafanaAgent, Netbird, SystemSettings, Utils}
   alias Nerves.Runtime
 
   @netbird_mangement_url "https://vpn.evercam.io"
@@ -72,13 +72,16 @@ defmodule ExNVR.Nerves.RemoteConfigurer do
       case RemoteConnection.push_and_wait("register-kit", payload, @call_timeout) do
         :ok ->
           Logger.info("Device already configured, finalizing...")
-          finalize_config(state.kit_serial)
+          finalize_config([], state.kit_serial)
           {:stop, :normal, state}
 
         {:ok, params} ->
           Logger.info("Received configuration from remote server, applying...")
-          do_configure(params)
-          finalize_config(params["serial"])
+
+          params
+          |> do_configure()
+          |> finalize_config(params["serial"])
+
           {:stop, :normal, state}
 
         {:error, _reason} ->
@@ -95,24 +98,33 @@ defmodule ExNVR.Nerves.RemoteConfigurer do
   end
 
   defp do_configure(config) do
-    connect_to_netbird!(config)
-    format_hdd!()
-    create_user!(config)
-    configure_grafana_agent!(config)
-    Router.configure(config["gateway_config"])
+    tasks = [
+      Task.async(fn -> connect_to_netbird(config) end),
+      Task.async(fn -> format_hdd() end),
+      Task.async(fn -> create_user(config) end),
+      Task.async(fn -> configure_grafana_agent(config) end),
+      Task.async(fn -> Router.configure(config["gateway_config"]) end)
+    ]
+
+    Task.await_many(tasks, :infinity)
   end
 
-  defp connect_to_netbird!(config) do
+  defp connect_to_netbird(config) do
     Logger.info("[RemoteConfigurer] Connect to Netbird management server")
-    {:ok, _} = Netbird.up(@netbird_mangement_url, config["vpn_setup_key"], config["serial"])
+
+    case Netbird.up(@netbird_mangement_url, config["vpn_setup_key"], config["serial"]) do
+      {:ok, _result} -> %Step{name: :netbird, status: :ok}
+      {:error, reason} -> %Step{name: :netbird, status: :error, reason: inspect(reason)}
+    end
   end
 
-  def format_hdd! do
+  def format_hdd do
     ExNVR.Disk.list_drives!()
     |> Enum.reject(&ExNVR.Disk.has_filesystem?/1)
     |> case do
       [] ->
         Logger.warning("No unformatted hard drive found")
+        %Step{name: :format_hdd, status: :ok, reason: "no unformatted drive found"}
 
       [drive | _rest] ->
         Logger.info("[RemoteConfigurer] delete all partitions on device: #{drive.path}")
@@ -137,10 +149,11 @@ defmodule ExNVR.Nerves.RemoteConfigurer do
 
         part = get_disk_first_part(drive.path)
         :ok = DiskMounter.add_fstab_entry(part.fs.uuid, @mountpoint, :ext4)
+        %Step{name: :format_hdd, status: :ok}
     end
   end
 
-  defp create_user!(config) do
+  defp create_user(config) do
     Logger.info("[RemoteConfigurer] Create admin user")
 
     case Accounts.get_user_by_email(@default_admin_user) do
@@ -150,20 +163,34 @@ defmodule ExNVR.Nerves.RemoteConfigurer do
 
     admin_user = config["ex_nvr_username"]
 
-    unless Accounts.get_user_by_email(admin_user) do
-      params = %{
-        email: admin_user,
-        password: config["ex_nvr_password"],
-        role: :admin,
-        first_name: "Admin",
-        last_name: "Admin"
-      }
+    case Accounts.get_user_by_email(admin_user) do
+      nil ->
+        params = %{
+          email: admin_user,
+          password: config["ex_nvr_password"],
+          role: :admin,
+          first_name: "Admin",
+          last_name: "Admin"
+        }
 
-      {:ok, _user} = Accounts.register_user(params)
+        case Accounts.register_user(params) do
+          {:ok, _user} ->
+            %Step{name: :create_user, status: :ok}
+
+          {:error, changeset} ->
+            %Step{
+              name: :create_user,
+              status: :error,
+              reason: "failed to create user: #{inspect(changeset.errors)}"
+            }
+        end
+
+      _user ->
+        %Step{name: :create_user, status: :ok, reason: "user already exists"}
     end
   end
 
-  defp configure_grafana_agent!(config) do
+  defp configure_grafana_agent(config) do
     Logger.info("[RemoteConfigurer] Configure grafana agent")
 
     config =
@@ -178,11 +205,12 @@ defmodule ExNVR.Nerves.RemoteConfigurer do
       )
 
     GrafanaAgent.reconfigure(config)
+    %Step{name: :grafana_agent, status: :ok}
   end
 
-  defp finalize_config(kit_serial) do
+  defp finalize_config(steps, kit_serial) do
     SystemSettings.update!(%{"kit_serial" => kit_serial})
-    :ok = RemoteConnection.push_and_wait("config-completed", %{}, @call_timeout)
+    :ok = RemoteConnection.push_and_wait("config-completed", steps, @call_timeout)
     SystemSettings.update!(%{"configured" => true})
   end
 

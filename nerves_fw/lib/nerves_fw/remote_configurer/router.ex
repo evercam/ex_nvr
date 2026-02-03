@@ -3,11 +3,12 @@ defmodule ExNVR.Nerves.RemoteConfigurer.Router do
 
   require Logger
 
-  alias ExNVR.Nerves.{RUT, SystemSettings, Utils}
+  alias ExNVR.Nerves.{RemoteConfigurer.Step, RUT, SystemSettings, Utils}
   alias ExNVR.RemoteConnection
 
   @router_username "admin"
 
+  @spec configure(map()) :: Step.t()
   def configure(%{"default_password" => passwd}) do
     Logger.info("[RemoteConfigurer] start configuring router")
     curr_passwd = SystemSettings.get_settings().router.password
@@ -21,29 +22,32 @@ defmodule ExNVR.Nerves.RemoteConfigurer.Router do
 
     with {:ok, info} <- RUT.system_information(),
          info <- %{serial_number: info.serial, model: info.model},
-         {:ok, new_config} <- RemoteConnection.push_and_wait("router-info", info) do
-      case do_configure(curr_passwd, new_config) do
-        {:ok, output} ->
-          SystemSettings.update!(%{
-            "router" => %{"password" => new_config["password"], "username" => @router_username}
-          })
+         {:ok, new_config} <- RemoteConnection.push_and_wait("router-info", info),
+         {:ok, output} <- do_configure(curr_passwd, new_config) do
+      SystemSettings.update!(%{
+        "router" => %{"password" => new_config["password"], "username" => @router_username}
+      })
 
-          Logger.info("""
-          [RemoteConfigurer] Router configuration output:
-          #{output}
-          """)
+      Logger.info("""
+      [RemoteConfigurer] Router configuration output:
+      #{output}
+      """)
 
-        {:error, reason} ->
-          Logger.error("""
-          [RemoteConfigurer] Router configuration failed:
-          #{inspect(reason)}
-          """)
-      end
+      %Step{name: :configure_router, status: :ok}
+    else
+      {:error, reason} ->
+        Logger.error("""
+        [RemoteConfigurer] Router configuration failed:
+        #{inspect(reason)}
+        """)
+
+        %Step{name: :configure_router, status: :error, reason: inspect(reason)}
     end
   end
 
   def configure(_) do
     Logger.warning("[RemoteConfigurer] No default password provided for router configuration")
+    %Step{name: :configure_router, status: :error, reason: "no default password provided"}
   end
 
   defp do_configure(password, new_config) do
@@ -96,7 +100,7 @@ defmodule ExNVR.Nerves.RemoteConfigurer.Router do
   end
 
   defp assigns_from_config(config) do
-    params = [
+    [
       wifi_password: config["password"],
       password: config["password"],
       timezone: config["timezone"] || "UTC",
