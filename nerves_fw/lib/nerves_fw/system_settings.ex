@@ -46,13 +46,13 @@ defmodule ExNVR.Nerves.SystemSettings do
 
         field :ac_failure_action, Ecto.Enum,
           values: ~w(power_off stop_recording nothing)a,
-          default: :nothing
+          default: :stop_recording
 
         field :low_battery_action, Ecto.Enum,
           values: ~w(power_off stop_recording nothing)a,
-          default: :stop_recording
+          default: :nothing
 
-        field :trigger_after, :integer, default: 5
+        field :trigger_after, :integer, default: 30
       end
     end
 
