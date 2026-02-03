@@ -20,8 +20,8 @@ defmodule ExNVR.SystemSettingsTest do
       enabled: false,
       ac_pin: "GPIO27",
       battery_pin: "GPIO22",
-      ac_failure_action: :nothing,
-      low_battery_action: :stop_recording
+      ac_failure_action: :stop_recording,
+      low_battery_action: :nothing
     }
   }
 
