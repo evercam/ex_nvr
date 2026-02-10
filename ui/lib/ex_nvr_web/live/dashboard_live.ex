@@ -1,4 +1,5 @@
 defmodule ExNVRWeb.DashboardLive do
+  alias ExNVR.Devices.Onvif
   use ExNVRWeb, :live_view
 
   alias Ecto.Changeset
@@ -176,7 +177,7 @@ defmodule ExNVRWeb.DashboardLive do
 
     new_y = clamp(y - @ptz_move_step)
 
-    move_ptz(onvif_device, %{x: x, y: new_y, zoom: zoom})
+    Onvif.move_ptz(onvif_device, %{x: x, y: new_y, zoom: zoom})
 
     {:noreply, assign(socket, :ptz_status, %{x: x, y: new_y, zoom: zoom})}
   end
@@ -187,7 +188,7 @@ defmodule ExNVRWeb.DashboardLive do
 
     new_y = clamp(y + @ptz_move_step)
 
-    move_ptz(onvif_device, %{x: x, y: new_y, zoom: zoom})
+    Onvif.move_ptz(onvif_device, %{x: x, y: new_y, zoom: zoom})
 
     {:noreply, assign(socket, :ptz_status, %{x: x, y: new_y, zoom: zoom})}
   end
@@ -198,7 +199,7 @@ defmodule ExNVRWeb.DashboardLive do
 
     new_x = clamp(x - @ptz_move_step)
 
-    move_ptz(onvif_device, %{x: new_x, y: y, zoom: zoom})
+    Onvif.move_ptz(onvif_device, %{x: new_x, y: y, zoom: zoom})
 
     {:noreply, assign(socket, :ptz_status, %{x: new_x, y: y, zoom: zoom})}
   end
@@ -209,7 +210,7 @@ defmodule ExNVRWeb.DashboardLive do
 
     new_x = clamp(x + @ptz_move_step)
 
-    move_ptz(onvif_device, %{x: new_x, y: y, zoom: zoom})
+    Onvif.move_ptz(onvif_device, %{x: new_x, y: y, zoom: zoom})
 
     {:noreply, assign(socket, :ptz_status, %{x: new_x, y: y, zoom: zoom})}
   end
@@ -231,7 +232,7 @@ defmodule ExNVRWeb.DashboardLive do
           zoom
       end
 
-    move_ptz(onvif_device, %{x: x, y: y, zoom: new_zoom})
+    Onvif.move_ptz(onvif_device, %{x: x, y: y, zoom: new_zoom})
 
     {:noreply, assign(socket, :ptz_status, %{x: x, y: y, zoom: new_zoom})}
   end
@@ -510,17 +511,16 @@ defmodule ExNVRWeb.DashboardLive do
     end
   end
 
-  @spec move_ptz(ExOnvif.Device.t(), ptz()) :: :ok
-  def move_ptz(device, %{x: x, y: y, zoom: zoom} = _ptz) do
-    ptz_vector = ExOnvif.PTZ.Vector.new(x, y, zoom)
-    abs_move = ExOnvif.PTZ.AbsoluteMove.new("Profile_1", ptz_vector)
-
-    ExOnvif.PTZ.absolute_move(device, abs_move)
-  end
-
   defp clamp(val, min \\ -1.0, max \\ 1.0) do
-    val
-    |> max(min)
-    |> min(max)
+    val =
+      val
+      |> max(min)
+      |> min(max)
+
+    cond do
+      val == min -> max
+      val == max -> min
+      true -> val
+    end
   end
 end
