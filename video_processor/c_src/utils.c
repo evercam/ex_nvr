@@ -1,9 +1,5 @@
 #include "utils.h"
 
-#ifndef FF_PROFILE_UNKNOWN
-#define FF_PROFILE_UNKNOWN AV_PROFILE_UNKNOWN
-#endif
-
 ERL_NIF_TERM nif_ok(ErlNifEnv *env, ERL_NIF_TERM data_term) {
   ERL_NIF_TERM ok_term = enif_make_atom(env, "ok");
   return enif_make_tuple(env, 2, ok_term, data_term);

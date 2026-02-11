@@ -10,7 +10,7 @@ defmodule ExNVR.Nerves.MixProject do
       app: @app,
       version: @version,
       elixir: "~> 1.18",
-      archives: [nerves_bootstrap: "~> 1.13"],
+      archives: [nerves_bootstrap: "~> 1.14"],
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       releases: [{@app, release()}],
@@ -39,9 +39,9 @@ defmodule ExNVR.Nerves.MixProject do
       {:circuits_gpio, "~> 2.1"},
       {:circuits_i2c, "~> 2.0"},
       {:ex_nvr_system_rpi4,
-       github: "evercam/ex_nvr_system_rpi4", tag: "v1.31.3", runtime: false, targets: :rpi4},
+       github: "evercam/ex_nvr_system_rpi4", tag: "v1.33.0", runtime: false, targets: :rpi4},
       {:ex_nvr_system_rpi5,
-       github: "evercam/ex_nvr_system_rpi5", tag: "v0.6.3", runtime: false, targets: [:rpi5]}
+       github: "evercam/ex_nvr_system_rpi5", tag: "v0.8.0", runtime: false, targets: [:rpi5]}
     ]
   end
 
