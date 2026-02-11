@@ -29,7 +29,7 @@ config :live_vue,
   ssr: false
 
 config :sentry,
-  release: "ex_nvr@0.25.1",
+  release: "ex_nvr@0.26.0",
   report_deps: false,
   root_source_code_paths: [File.cwd!()],
   context_lines: 5,

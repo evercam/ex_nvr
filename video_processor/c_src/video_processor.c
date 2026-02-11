@@ -1,6 +1,3 @@
-#ifndef NVR_ENCODER_H
-#define NVR_ENCODER_H
-
 #include "video_processor.h"
 #include <libavutil/imgutils.h>
 
@@ -624,5 +621,3 @@ static int load(ErlNifEnv *env, void **priv, ERL_NIF_TERM load_info) {
 }
 
 ERL_NIF_INIT(Elixir.ExNVR.AV.VideoProcessor.NIF, funcs, &load, NULL, NULL, NULL);
-
-#endif // NVR_ENCODER_H
