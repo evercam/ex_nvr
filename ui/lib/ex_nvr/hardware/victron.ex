@@ -166,10 +166,12 @@ defmodule ExNVR.Hardware.Victron do
     aes: 7
   }
 
+  @spec start_link(keyword()) :: GenServer.on_start()
   def start_link(options) do
     GenServer.start_link(__MODULE__, options[:port], name: options[:name])
   end
 
+  @spec write(GenServer.name(), binary()) :: :ok
   def write(pid, data) do
     GenServer.call(pid, {:write, data})
   end
