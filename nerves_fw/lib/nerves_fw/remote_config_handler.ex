@@ -16,6 +16,7 @@ defmodule ExNVR.Nerves.RemoteConfigHandler do
       with {:ok, _new_settings} <- SystemSettings.update_router_settings(config["router"] || %{}),
            {:ok, new_settings} <-
              SystemSettings.update_power_schedule_settings(config["power_schedule"] || %{}) do
+        #credo:disable-for-next-line Credo.Check.Refactor.Nesting
         if power_schedule_updated?(settings.power_schedule, new_settings.power_schedule) do
           Logger.info("[RemoteConfigHandler] Updating router schedule")
           update_router_schedule(new_settings.power_schedule.schedule)
