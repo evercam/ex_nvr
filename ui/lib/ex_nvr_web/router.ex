@@ -59,6 +59,18 @@ defmodule ExNVRWeb.Router do
       get "/footage", API.DeviceStreamingController, :footage
 
       get "/bif/:hour", API.DeviceStreamingController, :bif
+
+      scope "/ptz/:profile_token" do
+        pipe_through ExNVRWeb.Plug.OnvifPTZPlug
+
+        post "/move/:mode", API.PTZController, :move
+        post "/stop/:mode", API.PTZController, :stop
+        post "/zoom/:mode", API.PTZController, :zoom
+        post "/status", API.PTZController, :status
+        post "/continuous_move", API.PTZController, :continuous_move
+        get "/get_nodes", API.PTZController, :get_nodes
+        get "/get_node_info/:node_token", API.PTZController, :get_node_info
+      end
     end
 
     get "/system/status", API.SystemStatusController, :status
