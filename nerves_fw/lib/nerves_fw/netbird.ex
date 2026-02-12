@@ -43,7 +43,7 @@ defmodule ExNVR.Nerves.Netbird do
     # Once v0.26.0 is deployed, we can delete this code
     with {:ok, content} <- File.read(opts[:config_file]),
          {:ok, config} <- Jason.decode(content) do
-      config = Map.put(config, "DisableFirewall", true);
+      config = Map.put(config, "DisableFirewall", true)
       File.write!(opts[:config_file], Jason.encode!(config))
     end
 
