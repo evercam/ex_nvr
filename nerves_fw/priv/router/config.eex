@@ -65,8 +65,8 @@ EOF
 )"
 
 # root and UI password change
-echo -e "<%= @password %>\n<%= @password %>" | passwd admin
-echo -e "<%= @password %>\n<%= @password %>" | passwd root
+echo -e '<%= @password %>\n<%= @password %>' | passwd admin
+echo -e '<%= @password %>\n<%= @password %>' | passwd root
 uci set vuci.main.firstlogin='0' && uci commit && /etc/init.d/vuci reload
 
 # delete Factory PF rules
