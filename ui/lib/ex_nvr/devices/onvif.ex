@@ -60,11 +60,7 @@ defmodule ExNVR.Devices.Onvif do
         {:error, :no_url}
 
       url ->
-        ExOnvif.Device.new(
-          "https://192-168-8-101-kit-y24t0671.us-vpn.evercam.io",
-          "admin",
-          "MehcamMehcam"
-        )
+        ExOnvif.Device.new(url, device.credentials.username, device.credentials.password)
     end
   end
 
