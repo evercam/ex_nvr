@@ -58,8 +58,8 @@ jobs:
 
       - name: Rename firmware file
         run: |
-          mv ./nerves_community/_build/${{ matrix.target }}_prod/nerves/images/exnvr_fw.fw \
-             ./nerves_community/_build/${{ matrix.target }}_prod/nerves/images/exnvr_nerves_${{ matrix.target }}.fw
+          mv ./_build/${{ matrix.target }}_prod/nerves/images/exnvr_fw.fw \
+             ./_build/${{ matrix.target }}_prod/nerves/images/exnvr_nerves_${{ matrix.target }}.fw
 
       - name: Artifact upload
         uses: actions/upload-artifact@v4
