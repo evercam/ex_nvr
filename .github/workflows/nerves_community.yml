@@ -61,18 +61,11 @@ jobs:
           mv ./_build/${{ matrix.target }}_prod/nerves/images/exnvr_fw.fw \
              ./_build/${{ matrix.target }}_prod/nerves/images/exnvr_nerves_${{ matrix.target }}.fw
 
-      - name: Artifact upload
-        uses: actions/upload-artifact@v4
-        with:
-          name: ex_nvr_nerves_${{ matrix.target }}.fw
-          path: ./_build/${{ matrix.target }}_prod/nerves/images/exnvr_nerves_${{ matrix.target }}.fw
-          compression-level: 0
-
       - name: Publish archives and packages
         uses: softprops/action-gh-release@v1
         with:
           draft: true
           generate_release_notes: true
           files: |
-            ./_build/${{ matrix.target }}_prod/nerves/images/exnvr_nerves_${{ matrix.target }}.fw
-        if: startsWith(github.ref, 'refs/tags/')
+            _build/${{ matrix.target }}_prod/nerves/images/exnvr_nerves_${{ matrix.target }}.fw
+        # if: startsWith(github.ref, 'refs/tags/')
