@@ -70,7 +70,7 @@ defmodule ExNVR.Nerves.RemoteConfigurer do
       }
 
       case RemoteConnection.push_and_wait("register-kit", payload, @call_timeout) do
-        {:ok, kit_serial} ->
+        {:ok, kit_serial} when is_binary(kit_serial) ->
           Logger.info("Device already configured, finalizing...")
           finalize_config([], kit_serial)
           {:stop, :normal, state}

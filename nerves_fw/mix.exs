@@ -2,7 +2,7 @@ defmodule NervesFw.MixProject do
   use Mix.Project
 
   @app :ex_nvr_fw
-  @version "0.26.0"
+  @version "0.26.1"
   @all_targets [:ex_nvr_rpi4, :ex_nvr_rpi5, :giraffe]
 
   def project do
