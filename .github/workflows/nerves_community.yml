@@ -2,8 +2,8 @@ name: Nerves Community Image
 
 on:
   push:
-  #   tags:
-  #     - "v*"
+    tags:
+      - "v*"
 
 jobs:
   firmware:
@@ -68,4 +68,4 @@ jobs:
           generate_release_notes: true
           files: |
             nerves_community/_build/${{ matrix.target }}_prod/nerves/images/*.fw
-        # if: startsWith(github.ref, 'refs/tags/')
+        if: startsWith(github.ref, 'refs/tags/')
