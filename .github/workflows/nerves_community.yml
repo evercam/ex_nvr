@@ -1,9 +1,9 @@
 name: Nerves Community Image
 
 on:
-  push:
-    tags:
-      - "v*"
+  # push:
+  #   tags:
+  #     - "v*"
 
 jobs:
   firmware:
@@ -65,7 +65,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ex_nvr_nerves_${{ matrix.target }}.fw
-          path: ./nerves_community/_build/${{ matrix.target }}_prod/nerves/images/exnvr_nerves_${{ matrix.target }}.fw
+          path: ./_build/${{ matrix.target }}_prod/nerves/images/exnvr_nerves_${{ matrix.target }}.fw
           compression-level: 0
 
       - name: Publish archives and packages
@@ -74,5 +74,5 @@ jobs:
           draft: true
           generate_release_notes: true
           files: |
-            ./nerves_community/_build/${{ matrix.target }}_prod/nerves/images/exnvr_nerves_${{ matrix.target }}.fw
+            ./_build/${{ matrix.target }}_prod/nerves/images/exnvr_nerves_${{ matrix.target }}.fw
         if: startsWith(github.ref, 'refs/tags/')
