@@ -207,10 +207,11 @@ defmodule ExNVR.Devices.Onvif do
         resolution: select_resolution(config.resolutions_available, stream_type)
     }
 
-    case select_quality(onvif_device, config.quality_range) do
-      nil -> video_encoder
-      quality -> %VideoEncoder{video_encoder | quality: quality}
-    end
+    video_encoder =
+      case select_quality(onvif_device, config.quality_range) do
+        nil -> video_encoder
+        quality -> %VideoEncoder{video_encoder | quality: quality}
+      end
 
     ExOnvif.Media2.set_video_encoder_configuration(onvif_device, video_encoder)
   end
