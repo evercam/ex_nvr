@@ -68,8 +68,9 @@ defmodule ExNVRWeb.Router do
         post "/zoom/:mode", API.PTZController, :zoom
         post "/status", API.PTZController, :status
         post "/continuous_move", API.PTZController, :continuous_move
-        get "/get_nodes", API.PTZController, :get_nodes
-        get "/get_node_info/:node_token", API.PTZController, :get_node_info
+        get "/nodes", API.PTZController, :get_nodes
+        get "/node/:node_token", API.PTZController, :node
+        get "/profiles", API.PTZController, :profiles
       end
     end
 

@@ -2,7 +2,7 @@ defmodule ExNVRWeb.API.PTZController do
   use ExNVRWeb, :controller
 
   alias ExNVR.Devices.Onvif
-  alias ExOnvif.PTZ
+  alias ExOnvif.{PTZ, Media2}
   action_fallback ExNVRWeb.API.FallbackController
 
   plug ExNVRWeb.Plug.OnvifPTZPlug, [field_name: "profile_token"] when action in [:zoom]
@@ -125,7 +125,7 @@ defmodule ExNVRWeb.API.PTZController do
     end
   end
 
-  def get_nodes(conn, _params) do
+  def nodes(conn, _params) do
     onvif_device = conn.assigns.onvif_device
 
     case ExOnvif.PTZ.get_nodes(onvif_device) do
@@ -141,10 +141,10 @@ defmodule ExNVRWeb.API.PTZController do
     end
   end
 
-  def get_node_info(conn, %{"node_token" => node_token} = _params) do
+  def node(conn, %{"node_token" => node_token} = _params) do
     onvif_device = conn.assigns.onvif_device
 
-    case ExOnvif.PTZ.get_node(onvif_device, node_token) do
+    case PTZ.get_node(onvif_device, node_token) do
       {:ok, node_info} ->
         node_info = deep_to_map(node_info)
 
@@ -155,6 +155,17 @@ defmodule ExNVRWeb.API.PTZController do
       {:error, _reason} ->
         send_resp(conn, 404, "failed to get node info")
     end
+  end
+
+  def profiles(conn, params) do
+    onvif_device = conn.assigns.onvif_device
+
+    {:ok, profiles} =
+      Media2.get_profiles(onvif_device, token: params["token"], type: params["type"])
+
+    conn
+    |> put_resp_content_type("application/json")
+    |> send_resp(200, Jason.encode!(profiles))
   end
 
   def clamp(val, min \\ -1.0, max \\ 1.0) do
@@ -170,22 +181,22 @@ defmodule ExNVRWeb.API.PTZController do
     end
   end
 
-  defp deep_to_map(%_{} = struct) do
+  def deep_to_map(%_{} = struct) do
     struct
     |> Map.from_struct()
     |> Enum.map(fn {k, v} -> {k, deep_to_map(v)} end)
     |> Enum.into(%{})
   end
 
-  defp deep_to_map(map) when is_map(map) do
+  def deep_to_map(map) when is_map(map) do
     map
     |> Enum.map(fn {k, v} -> {k, deep_to_map(v)} end)
     |> Enum.into(%{})
   end
 
-  defp deep_to_map(list) when is_list(list) do
+  def deep_to_map(list) when is_list(list) do
     Enum.map(list, &deep_to_map/1)
   end
 
-  defp deep_to_map(value), do: value
+  def deep_to_map(value), do: value
 end
