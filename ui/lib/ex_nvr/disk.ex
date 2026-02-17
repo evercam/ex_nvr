@@ -203,13 +203,26 @@ defmodule ExNVR.Disk do
       opts = [stderr_to_stdout: true]
       args = ["-ji", drive]
 
-      with {_error, exit_code} when exit_code != 0 <- System.cmd(path, args, opts),
-           {_error, exit_code} when exit_code != 0 <- System.cmd(path, ["-d", "sat" | args], opts) do
-        %{}
-      else
-        {output, 0} ->
-          JSON.decode!(output)
-      end
+      task =
+        Task.Supervisor.async_nolink(ExNVR.TaskSupervisor, fn ->
+          with {_error, exit_code} when exit_code != 0 <- System.cmd(path, args, opts),
+               {_error, exit_code} when exit_code != 0 <-
+                 System.cmd(path, ["-d", "sat" | args], opts) do
+            %{}
+          else
+            {output, 0} ->
+              JSON.decode!(output)
+          end
+        end)
+
+      result =
+        case Task.yield(task, 2000) do
+          nil -> %{}
+          {:ok, result} -> result
+        end
+
+      Task.shutdown(task, :brutal_kill)
+      result
     else
       %{}
     end
