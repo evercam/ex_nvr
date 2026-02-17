@@ -1,0 +1,33 @@
+FROM 114786593061.dkr.ecr.eu-west-1.amazonaws.com/ex-nvr/elixir-1.19.5-erlang-28.1.1:latest
+
+# install build dependencies
+RUN apt-get update && apt-get install -y libsrtp2-dev \
+  && rm -rf /var/lib/apt/lists/*
+
+ARG ERL_FLAGS
+ENV ERL_FLAGS=$ERL_FLAGS
+ENV MIX_ENV=prod
+ENV GENERATE_DEB_PACKAGE=true
+
+# Create build workdir
+WORKDIR /app
+
+# install hex + rebar
+RUN mix local.hex --force && \
+  mix local.rebar --force
+
+COPY video_processor video_processor
+COPY ui ui
+
+WORKDIR /app/ui
+
+RUN rm -rf assets/node_modules
+
+RUN mix deps.get
+RUN mix deps.compile
+
+RUN mix sentry.package_source_code
+RUN mix release
+
+RUN mkdir build-assets
+RUN cp _build/prod/*.tar.gz _build/prod/*.deb build-assets/

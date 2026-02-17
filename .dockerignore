@@ -1,0 +1,6 @@
+**/_build
+**/.elixir_ls
+**/deps
+**/data
+**/priv/bundlex
+**/node_modules

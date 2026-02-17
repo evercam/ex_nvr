@@ -1,0 +1,11 @@
+<header>
+  <.topbar current_user={@current_user} />
+  <.sidebar {assigns} />
+</header>
+
+<main class="e-h-full bg-gray-300 dark:bg-gray-800">
+  <div class="flex e-h-full e-pt-14 sm:ml-64 bg-gray-300 dark:bg-gray-800">
+    <.flash_group flash={@flash} />
+    {@inner_content}
+  </div>
+</main>

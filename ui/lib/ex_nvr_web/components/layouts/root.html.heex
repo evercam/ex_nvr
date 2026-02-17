@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="csrf-token" content={get_csrf_token()} />
+    <head>
+      {Application.get_env(:live_debugger, :live_debugger_tags)}
+    </head>
+    <script>
+      // Init dark mode, having this script here so the initial page flicker from light to dark won't be noticeable
+      if (localStorage.getItem('dark-mode') === 'true' || (!('dark-mode' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    </script>
+    <.live_title suffix=" · Network Video Recorder">
+      {assigns[:page_title] || "ExNVR"}
+    </.live_title>
+    <LiveVue.Reload.vite_assets assets={["/js/app.js", "/css/app.css", "/js/webrtc.js"]}>
+      <link phx-track-static rel="stylesheet" href={static_path(@conn, "/assets/app.css")} />
+      <script defer phx-track-static type="module" src={static_path(@conn, "/assets/app.js")} />
+    </LiveVue.Reload.vite_assets>
+  </head>
+  <body class="main-body bg-gray-300 dark:bg-gray-800 antialiased">
+    {@inner_content}
+  </body>
+</html>

@@ -1,0 +1,130 @@
+name: nerves
+
+on:
+  push:
+    tags:
+      - "v*"
+
+  workflow_call:
+    inputs:
+      version:
+        description: "Custom version string to use instead of the tag-based version"
+        required: false
+        type: string
+      target:
+        description: "Specific target to build (ex_nvr_rpi4, ex_nvr_rpi5, or giraffe). If not specified, all targets will be built."
+        required: false
+        type: string
+      git_sha:
+        description: 'Target git ref for @actions/checkout. (defaults to "master")'
+        default: "master"
+        required: false
+        type: string
+
+jobs:
+  define-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      targets: ${{ steps.targets.outputs.targets }}
+    steps:
+      - id: targets
+        run: |
+          if [ "${{ inputs.target }}" = "" ]; then
+            echo 'targets=["ex_nvr_rpi4", "ex_nvr_rpi5", "giraffe"]' >> $GITHUB_OUTPUT
+          else
+            echo 'targets=["${{ inputs.target }}"]' >> $GITHUB_OUTPUT
+          fi
+  firmware:
+    runs-on: ubuntu-latest
+    needs: define-matrix
+    defaults:
+      run:
+        working-directory: ./nerves_fw
+    strategy:
+      matrix:
+        target: ${{ fromJSON(needs.define-matrix.outputs.targets) }}
+    env:
+      MIX_ENV: prod
+      MIX_TARGET: ${{ matrix.target }}
+      NERVES_HUB_PRODUCT_KEY: ${{ secrets.NERVES_HUB_PRODUCT_KEY }}
+      NERVES_HUB_PRODUCT_SECRET: ${{ secrets.NERVES_HUB_PRODUCT_SECRET }}
+      SECRET_KEY_BASE: ${{ secrets.SECRET_KEY_BASE }}
+      NH_TOKEN: ${{ secrets.NH_TOKEN }}
+      NERVES_HUB_URI: ${{ vars.NERVES_HUB_URI }}
+      NERVES_HUB_DEVICES_URI: ${{ vars.NERVES_HUB_DEVICES_URI }}
+      NERVES_HUB_ORG: ${{ vars.NERVES_HUB_ORG }}
+      NERVES_HUB_PRODUCT: ${{ vars.NERVES_HUB_PRODUCT }}
+      NERVES_HUB_NON_INTERACTIVE: true
+      NERVES_FIRMWARE_SIGNING_KEY: ${{ secrets.NERVES_FIRMWARE_SIGNING_KEY }}
+      EXNVR_REMOTE_SERVER_URI: ${{ vars.EXNVR_REMOTE_SERVER_URI }}
+      EXNVR_REMOTE_SERVER_TOKEN: ${{ secrets.EXNVR_REMOTE_SERVER_TOKEN }}
+      EXNVR_ICE_SERVERS: ${{ secrets.ICE_SERVERS }}
+      SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+      LOKI_URL: ${{ vars.LOKI_URL }}
+      LOKI_USERNAME: ${{ secrets.LOKI_USERNAME }}
+      LOKI_PASSWORD: ${{ secrets.LOKI_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          ref: ${{ inputs.git_sha }}
+
+      - uses: erlef/setup-beam@v1.18
+        with:
+          otp-version: 28.1.1
+          elixir-version: 1.19.5-otp-28
+
+      - name: Set platform env variable
+        run: echo "NERVES_FW_PLATFORM=giraffe" >> $GITHUB_ENV
+        if: matrix.target == 'giraffe'
+
+      - name: Set version if provided
+        if: inputs.version != ''
+        run: |
+          echo "VERSION=${{ inputs.version }}" >> $GITHUB_ENV
+          echo "Using version: ${{ inputs.version }}"
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update && \
+          sudo apt-get -y install npm wget build-essential automake autoconf git squashfs-tools ssh-askpass \
+                                  pkg-config curl libmnl-dev libssl-dev libncurses5-dev help2man libconfuse-dev \
+                                  libarchive-dev libsrtp2-dev
+
+      - name: Install fwup
+        run: |
+          wget https://github.com/fwup-home/fwup/releases/download/v1.13.2/fwup_1.13.2_amd64.deb && \
+          sudo dpkg -i fwup_1.13.2_amd64.deb && \
+          rm fwup_1.13.2_amd64.deb
+
+      - name: Install Nerves
+        run: |
+          mix local.hex --force && \
+          mix local.rebar --force && \
+          mix archive.install hex nerves_bootstrap --force
+
+      - name: Build assets
+        run: mix do deps.get, cmd --cd assets npm install, assets.deploy
+        working-directory: ./ui
+
+      - name: Download firmware dependencies
+        run: mix do deps.get, firmware.deps
+
+      - name: Package source code for sentry
+        run: mix sentry.package_source_code
+
+      - name: Create firmware
+        run: |
+          if [ -n "$VERSION" ]; then
+            sed -i "s/@version \"[^\"]*\"/@version \"${VERSION}\"/" mix.exs
+            mix firmware
+            git checkout -- mix.exs
+          else
+            mix firmware
+          fi
+
+      - name: Sign firmware
+        run: |
+          fwup -S --private-key ${{ env.NERVES_FIRMWARE_SIGNING_KEY }} -i _build/${{ env.MIX_TARGET }}_${{ env.MIX_ENV}}/nerves/images/ex_nvr_fw.fw -o ex_nvr_fw.fw
+
+      - name: Upload to Nerves hub
+        run: mix nerves_hub.firmware publish --product ${{ env.NERVES_HUB_PRODUCT }} ex_nvr_fw.fw
