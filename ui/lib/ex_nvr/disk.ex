@@ -205,14 +205,7 @@ defmodule ExNVR.Disk do
 
       task =
         Task.Supervisor.async_nolink(ExNVR.TaskSupervisor, fn ->
-          with {_error, exit_code} when exit_code != 0 <- System.cmd(path, args, opts),
-               {_error, exit_code} when exit_code != 0 <-
-                 System.cmd(path, ["-d", "sat" | args], opts) do
-            %{}
-          else
-            {output, 0} ->
-              JSON.decode!(output)
-          end
+          smartclt_do_get_disk_info(path, args, opts)
         end)
 
       result =
@@ -225,6 +218,17 @@ defmodule ExNVR.Disk do
       result
     else
       %{}
+    end
+  end
+
+  defp smartclt_do_get_disk_info(path, args, opts) do
+    with {_error, exit_code} when exit_code != 0 <- System.cmd(path, args, opts),
+         {_error, exit_code} when exit_code != 0 <-
+           System.cmd(path, ["-d", "sat" | args], opts) do
+      %{}
+    else
+      {output, 0} ->
+        JSON.decode!(output)
     end
   end
 
