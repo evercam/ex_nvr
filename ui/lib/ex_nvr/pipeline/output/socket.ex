@@ -98,9 +98,7 @@ defmodule ExNVR.Pipeline.Output.Socket do
   defp send_frame(frame, state) do
     {timestamp, pts_to_datetime} = Map.pop!(state.pts_to_datetime, frame.pts)
 
-    message =
-      <<Membrane.Time.as_milliseconds(timestamp, :round)::64, frame.width::16, frame.height::16,
-        3::8, frame.data::binary>>
+    message = <<timestamp::64, frame.width::16, frame.height::16, 3::8, frame.data::binary>>
 
     sockets =
       Enum.reduce(state.sockets, [], fn socket, open_sockets ->
@@ -118,8 +116,8 @@ defmodule ExNVR.Pipeline.Output.Socket do
     end
   end
 
-  defp buffer_timestamp(nil), do: Time.os_time()
-  defp buffer_timestamp(datetime), do: Time.from_datetime(datetime)
+  defp buffer_timestamp(nil), do: System.os_time(:millisecond)
+  defp buffer_timestamp(datetime), do: datetime
 
   defp convert_pts(value), do: ExMP4.Helper.timescalify(value, Time.seconds(1), 90_000)
 end

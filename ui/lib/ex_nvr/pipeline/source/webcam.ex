@@ -142,7 +142,7 @@ defmodule ExNVR.Pipeline.Source.Webcam do
       payload: packet.data,
       metadata: %{
         h264: %{key_frame?: packet.keyframe?},
-        timestamp: DateTime.utc_now()
+        timestamp: System.os_time(:millisecond)
       }
     }
   end

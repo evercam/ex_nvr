@@ -141,7 +141,10 @@ defmodule ExNVR.Pipeline.Source.File do
       payload: sample.payload,
       dts: offset + Helper.timescalify(sample.dts, track.timescale, :nanosecond),
       pts: offset + Helper.timescalify(sample.pts, track.timescale, :nanosecond),
-      metadata: %{track.media => %{key_frame?: sample.sync?}, timestamp: DateTime.utc_now()}
+      metadata: %{
+        track.media => %{key_frame?: sample.sync?},
+        timestamp: System.os_time(:millisecond)
+      }
     }
   end
 
