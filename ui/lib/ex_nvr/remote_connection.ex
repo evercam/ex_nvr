@@ -16,6 +16,11 @@ defmodule ExNVR.RemoteConnection do
     Slipstream.start_link(__MODULE__, options, name: __MODULE__)
   end
 
+  @spec push_and_wait(String.t(), map(), timeout()) :: {:ok, map()} | {:error, term()}
+  def push_and_wait(event, payload, timeout \\ 5_000) do
+    GenServer.call(__MODULE__, {:push_and_wait, event, payload, timeout}, :infinity)
+  end
+
   def push_event(event, payload) do
     send(__MODULE__, {:push_event, event, payload})
   end
@@ -41,6 +46,16 @@ defmodule ExNVR.RemoteConnection do
     Logger.info("Joined topic: #{@topic}")
     {:ok, ref} = :timer.send_interval(to_timeout(minute: 1), :send_system_status)
     {:ok, assign(socket, timer_ref: ref)}
+  end
+
+  @impl Slipstream
+  def handle_call({:push_and_wait, event, payload, timeout}, _from, socket) do
+    Logger.info("Pushing event and waiting for reply: #{event}")
+
+    case push(socket, @topic, event, payload, timeout) do
+      {:ok, ref} -> {:reply, await_reply(ref, timeout), socket}
+      error -> {:reply, error, socket}
+    end
   end
 
   @impl Slipstream

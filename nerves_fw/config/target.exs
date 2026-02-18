@@ -61,11 +61,6 @@ if enable_ssl do
     ]
 end
 
-config :ex_nvr_fw, :remote_configurer,
-  url: System.get_env("REMOTE_CONFIGURER_URL", "http://localhost:4000"),
-  token: System.get_env("REMOTE_CONFIGURER_TOKEN"),
-  api_version: System.get_env("REMOTE_CONFIGURER_VERSION")
-
 config :logger, backends: [RingLogger]
 
 config :logger, RingLogger, level: :info
@@ -119,6 +114,11 @@ config :vintage_net,
   config: [
     {"usb0", %{type: VintageNetDirect}},
     {"eth0",
+     %{
+       type: VintageNetEthernet,
+       ipv4: %{method: :dhcp}
+     }},
+    {"usb1",
      %{
        type: VintageNetEthernet,
        ipv4: %{method: :dhcp}
@@ -191,7 +191,7 @@ root_source_code = [
 
 config :sentry,
   dsn: System.get_env("SENTRY_DSN", nil),
-  release: "ex_nvr@0.25.1",
+  release: "ex_nvr@0.26.1",
   report_deps: false,
   root_source_code_paths: root_source_code,
   context_lines: 5,

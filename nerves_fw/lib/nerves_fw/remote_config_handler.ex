@@ -11,18 +11,22 @@ defmodule ExNVR.Nerves.RemoteConfigHandler do
 
     settings = SystemSettings.get_settings()
 
-    with {:ok, _new_settings} <- SystemSettings.update_router_settings(config["router"] || %{}),
-         {:ok, new_settings} <-
-           SystemSettings.update_power_schedule_settings(config["power_schedule"] || %{}) do
-      if power_schedule_updated?(settings.power_schedule, new_settings.power_schedule) do
-        Logger.info("[RemoteConfigHandler] Updating router schedule")
-        update_router_schedule(new_settings.power_schedule.schedule)
+    # ignore if the kit is not yet configured
+    if settings.configured do
+      with {:ok, _new_settings} <- SystemSettings.update_router_settings(config["router"] || %{}),
+           {:ok, new_settings} <-
+             SystemSettings.update_power_schedule_settings(config["power_schedule"] || %{}) do
+        # credo:disable-for-next-line Credo.Check.Refactor.Nesting
+        if power_schedule_updated?(settings.power_schedule, new_settings.power_schedule) do
+          Logger.info("[RemoteConfigHandler] Updating router schedule")
+          update_router_schedule(new_settings.power_schedule.schedule)
+        end
+      else
+        {:error, reason} ->
+          Logger.error(
+            "[RemoteConfigHandler] Failed to update router or power schedule settings: #{inspect(reason)}"
+          )
       end
-    else
-      {:error, reason} ->
-        Logger.error(
-          "[RemoteConfigHandler] Failed to update router or power schedule settings: #{inspect(reason)}"
-        )
     end
   end
 

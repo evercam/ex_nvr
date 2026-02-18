@@ -214,7 +214,6 @@ defmodule ExNVR.Devices.Onvif do
       video_encoder_configuration
       | encoding: config.encoding,
         gov_length: trunc(frame_rate * gov_length_coeff),
-        quality: select_quality(onvif_device, config.quality_range),
         rate_control: %VideoEncoder.RateControl{
           bitrate_limit: bit_rate,
           constant_bitrate: false,
@@ -222,6 +221,12 @@ defmodule ExNVR.Devices.Onvif do
         },
         resolution: select_resolution(config.resolutions_available, stream_type)
     }
+
+    video_encoder =
+      case select_quality(onvif_device, config.quality_range) do
+        nil -> video_encoder
+        quality -> %VideoEncoder{video_encoder | quality: quality}
+      end
 
     ExOnvif.Media2.set_video_encoder_configuration(onvif_device, video_encoder)
   end
@@ -288,6 +293,7 @@ defmodule ExNVR.Devices.Onvif do
   end
 
   defp select_quality(%{manufacturer: "AXIS"}, _quality), do: 70
+  defp select_quality(_device, %{max: max, min: min}) when is_nil(max) or is_nil(min), do: nil
   defp select_quality(_device, quality), do: Float.ceil((quality.max + quality.min) / 2)
 
   # prefer 4K resolutions with 16:9 aspect ratio

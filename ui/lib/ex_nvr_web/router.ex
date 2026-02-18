@@ -85,7 +85,7 @@ defmodule ExNVRWeb.Router do
     scope "/devices/:device_id" do
       pipe_through ExNVRWeb.Plug.Device
 
-      get "/hls/:segment_name", API.DeviceStreamingController, :hls_stream_segment
+      get "/hls/*path", API.DeviceStreamingController, :hls_stream_segment
     end
   end
 
