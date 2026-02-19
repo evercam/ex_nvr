@@ -4,7 +4,7 @@ defmodule ExNVRWeb.DeviceDetailsLive do
   require Logger
 
   alias ExNVR.Devices
-  alias ExNVRWeb.DeviceTabs.{EventsListTab, RecordingsListTab}
+  alias ExNVRWeb.DeviceTabs.{EventsListTab, RecordingsListTab, StatsTab}
   alias ExNVRWeb.Router.Helpers, as: Routes
 
   @impl true
@@ -12,7 +12,7 @@ defmodule ExNVRWeb.DeviceDetailsLive do
     ~H"""
     <div class="grow px-4 py-6">
       <h2 class="text-xl font-semibold text-black dark:text-white mb-4">
-        {@device.name}
+        Device: {@device.name}
       </h2>
       <.tabs id="device-details-tabs" active_tab={@active_tab} on_change={:tab_changed}>
         <:tab id="details" label="Details" />
@@ -71,7 +71,13 @@ defmodule ExNVRWeb.DeviceDetailsLive do
         
     <!-- stats tab-->
         <:tab_content for="stats">
-          <div class="text-center text-gray-500 dark:text-gray-400">Stats tab coming soon...</div>
+          <.live_component
+            id="stats_tab"
+            module={StatsTab}
+            device={@device}
+            main_stream_stats={@main_stream_stats}
+            sub_stream_stats={@sub_stream_stats}
+          />
         </:tab_content>
 
         <:tab_content for="settings">
@@ -103,15 +109,23 @@ defmodule ExNVRWeb.DeviceDetailsLive do
     {:ok,
      assign(socket,
        device: device,
-       active_tab: active_tab
+       active_tab: active_tab,
+       main_stream_stats: nil,
+       sub_stream_stats: nil
      )}
   end
 
   @impl true
   def handle_params(params, _uri, socket) do
+    active_tab = params["tab"] || socket.assigns.active_tab
+
+    if active_tab == "stats",
+      do: Phoenix.PubSub.subscribe(ExNVR.PubSub, "stats"),
+      else: Phoenix.PubSub.unsubscribe(ExNVR.PubSub, "stats")
+
     {:noreply,
      socket
-     |> assign(:active_tab, params["tab"] || socket.assigns.active_tab)
+     |> assign(:active_tab, active_tab)
      |> assign(:params, params)}
   end
 
@@ -130,6 +144,16 @@ defmodule ExNVRWeb.DeviceDetailsLive do
      |> push_patch(
        to: Routes.device_details_path(socket, :show, socket.assigns.device.id, params)
      )}
+  end
+
+  @impl true
+  def handle_info({:video_stats, {:high, stats}}, socket) do
+    {:noreply, assign(socket, :main_stream_stats, stats)}
+  end
+
+  @impl true
+  def handle_info({:video_stats, {:low, stats}}, socket) do
+    {:noreply, assign(socket, :sub_stream_stats, stats)}
   end
 
   def update_params(tab, id) do
