@@ -190,7 +190,7 @@
             </div>
           </div>
 
-          <div v-if="enablePtz" class="flex z-10 gap-5 absolute right-5 p-4">
+          <div v-if="showPTZControl" class="flex z-10 gap-5 absolute right-5 p-4">
             <div>
               <div class="flex justify-center">
                 <button

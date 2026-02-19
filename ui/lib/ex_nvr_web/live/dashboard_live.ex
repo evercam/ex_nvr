@@ -18,7 +18,7 @@ defmodule ExNVRWeb.DashboardLive do
     {"Custom", ""}
   ]
 
-  @type ptz() :: %{
+  @type ptz_t() :: %{
           x: float(),
           y: float(),
           zoom: float()
@@ -493,7 +493,7 @@ defmodule ExNVRWeb.DashboardLive do
     end
   end
 
-  @spec get_status(Ecto.Changeset.t()) :: {ptz(), ExOnvif.Device.t()} | {nil, nil}
+  @spec get_status(Ecto.Changeset.t()) :: {ptz_t(), ExOnvif.Device.t()} | {nil, nil}
   defp get_status(device) do
     with {:ok, onvif_device} <- ExNVR.Devices.Onvif.onvif_device(device),
          {:ok, status} <-
