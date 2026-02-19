@@ -1,6 +1,10 @@
 defmodule ExNVRWeb.DeviceTabs.RecordingsListTab do
-  @moduledoc false
-
+  @moduledoc """
+    recordings list tab
+      recordings list
+      filters
+      pagination
+  """
   use ExNVRWeb, :live_component
 
   require Logger
@@ -15,7 +19,11 @@ defmodule ExNVRWeb.DeviceTabs.RecordingsListTab do
   def render(assigns) do
     ~H"""
     <div>
-      <div class="text-center text-gray-500 dark:text-gray-400" id="recordings-tab">
+      <div
+        class="text-center text-gray-500 dark:text-gray-400"
+        id="recordings-tab"
+        phx-hook="FlowbiteInit"
+      >
         <.filter_form
           meta={@meta}
           recordings={@recordings}
@@ -23,7 +31,7 @@ defmodule ExNVRWeb.DeviceTabs.RecordingsListTab do
           id="recording-filter-form"
         />
 
-        <div>
+        <div class="overflow-y-auto h-[72vh]">
           <Flop.Phoenix.table
             id="recordings"
             opts={ExNVRWeb.FlopConfig.table_opts()}
@@ -88,14 +96,7 @@ defmodule ExNVRWeb.DeviceTabs.RecordingsListTab do
             </:action>
           </Flop.Phoenix.table>
         </div>
-
-        <div class="fixed bottom-0  right-10 w-full">
-          <div class="bg-gray-300 dark:bg-gray-800">
-            <div class="pb-5">
-              <.pagination meta={@meta} target={@myself} />
-            </div>
-          </div>
-        </div>
+        <.pagination meta={@meta} target={@myself} />
       </div>
       <div
         id="popup-container"
@@ -240,7 +241,6 @@ defmodule ExNVRWeb.DeviceTabs.RecordingsListTab do
     case Recordings.list(nested_filter_params) do
       {:ok, {recordings, meta}} ->
         socket
-        |> push_event("reload-popovers", %{})
         |> assign(meta: meta, recordings: recordings, sort_params: sort_params)
 
       {:error, meta} ->

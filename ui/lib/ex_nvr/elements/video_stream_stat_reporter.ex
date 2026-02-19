@@ -116,14 +116,17 @@ defmodule ExNVR.Elements.VideoStreamStatReporter do
 
   @impl true
   def handle_tick(:report_stats, _ctx, state) do
-    stats = %ExNVR.Pipeline.Track.Stat{
-      width: state.resolution && elem(state.resolution, 0),
-      height: state.resolution && elem(state.resolution, 1),
-      profile: state.profile,
-      recv_bytes: state.total_bytes,
-      total_frames: state.total_frames,
-      gop_size: state.gop_size
-    }
+    stats =
+      %ExNVR.Pipeline.Track.Stat{
+        width: state.resolution && elem(state.resolution, 0),
+        height: state.resolution && elem(state.resolution, 1),
+        profile: state.profile,
+        recv_bytes: state.total_bytes,
+        total_frames: state.total_frames,
+        gop_size: state.gop_size
+      }
+
+    broadcast_stream_info(state)
 
     {[notify_parent: {:stats, stats}], state}
   end
@@ -150,5 +153,13 @@ defmodule ExNVR.Elements.VideoStreamStatReporter do
 
   defp calculate_avg_gop_size(state) do
     (state.avg_gop_size + state.frames_since_last_keyframe) / 2
+  end
+
+  defp broadcast_stream_info(stats) do
+    Phoenix.PubSub.broadcast(
+      ExNVR.PubSub,
+      "stats",
+      {:video_stats, {stats.stream, stats}}
+    )
   end
 end
