@@ -7,8 +7,6 @@ defmodule ExNVRWeb.DeviceDetailsLive do
   alias ExNVRWeb.DeviceTabs.{EventsListTab, RecordingsListTab, StatsTab}
   alias ExNVRWeb.Router.Helpers, as: Routes
 
-  import ExNVRWeb.ViewUtils
-
   @impl true
   def render(assigns) do
     ~H"""
@@ -119,20 +117,20 @@ defmodule ExNVRWeb.DeviceDetailsLive do
 
   @impl true
   def handle_params(params, _uri, socket) do
+    active_tab = params["tab"] || socket.assigns.active_tab
+
+    if active_tab == "stats",
+      do: Phoenix.PubSub.subscribe(ExNVR.PubSub, "stats"),
+      else: Phoenix.PubSub.unsubscribe(ExNVR.PubSub, "stats")
+
     {:noreply,
      socket
-     |> assign(:active_tab, params["tab"] || socket.assigns.active_tab)
+     |> assign(:active_tab, active_tab)
      |> assign(:params, params)}
   end
 
   @impl true
   def handle_info({:tab_changed, %{tab: tab}}, socket) do
-    if tab == "stats" do
-      Phoenix.PubSub.subscribe(ExNVR.PubSub, "stats")
-    else
-      Phoenix.PubSub.unsubscribe(ExNVR.PubSub, "stats")
-    end
-
     params =
       socket.assigns.params
       |> Map.put("tab", tab)
@@ -156,21 +154,6 @@ defmodule ExNVRWeb.DeviceDetailsLive do
   @impl true
   def handle_info({:video_stats, {:low, stats}}, socket) do
     {:noreply, assign(socket, :sub_stream_stats, stats)}
-  end
-
-  @spec format_stats(map()) :: map()
-  def format_stats(stats) do
-    %{
-      "Resolution" => "#{stats["width"]}x#{stats["height"]}",
-      "R-Frame Rate" => "#{stats["r_frame_rate"]}",
-      "Color Primaries" => stats["color_primaries"],
-      "color_transfer" => stats["color_transfer"],
-      "Bits Per Raw Sample" => stats["bits_per_raw_sample"],
-      "Codec Long Name" => stats["codec_long_name"],
-      "Codec Type" => stats["codec_type"],
-      "AVG Frame Rate" => stats["avg_frame_rate"],
-      "Bit Rate" => humanize_bitrate(String.to_integer(stats["bit_rate"]))
-    }
   end
 
   def update_params(tab, id) do

@@ -3,15 +3,20 @@ defmodule ExNVRWeb.DeviceTabs.StatsTab do
 
   import ExNVRWeb.ViewUtils
 
+  alias ExNVR.Model.Device
+
   @moduledoc false
 
   @impl true
   def render(assigns) do
-    if assigns.device.state == :recording do
-      ~H"""
-      <div class="bg-gray-50 dark:bg-slate-900 text-gray-900 dark:text-gray-100 p-8 font-sans">
+    ~H"""
+    <div>
+      <div
+        :if={Device.streaming?(@device)}
+        class="bg-gray-50 dark:bg-slate-900 text-gray-900 dark:text-gray-100 p-8 font-sans"
+      >
         
-      <!-- Main Stream Section -->
+    <!-- Main Stream Section -->
         <div :if={@main_stream_stats} class="mb-8 ">
           <div class="flex items-center justify-between gap-3 mb-4">
             <div class="flex gap-3">
@@ -37,7 +42,7 @@ defmodule ExNVRWeb.DeviceTabs.StatsTab do
             </div>
           </div>
           
-      <!-- Main Stream Cards -->
+    <!-- Main Stream Cards -->
           <div class="flex flex-wrap gap-4 mb-6">
             <!-- Resolution Card -->
             <div class="flex-1 min-w-[240px] bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg p-5">
@@ -57,7 +62,7 @@ defmodule ExNVRWeb.DeviceTabs.StatsTab do
               </div>
             </div>
             
-      <!-- Frame Rate Card -->
+    <!-- Frame Rate Card -->
             <div class="flex-1 min-w-[240px] bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg p-5">
               <div class="flex items-center justify-between mb-2">
                 <div class="text-gray-600 dark:text-gray-400 text-sm uppercase">Frame Rate</div>
@@ -81,7 +86,7 @@ defmodule ExNVRWeb.DeviceTabs.StatsTab do
               <div class="text-gray-500 dark:text-gray-400 text-sm">Average</div>
             </div>
             
-      <!-- Bitrate Card -->
+    <!-- Bitrate Card -->
             <div class="flex-1 min-w-[240px] bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg p-5">
               <div class="flex items-center justify-between mb-2">
                 <div class="text-gray-600 dark:text-gray-400 text-sm uppercase">Bitrate</div>
@@ -105,7 +110,7 @@ defmodule ExNVRWeb.DeviceTabs.StatsTab do
               <div class="text-gray-500 dark:text-gray-400 text-sm">Average</div>
             </div>
             
-      <!-- Total Frames Card -->
+    <!-- Total Frames Card -->
             <div class="flex-1 min-w-[240px] bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg p-5">
               <div class="flex items-center justify-between mb-2">
                 <div class="text-gray-600 dark:text-gray-400 text-sm uppercase">Total Frames</div>
@@ -129,7 +134,7 @@ defmodule ExNVRWeb.DeviceTabs.StatsTab do
             </div>
           </div>
           
-      <!-- Additional Main Stream Cards -->
+    <!-- Additional Main Stream Cards -->
           <div class="flex flex-wrap gap-4">
             <!-- GOP Size Card -->
             <div class="flex-1 min-w-[240px] bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg p-5">
@@ -157,10 +162,12 @@ defmodule ExNVRWeb.DeviceTabs.StatsTab do
               </div>
             </div>
             
-      <!-- Keyframe Distance Card -->
+    <!-- Keyframe Distance Card -->
             <div class="flex-1 min-w-[240px] bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg p-5">
               <div class="flex items-center justify-between mb-2">
-                <div class="text-gray-600 dark:text-gray-400 text-sm uppercase">Keyframe Distance</div>
+                <div class="text-gray-600 dark:text-gray-400 text-sm uppercase">
+                  Keyframe Distance
+                </div>
                 <svg
                   class="w-5 h-5 text-gray-400 dark:text-gray-500"
                   fill="none"
@@ -168,7 +175,12 @@ defmodule ExNVRWeb.DeviceTabs.StatsTab do
                   viewBox="0 0 24 24"
                 >
                   <circle cx="12" cy="12" r="10" stroke-width="2" />
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6l4 2" />
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M12 6v6l4 2"
+                  />
                 </svg>
               </div>
               <div class="text-3xl font-bold text-gray-900 dark:text-white mb-1">
@@ -177,7 +189,7 @@ defmodule ExNVRWeb.DeviceTabs.StatsTab do
               <div class="text-gray-500 dark:text-gray-400 text-sm">Frames since last</div>
             </div>
             
-      <!-- Total Data Card -->
+    <!-- Total Data Card -->
             <div class="flex-1 min-w-[240px] bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg p-5">
               <div class="flex items-center justify-between mb-2">
                 <div class="text-gray-600 dark:text-gray-400 text-sm uppercase">Total Data</div>
@@ -200,7 +212,7 @@ defmodule ExNVRWeb.DeviceTabs.StatsTab do
               </div>
             </div>
             
-      <!-- Profile Card -->
+    <!-- Profile Card -->
             <div class="flex-1 min-w-[240px] bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg p-5">
               <div class="flex items-center justify-between mb-2">
                 <div class="text-gray-600 dark:text-gray-400 text-sm uppercase">Profile</div>
@@ -243,7 +255,7 @@ defmodule ExNVRWeb.DeviceTabs.StatsTab do
           </svg>
         </div>
         
-      <!-- Sub Stream Section -->
+    <!-- Sub Stream Section -->
         <div :if={@sub_stream_stats} class="mb-8">
           <div class="flex items-center justify-between gap-3 mb-4">
             <div class="flex gap-3">
@@ -269,7 +281,7 @@ defmodule ExNVRWeb.DeviceTabs.StatsTab do
             </div>
           </div>
           
-      <!-- Main Stream Cards -->
+    <!-- Main Stream Cards -->
           <div class="flex flex-wrap gap-4 mb-6">
             <!-- Resolution Card -->
             <div class="flex-1 min-w-[240px] bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg p-5">
@@ -289,7 +301,7 @@ defmodule ExNVRWeb.DeviceTabs.StatsTab do
               </div>
             </div>
             
-      <!-- Frame Rate Card -->
+    <!-- Frame Rate Card -->
             <div class="flex-1 min-w-[240px] bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg p-5">
               <div class="flex items-center justify-between mb-2">
                 <div class="text-gray-600 dark:text-gray-400 text-sm uppercase">Frame Rate</div>
@@ -313,7 +325,7 @@ defmodule ExNVRWeb.DeviceTabs.StatsTab do
               <div class="text-gray-500 dark:text-gray-400 text-sm">Average</div>
             </div>
             
-      <!-- Bitrate Card -->
+    <!-- Bitrate Card -->
             <div class="flex-1 min-w-[240px] bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg p-5">
               <div class="flex items-center justify-between mb-2">
                 <div class="text-gray-600 dark:text-gray-400 text-sm uppercase">Bitrate</div>
@@ -337,7 +349,7 @@ defmodule ExNVRWeb.DeviceTabs.StatsTab do
               <div class="text-gray-500 dark:text-gray-400 text-sm">Average</div>
             </div>
             
-      <!-- Total Frames Card -->
+    <!-- Total Frames Card -->
             <div class="flex-1 min-w-[240px] bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg p-5">
               <div class="flex items-center justify-between mb-2">
                 <div class="text-gray-600 dark:text-gray-400 text-sm uppercase">Total Frames</div>
@@ -361,7 +373,7 @@ defmodule ExNVRWeb.DeviceTabs.StatsTab do
             </div>
           </div>
           
-      <!-- Additional Main Stream Cards -->
+    <!-- Additional Main Stream Cards -->
           <div class="flex flex-wrap gap-4">
             <!-- GOP Size Card -->
             <div class="flex-1 min-w-[240px] bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg p-5">
@@ -389,10 +401,12 @@ defmodule ExNVRWeb.DeviceTabs.StatsTab do
               </div>
             </div>
             
-      <!-- Keyframe Distance Card -->
+    <!-- Keyframe Distance Card -->
             <div class="flex-1 min-w-[240px] bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg p-5">
               <div class="flex items-center justify-between mb-2">
-                <div class="text-gray-600 dark:text-gray-400 text-sm uppercase">Keyframe Distance</div>
+                <div class="text-gray-600 dark:text-gray-400 text-sm uppercase">
+                  Keyframe Distance
+                </div>
                 <svg
                   class="w-5 h-5 text-gray-400 dark:text-gray-500"
                   fill="none"
@@ -400,7 +414,12 @@ defmodule ExNVRWeb.DeviceTabs.StatsTab do
                   viewBox="0 0 24 24"
                 >
                   <circle cx="12" cy="12" r="10" stroke-width="2" />
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6l4 2" />
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M12 6v6l4 2"
+                  />
                 </svg>
               </div>
               <div class="text-3xl font-bold text-gray-900 dark:text-white mb-1">
@@ -409,7 +428,7 @@ defmodule ExNVRWeb.DeviceTabs.StatsTab do
               <div class="text-gray-500 dark:text-gray-400 text-sm">Frames since last</div>
             </div>
             
-      <!-- Total Data Card -->
+    <!-- Total Data Card -->
             <div class="flex-1 min-w-[240px] bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg p-5">
               <div class="flex items-center justify-between mb-2">
                 <div class="text-gray-600 dark:text-gray-400 text-sm uppercase">Total Data</div>
@@ -432,7 +451,7 @@ defmodule ExNVRWeb.DeviceTabs.StatsTab do
               </div>
             </div>
             
-      <!-- Profile Card -->
+    <!-- Profile Card -->
             <div class="flex-1 min-w-[240px] bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg p-5">
               <div class="flex items-center justify-between mb-2">
                 <div class="text-gray-600 dark:text-gray-400 text-sm uppercase">Profile</div>
@@ -456,24 +475,16 @@ defmodule ExNVRWeb.DeviceTabs.StatsTab do
           </div>
         </div>
       </div>
-      """
-    else
-      ~H"""
-      <div class="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-[#0a0e1a]">
+      <div
+        :if={!Device.streaming?(@device)}
+        class="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-[#0a0e1a]"
+      >
         <div class="text-center p-8 bg-white dark:bg-[#131824] border border-gray-200 dark:border-gray-800 rounded-xl shadow-xl">
           <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-4">Device Not Live</h2>
           <p class="text-gray-500 dark:text-gray-400">The device is not currently recording.</p>
         </div>
       </div>
-      """
-    end
+    </div>
+    """
   end
-
-  @impl true
-  def mount(socket) do
-    {:ok, socket}
-  end
-
-  defp format_date(nil), do: nil
-  defp format_date(datetime), do: DateTime.to_iso8601(datetime)
 end
