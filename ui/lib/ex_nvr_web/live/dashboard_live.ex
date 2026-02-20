@@ -1,4 +1,5 @@
 defmodule ExNVRWeb.DashboardLive do
+  alias ExNVR.Devices.Onvif
   use ExNVRWeb, :live_view
 
   alias Ecto.Changeset
@@ -16,6 +17,13 @@ defmodule ExNVRWeb.DashboardLive do
     {"2 Hours", "7200"},
     {"Custom", ""}
   ]
+
+  @type ptz_t() :: %{
+          x: float(),
+          y: float(),
+          zoom: float()
+        }
+  @ptz_move_step 0.1
 
   def render(assigns) do
     ~H"""
@@ -38,6 +46,7 @@ defmodule ExNVRWeb.DashboardLive do
           device={Map.take(@current_device, [:id, :name, :timezone])}
           live-view-enabled={@live_view_enabled?}
           start-date={@start_date}
+          enable-ptz={!is_nil(@onvif_device)}
           v-on:switch_stream={JS.push("switch_stream")}
           v-on:switch_device={JS.push("switch_device")}
           v-on:show-download-modal={show_modal("download-modal")}
@@ -137,9 +146,14 @@ defmodule ExNVRWeb.DashboardLive do
 
     stream = Map.get(params, "stream", socket.assigns[:stream]) || "sub_stream"
 
+    {ptz_status, onvif_device} =
+      get_status(device)
+
     socket
     |> assign(current_device: device)
     |> assign(stream: stream, start_date: nil)
+    |> assign(ptz_status: ptz_status)
+    |> assign(onvif_device: onvif_device)
     |> assign_streams()
     |> assign_footage_form(%{"device_id" => device && device.id})
     |> live_view_enabled?()
@@ -154,6 +168,74 @@ defmodule ExNVRWeb.DashboardLive do
   end
 
   def handle_info(_, socket), do: socket
+
+  def handle_event("up", _params, socket) do
+    onvif_device = socket.assigns.onvif_device
+
+    %{x: x, y: y, zoom: zoom} =
+      socket.assigns.ptz_status
+
+    new_y = clamp(y - @ptz_move_step)
+
+    Onvif.move_ptz(onvif_device, %{x: x, y: new_y, zoom: zoom})
+
+    {:noreply, assign(socket, :ptz_status, %{x: x, y: new_y, zoom: zoom})}
+  end
+
+  def handle_event("down", _params, socket) do
+    onvif_device = socket.assigns.onvif_device
+    %{x: x, y: y, zoom: zoom} = socket.assigns.ptz_status
+
+    new_y = clamp(y + @ptz_move_step)
+
+    Onvif.move_ptz(onvif_device, %{x: x, y: new_y, zoom: zoom})
+
+    {:noreply, assign(socket, :ptz_status, %{x: x, y: new_y, zoom: zoom})}
+  end
+
+  def handle_event("left", _params, socket) do
+    onvif_device = socket.assigns.onvif_device
+    %{x: x, y: y, zoom: zoom} = socket.assigns.ptz_status
+
+    new_x = clamp(x - @ptz_move_step)
+
+    Onvif.move_ptz(onvif_device, %{x: new_x, y: y, zoom: zoom})
+
+    {:noreply, assign(socket, :ptz_status, %{x: new_x, y: y, zoom: zoom})}
+  end
+
+  def handle_event("right", _params, socket) do
+    onvif_device = socket.assigns.onvif_device
+    %{x: x, y: y, zoom: zoom} = socket.assigns.ptz_status
+
+    new_x = clamp(x + @ptz_move_step)
+
+    Onvif.move_ptz(onvif_device, %{x: new_x, y: y, zoom: zoom})
+
+    {:noreply, assign(socket, :ptz_status, %{x: new_x, y: y, zoom: zoom})}
+  end
+
+  def handle_event("zoom", %{"zoom_in" => zoom_in, "zoom_out" => zoom_out}, socket) do
+    onvif_device = socket.assigns.onvif_device
+
+    %{x: x, y: y, zoom: zoom} = socket.assigns.ptz_status
+
+    new_zoom =
+      cond do
+        zoom_in ->
+          clamp(zoom + @ptz_move_step)
+
+        zoom_out ->
+          clamp(zoom - @ptz_move_step)
+
+        true ->
+          zoom
+      end
+
+    Onvif.move_ptz(onvif_device, %{x: x, y: y, zoom: new_zoom})
+
+    {:noreply, assign(socket, :ptz_status, %{x: x, y: y, zoom: new_zoom})}
+  end
 
   def handle_event("switch_device", %{"device" => device_id}, socket) do
     route =
@@ -408,6 +490,37 @@ defmodule ExNVRWeb.DashboardLive do
     case Recordings.get_recordings_between(device_id, start_date, start_date) do
       [] -> Changeset.add_error(changeset, :start_date, "No recordings found")
       _recordings -> changeset
+    end
+  end
+
+  @spec get_status(Ecto.Changeset.t()) :: {ptz_t(), ExOnvif.Device.t()} | {nil, nil}
+  defp get_status(device) do
+    with {:ok, onvif_device} <- ExNVR.Devices.Onvif.onvif_device(device),
+         {:ok, status} <-
+           ExOnvif.PTZ.get_status(onvif_device, "Profile_1") do
+      {
+        %{
+          x: status.position.pan_tilt.x,
+          y: status.position.pan_tilt.y,
+          zoom: status.position.zoom
+        },
+        onvif_device
+      }
+    else
+      {:error, :not_camera} -> {nil, nil}
+    end
+  end
+
+  defp clamp(val, min \\ -1.0, max \\ 1.0) do
+    val =
+      val
+      |> max(min)
+      |> min(max)
+
+    cond do
+      val == min -> max
+      val == max -> min
+      true -> val
     end
   end
 end
