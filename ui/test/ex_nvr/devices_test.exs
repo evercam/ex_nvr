@@ -498,4 +498,66 @@ defmodule ExNVR.DevicesTest do
 
     assert Path.join([ctx.tmp_dir, "ex_nvr", device.id, "bif"]) == Device.bif_dir(device)
   end
+
+  describe "recording_mode" do
+    test "defaults to :always for new devices", %{tmp_dir: tmp_dir} do
+      device = camera_device_fixture(tmp_dir)
+      assert device.storage_config.recording_mode == :always
+      assert Device.recording_mode(device) == :always
+    end
+
+    test "create device with recording_mode :none does not require address" do
+      {:ok, device} =
+        Devices.create(
+          valid_device_attributes(%{
+            storage_config: %{recording_mode: :none, address: nil}
+          })
+        )
+
+      assert device.storage_config.recording_mode == :none
+      assert device.storage_config.address == nil
+    end
+
+    test "create device with recording_mode :none does not create directories" do
+      {:ok, device} =
+        Devices.create(
+          valid_device_attributes(%{
+            storage_config: %{recording_mode: :none, address: nil}
+          })
+        )
+
+      assert Device.base_dir(device) == nil
+    end
+
+    test "create device with recording_mode :always requires address" do
+      {:error, changeset} =
+        Devices.create(
+          valid_device_attributes(%{
+            storage_config: %{recording_mode: :always, address: nil}
+          })
+        )
+
+      assert %{storage_config: %{address: ["can't be blank"]}} = errors_on(changeset)
+    end
+
+    test "update device recording_mode", %{tmp_dir: tmp_dir} do
+      device = camera_device_fixture(tmp_dir)
+      assert device.storage_config.recording_mode == :always
+
+      {:ok, updated} =
+        Devices.update(device, %{storage_config: %{recording_mode: :none}})
+
+      assert updated.storage_config.recording_mode == :none
+    end
+
+    test "recording_mode helper defaults to :always for legacy devices" do
+      device = %Device{storage_config: %{recording_mode: nil}}
+      assert Device.recording_mode(device) == :always
+    end
+
+    test "base_dir returns nil when address is nil" do
+      device = %Device{id: "test-id", storage_config: %{address: nil}}
+      assert Device.base_dir(device) == nil
+    end
+  end
 end

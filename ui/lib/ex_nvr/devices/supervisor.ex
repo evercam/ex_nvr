@@ -20,13 +20,22 @@ defmodule ExNVR.Devices.Supervisor do
   @impl true
   def init(device) do
     params = [device: device]
+    recording_mode = Device.recording_mode(device)
 
-    children = [
-      {ExNVR.DiskMonitor, params},
-      {Main, params},
-      {ExNVR.BIF.GeneratorServer, params},
-      {ExNVR.Devices.SnapshotUploader, params}
-    ]
+    children =
+      if recording_mode == :none do
+        [
+          {Main, params},
+          {ExNVR.Devices.SnapshotUploader, params}
+        ]
+      else
+        [
+          {ExNVR.DiskMonitor, params},
+          {Main, params},
+          {ExNVR.BIF.GeneratorServer, params},
+          {ExNVR.Devices.SnapshotUploader, params}
+        ]
+      end
 
     children =
       if device.settings.enable_lpr && Device.http_url(device) do

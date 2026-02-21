@@ -504,7 +504,9 @@ defmodule ExNVR.Pipelines.Main do
   end
 
   defp build_sub_stream_bif_spec(state) do
-    if state.record_main_stream? and state.device.settings.generate_bif do
+    has_address = not is_nil(state.device.storage_config.address)
+
+    if has_address and state.device.settings.generate_bif do
       [
         get_child({:tee, :sub_stream})
         |> via_out(:push_output)

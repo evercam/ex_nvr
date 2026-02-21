@@ -27,10 +27,12 @@ defmodule ExNVR.Pipeline.StorageMonitor do
   def init(opts) do
     device = Keyword.fetch!(opts, :device)
     schedule = device.storage_config.schedule
+    recording_mode = Device.recording_mode(device)
 
     state = %{
       pipeline_pid: Keyword.fetch!(opts, :pipeline_pid),
       device: device,
+      recording_mode: recording_mode,
       schedule: schedule && Schedule.parse!(schedule),
       dir: Device.base_dir(device),
       schedule_timer: nil,
@@ -39,7 +41,11 @@ defmodule ExNVR.Pipeline.StorageMonitor do
       paused?: false
     }
 
-    {:ok, state, {:continue, :record?}}
+    if recording_mode == :none do
+      {:ok, notify_parent(state, false)}
+    else
+      {:ok, state, {:continue, :record?}}
+    end
   end
 
   @impl true
@@ -116,6 +122,7 @@ defmodule ExNVR.Pipeline.StorageMonitor do
     %{state | record?: record?}
   end
 
+  defp record?(%{recording_mode: :none}), do: false
   defp record?(%{schedule: nil}), do: true
 
   defp record?(%{schedule: schedule} = state) do

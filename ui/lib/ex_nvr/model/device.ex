@@ -243,7 +243,15 @@ defmodule ExNVR.Model.Device do
 
   # directories path
 
-  @spec base_dir(t()) :: Path.t()
+  @spec recording_mode(t()) :: :none | :always | :on_event
+  def recording_mode(%__MODULE__{storage_config: %{recording_mode: mode}}) when not is_nil(mode),
+    do: mode
+
+  def recording_mode(%__MODULE__{}), do: :always
+
+  @spec base_dir(t()) :: Path.t() | nil
+  def base_dir(%__MODULE__{storage_config: %{address: nil}}), do: nil
+
   def base_dir(%__MODULE__{id: id, storage_config: %{address: path}}),
     do: Path.join([path, "ex_nvr", id])
 
