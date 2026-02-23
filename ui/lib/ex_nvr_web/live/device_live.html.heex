@@ -229,66 +229,99 @@
         <div class="flex flex-col text-black dark:text-white">
           <.inputs_for :let={storage_config} field={@device_form[:storage_config]}>
             <div class="w-full mb-5 font-medium bg-gray-300 dark:bg-gray-800">
-              <h2 class="mb-2">Select storage address</h2>
               <.input
-                :let={option}
-                field={storage_config[:address]}
-                id="settings-storage-address"
-                type="radio"
-                options={@disks_data}
-                disabled={not is_nil(@device.id)}
-              >
-                <div class="w-full px-2 font-normal text-xs">
-                  <div class="flex justify-between mb-1">
-                    <span class="text-black dark:text-white">
-                      {elem(option, 0)}
-                    </span>
-                    <span class="text-black dark:text-white">
-                      {humanize_capacity(elem(option, 1))}
-                    </span>
-                  </div>
-                  <div class="w-full bg-gray-200 rounded-full dark:bg-gray-700">
-                    <div
-                      class="bg-blue-800 text-xs font-medium text-blue-100 text-center leading-none rounded-full"
-                      style={"width: #{elem(option, 1) |> elem(1)}%"}
-                    >
-                      {elem(option, 1) |> elem(1)}%
-                    </div>
-                  </div>
+                field={storage_config[:recording_mode]}
+                id="settings-recording-mode"
+                type="select"
+                label="Recording mode"
+                options={[
+                  {"Always", "always"},
+                  {"None", "none"}
+                ]}
+              />
+              <div :if={@recording_mode != "none"}>
+                <div class="flex items-center justify-between mt-4 mb-2">
+                  <h2>Storage address</h2>
+                  <button
+                    type="button"
+                    class="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+                    phx-click="toggle_storage_address_mode"
+                  >
+                    {if @storage_address_mode == "volume",
+                      do: "Use custom path",
+                      else: "Select volume"}
+                  </button>
                 </div>
-              </.input>
-              <div
-                :if={@device_type == "ip" || @device_type == "webcam"}
-                class="grid grid-cols-3 gap-5 items-center my-5"
-              >
-                <span class="col-span-2">Full drive threshold:</span>
-                <.input
-                  field={storage_config[:full_drive_threshold]}
-                  type="number"
-                  label=""
-                  min="0"
-                  max="99"
-                />
+                <div :if={@storage_address_mode == "volume"}>
+                  <.input
+                    :let={option}
+                    field={storage_config[:address]}
+                    id="settings-storage-address"
+                    type="radio"
+                    options={@disks_data}
+                  >
+                    <div class="w-full px-2 font-normal text-xs">
+                      <div class="flex justify-between mb-1">
+                        <span class="text-black dark:text-white">
+                          {elem(option, 0)}
+                        </span>
+                        <span class="text-black dark:text-white">
+                          {humanize_capacity(elem(option, 1))}
+                        </span>
+                      </div>
+                      <div class="w-full bg-gray-200 rounded-full dark:bg-gray-700">
+                        <div
+                          class="bg-blue-800 text-xs font-medium text-blue-100 text-center leading-none rounded-full"
+                          style={"width: #{elem(option, 1) |> elem(1)}%"}
+                        >
+                          {elem(option, 1) |> elem(1)}%
+                        </div>
+                      </div>
+                    </div>
+                  </.input>
+                </div>
+                <div :if={@storage_address_mode == "custom"}>
+                  <.input
+                    field={storage_config[:address]}
+                    id="settings-storage-address-custom"
+                    type="text"
+                    label=""
+                    placeholder="/path/to/storage"
+                  />
+                </div>
+                <div
+                  :if={@device_type == "ip" || @device_type == "webcam"}
+                  class="grid grid-cols-3 gap-5 items-center my-5"
+                >
+                  <span class="col-span-2">Full drive threshold:</span>
+                  <.input
+                    field={storage_config[:full_drive_threshold]}
+                    type="number"
+                    label=""
+                    min="0"
+                    max="99"
+                  />
 
-                <span class="col-span-2">Full drive action:</span>
-                <.input
-                  field={storage_config[:full_drive_action]}
-                  type="select"
-                  label=""
-                  options={[{"nothing", "nothing"}, {"overwrite", "overwrite"}]}
-                />
+                  <span class="col-span-2">Full drive action:</span>
+                  <.input
+                    field={storage_config[:full_drive_action]}
+                    type="select"
+                    label=""
+                    options={[{"nothing", "nothing"}, {"overwrite", "overwrite"}]}
+                  />
 
-                <span class="col-span-2">Record sub stream:</span>
-                <.input
-                  field={storage_config[:record_sub_stream]}
-                  type="select"
-                  label=""
-                  options={[{"never", "never"}, {"always", "always"}]}
-                />
+                  <span class="col-span-2">Record sub stream:</span>
+                  <.input
+                    field={storage_config[:record_sub_stream]}
+                    type="select"
+                    label=""
+                    options={[{"never", "never"}, {"always", "always"}]}
+                  />
+                </div>
               </div>
             </div>
 
-            <div class="flex items-center gap-4 mb-2">
+            <div :if={@recording_mode != "none"} class="flex items-center gap-4 mb-2">
               <.vue
                 v-component="ScheduleFormInput"
                 class="e-h-full"
@@ -356,7 +389,12 @@
             <div class="flex-grow border-t border-gray-400"></div>
           </div>
           <.inputs_for :let={settings} field={@device_form[:settings]}>
-            <.input field={settings[:generate_bif]} type="checkbox" label="Generate BIF" />
+            <.input
+              :if={@recording_mode != "none"}
+              field={settings[:generate_bif]}
+              type="checkbox"
+              label="Generate BIF"
+            />
             <.input field={settings[:enable_lpr]} type="checkbox" label="Pull LPR events" />
           </.inputs_for>
         </div>

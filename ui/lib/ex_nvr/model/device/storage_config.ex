@@ -11,6 +11,7 @@ defmodule ExNVR.Model.Device.StorageConfig do
 
   @primary_key false
   embedded_schema do
+    field :recording_mode, Ecto.Enum, values: [:none, :always, :on_event], default: :always
     field :address, :string
     # full drive
     field :full_drive_threshold, :float, default: 95.0
@@ -36,7 +37,14 @@ defmodule ExNVR.Model.Device.StorageConfig do
   @spec update_changeset(t(), map()) :: Ecto.Changeset.t()
   def update_changeset(struct, params) do
     struct
-    |> cast(params, [:full_drive_threshold, :full_drive_action, :record_sub_stream, :schedule])
+    |> cast(params, [
+      :recording_mode,
+      :address,
+      :full_drive_threshold,
+      :full_drive_action,
+      :record_sub_stream,
+      :schedule
+    ])
     |> common_changeset()
   end
 
@@ -47,12 +55,22 @@ defmodule ExNVR.Model.Device.StorageConfig do
       greater_than_or_equal_to: 0,
       message: "value must be between 0 and 100"
     )
-    |> validate_required([:address])
+    |> maybe_require_address()
     |> validate_change(:schedule, fn :schedule, schedule ->
       case Schedule.validate(schedule) do
         {:ok, _schedule} -> []
         {:error, _reason} -> [schedule: "Invalid schedule"]
       end
     end)
+  end
+
+  defp maybe_require_address(changeset) do
+    recording_mode = get_field(changeset, :recording_mode)
+
+    if recording_mode != :none do
+      validate_required(changeset, [:address])
+    else
+      changeset
+    end
   end
 end

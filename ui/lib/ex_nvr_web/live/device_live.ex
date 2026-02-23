@@ -19,6 +19,8 @@ defmodule ExNVRWeb.DeviceLive do
        disks_data: get_disks_data(),
        device_form: to_form(changeset),
        device_type: "ip",
+       recording_mode: "always",
+       storage_address_mode: "volume",
        override_on_full_disk: false,
        remote_storages: list_remote_storages()
      )
@@ -31,13 +33,20 @@ defmodule ExNVRWeb.DeviceLive do
   def mount(%{"id" => device_id}, _session, socket) do
     device = Devices.get!(device_id)
     device_params = get_device_params(socket.assigns.flash) |> Map.delete(:name)
+    recording_mode = Atom.to_string(Device.recording_mode(device))
+    disks_data = get_disks_data()
+
+    storage_address_mode =
+      detect_storage_address_mode(device.storage_config.address, disks_data)
 
     {:ok,
      assign(socket,
        device: device,
-       disks_data: get_disks_data(),
+       disks_data: disks_data,
        device_form: to_form(Devices.change_device_update(device, device_params)),
        device_type: Atom.to_string(device.type),
+       recording_mode: recording_mode,
+       storage_address_mode: storage_address_mode,
        remote_storages: list_remote_storages()
      )}
   end
@@ -48,6 +57,9 @@ defmodule ExNVRWeb.DeviceLive do
     device_params = decode_schedule(device_params)
     {device_type, changeset} = get_validation_assigns(device, device_params)
 
+    recording_mode =
+      get_in(device_params, ["storage_config", "recording_mode"]) || "always"
+
     changeset
     |> Map.put(:action, :validate)
     |> then(
@@ -55,10 +67,18 @@ defmodule ExNVRWeb.DeviceLive do
         socket,
         device_form: to_form(&1),
         device_type: device_type,
+        recording_mode: recording_mode,
         override_on_full_disk: device_params["settings"]["override_on_full_disk"] == "true"
       )
     )
     |> then(&{:noreply, &1})
+  end
+
+  def handle_event("toggle_storage_address_mode", _params, socket) do
+    new_mode =
+      if socket.assigns.storage_address_mode == "volume", do: "custom", else: "volume"
+
+    {:noreply, assign(socket, storage_address_mode: new_mode)}
   end
 
   def handle_event("save_device", %{"device" => device_params}, socket) do
@@ -182,6 +202,14 @@ defmodule ExNVRWeb.DeviceLive do
       capacity / 1_000_000 >= 1 -> "#{Float.round(capacity / 1024 ** 2, 2)} GiB"
       true -> "#{Float.round(capacity / 1024, 2)} MiB"
     end
+  end
+
+  defp detect_storage_address_mode(nil, _disks_data), do: "volume"
+
+  defp detect_storage_address_mode(address, disks_data) do
+    volume_paths = Enum.map(disks_data, &elem(&1, 0))
+
+    if address in volume_paths, do: "volume", else: "custom"
   end
 
   defp get_disks_data do
