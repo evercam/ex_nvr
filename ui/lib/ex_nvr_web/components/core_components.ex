@@ -470,7 +470,7 @@ defmodule ExNVRWeb.CoreComponents do
         name={@name}
         class={[
           "mt-1 block w-full rounded-md border border-gray-300 bg-white shadow-sm focus:border-zinc-400 focus:ring-0 text-sm",
-          "dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+          "placeholder-gray-400 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
         ]}
         multiple={@multiple}
         {@rest}
@@ -494,7 +494,7 @@ defmodule ExNVRWeb.CoreComponents do
           "mt-2 block w-full rounded-lg text-zinc-900 focus:ring-0 sm:text-sm sm:leading-6",
           "phx-no-feedback:border-zinc-300 phx-no-feedback:focus:border-zinc-400",
           "min-h-[6rem] border-zinc-300 focus:border-zinc-400 dark:bg-gray-700",
-          "dark:border-gray-600 dark:placeholder-gray-400 dark:text-white",
+          "placeholder-gray-400 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white",
           "dark:focus:ring-blue-500 dark:focus:border-blue-500",
           @errors != [] && "border-rose-400 focus:border-rose-400"
         ]}
@@ -519,7 +519,7 @@ defmodule ExNVRWeb.CoreComponents do
           "mt-1 block w-full rounded-lg text-black focus:ring-0 sm:text-sm sm:leading-6",
           "phx-no-feedback:border-zinc-300 phx-no-feedback:focus:border-zinc-400",
           "border-zinc-300 focus:border-zinc-400 dark:bg-gray-600 dark:border-gray-500",
-          "dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500",
+          "placeholder-gray-400 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500",
           "text-black",
           @errors != [] && "border-rose-400 focus:border-rose-400"
         ]}
