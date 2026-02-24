@@ -11,6 +11,12 @@ defmodule ExNVR.Devices.Onvif do
   alias ExOnvif.Search
   alias ExOnvif.Search.{FindRecordings, GetRecordingSearchResults}
 
+  @type ptz() :: %{
+          x: float(),
+          y: float(),
+          zoom: float()
+        }
+
   @spec discover(Keyword.t()) :: [ExOnvif.Discovery.Probe.t()]
   def discover(options) do
     ExOnvif.Discovery.probe(options)
@@ -82,6 +88,15 @@ defmodule ExNVR.Devices.Onvif do
   end
 
   def auto_configure(_onvif_device), do: %AutoConfig{}
+
+  @spec move_ptz(ExOnvif.Device.t(), ptz(), String.t()) :: :ok
+  @spec move_ptz(ExOnvif.Device.t(), ptz()) :: :ok
+  def move_ptz(device, %{x: x, y: y, zoom: zoom} = _ptz, profile_token \\ "Profile_1") do
+    ptz_vector = ExOnvif.PTZ.Vector.new(x, y, zoom)
+    abs_move = ExOnvif.PTZ.AbsoluteMove.new(profile_token, ptz_vector)
+
+    ExOnvif.PTZ.absolute_move(device, abs_move)
+  end
 
   defp maybe_create_and_configure_profiles(auto_config, device) do
     case fetch_profiles(device) do
