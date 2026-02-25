@@ -13,7 +13,36 @@ defmodule ExNVRWeb.RecordingListLive do
   def render(assigns) do
     ~H"""
     <div class="grow e-m-8">
-      <.filter_form meta={@meta} devices={@devices} id="recording-filter-form" />
+      <div>
+        <!-- filters -->
+        <div class="flex gap-5 ">
+          <.filter_form meta={@meta} devices={@devices} id="recording-filter-form" />
+          <div :if={Application.get_env(:ex_nvr, :env) == :dev} class="relative min-w-40 mb-0">
+            <.button
+              phx-click="export"
+              type="submit"
+              class="absolute bottom-0 py-2 px-3 flex gap-2 rounded-md bg-blue-500 mt-5 text-white "
+            >
+              <span> Export </span>
+
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke-width="1.5"
+                stroke="currentColor"
+                class="size-5"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5"
+                />
+              </svg>
+            </.button>
+          </div>
+        </div>
+      </div>
 
       <Flop.Phoenix.table
         id="recordings"
@@ -198,7 +227,9 @@ defmodule ExNVRWeb.RecordingListLive do
        filter_params: params,
        pagination_params: %{},
        sort_params: %{},
-       files_details: %{}
+       files_details: %{},
+       type: nil,
+       errors: %{}
      )}
   end
 
@@ -258,6 +289,36 @@ defmodule ExNVRWeb.RecordingListLive do
     {:noreply, assign(socket, :files_details, files_details)}
   end
 
+  def handle_event("export", _params, socket) do
+    socket.assigns.filter_params
+
+    {device_id, start_date, end_date} =
+      get_values(socket.assigns.filter_params["filters"])
+
+    device = Enum.find(socket.assigns.devices, &(&1.id == device_id))
+
+    destination =
+      (File.cwd!() <> "/" <> start_date <> "-" <> end_date <> ".mp4")
+      |> String.replace(":", "-")
+
+    start = format_date(start_date)
+    end_d = format_date(end_date)
+
+    duration =
+      Recordings.count_number_of_recordings(device, :high, start_date, end_date)
+
+    Recordings.VideoAssembler.assemble(
+      device,
+      :high,
+      start,
+      end_d,
+      duration * 60,
+      destination
+    )
+
+    {:noreply, put_flash(socket, :info, "Exported to #{destination}")}
+  end
+
   defp load_recordings(params, socket) do
     sort_params = Map.take(params, ["order_by", "order_directions"])
 
@@ -290,5 +351,21 @@ defmodule ExNVRWeb.RecordingListLive do
     date
     |> DateTime.shift_zone!(timezone)
     |> Calendar.strftime("%b %d, %Y %H:%M:%S %z")
+  end
+
+  def get_values(filters) do
+    f = fn field ->
+      filters
+      |> Map.values()
+      |> Enum.find(&(&1["field"] == field))
+      |> Map.get("value")
+    end
+
+    {f.("device_id"), f.("start_date"), f.("end_date")}
+  end
+
+  def format_date(date) do
+    {:ok, date, _} = DateTime.from_iso8601(date <> ":00Z")
+    date
   end
 end
