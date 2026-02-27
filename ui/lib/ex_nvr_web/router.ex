@@ -175,6 +175,7 @@ defmodule ExNVRWeb.Router do
           {ExNVRWeb.Navigation, :set_current_path}
         ] do
         live "/nerves/system-settings", SystemSettingsLive, :index
+        live "/networking/modem", ModemLive, :index
       end
     end
   end
