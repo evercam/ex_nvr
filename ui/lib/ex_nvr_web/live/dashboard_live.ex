@@ -19,12 +19,12 @@ defmodule ExNVRWeb.DashboardLive do
 
   def render(assigns) do
     ~H"""
-    <div class="bg-gray-300 e-w-full dark:bg-gray-800">
+    <div class="bg-gray-50 e-w-full dark:bg-gray-800">
       <div :if={@devices == []} class="grid tracking-wide text-lg text-center dark:text-gray-200">
         You have no devices, you can create one
         <span><.link href={~p"/devices"} class="ml-2 dark:text-blue-600">here</.link></span>
       </div>
-      <div :if={@devices != []} class="e-h-full">
+      <div :if={@devices != []} class="e-h-full pt-2">
         <.vue
           v-component="Viewer"
           class="e-h-full"
@@ -101,10 +101,7 @@ defmodule ExNVRWeb.DashboardLive do
               </div>
 
               <div class="mr-4 w-full p-2 rounded flex justify-center space-x-4">
-                <.button
-                  class="bg-blue-500 text-white px-4 py-2 rounded flex items-center"
-                  phx-disable-with="Downloading..."
-                >
+                <.button phx-disable-with="Downloading...">
                   Download
                 </.button>
               </div>

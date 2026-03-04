@@ -69,7 +69,7 @@ defmodule ExNVRWeb.CoreComponents do
               phx-window-keydown={JS.exec("data-cancel", to: "##{@id}")}
               phx-key="escape"
               phx-click-away={JS.exec("data-cancel", to: "##{@id}")}
-              class="shadow-zinc-700/10 ring-zinc-700/10 relative hidden rounded-lg bg-gray-300 p-2 shadow-lg ring-1 transition shadow dark:bg-gray-800"
+              class="shadow-zinc-700/10 ring-zinc-700/10 relative hidden rounded-lg bg-white p-2 shadow-lg ring-1 transition shadow dark:bg-gray-800"
             >
               <div class="absolute top-6 right-5">
                 <button
@@ -266,10 +266,10 @@ defmodule ExNVRWeb.CoreComponents do
     <button
       type={@type}
       class={[
-        "phx-submit-loading:opacity-75 inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium",
-        "ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-        "focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4",
-        "[&_svg]:shrink-0 text-primary-foreground h-10 px-4 py-2 bg-blue-600 hover:bg-blue-700 dark:text-white",
+        "phx-submit-loading:opacity-75 inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-semibold",
+        "transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2",
+        "disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+        "text-white h-10 px-4 py-2 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 shadow-sm",
         @class
       ]}
       {@rest}
@@ -725,7 +725,7 @@ defmodule ExNVRWeb.CoreComponents do
 
   def card(assigns) do
     ~H"""
-    <div class={@class <> " p-4 bg-gray-300 border border-gray-500 rounded-lg shadow sm:p-6 md:p-8 dark:bg-gray-800 dark:border-gray-700"}>
+    <div class={@class <> " p-4 bg-white border border-gray-200 rounded-lg shadow sm:p-6 md:p-8 dark:bg-gray-800 dark:border-gray-700"}>
       {render_slot(@inner_block)}
     </div>
     """
@@ -985,9 +985,9 @@ defmodule ExNVRWeb.CoreComponents do
         id={@id}
         phx-hook="HighlightSyntax"
         data-lang={@lang}
-        class="relative bg-gray-100 dark:bg-gray-800 rounded-md overflow-x-auto border border-white dark:bg-gray-800 dark:border-gray-700"
+        class="relative bg-gray-100 dark:bg-gray-800 rounded-md overflow-x-auto border border-gray-200 dark:border-gray-700"
       >
-        <pre class="text-sm text-gray-400 p-5"><code><%= @code %></code></pre>
+        <pre class="text-sm text-gray-700 dark:text-gray-400 p-5"><code><%= @code %></code></pre>
       </div>
 
       <div class="absolute top-3 right-3 gap-2">

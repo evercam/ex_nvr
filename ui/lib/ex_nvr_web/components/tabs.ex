@@ -12,7 +12,7 @@ defmodule ExNVRWeb.Components.Tabs do
       "bg-blue-600 dark:bg-blue-500 text-blue-600 border-blue-600 dark:text-blue-500 dark:border-blue-500"
 
   attr :inactive_class, :string,
-    default: "text-gray-900 text-white dark:text-white hover:bg-gray-500 dark:hover:bg-gray-700"
+    default: "text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
 
   attr :on_change, :any, default: nil
 

@@ -6,16 +6,16 @@
         <ERow
             ref="topMenu"
             justify="between"
-            align-content="start"
-            class="top-bar dark:bg-gray-900"
+            align-content="center"
+            class="top-bar bg-white border-b border-gray-200 dark:bg-gray-900 dark:border-gray-700 px-3 py-2 items-center gap-2"
         >
             <ECol class="e-p-0" cols="5">
-                <ERow>
+                <ERow class="items-center gap-2">
                     <select
                         :value="device.id"
                         id="device_form_id"
                         name="devices"
-                        class="text-sm dark:bg-gray-800 dark:placeholder-gray-400 dark:text-white dark:hover:bg-gray-600 e-border-transparent"
+                        class="text-sm bg-white dark:bg-gray-800 text-gray-700 dark:text-white border border-gray-200 dark:border-gray-600 rounded-md px-3 py-1.5 h-9 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors"
                         @input="
                             $emit('switch_device', {
                                 device: $event.target.value,
@@ -33,7 +33,7 @@
                     <select
                         :value="stream"
                         name="streams"
-                        class="text-sm dark:bg-gray-800 dark:placeholder-gray-400 dark:text-white dark:hover:bg-gray-600 e-border-transparent"
+                        class="text-sm bg-white dark:bg-gray-800 text-gray-700 dark:text-white border border-gray-200 dark:border-gray-600 rounded-md px-3 py-1.5 h-9 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors"
                         @input="
                             $emit('switch_stream', {
                                 stream: $event.target.value,
@@ -50,21 +50,21 @@
                     </select>
                 </ERow>
             </ECol>
-            <ETooltip v-if="liveViewEnabled" position="bottom" text="Go live">
+            <ETooltip v-if="liveViewEnabled" position="bottom" :text="!startDate ? 'Currently watching live' : 'Jump to live edge'">
                 <button
-                    class="dark:bg-gray-800 dark:border-gray-600 e-h-full text-white dark:text-white px-4 flex items-center dark:hover:bg-gray-600"
+                    :class="!startDate
+                        ? 'bg-red-500 border border-red-600 text-white hover:bg-red-600 h-9 px-3 flex items-center gap-2 rounded-md transition-colors text-sm font-semibold'
+                        : 'bg-gray-50 dark:bg-gray-800 border border-red-300 dark:border-red-700 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 h-9 px-3 flex items-center gap-2 rounded-md transition-colors text-sm font-semibold'"
                     @click="$emit('load-recording', { timestamp: null })"
                 >
-                    <span class="">Live</span>
-                    <div v-if="!startDate" class="ml-2">
-                        <EPulsatingDot :size="12" color="#c5393d" />
-                    </div>
+                    <EPulsatingDot :size="8" :color="!startDate ? '#ffffff' : '#ef4444'" />
+                    <span>{{ !startDate ? 'LIVE' : 'Go Live' }}</span>
                 </button>
             </ETooltip>
-            <ECol class="e-p-0" cols="5" align-self="stretch">
+            <ECol class="e-p-0" cols="5">
                 <ERow
-                    class="right-buttons e-h-full"
-                    align-content="stretch"
+                    class="right-buttons items-center gap-2"
+                    align-content="center"
                     justify="end"
                 >
                     <ETooltip
@@ -73,7 +73,7 @@
                         text="Download current snapshot"
                     >
                         <button
-                            class="dark:bg-gray-800 dark:border-gray-600 e-h-full text-white dark:text-white px-4 flex items-center dark:hover:bg-gray-600"
+                            class="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 h-9 text-gray-700 dark:text-white px-4 flex items-center rounded-md hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors text-sm font-medium"
                             @click="downloadSnapshot"
                         >
                             <EIcon icon="camera" size="xl" class="e-mt-1" />
@@ -81,7 +81,7 @@
                     </ETooltip>
                     <ETooltip position="bottom" text="Download footage">
                         <button
-                            class="dark:bg-gray-800 dark:border-gray-600 e-h-full text-white dark:text-white px-4 flex items-center dark:hover:bg-gray-600"
+                            class="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 h-9 text-gray-700 dark:text-white px-4 flex items-center rounded-md hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors text-sm font-medium"
                             @click="$emit('show-download-modal')"
                         >
                             <EIcon icon="download" size="xl" class="e-mt-1" />
@@ -212,7 +212,7 @@
 
                 <div
                     v-else
-                    class="relative text-lg rounded-tr rounded-tl text-center bg-gray-200 dark:text-gray-200 w-full h-full dark:bg-gray-400 flex justify-center items-center d-flex"
+                    class="relative text-lg rounded-tr rounded-tl text-center bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-200 w-full h-full flex justify-center items-center"
                 >
                     Device is not recording, live view is not available
                 </div>
@@ -222,7 +222,7 @@
                 <ECol>
                     <div class="mb-2">
                         <button
-                            class="dark:bg-gray-800 dark:border-gray-600 text-white dark:text-white px-3.5 e-py-2.5 flex items-center dark:hover:bg-gray-600"
+                            class="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-white px-3.5 e-py-2.5 flex items-center hover:bg-gray-200 dark:hover:bg-gray-600 rounded"
                             @click="openStatsTab"
                         >
                             <i class="fa-solid fa-sliders"></i>
@@ -230,7 +230,7 @@
                     </div>
 
                     <button
-                        class="dark:bg-gray-800 dark:border-gray-600 text-white dark:text-white px-3 e-py-1.5 flex items-center dark:hover:bg-gray-600"
+                        class="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-white px-3 e-py-1.5 flex items-center hover:bg-gray-200 dark:hover:bg-gray-600 rounded"
                         @click="toggleFullscreen"
                     >
                         <EIcon
@@ -344,11 +344,13 @@ export default defineComponent({
     },
     methods: {
         handleResize() {
+            const GAP_PX = 8;
             this.height = `${
                 document.body.clientHeight -
                     this.$refs.topMenu?.$el.clientHeight -
                     this.getNavHeight() -
-                    this.$refs.timeline?.$el?.clientHeight ?? 0
+                    (this.$refs.timeline?.$el?.clientHeight ?? 0) -
+                    GAP_PX
             }px`;
         },
         getNavHeight() {

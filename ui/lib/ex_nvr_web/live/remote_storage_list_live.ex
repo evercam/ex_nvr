@@ -55,7 +55,7 @@ defmodule ExNVRWeb.RemoteStorageListLive do
         <:action :let={remote_storage}>
           <.modal id={"delete-remote-storage-modal-#{remote_storage.id}"}>
             <div class="bg-white dark:bg-gray-800 m-8 rounded">
-              <h2 class="text-xl text-white font-bold mb-4">
+              <h2 class="text-xl text-gray-900 dark:text-white font-bold mb-4">
                 Are you sure you want to delete this remote storage ?
               </h2>
               <div class="mt-4">

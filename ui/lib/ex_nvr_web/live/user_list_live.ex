@@ -10,7 +10,7 @@ defmodule ExNVRWeb.UserListLive do
     <div class="grow e-m-8">
       <div :if={@current_user.role == :admin} class="ml-4 sm:ml-0">
         <.link href={~p"/users/new"}>
-          <.button>Add User</.button>
+          <.button><.icon name="hero-plus-solid" class="h-4 w-4" />Add User</.button>
         </.link>
       </div>
 
