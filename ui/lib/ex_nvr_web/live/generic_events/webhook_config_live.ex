@@ -52,9 +52,8 @@ defmodule ExNVRWeb.GenericEventsLive.WebhookConfig do
                 phx-click="delete_token"
                 phx-target={@myself}
                 data-confirm="Are you sure you want to delete this token? This action cannot be undone."
-                class="mr-0"
               >
-                <.icon name="hero-trash-solid" class="mr-1" /> Delete token
+                <.icon name="hero-trash-solid" /> Delete token
               </.button>
             </div>
           </div>
@@ -63,8 +62,8 @@ defmodule ExNVRWeb.GenericEventsLive.WebhookConfig do
             <p class="text-sm leading-6 text-zinc-600 dark:text-white mb-2">
               You don't have a webhook token yet.
             </p>
-            <.button phx-click="generate_token" phx-target={@myself} class="pl-3 pr-3">
-              <.icon name="hero-plus-solid" class="mr-1" /> Generate Token
+            <.button phx-click="generate_token" phx-target={@myself}>
+              <.icon name="hero-plus-solid" /> Generate Token
             </.button>
           </div>
         <% end %>

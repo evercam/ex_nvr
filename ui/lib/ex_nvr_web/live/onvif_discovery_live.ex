@@ -59,7 +59,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
         <div class="w-3/4 flex justify-between items-center ">
           <div>
             <h1 class="text-2xl font-bold dark:text-white">Onvif Camera Manager</h1>
-            <p class="text-sm text-gray-400">Discover and manage network cameras</p>
+            <p class="text-sm text-gray-500 dark:text-gray-400">Discover and manage network cameras</p>
           </div>
 
           <.simple_form
@@ -104,7 +104,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
         </div>
 
         <.button phx-click="discover" phx-disable-with="Scanning...">
-          <.icon name="hero-magnifying-glass-solid" class="w-4 h-4 mr-2" /> Scan Network
+          <.icon name="hero-magnifying-glass-solid" class="w-4 h-4" /> Scan Network
         </.button>
       </div>
       
