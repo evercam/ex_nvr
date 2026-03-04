@@ -59,7 +59,9 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
         <div class="w-3/4 flex justify-between items-center ">
           <div>
             <h1 class="text-2xl font-bold dark:text-white">Onvif Camera Manager</h1>
-            <p class="text-sm text-gray-500 dark:text-gray-400">Discover and manage network cameras</p>
+            <p class="text-sm text-gray-500 dark:text-gray-400">
+              Discover and manage network cameras
+            </p>
           </div>
 
           <.simple_form
