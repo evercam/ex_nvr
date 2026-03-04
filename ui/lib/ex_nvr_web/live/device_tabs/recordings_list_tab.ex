@@ -24,14 +24,17 @@ defmodule ExNVRWeb.DeviceTabs.RecordingsListTab do
         id="recordings-tab"
         phx-hook="FlowbiteInit"
       >
-        <.filter_form
-          meta={@meta}
-          recordings={@recordings}
-          target={@myself}
-          id="recording-filter-form"
-        />
+        <div class="flex justify-between items-end mb-2">
+          <.filter_form
+            meta={@meta}
+            recordings={@recordings}
+            target={@myself}
+            id="recording-filter-form"
+          />
+          <.pagination meta={@meta} target={@myself} />
+        </div>
 
-        <div class="overflow-y-auto h-[72vh]">
+        <div>
           <Flop.Phoenix.table
             id="recordings"
             opts={ExNVRWeb.FlopConfig.table_opts()}
@@ -96,7 +99,6 @@ defmodule ExNVRWeb.DeviceTabs.RecordingsListTab do
             </:action>
           </Flop.Phoenix.table>
         </div>
-        <.pagination meta={@meta} target={@myself} />
       </div>
       <div
         id="popup-container"
