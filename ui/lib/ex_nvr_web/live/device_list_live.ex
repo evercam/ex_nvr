@@ -23,7 +23,20 @@ defmodule ExNVRWeb.DeviceListLive do
         row_click={fn device -> JS.navigate(~p"/devices/#{device.id}/details") end}
         row_id={fn device -> "device-row-#{device.id}" end}
       >
-        <:col :let={device} label="Id">{device.id}</:col>
+        <:col :let={device} label="Id">
+          <div class="flex items-center gap-2">
+            <span id={"device-id-#{device.id}"}>{device.id}</span>
+            <button
+              type="button"
+              phx-click={JS.dispatch("events:clipboard-copy", to: "#device-id-#{device.id}")}
+              class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+              title="Copy ID"
+            >
+              <.icon name="hero-clipboard-document" class="h-4 w-4 copy-icon" />
+              <.icon name="hero-check" class="h-4 w-4 copied-icon hidden" />
+            </button>
+          </div>
+        </:col>
         <:col :let={device} label="Type">{get_type_label(device.type)}</:col>
         <:col :let={device} label="Name">{device.name}</:col>
         <:col :let={device} label="Vendor">{device.vendor || "N/A"}</:col>
