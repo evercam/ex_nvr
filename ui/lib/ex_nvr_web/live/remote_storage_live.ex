@@ -9,7 +9,7 @@ defmodule ExNVRWeb.RemoteStorageLive do
   def render(assigns) do
     ~H"""
     <div class="grow max-w-2xl mx-auto e-py-10">
-      <div class="px-6 lg:px-8 bg-gray-300 dark:bg-gray-800">
+      <div class="bg-white p-6 border rounded-lg dark:border-gray-600 dark:bg-gray-950 dark:text-white">
         <h3
           :if={@remote_storage.id == nil}
           class="mb-4 text-xl text-center font-medium text-gray-900 dark:text-white"

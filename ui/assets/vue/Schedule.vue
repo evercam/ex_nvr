@@ -59,7 +59,7 @@
             :style="
             calculateBarStyle(dayIndex, segment.startTime, segment.endTime)
           "
-            class="segment rounded absolute bg-blue-500/80"
+            class="segment rounded absolute bg-blue-500/80 ring-1 ring-blue-700 dark:ring-blue-300"
             @mousedown.stop="onSegmentMouseDown($event, dayIndex, segmentIndex)"
             @mousemove="onSegmentMouseMove"
             @mouseleave="onSegmentMouseLeave"
