@@ -30,6 +30,9 @@ defmodule ExNVRWeb.RecordingListLive do
         <:col :let={recording} label="End-date" field={:end_date}>
           {format_date(recording.end_date, recording.timezone)}
         </:col>
+        <:col :let={recording} label="Duration">
+          {humanize_duration(DateTime.diff(recording.end_date, recording.start_date, :millisecond))}
+        </:col>
         <:action :let={recording}>
           <div class="flex justify-end">
             <button
@@ -77,15 +80,33 @@ defmodule ExNVRWeb.RecordingListLive do
 
       <.pagination meta={@meta} />
     </div>
-    <!-- Popup container -->
+    <!-- Video Modal -->
     <div
       id="popup-container"
-      class="popup-container fixed top-0 left-0 w-full h-full bg-black bg-opacity-75 flex justify-center items-center hidden"
+      class="popup-container fixed inset-0 z-50 hidden flex items-center justify-center p-4"
     >
-      <button class="popup-close absolute top-4 right-4 text-white" phx-click={close_popup()}>
-        ×
-      </button>
-      <video id="recording-player" autoplay class="w-full h-auto max-w-full max-h-[80%]"></video>
+      <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" phx-click={close_popup()}></div>
+      <div class="relative z-10 w-full max-w-5xl bg-gray-900 rounded-2xl shadow-2xl overflow-hidden ring-1 ring-white/10">
+        <div class="flex items-center justify-between px-5 py-3 bg-gray-800 border-b border-gray-700">
+          <div class="flex items-center gap-2 min-w-0">
+            <.icon name="hero-film-solid" class="w-5 h-5 text-blue-400 flex-shrink-0" />
+            <p id="recording-modal-title" class="text-sm font-medium text-white truncate">
+              Recording Preview
+            </p>
+          </div>
+          <button
+            class="ml-4 flex-shrink-0 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg p-1.5 transition-colors"
+            phx-click={close_popup()}
+            title="Close"
+          >
+            <.icon name="hero-x-mark-solid" class="w-5 h-5" />
+          </button>
+        </div>
+        <div class="bg-black">
+          <video id="recording-player" controls autoplay class="w-full max-h-[75vh] outline-none">
+          </video>
+        </div>
+      </div>
     </div>
     """
   end
@@ -279,11 +300,12 @@ defmodule ExNVRWeb.RecordingListLive do
       {"src", "/api/devices/#{recording.device_id}/recordings/#{recording.filename}/blob"},
       to: "#recording-player"
     )
+    |> JS.dispatch("recording:preview", detail: %{filename: recording.filename})
   end
 
   def close_popup do
     JS.add_class("hidden", to: "#popup-container")
-    |> JS.set_attribute({"src", nil}, to: "#recording-player")
+    |> JS.set_attribute({"src", ""}, to: "#recording-player")
   end
 
   def format_date(date, timezone) do

@@ -127,6 +127,11 @@ window.addEventListener("events:clipboard-copy", (e) => {
     setTimeout(toggleIcon, 1500)
 })
 
+window.addEventListener("recording:preview", (e) => {
+    const titleEl = document.getElementById("recording-modal-title")
+    if (titleEl) titleEl.textContent = e.detail.filename
+})
+
 window.addEventListener("phx:clear-select", (e) => {
     const select = document.getElementById(e.detail.select_id)
     if (select) {

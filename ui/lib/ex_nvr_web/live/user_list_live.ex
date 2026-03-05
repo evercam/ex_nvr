@@ -68,13 +68,15 @@ defmodule ExNVRWeb.UserListLive do
             <div class="p-6">
               <div class="flex items-start gap-4">
                 <div class="flex-shrink-0 flex items-center justify-center w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/30">
-                  <.icon name="hero-exclamation-triangle" class="w-5 h-5 text-red-600 dark:text-red-400" />
+                  <.icon
+                    name="hero-exclamation-triangle"
+                    class="w-5 h-5 text-red-600 dark:text-red-400"
+                  />
                 </div>
                 <div>
                   <h3 class="text-base font-semibold text-gray-900 dark:text-white">Delete user?</h3>
                   <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                    Are you sure you want to delete
-                    <span class="font-medium text-gray-700 dark:text-gray-300">{user.email}</span>?
+                    Are you sure you want to delete <span class="font-medium text-gray-700 dark:text-gray-300">{user.email}</span>?
                     This action cannot be undone.
                   </p>
                 </div>

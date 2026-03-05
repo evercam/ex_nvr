@@ -2,10 +2,11 @@ defmodule ExNvrWeb.DeviceDetailsLiveTest do
   use ExNVRWeb.ConnCase
   use Mimic
 
-  import ExNVR.{AccountsFixtures, DevicesFixtures}
+  import ExNVR.{AccountsFixtures, DevicesFixtures, RecordingsFixtures}
   import Phoenix.LiveViewTest
 
   alias ExNVR.Devices
+  alias ExNVRWeb.ViewUtils
 
   @moduletag :tmp_dir
 
@@ -338,6 +339,99 @@ defmodule ExNvrWeb.DeviceDetailsLiveTest do
       assert has_element?(lv, "span.bg-green-100", "RECORDING")
       assert has_element?(lv, "button", "Stop")
       assert Devices.get(device.id).state == :recording
+    end
+  end
+
+  describe "Recordings tab" do
+    setup %{conn: conn, tmp_dir: tmp_dir} do
+      device = camera_device_fixture(tmp_dir)
+
+      recordings =
+        Enum.map(1..3, fn idx ->
+          recording_fixture(device,
+            start_date: DateTime.add(~U(2023-09-12 00:00:00Z), idx * 100),
+            end_date: DateTime.add(~U(2023-09-14 00:00:00Z), idx * 100)
+          )
+        end)
+
+      %{device: device, recordings: recordings, conn: log_in_user(conn, user_fixture())}
+    end
+
+    test "renders recordings with duration column", %{
+      conn: conn,
+      device: device,
+      recordings: recordings
+    } do
+      {:ok, lv, html} = live(conn, ~p"/devices/#{device.id}/details?tab=recordings")
+
+      for recording <- recordings do
+        assert html =~ "#{recording.id}"
+
+        assert lv
+               |> element(~s{[id="recording-#{recording.id}-link"]})
+               |> has_element?()
+
+        expected_duration =
+          ViewUtils.humanize_duration(
+            DateTime.diff(recording.end_date, recording.start_date, :millisecond)
+          )
+
+        assert html =~ expected_duration
+      end
+    end
+
+    test "shows preview button for each recording", %{
+      conn: conn,
+      device: device,
+      recordings: recordings
+    } do
+      {:ok, lv, _html} = live(conn, ~p"/devices/#{device.id}/details?tab=recordings")
+
+      for recording <- recordings do
+        assert lv |> element(~s{[id="thumbnail-#{recording.id}"]}) |> has_element?()
+      end
+    end
+
+    test "video modal is initially hidden", %{conn: conn, device: device} do
+      {:ok, lv, _html} = live(conn, ~p"/devices/#{device.id}/details?tab=recordings")
+
+      assert lv |> element("#popup-container.hidden") |> has_element?()
+    end
+
+    test "video modal contains player, title and close button", %{conn: conn, device: device} do
+      {:ok, lv, _html} = live(conn, ~p"/devices/#{device.id}/details?tab=recordings")
+
+      assert lv |> element("#recording-modal-title") |> has_element?()
+      assert lv |> element("#recording-player") |> has_element?()
+      assert lv |> element("button[title='Close']") |> has_element?()
+    end
+
+    test "filter recordings by start date", %{
+      conn: conn,
+      device: device,
+      recordings: recordings
+    } do
+      {:ok, lv, _html} = live(conn, ~p"/devices/#{device.id}/details?tab=recordings")
+
+      result =
+        lv
+        |> form("#recording-filter-form", %{"filters[0][value]" => "2023-09-11T00:00"})
+        |> render_change()
+
+      for recording <- recordings do
+        assert result =~ "#{recording.id}"
+      end
+    end
+
+    test "filter recordings by start date with no results", %{conn: conn, device: device} do
+      {:ok, lv, _html} = live(conn, ~p"/devices/#{device.id}/details?tab=recordings")
+
+      result =
+        lv
+        |> form("#recording-filter-form", %{"filters[0][value]" => "2150-01-01T00:00"})
+        |> render_change()
+
+      assert result =~ "No results."
     end
   end
 

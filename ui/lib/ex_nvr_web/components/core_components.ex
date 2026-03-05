@@ -53,7 +53,11 @@ defmodule ExNVRWeb.CoreComponents do
       data-cancel={JS.exec(@on_cancel, "phx-remove")}
       class="fixed top-0 left-0 right-0 z-50 hidden w-full p-4 overflow-x-hidden overflow-y-auto md:inset-0 h-[calc(100%-1rem)] max-h-full justify-center"
     >
-      <div id={"#{@id}-bg"} class="bg-gray-900/60 fixed inset-0 transition-opacity" aria-hidden="true" />
+      <div
+        id={"#{@id}-bg"}
+        class="bg-gray-900/60 fixed inset-0 transition-opacity"
+        aria-hidden="true"
+      />
       <div
         class={["fixed inset-0 overflow-y-auto", @class]}
         aria-labelledby={"#{@id}-title"}
