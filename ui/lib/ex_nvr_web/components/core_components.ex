@@ -748,7 +748,7 @@ defmodule ExNVRWeb.CoreComponents do
   def pagination(assigns) do
     ~H"""
     <div aria-label="Pagination" class="flex justify-end mt-4">
-      <ul :if={@meta.total_pages > 0} class="flex items-center -space-x-px h-8 text-sm">
+      <ul :if={@meta.total_pages > 1} class="flex items-center -space-x-px h-8 text-sm">
         <li>
           <a
             href="#"
@@ -756,12 +756,12 @@ defmodule ExNVRWeb.CoreComponents do
             phx-value-page={@meta.previous_page}
             class={
               [
-                "flex items-center justify-center px-3 h-8 ml-0 leading-tight bg-white border border-gray-300 rounded-l-lg"
+                "flex items-center justify-center px-3 h-8 ml-0 leading-tight bg-white border border-gray-300 rounded-l-lg dark:bg-gray-800 dark:border-gray-700"
               ] ++
                 if not @meta.has_previous_page?,
-                  do: ["pointer-events-none text-gray-300"],
+                  do: ["pointer-events-none text-gray-300 dark:text-gray-600"],
                   else: [
-                    "text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
+                    "text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
                   ]
             }
           >
@@ -798,12 +798,12 @@ defmodule ExNVRWeb.CoreComponents do
             phx-value-page={@meta.next_page}
             class={
               [
-                "flex items-center justify-center px-3 h-8 leading-tight border border-gray-300 bg-white rounded-r-lg"
+                "flex items-center justify-center px-3 h-8 leading-tight border border-gray-300 bg-white rounded-r-lg dark:bg-gray-800 dark:border-gray-700"
               ] ++
                 if not @meta.has_next_page?,
-                  do: ["pointer-events-none text-gray-300"],
+                  do: ["pointer-events-none text-gray-300 dark:text-gray-600"],
                   else: [
-                    "text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
+                    "text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
                   ]
             }
           >
