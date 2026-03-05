@@ -1,6 +1,8 @@
 defmodule ExNVRWeb.DeviceTabs.SettingsTab do
   use ExNVRWeb, :live_component
 
+  import ExNVR.Authorization
+
   alias ExNVR.{Devices, RemoteStorages}
   alias ExNVR.Model.Device
 
@@ -344,6 +346,56 @@ defmodule ExNVRWeb.DeviceTabs.SettingsTab do
           </:footer>
         </.settings_section>
       </.simple_form>
+
+      <%!-- Section: Danger Zone (admins only) --%>
+      <div
+        :if={@current_user.role == :admin}
+        id={"danger_zone_#{@device.id}"}
+        class="bg-white dark:bg-gray-800 rounded-xl border border-red-200 dark:border-red-900 shadow-sm overflow-hidden"
+      >
+        <div class="px-5 py-3.5 border-b border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/30">
+          <h3 class="text-xs font-semibold text-red-600 dark:text-red-400 uppercase tracking-widest">
+            Danger Zone
+          </h3>
+        </div>
+        <div class="px-5 py-4 flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-8">
+          <div class="flex-1">
+            <p class="text-sm font-medium text-gray-700 dark:text-gray-300">Delete Device</p>
+            <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+              Permanently remove this device and all its recording metadata. Files on disk will not be deleted.
+            </p>
+          </div>
+          <div :if={not @confirm_delete}>
+            <button
+              type="button"
+              phx-click="toggle_confirm_delete"
+              phx-target={@myself}
+              class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-semibold h-10 px-4 py-2 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white shadow-sm transition-all"
+            >
+              Delete Device
+            </button>
+          </div>
+          <div :if={@confirm_delete} class="flex items-center gap-3">
+            <span class="text-sm text-gray-600 dark:text-gray-400">Are you sure?</span>
+            <button
+              type="button"
+              phx-click="delete_device"
+              phx-target={@myself}
+              class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-semibold h-10 px-4 py-2 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white shadow-sm transition-all"
+            >
+              Yes, delete
+            </button>
+            <button
+              type="button"
+              phx-click="toggle_confirm_delete"
+              phx-target={@myself}
+              class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-semibold h-10 px-4 py-2 bg-gray-100 hover:bg-gray-200 active:bg-gray-300 text-gray-700 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-300 shadow-sm transition-all"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
     """
   end
@@ -474,7 +526,8 @@ defmodule ExNVRWeb.DeviceTabs.SettingsTab do
        Atom.to_string(Device.recording_mode(device))
      end)
      |> assign_new(:remote_storages, fn -> list_remote_storages() end)
-     |> assign_new(:save_section, fn -> nil end)}
+     |> assign_new(:save_section, fn -> nil end)
+     |> assign_new(:confirm_delete, fn -> false end)}
   end
 
   @impl true
@@ -518,6 +571,31 @@ defmodule ExNVRWeb.DeviceTabs.SettingsTab do
   @impl true
   def handle_event("save_advanced", %{"device" => device_params}, socket) do
     do_save(socket, device_params, "advanced")
+  end
+
+  @impl true
+  def handle_event("toggle_confirm_delete", _params, socket) do
+    {:noreply, assign(socket, :confirm_delete, not socket.assigns.confirm_delete)}
+  end
+
+  @impl true
+  def handle_event("delete_device", _params, socket) do
+    user = socket.assigns.current_user
+    device = socket.assigns.device
+
+    with :ok <- authorize(user, :device, :delete),
+         :ok <- Devices.delete(device) do
+      {:noreply,
+       socket
+       |> put_flash(:info, "Device #{device.name} deleted successfully")
+       |> push_navigate(to: ~p"/devices")}
+    else
+      {:error, :unauthorized} ->
+        {:noreply, put_flash(socket, :error, "You are not authorized to delete this device")}
+
+      {:error, _changeset} ->
+        {:noreply, put_flash(socket, :error, "Could not delete device")}
+    end
   end
 
   defp do_save(socket, device_params, section) do

@@ -318,4 +318,60 @@ defmodule ExNVRWeb.DeviceTabs.SettingsTabTest do
       assert html =~ "can&#39;t be blank"
     end
   end
+
+  describe "Settings tab - delete device" do
+    setup %{conn: conn, tmp_dir: tmp_dir} do
+      %{
+        conn: log_in_user(conn, user_fixture()),
+        device: camera_device_fixture(tmp_dir)
+      }
+    end
+
+    test "shows Danger Zone section for admin users", %{conn: conn, device: device} do
+      lv = open_settings_tab(conn, device)
+
+      assert has_element?(lv, "#danger_zone_#{device.id}")
+      assert has_element?(lv, "button", "Delete Device")
+    end
+
+    test "shows confirmation buttons after clicking Delete Device", %{
+      conn: conn,
+      device: device
+    } do
+      lv = open_settings_tab(conn, device)
+
+      lv |> element("button", "Delete Device") |> render_click()
+
+      assert has_element?(lv, "button", "Yes, delete")
+      assert has_element?(lv, "button", "Cancel")
+      refute has_element?(lv, "button", "Delete Device")
+    end
+
+    test "Cancel hides confirmation and restores Delete Device button", %{
+      conn: conn,
+      device: device
+    } do
+      lv = open_settings_tab(conn, device)
+
+      lv |> element("button", "Delete Device") |> render_click()
+      lv |> element("button", "Cancel") |> render_click()
+
+      assert has_element?(lv, "button", "Delete Device")
+      refute has_element?(lv, "button", "Yes, delete")
+    end
+
+    test "confirming delete removes the device and redirects to /devices", %{
+      conn: conn,
+      device: device
+    } do
+      lv = open_settings_tab(conn, device)
+
+      lv |> element("button", "Delete Device") |> render_click()
+
+      assert {:error, {:live_redirect, %{to: "/devices"}}} =
+               lv |> element("button", "Yes, delete") |> render_click()
+
+      assert Devices.get(device.id) == nil
+    end
+  end
 end

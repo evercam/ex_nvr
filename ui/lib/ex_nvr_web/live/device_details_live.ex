@@ -288,6 +288,7 @@ defmodule ExNVRWeb.DeviceDetailsLive do
             id="settings_tab"
             module={SettingsTab}
             device={@device}
+            current_user={@current_user}
           />
         </:tab_content>
         
