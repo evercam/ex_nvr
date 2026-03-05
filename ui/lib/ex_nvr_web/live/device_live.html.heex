@@ -201,10 +201,21 @@
               required
             />
             <div :if={@device_type == "file" && is_nil(@device.id)}>
-              <div :for={entry <- @uploads.file_to_upload.entries}>
+              <div :for={entry <- @uploads.file_to_upload.entries} class="mt-2">
+                <div class="flex justify-between text-sm text-gray-600 dark:text-gray-400 mb-1">
+                  <span class="truncate max-w-xs">{entry.client_name}</span>
+                  <span>{entry.progress}%</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full dark:bg-gray-700 h-2">
+                  <div
+                    class="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                    style={"width: #{entry.progress}%"}
+                  >
+                  </div>
+                </div>
                 <div
                   :for={err <- upload_errors(@uploads.file_to_upload, entry)}
-                  style="color: #E11D48;"
+                  class="mt-1 text-sm text-red-600 dark:text-red-400"
                 >
                   {error_to_string(err)}
                 </div>

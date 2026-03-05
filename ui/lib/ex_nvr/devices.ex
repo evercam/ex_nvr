@@ -15,11 +15,13 @@ defmodule ExNVR.Devices do
 
   @spec create(map()) :: {:ok, Device.t()} | {:error, Ecto.Changeset.t()}
   def create(params) do
+    temporary_path = get_in(params, ["stream_config", "temporary_path"])
+
     Multi.new()
     |> Multi.insert(:device, Device.create_changeset(params))
     |> Multi.run(:create_directories, fn _repo, %{device: device} ->
       create_device_directories(device)
-      copy_device_file(device)
+      copy_device_file(device, temporary_path)
       {:ok, nil}
     end)
     |> Repo.transaction()
@@ -226,11 +228,16 @@ defmodule ExNVR.Devices do
     end
   end
 
-  defp copy_device_file(%Device{type: :file, stream_config: stream_config} = device) do
-    File.cp!(stream_config.temporary_path, Device.file_location(device))
+  defp copy_device_file(%Device{type: :file} = device, path) when not is_nil(path) do
+    dest = Device.file_location(device)
+
+    case File.rename(path, dest) do
+      :ok -> :ok
+      {:error, :exdev} -> File.cp!(path, dest)
+    end
   end
 
-  defp copy_device_file(_device), do: :ok
+  defp copy_device_file(_device, _path), do: :ok
 
   defp url_and_opts(%{url: nil}), do: {:error, :url_not_configured}
 

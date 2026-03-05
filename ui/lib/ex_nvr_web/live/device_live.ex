@@ -26,7 +26,8 @@ defmodule ExNVRWeb.DeviceLive do
      )
      |> allow_upload(:file_to_upload,
        accept: ~w(video/mp4),
-       max_file_size: 1_000_000_000
+       max_file_size: 1_000_000_000,
+       chunk_size: 4_000_000
      )}
   end
 
