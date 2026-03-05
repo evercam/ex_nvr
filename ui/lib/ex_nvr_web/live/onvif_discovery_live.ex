@@ -54,8 +54,8 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
 
   def render(assigns) do
     ~H"""
-    <div class="w-full flex items-center flex-col space-y-5">
-      <div class="w-full flex items-center flex-col bg-white dark:bg-gray-700">
+    <div class="w-full flex items-center flex-col space-y-5 bg-gray-50 dark:bg-gray-900 min-h-screen pb-10">
+      <div class="w-full flex items-center flex-col bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
         <div class="w-3/4 flex justify-between items-center ">
           <div>
             <h1 class="text-2xl font-bold dark:text-white">Onvif Camera Manager</h1>
@@ -69,7 +69,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
             for={@discover_form}
             phx-change="discover-settings"
           >
-            <div class="border flex flex-col dark:text-white p-5 m-5 space-y-4 rounded-lg dark:border-black dark:bg-gray-950">
+            <div class="border flex flex-col dark:text-white p-5 m-5 space-y-4 rounded-lg border-gray-200 dark:border-gray-700 dark:bg-gray-900">
               <span class="font-bold"><.icon name="hero-cog-6-tooth" /> Network Settings</span>
               <div class="flex items-center gap-2">
                 <.input
@@ -92,14 +92,14 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
           </.simple_form>
         </div>
       </div>
-      
+
     <!-- Device Discovery Section -->
-      <div class="w-3/4 flex justify-between items-center bg-white p-5 border rounded-lg dark:border-gray-600 dark:bg-gray-950 dark:text-white mr-5">
+      <div class="w-3/4 flex justify-between items-center bg-white dark:bg-gray-800 p-5 border border-gray-200 rounded-lg dark:border-gray-700 dark:text-white mr-5">
         <div class="flex items-center space-x-2">
           <.icon name="network" class="row-span-2 h-6 w-6" />
           <div class="flex flex-col">
             <span class="text-xl font-bold">Device Discovery</span>
-            <span class="text-sm dark:text-gray-400">
+            <span class="text-sm text-gray-500 dark:text-gray-400">
               Scanning: {@discover_settings.ip_address} • Timeout {@discover_settings.timeout}s
             </span>
           </div>
@@ -109,28 +109,28 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
           <.icon name="hero-magnifying-glass-solid" class="w-4 h-4" /> Scan Network
         </.button>
       </div>
-      
+
     <!-- Device List Section -->
-      <div class="w-3/4 flex flex-col space-y-5 bg-white p-5 border rounded-lg dark:border-gray-600 dark:bg-gray-950 dark:text-white mr-5">
+      <div class="w-3/4 flex flex-col space-y-5 bg-white dark:bg-gray-800 p-5 border border-gray-200 rounded-lg dark:border-gray-700 dark:text-white mr-5">
         <span class="text-md font-bold">
           <.icon name="hero-wifi" class="w-5 h-5 mr-1" /> Found {length(@devices)} Device(s)
         </span>
         <div :for={device <- @devices} id={device.id} class="flex flex-col space-y-2">
-          <div class="flex justify-between border rounded-lg dark:border-gray-200 p-5">
+          <div class="flex justify-between border border-gray-200 rounded-lg dark:border-gray-600 p-5">
             <div class="flex items-center">
-              <div class="boder-1 rounded-lg bg-gray-200 dark:bg-gray-600 p-2 mr-2">
+              <div class="rounded-lg bg-gray-100 dark:bg-gray-700 p-2 mr-2">
                 <.icon name="hero-camera" class="w-6 h-6" />
               </div>
               <div class="flex flex-col">
                 <span class="text-md font-bold">{device.name}</span>
-                <div class="text-sm text-gray-500">
+                <div class="text-sm text-gray-500 dark:text-gray-400">
                   <span class="mr-3">{device.probe.device_ip}</span>
                 </div>
               </div>
             </div>
             <.button
               :if={is_nil(device.device)}
-              class="bg-white dark:bg-gray-950 dark:hover:bg-gray-800 border dark:border-gray-600"
+              class="bg-white !text-gray-800 hover:bg-gray-50 dark:!text-white dark:bg-gray-700 dark:hover:bg-gray-600 border border-gray-200 dark:border-gray-600"
               phx-click={
                 show_modal2(
                   JS.set_attribute({"phx-value-id", device.probe.device_ip}, to: "#auth-form"),
@@ -148,17 +148,17 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
       </div>
 
       <.separator :if={@selected_device} class="w-3/4 mr-5" />
-      
+
     <!-- Device Details Section -->
       <div :if={@selected_device} class="w-3/4 flex flex-col space-y-2 mr-5">
-        <div class="flex justify-between items-center border rounded-lg bg-white dark:border-gray-600 dark:bg-gray-950 dark:text-white p-5">
+        <div class="flex justify-between items-center border border-gray-200 rounded-lg bg-white dark:border-gray-700 dark:bg-gray-800 dark:text-white p-5">
           <div class="flex items-center">
-            <div class="boder-1 rounded-lg bg-gray-200 dark:bg-gray-600 p-2 mr-2">
+            <div class="rounded-lg bg-gray-100 dark:bg-gray-700 p-2 mr-2">
               <.icon name="hero-camera" class="w-7 h-7" />
             </div>
             <div class="flex flex-col">
               <span class="text-lg font-bold">{@selected_device.name}</span>
-              <div class="text-sm text-gray-500">
+              <div class="text-sm text-gray-500 dark:text-gray-400">
                 <span class="mr-3">{@selected_device.probe.device_ip}</span>
                 <span class="mr-3">{@selected_device.device.manufacturer}</span>
               </div>
@@ -166,7 +166,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
           </div>
           <div>
             <.button
-              class="bg-white dark:bg-gray-950 dark:hover:bg-gray-800 border dark:border-gray-600"
+              class="bg-white !text-gray-800 hover:bg-gray-50 dark:!text-white dark:bg-gray-700 dark:hover:bg-gray-600 border border-gray-200 dark:border-gray-600"
               phx-click="auto-configure"
               phx-disable-with="Auto Configuring..."
             >
@@ -178,7 +178,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
           </div>
         </div>
 
-        <div class="grid grid-cols-4 content-center rounded-lg bg-white dark:border-gray-600 dark:bg-gray-700 dark:text-white p-1">
+        <div class="grid grid-cols-4 content-center rounded-lg bg-white dark:bg-gray-800 dark:text-white p-1 border border-gray-200 dark:border-gray-700">
           <div class={["flex justify-center", selected_tab("system", @selected_device.tab)]}>
             <span
               class="text-sm font-bold p-1 hover:cursor-pointer"
@@ -219,24 +219,24 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
 
         <div
           :if={@selected_device.tab == "system"}
-          class="w-1/2 flex flex-col border rounded-lg bg-white dark:border-gray-600 dark:bg-gray-950 dark:text-white"
+          class="w-1/2 flex flex-col border border-gray-200 rounded-lg bg-white dark:border-gray-700 dark:bg-gray-800 dark:text-white"
         >
           <h2 class="text-lg font-bold p-3">Hardware Information</h2>
           <div class="space-y-2 p-5 pt-0 text-sm">
             <div class="flex justify-between">
-              <span class="text-gray-600">Manufacturer:</span>
+              <span class="text-gray-500 dark:text-gray-400">Manufacturer:</span>
               <span class="font-mono">{@selected_device.device.manufacturer}</span>
             </div>
             <div class="flex justify-between">
-              <span class="text-gray-600">Model:</span>
+              <span class="text-gray-500 dark:text-gray-400">Model:</span>
               <span class="font-mono">{@selected_device.device.model}</span>
             </div>
             <div class="flex justify-between">
-              <span class="text-gray-600">Firmware:</span>
+              <span class="text-gray-500 dark:text-gray-400">Firmware:</span>
               <span class="font-mono">{@selected_device.device.firmware_version}</span>
             </div>
             <div class="flex justify-between">
-              <span class="text-gray-600">Hardware ID:</span>
+              <span class="text-gray-500 dark:text-gray-400">Hardware ID:</span>
               <span class="font-mono">{@selected_device.device.hardware_id}</span>
             </div>
           </div>
@@ -244,25 +244,25 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
 
         <div
           :if={@selected_device.tab == "network"}
-          class="flex flex-col border rounded-lg bg-white dark:border-gray-600 dark:bg-gray-950 dark:text-white"
+          class="flex flex-col border border-gray-200 rounded-lg bg-white dark:border-gray-700 dark:bg-gray-800 dark:text-white"
         >
           <h2 class="text-lg font-bold p-3">Network Configuration</h2>
           <div class="space-y-2 p-5 pt-0 text-sm">
             <div class="grid grid-cols-2 gap-x-6 gap-y-2">
               <div class="flex justify-between">
-                <span class="text-gray-600">Name:</span>
+                <span class="text-gray-500 dark:text-gray-400">Name:</span>
                 <span class="font-mono">{@selected_device.network_interface.name}</span>
               </div>
               <div class="flex justify-between">
-                <span class="text-gray-600">IP Address:</span>
+                <span class="text-gray-500 dark:text-gray-400">IP Address:</span>
                 <span class="font-mono">{@selected_device.network_interface.ipv4.address}</span>
               </div>
               <div class="flex justify-between">
-                <span class="text-gray-600">MAC Address:</span>
+                <span class="text-gray-500 dark:text-gray-400">MAC Address:</span>
                 <span class="font-mono">{@selected_device.network_interface.hw_address}</span>
               </div>
               <div class="flex justify-between">
-                <span class="text-gray-600">DHCP:</span>
+                <span class="text-gray-500 dark:text-gray-400">DHCP:</span>
                 <.tag>{format_dhcp(@selected_device.network_interface.ipv4.dhcp)}</.tag>
               </div>
             </div>
@@ -271,27 +271,27 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
 
         <div
           :if={@selected_device.tab == "datetime"}
-          class="flex flex-col border rounded-lg bg-white dark:border-gray-600 dark:bg-gray-950 dark:text-white"
+          class="flex flex-col border border-gray-200 rounded-lg bg-white dark:border-gray-700 dark:bg-gray-800 dark:text-white"
         >
           <h2 class="text-lg font-bold p-3">Date & Time Settings</h2>
           <div class="space-y-2 p-5 pt-0 text-sm">
             <div class="grid grid-cols-2 gap-x-6 gap-y-2">
               <div class="flex justify-between">
-                <span class="text-gray-600">Timezone:</span>
+                <span class="text-gray-500 dark:text-gray-400">Timezone:</span>
                 <span class="font-mono">{@selected_device.device.system_date_time.time_zone.tz}</span>
               </div>
               <div class="flex justify-between">
-                <span class="text-gray-600">NTP Enabled</span>
+                <span class="text-gray-500 dark:text-gray-400">NTP Enabled</span>
                 <.tag>{yes_no(@selected_device.ntp)}</.tag>
               </div>
               <div class="flex justify-between">
-                <span class="text-gray-600">Dayligth Saving</span>
+                <span class="text-gray-500 dark:text-gray-400">Dayligth Saving</span>
                 <.tag>
                   {yes_no(@selected_device.device.system_date_time.daylight_savings)}
                 </.tag>
               </div>
               <div class="flex justify-between">
-                <span class="text-gray-600">NTP Server</span>
+                <span class="text-gray-500 dark:text-gray-400">NTP Server</span>
                 <span class="font-mono">
                   {@selected_device.ntp && @selected_device.ntp.server}
                 </span>
@@ -302,7 +302,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
 
         <div
           :if={@selected_device.tab == "streams"}
-          class="flex flex-col border rounded-lg bg-white dark:border-gray-600 dark:bg-gray-950 dark:text-white"
+          class="flex flex-col border border-gray-200 rounded-lg bg-white dark:border-gray-700 dark:bg-gray-800 dark:text-white"
         >
           <h2 class="text-lg font-bold p-3">Stream Selection</h2>
           <div class="space-y-2 p-5 pt-0 text-sm">
@@ -365,7 +365,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
         <div class="flex items-center space-x-5">
           <.button
             type="button"
-            class="w-full bg-white dark:bg-gray-800 border dark:border-gray-600"
+            class="w-full bg-white !text-gray-800 dark:!text-white dark:bg-gray-800 border dark:border-gray-600"
             phx-click={hide_modal2("camera-authentication")}
           >
             Cancel
@@ -641,7 +641,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
     end
   end
 
-  defp selected_tab(tab, tab), do: ["rounded-sm", "bg-gray-300", "dark:bg-gray-950"]
+  defp selected_tab(tab, tab), do: ["rounded-sm", "bg-gray-100", "dark:bg-gray-700"]
   defp selected_tab(_, _), do: []
 
   defp format_dhcp(true), do: "Enabled"

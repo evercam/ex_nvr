@@ -52,10 +52,13 @@ defmodule ExNVRWeb.Onvif.StreamProfile do
               <.icon name="hero-link" class="w-3 h-3" />Stream URI
             </span>
             <button
+              type="button"
               phx-click={JS.dispatch("events:clipboard-copy", to: "##{@id}-stream-uri")}
-              class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-xs hover:bg-gray-600 px-2 rounded"
+              class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+              title="Copy Stream URI"
             >
-              Copy
+              <.icon name="hero-clipboard-document" class="h-4 w-4 copy-icon" />
+              <.icon name="hero-check" class="h-4 w-4 copied-icon hidden" />
             </button>
           </div>
           <div
@@ -71,10 +74,13 @@ defmodule ExNVRWeb.Onvif.StreamProfile do
               <.icon name="hero-photo" class="w-3 h-3" />Snapshot URI
             </span>
             <button
+              type="button"
               phx-click={JS.dispatch("events:clipboard-copy", to: "##{@id}-snapshot-uri")}
-              class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-xs hover:bg-gray-600 px-2 rounded"
+              class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+              title="Copy Snapshot URI"
             >
-              Copy
+              <.icon name="hero-clipboard-document" class="h-4 w-4 copy-icon" />
+              <.icon name="hero-check" class="h-4 w-4 copied-icon hidden" />
             </button>
           </div>
           <div
