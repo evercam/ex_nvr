@@ -158,7 +158,7 @@ defmodule ExNVR.Elements.VideoStreamStatReporter do
   defp broadcast_stream_info(stats) do
     Phoenix.PubSub.broadcast(
       ExNVR.PubSub,
-      "stats",
+      "stats:#{stats.device_id}",
       {:video_stats, {stats.stream, stats}}
     )
   end

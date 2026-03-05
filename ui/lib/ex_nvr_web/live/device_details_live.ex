@@ -357,9 +357,11 @@ defmodule ExNVRWeb.DeviceDetailsLive do
   def handle_params(params, _uri, socket) do
     active_tab = params["tab"] || socket.assigns.active_tab
 
+    stats_topic = "stats:#{socket.assigns.device.id}"
+
     if active_tab == "stats",
-      do: Phoenix.PubSub.subscribe(ExNVR.PubSub, "stats"),
-      else: Phoenix.PubSub.unsubscribe(ExNVR.PubSub, "stats")
+      do: Phoenix.PubSub.subscribe(ExNVR.PubSub, stats_topic),
+      else: Phoenix.PubSub.unsubscribe(ExNVR.PubSub, stats_topic)
 
     {:noreply,
      socket
