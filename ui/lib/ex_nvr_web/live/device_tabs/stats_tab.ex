@@ -11,232 +11,8 @@ defmodule ExNVRWeb.DeviceTabs.StatsTab do
   def render(assigns) do
     ~H"""
     <div>
-      <div
-        :if={Device.streaming?(@device)}
-        class="bg-gray-50 dark:bg-slate-900 text-gray-900 dark:text-gray-100 p-8 font-sans"
-      >
-        
-    <!-- Main Stream Section -->
-        <div :if={@main_stream_stats} class="mb-8 ">
-          <div class="flex items-center justify-between gap-3 mb-4">
-            <div class="flex gap-3">
-              <h2 class="text-xl font-bold dark:text-white">Main Stream</h2>
-              <span class="px-3 py-1 bg-cyan-500 dark:bg-cyan-600 text-white dark:text-cyan-100 text-xs font-semibold rounded-full">
-                PRIMARY
-              </span>
-            </div>
-
-            <div>
-              <div class="flex items-center gap-2">
-                <div class="flex items-center gap-2">
-                  <div class="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-                  <span class="text-green-500 font-semibold">STREAMING</span>
-                </div>
-                <div class="flex items-center gap-2">
-                  <span class="text-gray-600 dark:text-gray-400">Codec:</span>
-                  <span class="text-cyan-600 dark:text-cyan-400 font-semibold">
-                    {@main_stream_stats.codec}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-    <!-- Main Stream Cards -->
-          <div class="flex flex-wrap gap-4 mb-6">
-            <!-- Resolution Card -->
-            <div class="flex-1 min-w-[240px] bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg p-5">
-              <div class="flex items-center justify-between mb-2">
-                <div class="text-gray-600 dark:text-gray-400 text-sm uppercase">Resolution</div>
-                <svg
-                  class="w-5 h-5 text-gray-400 dark:text-gray-500"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <rect x="3" y="3" width="18" height="18" rx="2" stroke-width="2" />
-                </svg>
-              </div>
-              <div class="text-3xl font-bold text-gray-900 dark:text-white mb-1">
-                {elem(@main_stream_stats.resolution, 0)}x{elem(@main_stream_stats.resolution, 1)}
-              </div>
-            </div>
-            
-    <!-- Frame Rate Card -->
-            <div class="flex-1 min-w-[240px] bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg p-5">
-              <div class="flex items-center justify-between mb-2">
-                <div class="text-gray-600 dark:text-gray-400 text-sm uppercase">Frame Rate</div>
-                <svg
-                  class="w-5 h-5 text-gray-400 dark:text-gray-500"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
-                  />
-                </svg>
-              </div>
-              <div class="text-3xl font-bold text-gray-900 dark:text-white mb-1">
-                {floor(@main_stream_stats.avg_fps)}
-              </div>
-              <div class="text-gray-500 dark:text-gray-400 text-sm">Average</div>
-            </div>
-            
-    <!-- Bitrate Card -->
-            <div class="flex-1 min-w-[240px] bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg p-5">
-              <div class="flex items-center justify-between mb-2">
-                <div class="text-gray-600 dark:text-gray-400 text-sm uppercase">Bitrate</div>
-                <svg
-                  class="w-5 h-5 text-gray-400 dark:text-gray-500"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M13 10V3L4 14h7v7l9-11h-7z"
-                  />
-                </svg>
-              </div>
-              <div class="text-3xl font-bold text-gray-900 dark:text-white mb-1">
-                {humanize_bitrate(@main_stream_stats.avg_bitrate)}
-              </div>
-              <div class="text-gray-500 dark:text-gray-400 text-sm">Average</div>
-            </div>
-            
-    <!-- Total Frames Card -->
-            <div class="flex-1 min-w-[240px] bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg p-5">
-              <div class="flex items-center justify-between mb-2">
-                <div class="text-gray-600 dark:text-gray-400 text-sm uppercase">Total Frames</div>
-                <svg
-                  class="w-5 h-5 text-gray-400 dark:text-gray-500"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"
-                  />
-                </svg>
-              </div>
-              <div class="text-3xl font-bold text-gray-900 dark:text-white">
-                {@main_stream_stats.total_frames}
-              </div>
-            </div>
-          </div>
-          
-    <!-- Additional Main Stream Cards -->
-          <div class="flex flex-wrap gap-4">
-            <!-- GOP Size Card -->
-            <div class="flex-1 min-w-[240px] bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg p-5">
-              <div class="flex items-center justify-between mb-2">
-                <div class="text-gray-600 dark:text-gray-400 text-sm uppercase">GOP Size</div>
-                <svg
-                  class="w-5 h-5 text-gray-400 dark:text-gray-500"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M13 10V3L4 14h7v7l9-11h-7z"
-                  />
-                </svg>
-              </div>
-              <div class="text-3xl font-bold text-gray-900 dark:text-white mb-1">
-                {@main_stream_stats.gop_size}
-              </div>
-              <div class="text-gray-500 dark:text-gray-400 text-sm">
-                Avg: {@main_stream_stats.avg_gop_size}
-              </div>
-            </div>
-            
-    <!-- Keyframe Distance Card -->
-            <div class="flex-1 min-w-[240px] bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg p-5">
-              <div class="flex items-center justify-between mb-2">
-                <div class="text-gray-600 dark:text-gray-400 text-sm uppercase">
-                  Keyframe Distance
-                </div>
-                <svg
-                  class="w-5 h-5 text-gray-400 dark:text-gray-500"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <circle cx="12" cy="12" r="10" stroke-width="2" />
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M12 6v6l4 2"
-                  />
-                </svg>
-              </div>
-              <div class="text-3xl font-bold text-gray-900 dark:text-white mb-1">
-                {@main_stream_stats.frames_since_last_keyframe}
-              </div>
-              <div class="text-gray-500 dark:text-gray-400 text-sm">Frames since last</div>
-            </div>
-            
-    <!-- Total Data Card -->
-            <div class="flex-1 min-w-[240px] bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg p-5">
-              <div class="flex items-center justify-between mb-2">
-                <div class="text-gray-600 dark:text-gray-400 text-sm uppercase">Total Data</div>
-                <svg
-                  class="w-5 h-5 text-gray-400 dark:text-gray-500"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"
-                  />
-                </svg>
-              </div>
-              <div class="text-3xl font-bold text-gray-900 dark:text-white">
-                {humanize_size(@main_stream_stats.total_bytes)}
-              </div>
-            </div>
-            
-    <!-- Profile Card -->
-            <div class="flex-1 min-w-[240px] bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg p-5">
-              <div class="flex items-center justify-between mb-2">
-                <div class="text-gray-600 dark:text-gray-400 text-sm uppercase">Profile</div>
-                <svg
-                  class="w-5 h-5 text-gray-400 dark:text-gray-500"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-                  />
-                </svg>
-              </div>
-              <div class="text-3xl font-bold text-gray-900 dark:text-white mb-1">MAIN</div>
-              <div class="text-gray-500 dark:text-gray-400 text-sm">{@main_stream_stats.profile}</div>
-            </div>
-          </div>
-        </div>
-
-        <div :if={!@main_stream_stats} role="status" class="flex items-center justify-center ">
+      <div :if={Device.streaming?(@device)} class="space-y-8">
+        <div :if={!@main_stream_stats} role="status" class="flex items-center justify-center py-12">
           <svg
             aria-hidden="true"
             class="w-8 h-8 text-blue-200 animate-spin fill-blue-500"
@@ -254,235 +30,182 @@ defmodule ExNVRWeb.DeviceTabs.StatsTab do
             />
           </svg>
         </div>
-        
-    <!-- Sub Stream Section -->
-        <div :if={@sub_stream_stats} class="mb-8">
-          <div class="flex items-center justify-between gap-3 mb-4">
-            <div class="flex gap-3">
-              <h2 class="text-xl font-bold dark:text-white">Sub Stream</h2>
-              <span class="px-3 py-1 bg-cyan-500 dark:bg-cyan-600 text-white dark:text-cyan-100 text-xs font-semibold rounded-full">
-                Secondary
-              </span>
-            </div>
 
-            <div>
-              <div class="flex items-center gap-2">
-                <div class="flex items-center gap-2">
-                  <div class="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-                  <span class="text-green-500 font-semibold">STREAMING</span>
-                </div>
-                <div class="flex items-center gap-2">
-                  <span class="text-gray-600 dark:text-gray-400">Codec:</span>
-                  <span class="text-cyan-600 dark:text-cyan-400 font-semibold">
-                    {@sub_stream_stats.codec}
-                  </span>
-                </div>
-              </div>
-            </div>
+        <.stream_section :if={@main_stream_stats} stats={@main_stream_stats} label="Main Stream" badge="PRIMARY" />
+        <.stream_section :if={@sub_stream_stats} stats={@sub_stream_stats} label="Sub Stream" badge="SECONDARY" />
+      </div>
+
+      <div
+        :if={!Device.streaming?(@device)}
+        class="flex items-center justify-center py-24"
+      >
+        <div class="text-center p-8 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm">
+          <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">Device Not Live</h2>
+          <p class="text-gray-500 dark:text-gray-400">The device is not currently recording.</p>
+        </div>
+      </div>
+    </div>
+    """
+  end
+
+  attr :stats, :map, required: true
+  attr :label, :string, required: true
+  attr :badge, :string, required: true
+
+  defp stream_section(assigns) do
+    ~H"""
+    <div>
+      <div class="flex items-center justify-between gap-3 mb-4">
+        <div class="flex items-center gap-3">
+          <h2 class="text-xl font-bold text-gray-900 dark:text-white">{@label}</h2>
+          <span class="px-3 py-1 bg-cyan-500 dark:bg-cyan-600 text-white text-xs font-semibold rounded-full">
+            {@badge}
+          </span>
+        </div>
+        <div class="flex items-center gap-3">
+          <div class="flex items-center gap-1.5">
+            <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+            <span class="text-sm font-semibold text-green-500">STREAMING</span>
           </div>
-          
-    <!-- Main Stream Cards -->
-          <div class="flex flex-wrap gap-4 mb-6">
-            <!-- Resolution Card -->
-            <div class="flex-1 min-w-[240px] bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg p-5">
-              <div class="flex items-center justify-between mb-2">
-                <div class="text-gray-600 dark:text-gray-400 text-sm uppercase">Resolution</div>
-                <svg
-                  class="w-5 h-5 text-gray-400 dark:text-gray-500"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <rect x="3" y="3" width="18" height="18" rx="2" stroke-width="2" />
-                </svg>
-              </div>
-              <div class="text-3xl font-bold text-gray-900 dark:text-white mb-1">
-                {elem(@sub_stream_stats.resolution, 0)}x{elem(@sub_stream_stats.resolution, 1)}
-              </div>
-            </div>
-            
-    <!-- Frame Rate Card -->
-            <div class="flex-1 min-w-[240px] bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg p-5">
-              <div class="flex items-center justify-between mb-2">
-                <div class="text-gray-600 dark:text-gray-400 text-sm uppercase">Frame Rate</div>
-                <svg
-                  class="w-5 h-5 text-gray-400 dark:text-gray-500"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
-                  />
-                </svg>
-              </div>
-              <div class="text-3xl font-bold text-gray-900 dark:text-white mb-1">
-                {floor(@sub_stream_stats.avg_fps)}
-              </div>
-              <div class="text-gray-500 dark:text-gray-400 text-sm">Average</div>
-            </div>
-            
-    <!-- Bitrate Card -->
-            <div class="flex-1 min-w-[240px] bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg p-5">
-              <div class="flex items-center justify-between mb-2">
-                <div class="text-gray-600 dark:text-gray-400 text-sm uppercase">Bitrate</div>
-                <svg
-                  class="w-5 h-5 text-gray-400 dark:text-gray-500"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M13 10V3L4 14h7v7l9-11h-7z"
-                  />
-                </svg>
-              </div>
-              <div class="text-3xl font-bold text-gray-900 dark:text-white mb-1">
-                {humanize_bitrate(@sub_stream_stats.avg_bitrate)}
-              </div>
-              <div class="text-gray-500 dark:text-gray-400 text-sm">Average</div>
-            </div>
-            
-    <!-- Total Frames Card -->
-            <div class="flex-1 min-w-[240px] bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg p-5">
-              <div class="flex items-center justify-between mb-2">
-                <div class="text-gray-600 dark:text-gray-400 text-sm uppercase">Total Frames</div>
-                <svg
-                  class="w-5 h-5 text-gray-400 dark:text-gray-500"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"
-                  />
-                </svg>
-              </div>
-              <div class="text-3xl font-bold text-gray-900 dark:text-white">
-                {@sub_stream_stats.total_frames}
-              </div>
-            </div>
-          </div>
-          
-    <!-- Additional Main Stream Cards -->
-          <div class="flex flex-wrap gap-4">
-            <!-- GOP Size Card -->
-            <div class="flex-1 min-w-[240px] bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg p-5">
-              <div class="flex items-center justify-between mb-2">
-                <div class="text-gray-600 dark:text-gray-400 text-sm uppercase">GOP Size</div>
-                <svg
-                  class="w-5 h-5 text-gray-400 dark:text-gray-500"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M13 10V3L4 14h7v7l9-11h-7z"
-                  />
-                </svg>
-              </div>
-              <div class="text-3xl font-bold text-gray-900 dark:text-white mb-1">
-                {@sub_stream_stats.gop_size}
-              </div>
-              <div class="text-gray-500 dark:text-gray-400 text-sm">
-                Avg: {@sub_stream_stats.avg_gop_size}
-              </div>
-            </div>
-            
-    <!-- Keyframe Distance Card -->
-            <div class="flex-1 min-w-[240px] bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg p-5">
-              <div class="flex items-center justify-between mb-2">
-                <div class="text-gray-600 dark:text-gray-400 text-sm uppercase">
-                  Keyframe Distance
-                </div>
-                <svg
-                  class="w-5 h-5 text-gray-400 dark:text-gray-500"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <circle cx="12" cy="12" r="10" stroke-width="2" />
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M12 6v6l4 2"
-                  />
-                </svg>
-              </div>
-              <div class="text-3xl font-bold text-gray-900 dark:text-white mb-1">
-                {@sub_stream_stats.frames_since_last_keyframe}
-              </div>
-              <div class="text-gray-500 dark:text-gray-400 text-sm">Frames since last</div>
-            </div>
-            
-    <!-- Total Data Card -->
-            <div class="flex-1 min-w-[240px] bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg p-5">
-              <div class="flex items-center justify-between mb-2">
-                <div class="text-gray-600 dark:text-gray-400 text-sm uppercase">Total Data</div>
-                <svg
-                  class="w-5 h-5 text-gray-400 dark:text-gray-500"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"
-                  />
-                </svg>
-              </div>
-              <div class="text-3xl font-bold text-gray-900 dark:text-white">
-                {humanize_size(@sub_stream_stats.total_bytes)}
-              </div>
-            </div>
-            
-    <!-- Profile Card -->
-            <div class="flex-1 min-w-[240px] bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg p-5">
-              <div class="flex items-center justify-between mb-2">
-                <div class="text-gray-600 dark:text-gray-400 text-sm uppercase">Profile</div>
-                <svg
-                  class="w-5 h-5 text-gray-400 dark:text-gray-500"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-                  />
-                </svg>
-              </div>
-              <div class="text-3xl font-bold text-gray-900 dark:text-white mb-1">MAIN</div>
-              <div class="text-gray-500 dark:text-gray-400 text-sm">{@sub_stream_stats.profile}</div>
-            </div>
+          <span class="text-gray-300 dark:text-gray-600">|</span>
+          <div class="flex items-center gap-1.5">
+            <span class="text-sm text-gray-500 dark:text-gray-400">Codec:</span>
+            <span class="text-sm font-semibold text-cyan-600 dark:text-cyan-400">{@stats.codec}</span>
           </div>
         </div>
       </div>
-      <div
-        :if={!Device.streaming?(@device)}
-        class="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-[#0a0e1a]"
-      >
-        <div class="text-center p-8 bg-white dark:bg-[#131824] border border-gray-200 dark:border-gray-800 rounded-xl shadow-xl">
-          <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-4">Device Not Live</h2>
-          <p class="text-gray-500 dark:text-gray-400">The device is not currently recording.</p>
+
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <%!-- Resolution: arrows-pointing-out (expand corners) conveys dimensions --%>
+        <.stat_card label="Resolution">
+          <:icon>
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"
+              />
+            </svg>
+          </:icon>
+          {elem(@stats.resolution, 0)}x{elem(@stats.resolution, 1)}
+        </.stat_card>
+
+        <%!-- Frame Rate: film/camera icon --%>
+        <.stat_card label="Avg Frame Rate">
+          <:icon>
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
+              />
+            </svg>
+          </:icon>
+          {:erlang.float_to_binary(@stats.avg_fps * 1.0, [{:decimals, 2}, :compact])}
+        </.stat_card>
+
+        <%!-- Bitrate: signal/activity icon --%>
+        <.stat_card label="Avg Bitrate">
+          <:icon>
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9 19V6l2 5h6l-5 6-1-4H9z"
+              />
+            </svg>
+          </:icon>
+          {humanize_bitrate(@stats.avg_bitrate)}
+        </.stat_card>
+
+        <%!-- Total Frames: stack of layers --%>
+        <.stat_card label="Total Frames">
+          <:icon>
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+              />
+            </svg>
+          </:icon>
+          {@stats.total_frames}
+        </.stat_card>
+
+        <%!-- GOP Size: repeat/cycle icon --%>
+        <.stat_card label="GOP Size" subtitle={"Avg: #{@stats.avg_gop_size}"}>
+          <:icon>
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+              />
+            </svg>
+          </:icon>
+          {@stats.gop_size}
+        </.stat_card>
+
+        <%!-- Total Data: database/storage icon --%>
+        <.stat_card label="Total Data">
+          <:icon>
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"
+              />
+            </svg>
+          </:icon>
+          {humanize_size(@stats.total_bytes)}
+        </.stat_card>
+
+        <%!-- Profile: tag/badge icon --%>
+        <.stat_card label="Profile" subtitle={@stats.profile}>
+          <:icon>
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
+              />
+            </svg>
+          </:icon>
+          MAIN
+        </.stat_card>
+      </div>
+    </div>
+    """
+  end
+
+  attr :label, :string, required: true
+  attr :subtitle, :string, default: nil
+  slot :icon, required: true
+  slot :inner_block, required: true
+
+  defp stat_card(assigns) do
+    ~H"""
+    <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 shadow-sm flex flex-col gap-2">
+      <div class="flex items-center gap-2">
+        <div class="flex items-center justify-center w-6 h-6 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 shrink-0">
+          {render_slot(@icon)}
         </div>
+        <span class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider leading-none">
+          {@label}
+        </span>
+      </div>
+      <div>
+        <div class="text-xl font-bold text-gray-900 dark:text-white leading-tight">
+          {render_slot(@inner_block)}
+        </div>
+        <div :if={@subtitle} class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{@subtitle}</div>
       </div>
     </div>
     """
