@@ -127,6 +127,14 @@ window.addEventListener("events:clipboard-copy", (e) => {
     setTimeout(toggleIcon, 1500)
 })
 
+window.addEventListener("phx:clear-select", (e) => {
+    const select = document.getElementById(e.detail.select_id)
+    if (select) {
+        select.value = ""
+        select.dispatchEvent(new Event("change", { bubbles: true }))
+    }
+})
+
 window.addEventListener("events:play-clip", (e) => {
     startStreaming(e.target.id, e.detail.src, e.detail.poster)
 })

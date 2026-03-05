@@ -465,19 +465,30 @@ defmodule ExNVRWeb.CoreComponents do
     ~H"""
     <div phx-feedback-for={@name}>
       <.label for={@id}>{@label}</.label>
-      <select
-        id={@id}
-        name={@name}
-        class={[
-          "mt-1 block w-full rounded-md border border-gray-300 bg-white shadow-sm focus:border-zinc-400 focus:ring-0 text-sm",
-          "placeholder-gray-400 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-        ]}
-        multiple={@multiple}
-        {@rest}
-      >
-        <option :if={@prompt} value="" disabled selected hidden>{@prompt}</option>
-        {Phoenix.HTML.Form.options_for_select(@options, @value)}
-      </select>
+      <div class="relative">
+        <select
+          id={@id}
+          name={@name}
+          class={[
+            "mt-1 block w-full rounded-md border border-gray-300 bg-white shadow-sm focus:border-zinc-400 focus:ring-0 text-sm",
+            "placeholder-gray-400 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+          ]}
+          multiple={@multiple}
+          {@rest}
+        >
+          <option :if={@prompt} value="" disabled selected hidden>{@prompt}</option>
+          {Phoenix.HTML.Form.options_for_select(@options, @value)}
+        </select>
+        <button
+          :if={@prompt && @value not in ["", nil]}
+          type="button"
+          class="absolute right-7 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+          phx-click={JS.dispatch("phx:clear-select", detail: %{select_id: @id})}
+          aria-label="Clear selection"
+        >
+          <.icon name="hero-x-mark" class="w-3.5 h-3.5" />
+        </button>
+      </div>
       <.error :for={msg <- @errors}>{msg}</.error>
     </div>
     """
@@ -1003,4 +1014,37 @@ defmodule ExNVRWeb.CoreComponents do
   defdelegate tabs(assigns), to: Components.Tabs
 
   defdelegate icon(assigns), to: Components.Icon
+
+  @doc """
+  Renders an event metadata map as a formatted key-value list.
+  """
+  attr :metadata, :map, required: true
+
+  def metadata_display(%{metadata: metadata} = assigns) when map_size(metadata) == 0 do
+    assigns = assign(assigns, :entries, [])
+
+    ~H"""
+    <span class="text-gray-400 dark:text-gray-500 text-xs italic">—</span>
+    """
+  end
+
+  def metadata_display(assigns) do
+    assigns = assign(assigns, :entries, Map.to_list(assigns.metadata))
+
+    ~H"""
+    <dl class="space-y-0.5 text-sm">
+      <div :for={{key, value} <- @entries} class="flex gap-1.5 flex-wrap">
+        <dt class="font-semibold text-gray-600 dark:text-gray-400 capitalize whitespace-nowrap">
+          {key |> to_string() |> String.replace("_", " ")}:
+        </dt>
+        <dd class="text-gray-900 dark:text-gray-100 break-all">
+          {format_metadata_value(value)}
+        </dd>
+      </div>
+    </dl>
+    """
+  end
+
+  defp format_metadata_value(value) when is_map(value) or is_list(value), do: Jason.encode!(value)
+  defp format_metadata_value(value), do: to_string(value)
 end

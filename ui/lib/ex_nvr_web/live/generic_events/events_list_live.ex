@@ -61,7 +61,7 @@ defmodule ExNVRWeb.GenericEventsLive.EventsList do
             {Calendar.strftime(event.time, "%b %d, %Y %H:%M:%S %Z")}
           </:col>
           <:col :let={event} label="Data">
-            {Jason.encode!(event.metadata)}
+            <.metadata_display metadata={event.metadata} />
           </:col>
         </Flop.Phoenix.table>
 
