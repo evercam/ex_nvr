@@ -2,8 +2,10 @@ defmodule ExNvrWeb.DeviceDetailsLiveTest do
   use ExNVRWeb.ConnCase
   use Mimic
 
-  import ExNVR.AccountsFixtures
+  import ExNVR.{AccountsFixtures, DevicesFixtures}
   import Phoenix.LiveViewTest
+
+  alias ExNVR.Devices
 
   @moduletag :tmp_dir
 
@@ -284,6 +286,132 @@ defmodule ExNvrWeb.DeviceDetailsLiveTest do
 
       # Previous snapshot should still be displayed
       assert has_element?(lv, "img[src^='data:image/jpeg;base64,']")
+    end
+  end
+
+  describe "Details tab - Start/Stop recording" do
+    setup %{conn: conn} do
+      %{conn: log_in_user(conn, user_fixture())}
+    end
+
+    test "shows Stop button when device is recording", %{conn: conn, tmp_dir: tmp_dir} do
+      device = camera_device_fixture(tmp_dir, %{state: :recording})
+
+      {:ok, lv, _html} =
+        conn |> live(~p"/devices/#{device.id}/details")
+
+      assert has_element?(lv, "button", "Stop")
+      refute has_element?(lv, "button", "Start")
+    end
+
+    test "shows Start button when device is stopped", %{conn: conn, tmp_dir: tmp_dir} do
+      device = camera_device_fixture(tmp_dir, %{state: :stopped})
+
+      {:ok, lv, _html} =
+        conn |> live(~p"/devices/#{device.id}/details")
+
+      assert has_element?(lv, "button", "Start")
+      refute has_element?(lv, "button", "Stop")
+    end
+
+    test "clicking Stop updates state to stopped", %{conn: conn, tmp_dir: tmp_dir} do
+      device = camera_device_fixture(tmp_dir, %{state: :recording})
+
+      {:ok, lv, _html} =
+        conn |> live(~p"/devices/#{device.id}/details")
+
+      lv |> element("button", "Stop") |> render_click()
+
+      assert has_element?(lv, "span.bg-yellow-100", "STOPPED")
+      assert has_element?(lv, "button", "Start")
+      assert Devices.get(device.id).state == :stopped
+    end
+
+    test "clicking Start updates state to recording", %{conn: conn, tmp_dir: tmp_dir} do
+      device = camera_device_fixture(tmp_dir, %{state: :stopped})
+
+      {:ok, lv, _html} =
+        conn |> live(~p"/devices/#{device.id}/details")
+
+      lv |> element("button", "Start") |> render_click()
+
+      assert has_element?(lv, "span.bg-green-100", "RECORDING")
+      assert has_element?(lv, "button", "Stop")
+      assert Devices.get(device.id).state == :recording
+    end
+  end
+
+  describe "Details tab - PubSub device updates" do
+    setup %{conn: conn} do
+      %{conn: log_in_user(conn, user_fixture())}
+    end
+
+    test "status badge updates when device state changes via PubSub", %{
+      conn: conn,
+      tmp_dir: tmp_dir
+    } do
+      device = camera_device_fixture(tmp_dir, %{state: :stopped})
+
+      {:ok, lv, _html} =
+        conn |> live(~p"/devices/#{device.id}/details")
+
+      assert has_element?(lv, "span.bg-yellow-100", "STOPPED")
+
+      {:ok, updated_device} = Devices.update_state(device, :recording)
+      send(lv.pid, {:device_updated, updated_device})
+
+      assert has_element?(lv, "span.bg-green-100", "RECORDING")
+    end
+
+    @tag :set_mimic_global
+    test "snapshot player activates when device transitions from stopped to recording", %{
+      conn: conn,
+      tmp_dir: tmp_dir
+    } do
+      stub(ExNVR.Devices, :fetch_snapshot, fn _device -> {:ok, @minimal_jpeg} end)
+
+      device =
+        camera_device_fixture(tmp_dir, %{
+          state: :stopped,
+          stream_config: %{snapshot_uri: "http://camera.local/snapshot.jpg"}
+        })
+
+      {:ok, lv, _html} =
+        conn |> live(~p"/devices/#{device.id}/details")
+
+      assert has_element?(lv, "p", "Device is stopped")
+      refute has_element?(lv, "img[src^='data:image']")
+
+      {:ok, updated_device} = Devices.update_state(device, :recording)
+      send(lv.pid, {:device_updated, updated_device})
+      send(lv.pid, :refresh_snapshot)
+
+      assert has_element?(lv, "img[src^='data:image/jpeg;base64,']")
+    end
+
+    @tag :set_mimic_global
+    test "snapshot player clears when device transitions from recording to stopped", %{
+      conn: conn,
+      tmp_dir: tmp_dir
+    } do
+      stub(ExNVR.Devices, :fetch_snapshot, fn _device -> {:ok, @minimal_jpeg} end)
+
+      device =
+        camera_device_fixture(tmp_dir, %{
+          state: :recording,
+          stream_config: %{snapshot_uri: "http://camera.local/snapshot.jpg"}
+        })
+
+      {:ok, lv, _html} =
+        conn |> live(~p"/devices/#{device.id}/details")
+
+      assert has_element?(lv, "img[src^='data:image/jpeg;base64,']")
+
+      {:ok, updated_device} = Devices.update_state(device, :stopped)
+      send(lv.pid, {:device_updated, updated_device})
+
+      refute has_element?(lv, "img[src^='data:image']")
+      assert has_element?(lv, "p", "Device is stopped")
     end
   end
 end

@@ -3,10 +3,7 @@ defmodule ExNVRWeb.DeviceListLive do
 
   use ExNVRWeb, :live_view
 
-  import ExNVR.Authorization
-
   alias ExNVR.Devices
-  alias ExNVR.Model.Device
 
   def render(assigns) do
     ~H"""
@@ -56,43 +53,6 @@ defmodule ExNVRWeb.DeviceListLive do
             {String.upcase(to_string(device.state))}
           </div>
         </:col>
-        <:action :let={device}>
-          <.three_dot
-            :if={@current_user.role == :admin}
-            id={"dropdownMenuIconButton_#{device.id}"}
-            dropdown_id={"dropdownDots_#{device.id}"}
-          />
-          <div
-            id={"dropdownDots_#{device.id}"}
-            class="z-10 hidden text-left bg-white divide-y divide-gray-100 rounded-lg shadow w-44 dark:bg-gray-700 dark:divide-gray-600"
-          >
-            <ul
-              class="py-2 text-sm text-gray-700 dark:text-gray-200"
-              aria-labelledby={"dropdownMenuIconButton_#{device.id}"}
-            >
-              <li>
-                <.link
-                  :if={not Device.recording?(device)}
-                  phx-click="start-recording"
-                  phx-value-device={device.id}
-                  class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white"
-                >
-                  Start recording
-                </.link>
-              </li>
-              <li>
-                <.link
-                  :if={Device.recording?(device)}
-                  phx-click="stop-recording"
-                  phx-value-device={device.id}
-                  class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white"
-                >
-                  Stop recording
-                </.link>
-              </li>
-            </ul>
-          </div>
-        </:action>
       </.table>
     </div>
     """
@@ -102,42 +62,7 @@ defmodule ExNVRWeb.DeviceListLive do
     {:ok, assign(socket, devices: Devices.list())}
   end
 
-  def handle_event("stop-recording", %{"device" => device_id}, socket) do
-    user = socket.assigns.current_user
-
-    case authorize(user, :device, :update) do
-      :ok -> update_device_state(socket, device_id, :stopped)
-      {:error, :unauthorized} -> unauthorized(socket, :noreply)
-    end
-  end
-
-  def handle_event("start-recording", %{"device" => device_id}, socket) do
-    user = socket.assigns.current_user
-
-    case authorize(user, :device, :update) do
-      :ok -> update_device_state(socket, device_id, :recording)
-      {:error, :unauthorized} -> unauthorized(socket, :noreply)
-    end
-  end
-
-  defp update_device_state(socket, device_id, new_state) do
-    devices = socket.assigns.devices
-
-    with %Device{} = device <- Enum.find(devices, &(&1.id == device_id)),
-         {:ok, _device} <- Devices.update_state(device, new_state) do
-      {:noreply, assign(socket, devices: Devices.list())}
-    else
-      _other -> {:noreply, put_flash(socket, :error, "could not update device state")}
-    end
-  end
-
   defp get_type_label(:ip), do: "IP Camera"
   defp get_type_label(:file), do: "File"
   defp get_type_label(:webcam), do: "Webcam"
-
-  defp unauthorized(socket, reply) do
-    socket
-    |> put_flash(:error, "You are not authorized to perform this action!")
-    |> then(&{reply, &1})
-  end
 end
