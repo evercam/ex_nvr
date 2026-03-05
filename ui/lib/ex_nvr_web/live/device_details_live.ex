@@ -5,7 +5,7 @@ defmodule ExNVRWeb.DeviceDetailsLive do
 
   alias ExNVR.Devices
   alias ExNVR.Model.Device
-  alias ExNVRWeb.DeviceTabs.{EventsListTab, RecordingsListTab, StatsTab}
+  alias ExNVRWeb.DeviceTabs.{EventsListTab, RecordingsListTab, SettingsTab, StatsTab}
   alias ExNVRWeb.Router.Helpers, as: Routes
 
   @snapshot_refresh_interval to_timeout(second: 10)
@@ -284,9 +284,11 @@ defmodule ExNVRWeb.DeviceDetailsLive do
         </:tab_content>
 
         <:tab_content for="settings">
-          <div class="text-center text-gray-500 dark:text-gray-400">
-            settings tab coming soon...
-          </div>
+          <.live_component
+            id="settings_tab"
+            module={SettingsTab}
+            device={@device}
+          />
         </:tab_content>
         
     <!-- events tab-->
@@ -370,6 +372,11 @@ defmodule ExNVRWeb.DeviceDetailsLive do
       end
 
     {:noreply, socket}
+  end
+
+  @impl true
+  def handle_info({:device_updated, device}, socket) do
+    {:noreply, assign(socket, :device, device)}
   end
 
   @impl true

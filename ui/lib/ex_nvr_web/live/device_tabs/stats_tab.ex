@@ -31,8 +31,18 @@ defmodule ExNVRWeb.DeviceTabs.StatsTab do
           </svg>
         </div>
 
-        <.stream_section :if={@main_stream_stats} stats={@main_stream_stats} label="Main Stream" badge="PRIMARY" />
-        <.stream_section :if={@sub_stream_stats} stats={@sub_stream_stats} label="Sub Stream" badge="SECONDARY" />
+        <.stream_section
+          :if={@main_stream_stats}
+          stats={@main_stream_stats}
+          label="Main Stream"
+          badge="PRIMARY"
+        />
+        <.stream_section
+          :if={@sub_stream_stats}
+          stats={@sub_stream_stats}
+          label="Sub Stream"
+          badge="SECONDARY"
+        />
       </div>
 
       <div

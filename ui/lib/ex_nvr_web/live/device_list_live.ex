@@ -72,14 +72,6 @@ defmodule ExNVRWeb.DeviceListLive do
             >
               <li>
                 <.link
-                  href={~p"/devices/#{device.id}"}
-                  class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white"
-                >
-                  Update
-                </.link>
-              </li>
-              <li>
-                <.link
                   phx-click={show_modal("delete-device-modal-#{device.id}")}
                   phx-value-device={device.id}
                   class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white"

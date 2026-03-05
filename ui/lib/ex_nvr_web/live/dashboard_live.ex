@@ -296,11 +296,20 @@ defmodule ExNVRWeb.DashboardLive do
 
     {enabled?, reason} =
       cond do
-        is_nil(device) -> {false, nil}
-        not is_nil(start_date) -> {true, nil}
-        not ExNVR.Utils.run_main_pipeline?() -> {false, "Live view is disabled. The NVR pipeline is not running."}
-        Device.streaming?(device) -> {true, nil}
-        true -> {false, "Device is not recording. Live view is unavailable until recording starts."}
+        is_nil(device) ->
+          {false, nil}
+
+        not is_nil(start_date) ->
+          {true, nil}
+
+        not ExNVR.Utils.run_main_pipeline?() ->
+          {false, "Live view is disabled. The NVR pipeline is not running."}
+
+        Device.streaming?(device) ->
+          {true, nil}
+
+        true ->
+          {false, "Device is not recording. Live view is unavailable until recording starts."}
       end
 
     assign(socket, live_view_enabled?: enabled?, live_view_disabled_reason: reason)
