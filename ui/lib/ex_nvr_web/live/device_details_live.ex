@@ -3,6 +3,8 @@ defmodule ExNVRWeb.DeviceDetailsLive do
 
   require Logger
 
+  import ExNVR.Authorization
+
   alias ExNVR.Devices
   alias ExNVR.Model.Device
   alias ExNVRWeb.DeviceTabs.{EventsListTab, RecordingsListTab, SettingsTab, StatsTab}
@@ -49,7 +51,7 @@ defmodule ExNVRWeb.DeviceDetailsLive do
                   </div>
                   <div class="px-5 py-3.5 flex items-center justify-between">
                     <dt class="text-sm text-gray-500 dark:text-gray-400">Status</dt>
-                    <dd>
+                    <dd class="flex items-center gap-3">
                       <span class={[
                         "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold",
                         case @device.state do
@@ -74,6 +76,26 @@ defmodule ExNVRWeb.DeviceDetailsLive do
                         </span>
                         {String.upcase(to_string(@device.state))}
                       </span>
+                      <button
+                        :if={@current_user.role == :admin and Device.recording?(@device)}
+                        phx-click="stop-recording"
+                        class="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-md bg-yellow-100 hover:bg-yellow-200 text-yellow-800 dark:bg-yellow-900/30 dark:hover:bg-yellow-900/50 dark:text-yellow-400 transition-colors"
+                      >
+                        <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                          <rect x="6" y="6" width="12" height="12" rx="1" />
+                        </svg>
+                        Stop
+                      </button>
+                      <button
+                        :if={@current_user.role == :admin and not Device.recording?(@device)}
+                        phx-click="start-recording"
+                        class="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-md bg-green-100 hover:bg-green-200 text-green-800 dark:bg-green-900/30 dark:hover:bg-green-900/50 dark:text-green-400 transition-colors"
+                      >
+                        <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M8 5v14l11-7z" />
+                        </svg>
+                        Start
+                      </button>
                     </dd>
                   </div>
                   <div class="px-5 py-3.5 flex items-center justify-between">
@@ -315,7 +337,10 @@ defmodule ExNVRWeb.DeviceDetailsLive do
     snapshot_enabled =
       not is_nil(device.stream_config.snapshot_uri) and Device.streaming?(device)
 
-    if snapshot_enabled, do: send(self(), :refresh_snapshot)
+    if connected?(socket) do
+      Phoenix.PubSub.subscribe(ExNVR.PubSub, "device:#{device.id}")
+      if snapshot_enabled, do: send(self(), :refresh_snapshot)
+    end
 
     {:ok,
      assign(socket,
@@ -343,6 +368,16 @@ defmodule ExNVRWeb.DeviceDetailsLive do
   end
 
   @impl true
+  def handle_event("start-recording", _params, socket) do
+    update_device_state(socket, :recording)
+  end
+
+  @impl true
+  def handle_event("stop-recording", _params, socket) do
+    update_device_state(socket, :stopped)
+  end
+
+  @impl true
   def handle_info({:tab_changed, %{tab: tab}}, socket) do
     params =
       socket.assigns.params
@@ -361,23 +396,44 @@ defmodule ExNVRWeb.DeviceDetailsLive do
 
   @impl true
   def handle_info(:refresh_snapshot, socket) do
-    Process.send_after(self(), :refresh_snapshot, @snapshot_refresh_interval)
+    if socket.assigns.snapshot_enabled do
+      Process.send_after(self(), :refresh_snapshot, @snapshot_refresh_interval)
 
-    socket =
-      case Devices.fetch_snapshot(socket.assigns.device) do
-        {:ok, binary} ->
-          assign(socket, :snapshot_data, "data:image/jpeg;base64,#{Base.encode64(binary)}")
+      socket =
+        case Devices.fetch_snapshot(socket.assigns.device) do
+          {:ok, binary} ->
+            assign(socket, :snapshot_data, "data:image/jpeg;base64,#{Base.encode64(binary)}")
 
-        {:error, _reason} ->
-          socket
-      end
+          {:error, _reason} ->
+            socket
+        end
 
-    {:noreply, socket}
+      {:noreply, socket}
+    else
+      {:noreply, socket}
+    end
   end
 
   @impl true
   def handle_info({:device_updated, device}, socket) do
-    {:noreply, assign(socket, :device, device)}
+    was_snapshot_enabled = socket.assigns.snapshot_enabled
+
+    snapshot_enabled =
+      not is_nil(device.stream_config.snapshot_uri) and Device.streaming?(device)
+
+    if snapshot_enabled and not was_snapshot_enabled do
+      send(self(), :refresh_snapshot)
+    end
+
+    socket =
+      socket
+      |> assign(:device, device)
+      |> assign(:snapshot_enabled, snapshot_enabled)
+
+    case snapshot_enabled do
+      true -> {:noreply, socket}
+      false -> {:noreply, assign(socket, :snapshot_data, nil)}
+    end
   end
 
   @impl true
@@ -392,5 +448,21 @@ defmodule ExNVRWeb.DeviceDetailsLive do
 
   def update_params(tab, id) do
     send_update(tab, id: id, params: %{})
+  end
+
+  defp update_device_state(socket, new_state) do
+    user = socket.assigns.current_user
+    device = socket.assigns.device
+
+    with :ok <- authorize(user, :device, :update),
+         {:ok, updated_device} <- Devices.update_state(device, new_state) do
+      {:noreply, assign(socket, :device, updated_device)}
+    else
+      {:error, :unauthorized} ->
+        {:noreply, put_flash(socket, :error, "You are not authorized to perform this action")}
+
+      {:error, _} ->
+        {:noreply, put_flash(socket, :error, "Could not update device state")}
+    end
   end
 end

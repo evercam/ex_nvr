@@ -42,6 +42,13 @@ defmodule ExNVR.Devices do
       {:ok, updated_device} ->
         create_device_directories(updated_device)
         start_or_stop_supervisor(device, updated_device)
+
+        Phoenix.PubSub.broadcast(
+          ExNVR.PubSub,
+          "device:#{updated_device.id}",
+          {:device_updated, updated_device}
+        )
+
         {:ok, updated_device}
 
       error ->
