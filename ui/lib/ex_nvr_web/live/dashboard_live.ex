@@ -37,6 +37,7 @@ defmodule ExNVRWeb.DashboardLive do
           stream={@stream}
           device={Map.take(@current_device, [:id, :name, :timezone])}
           live-view-enabled={@live_view_enabled?}
+          live-view-disabled-reason={@live_view_disabled_reason}
           start-date={@start_date}
           v-on:switch_stream={JS.push("switch_stream")}
           v-on:switch_device={JS.push("switch_device")}
@@ -293,15 +294,16 @@ defmodule ExNVRWeb.DashboardLive do
     device = socket.assigns.current_device
     start_date = socket.assigns[:start_date]
 
-    enabled? =
+    {enabled?, reason} =
       cond do
-        is_nil(device) -> false
-        not is_nil(start_date) -> true
-        not ExNVR.Utils.run_main_pipeline?() -> false
-        true -> Device.streaming?(device)
+        is_nil(device) -> {false, nil}
+        not is_nil(start_date) -> {true, nil}
+        not ExNVR.Utils.run_main_pipeline?() -> {false, "Live view is disabled. The NVR pipeline is not running."}
+        Device.streaming?(device) -> {true, nil}
+        true -> {false, "Device is not recording. Live view is unavailable until recording starts."}
       end
 
-    assign(socket, live_view_enabled?: enabled?)
+    assign(socket, live_view_enabled?: enabled?, live_view_disabled_reason: reason)
   end
 
   defp parse_datetime(nil, _), do: nil

@@ -212,9 +212,13 @@
 
                 <div
                     v-else
-                    class="relative text-lg rounded-tr rounded-tl text-center bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-200 w-full h-full flex justify-center items-center"
+                    class="relative rounded-tr rounded-tl text-center bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-200 w-full h-full flex flex-col justify-center items-center gap-3"
                 >
-                    Device is not recording, live view is not available
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-12 h-12 text-gray-400 dark:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25h-9A2.25 2.25 0 002.25 7.5v9a2.25 2.25 0 002.25 2.25z" />
+                        <line x1="3" y1="3" x2="21" y2="21" stroke-width="1.5" />
+                    </svg>
+                    <p class="text-lg font-medium">{{ liveViewDisabledReason || 'Live view is not available' }}</p>
                 </div>
             </template>
 
@@ -295,6 +299,10 @@ export default defineComponent({
         liveViewEnabled: {
             type: Boolean,
             default: false,
+        },
+        liveViewDisabledReason: {
+            type: String,
+            default: null,
         },
         startDate: {
             type: String,
