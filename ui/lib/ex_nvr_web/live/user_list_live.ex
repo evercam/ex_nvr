@@ -65,23 +65,35 @@ defmodule ExNVRWeb.UserListLive do
             </ul>
           </div>
           <.modal id={"delete-modal-#{user.id}"}>
-            <div class="bg-blue-300 p-4 rounded-lg text-center dark:bg-gray-800 dark:border-gray-700">
-              <p class="text-l text-black dark:text-white font-bold mb-4">
-                {"Are you sure you want to delete the User: '#{user.email}'"}
-              </p>
-              <.button
-                phx-disable-with="Deleting..."
-                phx-click={JS.push("delete", value: %{id: user.id})}
-                class="text-black bg-red-500 hover:bg-red-400 px-4 py-2 mx-2 rounded hover:bg-red-600 dark:text-white"
-              >
-                Yes
-              </.button>
-              <.button
-                phx-click={hide_modal("delete-modal-#{user.id}")}
-                class="text-black bg-gray-300 hover:bg-gray-200 px-4 py-2 mx-2 rounded hover:bg-red-600 dark:text-white"
-              >
-                Cancel
-              </.button>
+            <div class="p-6">
+              <div class="flex items-start gap-4">
+                <div class="flex-shrink-0 flex items-center justify-center w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/30">
+                  <.icon name="hero-exclamation-triangle" class="w-5 h-5 text-red-600 dark:text-red-400" />
+                </div>
+                <div>
+                  <h3 class="text-base font-semibold text-gray-900 dark:text-white">Delete user?</h3>
+                  <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                    Are you sure you want to delete
+                    <span class="font-medium text-gray-700 dark:text-gray-300">{user.email}</span>?
+                    This action cannot be undone.
+                  </p>
+                </div>
+              </div>
+              <div class="mt-6 flex justify-end gap-3">
+                <button
+                  phx-click={hide_modal("delete-modal-#{user.id}")}
+                  class="px-4 py-2 rounded-lg text-sm font-medium bg-white text-gray-700 ring-1 ring-gray-300 hover:bg-gray-50 dark:bg-gray-700 dark:text-gray-300 dark:ring-gray-600 dark:hover:bg-gray-600"
+                >
+                  Cancel
+                </button>
+                <button
+                  phx-disable-with="Deleting..."
+                  phx-click={JS.push("delete", value: %{id: user.id})}
+                  class="px-4 py-2 rounded-lg text-sm font-medium bg-red-600 text-white hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-600"
+                >
+                  Delete
+                </button>
+              </div>
             </div>
           </.modal>
         </:action>

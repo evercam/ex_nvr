@@ -46,9 +46,9 @@ defmodule ExNVRWeb.DashboardLive do
         />
       </div>
 
-      <.modal id="download-modal" class="dark:bg-gray-800/70 dark:backdrop-blur-none">
-        <div class="bg-gray-300 dark:bg-gray-800 p-8 rounded">
-          <h2 class="text-xl text-black dark:text-white font-bold mb-4">Download Footage</h2>
+      <.modal id="download-modal">
+        <div class="p-6">
+          <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Download Footage</h2>
           <.simple_form
             for={@footage_form}
             id="footage_form"

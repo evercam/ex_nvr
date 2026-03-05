@@ -54,23 +54,33 @@ defmodule ExNVRWeb.RemoteStorageListLive do
         </:action>
         <:action :let={remote_storage}>
           <.modal id={"delete-remote-storage-modal-#{remote_storage.id}"}>
-            <div class="bg-white dark:bg-gray-800 m-8 rounded">
-              <h2 class="text-xl text-gray-900 dark:text-white font-bold mb-4">
-                Are you sure you want to delete this remote storage ?
-              </h2>
-              <div class="mt-4">
+            <div class="p-6">
+              <div class="flex items-start gap-4">
+                <div class="flex-shrink-0 flex items-center justify-center w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/30">
+                  <.icon name="hero-exclamation-triangle" class="w-5 h-5 text-red-600 dark:text-red-400" />
+                </div>
+                <div>
+                  <h3 class="text-base font-semibold text-gray-900 dark:text-white">Delete remote storage?</h3>
+                  <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                    Are you sure you want to delete
+                    <span class="font-medium text-gray-700 dark:text-gray-300">{remote_storage.name}</span>?
+                    This action cannot be undone.
+                  </p>
+                </div>
+              </div>
+              <div class="mt-6 flex justify-end gap-3">
+                <button
+                  phx-click={hide_modal("delete-remote-storage-modal-#{remote_storage.id}")}
+                  class="px-4 py-2 rounded-lg text-sm font-medium bg-white text-gray-700 ring-1 ring-gray-300 hover:bg-gray-50 dark:bg-gray-700 dark:text-gray-300 dark:ring-gray-600 dark:hover:bg-gray-600"
+                >
+                  Cancel
+                </button>
                 <button
                   phx-click="delete-remote-storage"
                   phx-value-remote_storage_id={remote_storage.id}
-                  class="bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded mr-4"
+                  class="px-4 py-2 rounded-lg text-sm font-medium bg-red-600 text-white hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-600"
                 >
-                  Confirm
-                </button>
-                <button
-                  phx-click={hide_modal("delete-remote-storage-modal-#{remote_storage.id}")}
-                  class="bg-gray-300 hover:bg-gray-400 text-gray-800 py-2 px-4 rounded"
-                >
-                  Cancel
+                  Delete
                 </button>
               </div>
             </div>

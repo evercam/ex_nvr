@@ -53,9 +53,9 @@ defmodule ExNVRWeb.CoreComponents do
       data-cancel={JS.exec(@on_cancel, "phx-remove")}
       class="fixed top-0 left-0 right-0 z-50 hidden w-full p-4 overflow-x-hidden overflow-y-auto md:inset-0 h-[calc(100%-1rem)] max-h-full justify-center"
     >
-      <div id={"#{@id}-bg"} class="bg-zinc-50/90 fixed inset-0 transition-opacity" aria-hidden="true" />
+      <div id={"#{@id}-bg"} class="bg-gray-900/60 fixed inset-0 transition-opacity" aria-hidden="true" />
       <div
-        class={["fixed inset-0 overflow-y-auto", @class || "dark:bg-gray-400"]}
+        class={["fixed inset-0 overflow-y-auto", @class]}
         aria-labelledby={"#{@id}-title"}
         aria-describedby={"#{@id}-description"}
         role="dialog"
@@ -69,16 +69,16 @@ defmodule ExNVRWeb.CoreComponents do
               phx-window-keydown={JS.exec("data-cancel", to: "##{@id}")}
               phx-key="escape"
               phx-click-away={JS.exec("data-cancel", to: "##{@id}")}
-              class="shadow-zinc-700/10 ring-zinc-700/10 relative hidden rounded-lg bg-white p-2 shadow-lg ring-1 transition shadow dark:bg-gray-800"
+              class="relative hidden rounded-xl bg-white p-2 shadow-xl ring-1 ring-gray-200 transition dark:bg-gray-800 dark:ring-gray-700"
             >
-              <div class="absolute top-6 right-5">
+              <div class="absolute top-4 right-4">
                 <button
                   phx-click={JS.exec("data-cancel", to: "##{@id}")}
                   type="button"
-                  class="-m-3 flex-none p-3 opacity-20 hover:opacity-40"
+                  class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700 dark:hover:text-gray-200"
                   aria-label={gettext("close")}
                 >
-                  <.icon name="hero-x-mark-solid dark:bg-white" class="h-5 w-5" />
+                  <.icon name="hero-x-mark-solid" class="h-5 w-5" />
                 </button>
               </div>
               <div id={"#{@id}-content"}>
@@ -107,26 +107,23 @@ defmodule ExNVRWeb.CoreComponents do
       data-cancel={JS.exec(@on_cancel, "phx-remove")}
       tabindex="-1"
       aria-hidden="true"
-      class="hidden bg-gray-900/50 dark:bg-gray-900/80 overflow-y-auto overflow-x-hidden fixed top-0 right-0 left-0 z-50 justify-center items-center w-full md:inset-0 h-[calc(100%-1rem)] max-h-full"
+      class="hidden bg-gray-900/60 overflow-y-auto overflow-x-hidden fixed top-0 right-0 left-0 z-50 justify-center items-center w-full md:inset-0 h-[calc(100%-1rem)] max-h-full"
     >
       <div class="relative p-4 w-full max-w-md max-h-full">
-        <!-- Modal content -->
-        <div class="relative bg-white rounded-lg shadow-sm dark:bg-gray-700">
-          <!-- Modal header -->
-          <div class="flex items-center justify-between p-4 md:p-5 border-b rounded-t dark:border-gray-600 border-gray-200">
-            <h3 class="text-xl font-semibold text-gray-900 dark:text-white">
+        <div class="relative bg-white rounded-xl shadow-xl ring-1 ring-gray-200 dark:bg-gray-800 dark:ring-gray-700">
+          <div class="flex items-center justify-between p-4 md:p-5 border-b border-gray-200 dark:border-gray-700 rounded-t-xl">
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
               {render_slot(@header)}
             </h3>
             <button
               type="button"
-              class="end-2.5 text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm w-8 h-8 ms-auto inline-flex justify-center items-center dark:hover:bg-gray-600 dark:hover:text-white"
+              class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700 dark:hover:text-gray-200 ms-auto inline-flex justify-center items-center"
               phx-click={JS.exec("data-cancel", to: "##{@id}")}
             >
-              <.icon name="hero-x-mark-solid dark:bg-white" class="h-5 w-5" />
+              <.icon name="hero-x-mark-solid" class="h-5 w-5" />
               <span class="sr-only">Close modal</span>
             </button>
           </div>
-          <!-- Modal body -->
           <div class="p-4 md:p-5">
             {render_slot(@inner_block)}
           </div>
