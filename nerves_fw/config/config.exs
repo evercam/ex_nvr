@@ -27,7 +27,9 @@ config :ex_nvr_fw, target: Mix.target()
 
 config :nerves, :firmware,
   provisioning: :nerves_hub_link,
-  rootfs_overlay: "rootfs_overlay"
+  rootfs_overlay: "rootfs_overlay",
+  # -no-compression should imply ["-noI", "-noId", "-noD", "-noF", "-noX"]
+  mksquashfs_flags: ["-noI", "-noId", "-noD", "-noF", "-noX", "-quiet"]
 
 # Set the SOURCE_DATE_EPOCH date for reproducible builds.
 # See https://reproducible-builds.org/docs/source-date-epoch/ for more information
