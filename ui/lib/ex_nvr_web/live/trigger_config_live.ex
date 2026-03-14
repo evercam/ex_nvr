@@ -4,7 +4,14 @@ defmodule ExNVRWeb.TriggerConfigLive do
   use ExNVRWeb, :live_view
 
   alias ExNVR.Triggers
-  alias ExNVR.Triggers.{TriggerConfig, TriggerSourceConfig, TriggerTargetConfig}
+
+  alias ExNVR.Triggers.{
+    TriggerConfig,
+    TriggerSourceConfig,
+    TriggerSources,
+    TriggerTargetConfig,
+    TriggerTargets
+  }
 
   def render(assigns) do
     ~H"""
@@ -26,7 +33,7 @@ defmodule ExNVRWeb.TriggerConfigLive do
 
           <:actions>
             <.button :if={is_nil(@trigger_config.id)} class="w-full" phx-disable-with="Creating...">
-              {if @trigger_config.id, do: "Update", else: "Create"}
+              Create
             </.button>
             <.button :if={@trigger_config.id} class="w-full" phx-disable-with="Updating...">
               Update
@@ -49,12 +56,11 @@ defmodule ExNVRWeb.TriggerConfigLive do
               class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg"
             >
               <div>
-                <span class="font-medium">{source.source_type}</span>
-                <span
-                  :if={source.config["event_type"]}
-                  class="text-sm text-gray-500 dark:text-gray-400 ml-2"
-                >
-                  (event_type: {source.config["event_type"]})
+                <span class="font-medium">{source_label(source.source_type)}</span>
+                <span class="text-sm text-gray-500 dark:text-gray-400 ml-2">
+                  <span :for={{key, val} <- source.config}>
+                    ({format_key(key)}: {format_value(val)})
+                  </span>
                 </span>
               </div>
               <button
@@ -76,8 +82,8 @@ defmodule ExNVRWeb.TriggerConfigLive do
 
           <div class="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
             <h4 class="text-sm font-medium mb-3">Add Event Source</h4>
-            <form phx-submit="add-source" class="flex items-end gap-3">
-              <div class="flex-1">
+            <form phx-submit="add-source" phx-change="source-type-changed" class="space-y-3">
+              <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Source Type
                 </label>
@@ -85,24 +91,17 @@ defmodule ExNVRWeb.TriggerConfigLive do
                   name="source_type"
                   class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
                 >
-                  <option :for={type <- TriggerSourceConfig.source_types()} value={type}>
-                    {type}
+                  <option
+                    :for={{label, value} <- TriggerSources.type_options()}
+                    value={value}
+                    selected={value == @selected_source_type}
+                  >
+                    {label}
                   </option>
                 </select>
               </div>
-              <div class="flex-1">
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Event Type
-                </label>
-                <input
-                  name="event_type"
-                  type="text"
-                  placeholder="e.g. motion_detected"
-                  required
-                  class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
-                />
-              </div>
-              <.button type="submit" class="flex-shrink-0">Add</.button>
+              <.config_fields fields={@source_fields} />
+              <.button type="submit" class="flex-shrink-0">Add Source</.button>
             </form>
           </div>
         </div>
@@ -120,7 +119,7 @@ defmodule ExNVRWeb.TriggerConfigLive do
               class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg"
             >
               <div>
-                <span class="font-medium">{humanize_target_type(target.target_type)}</span>
+                <span class="font-medium">{target_label(target.target_type)}</span>
                 <span
                   :if={!target.enabled}
                   class="ml-2 text-xs text-gray-400 bg-gray-200 dark:bg-gray-600 px-2 py-0.5 rounded"
@@ -128,11 +127,12 @@ defmodule ExNVRWeb.TriggerConfigLive do
                   disabled
                 </span>
                 <span
-                  :if={target.target_type == "log_message"}
+                  :if={target.config != %{}}
                   class="text-sm text-gray-500 dark:text-gray-400 ml-2"
                 >
-                  (level: {target.config["level"] || "info"}, prefix: {target.config["message_prefix"] ||
-                    "Trigger"})
+                  <span :for={{key, val} <- target.config}>
+                    ({format_key(key)}: {format_value(val)})
+                  </span>
                 </span>
               </div>
               <button
@@ -155,53 +155,24 @@ defmodule ExNVRWeb.TriggerConfigLive do
           <div class="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
             <h4 class="text-sm font-medium mb-3">Add Target</h4>
             <form phx-submit="add-target" phx-change="target-type-changed" class="space-y-3">
-              <div class="flex items-end gap-3">
-                <div class="flex-1">
-                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Target Type
-                  </label>
-                  <select
-                    name="target_type"
-                    class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Target Type
+                </label>
+                <select
+                  name="target_type"
+                  class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                >
+                  <option
+                    :for={{label, value} <- TriggerTargets.type_options()}
+                    value={value}
+                    selected={value == @selected_target_type}
                   >
-                    <option
-                      :for={type <- TriggerTargetConfig.target_types()}
-                      value={type}
-                      selected={type == @selected_target_type}
-                    >
-                      {humanize_target_type(type)}
-                    </option>
-                  </select>
-                </div>
+                    {label}
+                  </option>
+                </select>
               </div>
-
-              <div :if={@selected_target_type == "log_message"} class="flex items-end gap-3">
-                <div class="flex-1">
-                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Log Level
-                  </label>
-                  <select
-                    name="level"
-                    class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
-                  >
-                    <option :for={level <- ~w(debug info warning error)} value={level}>
-                      {level}
-                    </option>
-                  </select>
-                </div>
-                <div class="flex-1">
-                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Message Prefix
-                  </label>
-                  <input
-                    name="message_prefix"
-                    type="text"
-                    value="Trigger"
-                    class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
-                  />
-                </div>
-              </div>
-
+              <.config_fields fields={@target_fields} />
               <.button type="submit" class="flex-shrink-0">Add Target</.button>
             </form>
           </div>
@@ -211,26 +182,78 @@ defmodule ExNVRWeb.TriggerConfigLive do
     """
   end
 
+  attr :fields, :list, required: true
+
+  defp config_fields(assigns) do
+    ~H"""
+    <div :for={field <- @fields}>
+      <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+        {field.label}
+      </label>
+      <select
+        :if={field.type == :select}
+        name={Atom.to_string(field.name)}
+        class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+      >
+        <option
+          :for={{opt_label, opt_value} <- field.options}
+          value={opt_value}
+          selected={opt_value == to_string(field.default)}
+        >
+          {opt_label}
+        </option>
+      </select>
+      <input
+        :if={field.type == :integer}
+        type="number"
+        name={Atom.to_string(field.name)}
+        value={field.default}
+        placeholder={field.placeholder}
+        class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+      />
+      <input
+        :if={field.type == :string}
+        type="text"
+        name={Atom.to_string(field.name)}
+        value={field[:default]}
+        placeholder={field[:placeholder]}
+        required={field[:required]}
+        class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+      />
+    </div>
+    """
+  end
+
   def mount(%{"id" => "new"}, _session, socket) do
     changeset = TriggerConfig.changeset(%{})
+    {source_type, source_fields} = default_type_and_fields(TriggerSources)
+    {target_type, target_fields} = default_type_and_fields(TriggerTargets)
 
     {:ok,
      assign(socket,
        trigger_config: %TriggerConfig{},
        form: to_form(changeset),
-       selected_target_type: "log_message"
+       selected_source_type: source_type,
+       source_fields: source_fields,
+       selected_target_type: target_type,
+       target_fields: target_fields
      )}
   end
 
   def mount(%{"id" => id}, _session, socket) do
     trigger_config = Triggers.get_trigger_config!(String.to_integer(id))
     changeset = TriggerConfig.changeset(trigger_config, %{})
+    {source_type, source_fields} = default_type_and_fields(TriggerSources)
+    {target_type, target_fields} = default_type_and_fields(TriggerTargets)
 
     {:ok,
      assign(socket,
        trigger_config: trigger_config,
        form: to_form(changeset),
-       selected_target_type: "log_message"
+       selected_source_type: source_type,
+       source_fields: source_fields,
+       selected_target_type: target_type,
+       target_fields: target_fields
      )}
   end
 
@@ -250,21 +273,35 @@ defmodule ExNVRWeb.TriggerConfigLive do
       else: do_create(socket, params)
   end
 
-  def handle_event("target-type-changed", %{"target_type" => target_type}, socket) do
-    {:noreply, assign(socket, selected_target_type: target_type)}
+  def handle_event("source-type-changed", %{"source_type" => source_type}, socket) do
+    fields = fields_for_type(TriggerSources, source_type, :config_fields)
+    {:noreply, assign(socket, selected_source_type: source_type, source_fields: fields)}
   end
 
-  def handle_event("target-type-changed", _params, socket) do
-    {:noreply, socket}
+  def handle_event("source-type-changed", _params, socket), do: {:noreply, socket}
+
+  def handle_event("target-type-changed", %{"target_type" => target_type}, socket) do
+    fields = fields_for_type(TriggerTargets, target_type, :config_fields)
+    {:noreply, assign(socket, selected_target_type: target_type, target_fields: fields)}
   end
+
+  def handle_event("target-type-changed", _params, socket), do: {:noreply, socket}
 
   def handle_event("add-source", params, socket) do
     trigger_config = socket.assigns.trigger_config
+    source_type = params["source_type"]
+    fields = fields_for_type(TriggerSources, source_type, :config_fields)
+
+    config =
+      Enum.into(fields, %{}, fn field ->
+        key = Atom.to_string(field.name)
+        {key, params[key]}
+      end)
 
     source_params = %{
       trigger_config_id: trigger_config.id,
-      source_type: params["source_type"],
-      config: %{"event_type" => params["event_type"]}
+      source_type: source_type,
+      config: config
     }
 
     case Triggers.create_source_config(source_params) do
@@ -293,18 +330,13 @@ defmodule ExNVRWeb.TriggerConfigLive do
   def handle_event("add-target", params, socket) do
     trigger_config = socket.assigns.trigger_config
     target_type = params["target_type"]
+    fields = fields_for_type(TriggerTargets, target_type, :config_fields)
 
     config =
-      case target_type do
-        "log_message" ->
-          %{
-            "level" => params["level"] || "info",
-            "message_prefix" => params["message_prefix"] || "Trigger"
-          }
-
-        _ ->
-          %{}
-      end
+      Enum.into(fields, %{}, fn field ->
+        key = Atom.to_string(field.name)
+        {key, params[key]}
+      end)
 
     target_params = %{
       trigger_config_id: trigger_config.id,
@@ -364,8 +396,38 @@ defmodule ExNVRWeb.TriggerConfigLive do
     end
   end
 
-  defp humanize_target_type("log_message"), do: "Log Message"
-  defp humanize_target_type("start_recording"), do: "Start Recording"
-  defp humanize_target_type("stop_recording"), do: "Stop Recording"
-  defp humanize_target_type(other), do: other
+  defp default_type_and_fields(registry) do
+    case registry.type_options() do
+      [{_label, type} | _] -> {type, fields_for_type(registry, type, :config_fields)}
+      [] -> {nil, []}
+    end
+  end
+
+  defp fields_for_type(registry, type, callback) do
+    case registry.module_for(type) do
+      nil -> []
+      module -> apply(module, callback, [])
+    end
+  end
+
+  defp source_label(type) do
+    case TriggerSources.module_for(type) do
+      nil -> type
+      module -> module.label()
+    end
+  end
+
+  defp target_label(type) do
+    case TriggerTargets.module_for(type) do
+      nil -> type
+      module -> module.label()
+    end
+  end
+
+  defp format_key(key) when is_binary(key) do
+    key |> String.replace("_", " ") |> String.capitalize()
+  end
+
+  defp format_value(val) when is_list(val), do: Enum.join(val, ", ")
+  defp format_value(val), do: to_string(val)
 end

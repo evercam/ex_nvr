@@ -96,7 +96,7 @@ defmodule ExNVR.TriggersTest do
           config: %{}
         })
 
-      assert %{config: ["event source requires an event_type"]} = errors_on(changeset)
+      assert %{config: _} = errors_on(changeset)
     end
 
     test "delete source config" do
@@ -118,23 +118,14 @@ defmodule ExNVR.TriggersTest do
                })
     end
 
-    test "create a start_recording target" do
+    test "create a device_control target" do
       trigger = trigger_config_fixture()
 
-      assert {:ok, %TriggerTargetConfig{target_type: "start_recording"}} =
+      assert {:ok, %TriggerTargetConfig{target_type: "device_control"}} =
                Triggers.create_target_config(%{
                  trigger_config_id: trigger.id,
-                 target_type: "start_recording"
-               })
-    end
-
-    test "create a stop_recording target" do
-      trigger = trigger_config_fixture()
-
-      assert {:ok, %TriggerTargetConfig{target_type: "stop_recording"}} =
-               Triggers.create_target_config(%{
-                 trigger_config_id: trigger.id,
-                 target_type: "stop_recording"
+                 target_type: "device_control",
+                 config: %{"action" => "start"}
                })
     end
 

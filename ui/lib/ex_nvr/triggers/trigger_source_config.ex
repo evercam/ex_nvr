@@ -4,10 +4,9 @@ defmodule ExNVR.Triggers.TriggerSourceConfig do
   use Ecto.Schema
 
   alias Ecto.Changeset
+  alias ExNVR.Triggers.TriggerSources
 
   @type t :: %__MODULE__{}
-
-  @source_types ~w(event)
 
   schema "trigger_source_configs" do
     field :source_type, :string
@@ -22,26 +21,27 @@ defmodule ExNVR.Triggers.TriggerSourceConfig do
     source_config
     |> Changeset.cast(params, [:source_type, :config, :trigger_config_id])
     |> Changeset.validate_required([:source_type, :trigger_config_id])
-    |> Changeset.validate_inclusion(:source_type, @source_types)
     |> validate_config()
   end
 
   defp validate_config(changeset) do
-    case Changeset.get_field(changeset, :source_type) do
-      "event" -> validate_event_config(changeset)
-      _ -> changeset
-    end
-  end
-
-  defp validate_event_config(changeset) do
+    source_type = Changeset.get_field(changeset, :source_type)
     config = Changeset.get_field(changeset, :config) || %{}
 
-    if is_binary(config["event_type"]) and config["event_type"] != "" do
-      changeset
-    else
-      Changeset.add_error(changeset, :config, "event source requires an event_type")
+    case TriggerSources.module_for(source_type) do
+      nil ->
+        Changeset.add_error(changeset, :source_type, "unknown source type")
+
+      module ->
+        case module.validate_config(config) do
+          {:ok, validated} ->
+            Changeset.put_change(changeset, :config, validated)
+
+          {:error, errors} ->
+            Enum.reduce(errors, changeset, fn {field, msg}, cs ->
+              Changeset.add_error(cs, :config, "#{field}: #{msg}")
+            end)
+        end
     end
   end
-
-  def source_types, do: @source_types
 end

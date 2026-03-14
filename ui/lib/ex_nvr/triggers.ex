@@ -14,6 +14,7 @@ defmodule ExNVR.Triggers do
     DeviceTriggerConfig,
     TriggerConfig,
     TriggerSourceConfig,
+    TriggerSources,
     TriggerTargetConfig
   }
 
@@ -126,21 +127,24 @@ defmodule ExNVR.Triggers do
   """
   @spec matching_triggers(binary(), String.t()) :: [TriggerConfig.t()]
   def matching_triggers(device_id, event_type) do
+    # Build a fake event struct for matching — only type is needed
+    event = %ExNVR.Events.Event{type: event_type, device_id: device_id}
+
     from(tc in TriggerConfig,
       join: dtc in DeviceTriggerConfig,
       on: dtc.trigger_config_id == tc.id,
-      join: sc in TriggerSourceConfig,
-      on: sc.trigger_config_id == tc.id,
       where: dtc.device_id == ^device_id,
       where: tc.enabled == true,
-      where: sc.source_type == "event",
       preload: [:source_configs, :target_configs]
     )
     |> Repo.all()
     |> Enum.uniq_by(& &1.id)
     |> Enum.filter(fn tc ->
       Enum.any?(tc.source_configs, fn sc ->
-        sc.source_type == "event" and sc.config["event_type"] == event_type
+        case TriggerSources.module_for(sc.source_type) do
+          nil -> false
+          module -> module.matches?(sc.config, event)
+        end
       end)
     end)
   end

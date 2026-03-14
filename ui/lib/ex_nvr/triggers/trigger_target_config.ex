@@ -4,10 +4,9 @@ defmodule ExNVR.Triggers.TriggerTargetConfig do
   use Ecto.Schema
 
   alias Ecto.Changeset
+  alias ExNVR.Triggers.TriggerTargets
 
   @type t :: %__MODULE__{}
-
-  @target_types ~w(log_message start_recording stop_recording)
 
   schema "trigger_target_configs" do
     field :target_type, :string
@@ -23,31 +22,27 @@ defmodule ExNVR.Triggers.TriggerTargetConfig do
     target_config
     |> Changeset.cast(params, [:target_type, :config, :enabled, :trigger_config_id])
     |> Changeset.validate_required([:target_type, :trigger_config_id])
-    |> Changeset.validate_inclusion(:target_type, @target_types)
     |> validate_config()
   end
 
   defp validate_config(changeset) do
-    case Changeset.get_field(changeset, :target_type) do
-      "log_message" -> validate_log_message_config(changeset)
-      _ -> changeset
-    end
-  end
-
-  defp validate_log_message_config(changeset) do
+    target_type = Changeset.get_field(changeset, :target_type)
     config = Changeset.get_field(changeset, :config) || %{}
-    level = config["level"] || "info"
 
-    if level in ~w(debug info warning error) do
-      changeset
-    else
-      Changeset.add_error(
-        changeset,
-        :config,
-        "log level must be one of: debug, info, warning, error"
-      )
+    case TriggerTargets.module_for(target_type) do
+      nil ->
+        Changeset.add_error(changeset, :target_type, "unknown target type")
+
+      module ->
+        case module.validate_config(config) do
+          {:ok, validated} ->
+            Changeset.put_change(changeset, :config, validated)
+
+          {:error, errors} ->
+            Enum.reduce(errors, changeset, fn {field, msg}, cs ->
+              Changeset.add_error(cs, :config, "#{field}: #{msg}")
+            end)
+        end
     end
   end
-
-  def target_types, do: @target_types
 end
