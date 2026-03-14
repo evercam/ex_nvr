@@ -26,7 +26,7 @@ defmodule ExNVRWeb.DeviceDetailsLive do
         <:tab id="settings" label="Settings" />
         <:tab id="events" label="Events" />
         <:tab id="triggers" label="Triggers" />
-        
+
     <!-- device details tab -->
         <:tab_content for="details">
           <div class="flex flex-col xl:flex-row gap-5 items-start">
@@ -113,7 +113,7 @@ defmodule ExNVRWeb.DeviceDetailsLive do
                   </div>
                 </dl>
               </div>
-              
+
     <!-- Hardware card (only when at least one field is present) -->
               <div
                 :if={@device.vendor || @device.model || @device.mac || @device.url}
@@ -148,7 +148,7 @@ defmodule ExNVRWeb.DeviceDetailsLive do
                 </dl>
               </div>
             </div>
-            
+
     <!-- Right: snapshot player -->
             <div class="w-full xl:w-[480px] shrink-0">
               <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
@@ -181,7 +181,7 @@ defmodule ExNVRWeb.DeviceDetailsLive do
                     Unavailable
                   </span>
                 </div>
-                
+
     <!-- Active player -->
                 <div :if={@snapshot_enabled}>
                   <div
@@ -204,7 +204,7 @@ defmodule ExNVRWeb.DeviceDetailsLive do
                     Refreshes every 10 seconds
                   </p>
                 </div>
-                
+
     <!-- Disabled placeholder -->
                 <div
                   :if={not @snapshot_enabled}
@@ -284,7 +284,7 @@ defmodule ExNVRWeb.DeviceDetailsLive do
             </div>
           </div>
         </:tab_content>
-        
+
     <!-- recordings tab -->
         <:tab_content for="recordings">
           <.live_component
@@ -294,7 +294,7 @@ defmodule ExNVRWeb.DeviceDetailsLive do
             params={@params}
           />
         </:tab_content>
-        
+
     <!-- stats tab-->
         <:tab_content for="stats">
           <.live_component
@@ -314,7 +314,7 @@ defmodule ExNVRWeb.DeviceDetailsLive do
             current_user={@current_user}
           />
         </:tab_content>
-        
+
     <!-- events tab-->
         <:tab_content for="events">
           <.live_component
