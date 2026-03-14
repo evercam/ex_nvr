@@ -164,10 +164,8 @@ defmodule ExNVRWeb.DeviceLive do
   defp do_update_device(socket, device, device_params) do
     case Devices.update(device, device_params) do
       {:ok, _updated_device} ->
-        info = "Device updated successfully"
-
         socket
-        |> put_flash(:info, info)
+        |> put_flash(:info, "Device updated successfully")
         |> redirect(to: ~p"/devices")
         |> then(&{:noreply, &1})
 

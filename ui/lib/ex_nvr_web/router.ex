@@ -151,6 +151,9 @@ defmodule ExNVRWeb.Router do
       ] do
       live "/devices/:id", DeviceLive, :edit
 
+      live "/triggers", TriggerConfigListLive, :list
+      live "/triggers/:id", TriggerConfigLive, :edit
+
       live "/remote-storages", RemoteStorageListLive, :list
       live "/remote-storages/:id", RemoteStorageLive, :edit
 
