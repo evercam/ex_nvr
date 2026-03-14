@@ -5,11 +5,10 @@ defmodule ExNVR.Triggers.Executor do
 
   require Logger
 
+  alias ExNVR.Devices
   alias ExNVR.Events.Event
   alias ExNVR.Triggers
   alias ExNVR.Triggers.TriggerTargetConfig
-
-  @type pipeline_module :: module()
 
   @doc """
   Evaluate triggers for the given event. Finds matching trigger configs
@@ -21,23 +20,27 @@ defmodule ExNVR.Triggers.Executor do
   def evaluate(%Event{device_id: nil}, _opts), do: :ok
 
   def evaluate(%Event{} = event, opts) do
-    pipeline_module = Keyword.get(opts, :pipeline_module, ExNVR.Pipelines.Main)
-    device_loader = Keyword.get(opts, :device_loader, &ExNVR.Devices.get/1)
+    device_loader = Keyword.get(opts, :device_loader, &Devices.get/1)
+    state_updater = Keyword.get(opts, :state_updater, &Devices.update_state/2)
 
     triggers = Triggers.matching_triggers(event.device_id, event.type)
+
+    Logger.info(
+      "Trigger executor: found #{length(triggers)} matching trigger(s) for device=#{event.device_id} event_type=#{event.type}"
+    )
 
     Enum.each(triggers, fn trigger_config ->
       trigger_config.target_configs
       |> Enum.filter(& &1.enabled)
-      |> Enum.each(&execute_target(&1, event, pipeline_module, device_loader))
+      |> Enum.each(&execute_target(&1, event, device_loader, state_updater))
     end)
   end
 
   defp execute_target(
          %TriggerTargetConfig{target_type: "log_message"} = target,
          event,
-         _pipeline,
-         _loader
+         _loader,
+         _updater
        ) do
     level = target.config["level"] || "info"
     prefix = target.config["message_prefix"] || "Trigger"
@@ -49,8 +52,8 @@ defmodule ExNVR.Triggers.Executor do
   defp execute_target(
          %TriggerTargetConfig{target_type: "start_recording"},
          event,
-         pipeline_module,
-         device_loader
+         device_loader,
+         state_updater
        ) do
     case device_loader.(event.device_id) do
       nil ->
@@ -59,10 +62,9 @@ defmodule ExNVR.Triggers.Executor do
       device ->
         Logger.info("Trigger: starting recording for device #{device.id}")
 
-        try do
-          pipeline_module.start_recording(device)
-        rescue
-          e -> Logger.error("Trigger: failed to start recording: #{Exception.message(e)}")
+        case state_updater.(device, :recording) do
+          {:ok, _device} -> :ok
+          {:error, reason} -> Logger.error("Trigger: failed to start recording: #{inspect(reason)}")
         end
     end
   end
@@ -70,8 +72,8 @@ defmodule ExNVR.Triggers.Executor do
   defp execute_target(
          %TriggerTargetConfig{target_type: "stop_recording"},
          event,
-         pipeline_module,
-         device_loader
+         device_loader,
+         state_updater
        ) do
     case device_loader.(event.device_id) do
       nil ->
@@ -80,15 +82,14 @@ defmodule ExNVR.Triggers.Executor do
       device ->
         Logger.info("Trigger: stopping recording for device #{device.id}")
 
-        try do
-          pipeline_module.stop_recording(device)
-        rescue
-          e -> Logger.error("Trigger: failed to stop recording: #{Exception.message(e)}")
+        case state_updater.(device, :stopped) do
+          {:ok, _device} -> :ok
+          {:error, reason} -> Logger.error("Trigger: failed to stop recording: #{inspect(reason)}")
         end
     end
   end
 
-  defp execute_target(%TriggerTargetConfig{target_type: type}, _event, _pipeline, _loader) do
+  defp execute_target(%TriggerTargetConfig{target_type: type}, _event, _loader, _updater) do
     Logger.warning("Trigger: unknown target type #{inspect(type)}")
   end
 end

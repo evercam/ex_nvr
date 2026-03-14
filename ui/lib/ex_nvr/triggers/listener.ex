@@ -21,11 +21,15 @@ defmodule ExNVR.Triggers.Listener do
 
   @impl true
   def handle_info({:event_created, event}, state) do
+    Logger.info(
+      "Trigger listener received event: type=#{event.type} device_id=#{event.device_id}"
+    )
+
     Triggers.Executor.evaluate(event)
     {:noreply, state}
-  rescue
-    e ->
-      Logger.error("Trigger listener error: #{Exception.message(e)}")
+  catch
+    kind, reason ->
+      Logger.error("Trigger listener error: #{Exception.format(kind, reason)}")
       {:noreply, state}
   end
 
