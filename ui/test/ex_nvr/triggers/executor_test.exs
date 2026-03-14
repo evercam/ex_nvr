@@ -46,7 +46,7 @@ defmodule ExNVR.Triggers.ExecutorTest do
   end
 
   describe "evaluate/2 with start_recording target" do
-    test "calls pipeline start_recording", %{device: device} do
+    test "updates device state to recording", %{device: device} do
       full_trigger_fixture(device, %{
         event_type: "motion_detected",
         target_type: "start_recording"
@@ -55,16 +55,17 @@ defmodule ExNVR.Triggers.ExecutorTest do
       {:ok, event} = Events.create_event(device, %{"type" => "motion_detected"})
       test_pid = self()
 
-      mock_loader = fn _id -> device end
-
-      mock_module = spawn_mock_pipeline(test_pid)
+      mock_updater = fn dev, state ->
+        send(test_pid, {:update_state, dev.id, state})
+        {:ok, dev}
+      end
 
       Executor.evaluate(event,
-        pipeline_module: mock_module,
-        device_loader: mock_loader
+        state_updater: mock_updater,
+        device_loader: fn _id -> device end
       )
 
-      assert_received {:start_recording, _device}
+      assert_received {:update_state, _, :recording}
     end
 
     test "logs warning when device not found", %{device: device} do
@@ -86,7 +87,7 @@ defmodule ExNVR.Triggers.ExecutorTest do
   end
 
   describe "evaluate/2 with stop_recording target" do
-    test "calls pipeline stop_recording", %{device: device} do
+    test "updates device state to stopped", %{device: device} do
       full_trigger_fixture(device, %{
         event_type: "motion_ended",
         target_type: "stop_recording"
@@ -95,14 +96,17 @@ defmodule ExNVR.Triggers.ExecutorTest do
       {:ok, event} = Events.create_event(device, %{"type" => "motion_ended"})
       test_pid = self()
 
-      mock_module = spawn_mock_pipeline(test_pid)
+      mock_updater = fn dev, state ->
+        send(test_pid, {:update_state, dev.id, state})
+        {:ok, dev}
+      end
 
       Executor.evaluate(event,
-        pipeline_module: mock_module,
+        state_updater: mock_updater,
         device_loader: fn _id -> device end
       )
 
-      assert_received {:stop_recording, _device}
+      assert_received {:update_state, _, :stopped}
     end
 
     test "logs warning when device not found", %{device: device} do
@@ -173,41 +177,22 @@ defmodule ExNVR.Triggers.ExecutorTest do
 
       {:ok, event} = Events.create_event(device, %{"type" => "multi_test"})
       test_pid = self()
-      mock_module = spawn_mock_pipeline(test_pid)
+
+      mock_updater = fn dev, state ->
+        send(test_pid, {:update_state, dev.id, state})
+        {:ok, dev}
+      end
 
       log =
         capture_log([level: :warning], fn ->
           Executor.evaluate(event,
-            pipeline_module: mock_module,
+            state_updater: mock_updater,
             device_loader: fn _id -> device end
           )
         end)
 
       assert log =~ "LOG_TARGET:"
-      assert_received {:start_recording, _device}
+      assert_received {:update_state, _, :recording}
     end
-  end
-
-  defp spawn_mock_pipeline(test_pid) do
-    # Create a module dynamically that sends messages to test process
-    module_name = :"MockPipeline_#{System.unique_integer([:positive])}"
-
-    Module.create(
-      module_name,
-      quote do
-        def start_recording(device) do
-          send(unquote(test_pid), {:start_recording, device})
-          :ok
-        end
-
-        def stop_recording(device) do
-          send(unquote(test_pid), {:stop_recording, device})
-          :ok
-        end
-      end,
-      Macro.Env.location(__ENV__)
-    )
-
-    module_name
   end
 end
