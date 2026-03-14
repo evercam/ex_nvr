@@ -45,11 +45,12 @@ defmodule ExNVR.Triggers.ExecutorTest do
     end
   end
 
-  describe "evaluate/2 with start_recording target" do
-    test "updates device state to recording", %{device: device} do
+  describe "evaluate/2 with device_control target" do
+    test "starts recording with action=start", %{device: device} do
       full_trigger_fixture(device, %{
         event_type: "motion_detected",
-        target_type: "start_recording"
+        target_type: "device_control",
+        target_config: %{"action" => "start"}
       })
 
       {:ok, event} = Events.create_event(device, %{"type" => "motion_detected"})
@@ -68,29 +69,11 @@ defmodule ExNVR.Triggers.ExecutorTest do
       assert_received {:update_state, _, :recording}
     end
 
-    test "logs warning when device not found", %{device: device} do
-      full_trigger_fixture(device, %{
-        event_type: "motion_detected",
-        target_type: "start_recording"
-      })
-
-      {:ok, event} = Events.create_event(device, %{"type" => "motion_detected"})
-
-      log =
-        capture_log([level: :warning], fn ->
-          Executor.evaluate(event, device_loader: fn _id -> nil end)
-        end)
-
-      assert log =~ "cannot start recording"
-      assert log =~ "not found"
-    end
-  end
-
-  describe "evaluate/2 with stop_recording target" do
-    test "updates device state to stopped", %{device: device} do
+    test "stops recording with action=stop", %{device: device} do
       full_trigger_fixture(device, %{
         event_type: "motion_ended",
-        target_type: "stop_recording"
+        target_type: "device_control",
+        target_config: %{"action" => "stop"}
       })
 
       {:ok, event} = Events.create_event(device, %{"type" => "motion_ended"})
@@ -109,20 +92,44 @@ defmodule ExNVR.Triggers.ExecutorTest do
       assert_received {:update_state, _, :stopped}
     end
 
-    test "logs warning when device not found", %{device: device} do
+    test "toggles recording with action=toggle", %{device: device} do
       full_trigger_fixture(device, %{
-        event_type: "motion_ended",
-        target_type: "stop_recording"
+        event_type: "button_press",
+        target_type: "device_control",
+        target_config: %{"action" => "toggle"}
       })
 
-      {:ok, event} = Events.create_event(device, %{"type" => "motion_ended"})
+      {:ok, event} = Events.create_event(device, %{"type" => "button_press"})
+      test_pid = self()
+
+      mock_updater = fn dev, state ->
+        send(test_pid, {:update_state, dev.id, state})
+        {:ok, dev}
+      end
+
+      Executor.evaluate(event,
+        state_updater: mock_updater,
+        device_loader: fn _id -> device end
+      )
+
+      assert_received {:update_state, _, :stopped}
+    end
+
+    test "logs warning when device not found", %{device: device} do
+      full_trigger_fixture(device, %{
+        event_type: "motion_detected",
+        target_type: "device_control",
+        target_config: %{"action" => "start"}
+      })
+
+      {:ok, event} = Events.create_event(device, %{"type" => "motion_detected"})
 
       log =
         capture_log([level: :warning], fn ->
           Executor.evaluate(event, device_loader: fn _id -> nil end)
         end)
 
-      assert log =~ "cannot stop recording"
+      assert log =~ "not found"
     end
   end
 
@@ -169,8 +176,8 @@ defmodule ExNVR.Triggers.ExecutorTest do
       })
 
       target_config_fixture(trigger, %{
-        target_type: "start_recording",
-        config: %{}
+        target_type: "device_control",
+        config: %{"action" => "start"}
       })
 
       ExNVR.Triggers.set_device_trigger_configs(device.id, [trigger.id])
