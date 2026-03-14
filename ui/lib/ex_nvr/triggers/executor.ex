@@ -63,8 +63,11 @@ defmodule ExNVR.Triggers.Executor do
         Logger.info("Trigger: starting recording for device #{device.id}")
 
         case state_updater.(device, :recording) do
-          {:ok, _device} -> :ok
-          {:error, reason} -> Logger.error("Trigger: failed to start recording: #{inspect(reason)}")
+          {:ok, _device} ->
+            :ok
+
+          {:error, reason} ->
+            Logger.error("Trigger: failed to start recording: #{inspect(reason)}")
         end
     end
   end
@@ -83,8 +86,11 @@ defmodule ExNVR.Triggers.Executor do
         Logger.info("Trigger: stopping recording for device #{device.id}")
 
         case state_updater.(device, :stopped) do
-          {:ok, _device} -> :ok
-          {:error, reason} -> Logger.error("Trigger: failed to stop recording: #{inspect(reason)}")
+          {:ok, _device} ->
+            :ok
+
+          {:error, reason} ->
+            Logger.error("Trigger: failed to stop recording: #{inspect(reason)}")
         end
     end
   end
