@@ -3,7 +3,7 @@ defmodule ExNVR.Elements.VideoBuffererDurationTest do
   Tests that verify the VideoBufferer holds the correct number of frames
   for seconds-based eviction and that flushed output has the expected
   duration. Uses both direct callback math and a real Membrane pipeline
-  with fixture data verified by ffprobe.
+  with fixture data verified by ExMP4.
   """
 
   use ExNVR.DataCase
@@ -179,7 +179,7 @@ defmodule ExNVR.Elements.VideoBuffererDurationTest do
     end
   end
 
-  # --- Pipeline test: verify output recording duration with ffprobe ---
+  # --- Pipeline test: verify output recording duration with ExMP4 ---
 
   defmodule Timestamper do
     @moduledoc false
@@ -210,7 +210,7 @@ defmodule ExNVR.Elements.VideoBuffererDurationTest do
     defp update_nalus_metadata(metadata), do: metadata
   end
 
-  describe "pipeline output verified by ffprobe" do
+  describe "pipeline output verified by ExMP4" do
     setup %{tmp_dir: tmp_dir} do
       device =
         camera_device_fixture(tmp_dir, %{
@@ -243,7 +243,7 @@ defmodule ExNVR.Elements.VideoBuffererDurationTest do
         recordings
         |> Enum.map(fn recording ->
           path = ExNVR.Recordings.recording_path(device, recording)
-          ffprobe_duration(path)
+          mp4_duration(path)
         end)
         |> Enum.sum()
 
@@ -271,7 +271,7 @@ defmodule ExNVR.Elements.VideoBuffererDurationTest do
         recordings
         |> Enum.map(fn recording ->
           path = ExNVR.Recordings.recording_path(device, recording)
-          ffprobe_frame_count(path)
+          mp4_frame_count(path)
         end)
         |> Enum.sum()
 
@@ -320,36 +320,18 @@ defmodule ExNVR.Elements.VideoBuffererDurationTest do
     |> Enum.map(&:binary.list_to_bin/1)
   end
 
-  defp ffprobe_duration(path) do
-    {output, 0} =
-      System.cmd("ffprobe", [
-        "-i",
-        path,
-        "-show_entries",
-        "format=duration",
-        "-v",
-        "quiet",
-        "-of",
-        "csv=p=0"
-      ])
-
-    output |> String.trim() |> String.to_float()
+  defp mp4_duration(path) do
+    {:ok, reader} = ExMP4.Reader.new(path)
+    duration_ms = ExMP4.Reader.duration(reader, :millisecond)
+    ExMP4.Reader.close(reader)
+    duration_ms / 1000
   end
 
-  defp ffprobe_frame_count(path) do
-    {output, 0} =
-      System.cmd("ffprobe", [
-        "-i",
-        path,
-        "-count_frames",
-        "-show_entries",
-        "stream=nb_read_frames",
-        "-v",
-        "quiet",
-        "-of",
-        "csv=p=0"
-      ])
-
-    output |> String.trim() |> String.to_integer()
+  defp mp4_frame_count(path) do
+    {:ok, reader} = ExMP4.Reader.new(path)
+    track = ExMP4.Reader.track(reader, :video)
+    count = track.sample_count
+    ExMP4.Reader.close(reader)
+    count
   end
 end
