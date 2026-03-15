@@ -19,11 +19,6 @@ defmodule ExNVR.Model.Device.StorageConfig do
     # Sub stream
     field :record_sub_stream, Ecto.Enum, values: [:never, :always], default: :never
     field :schedule, :map
-
-    # on_event buffer settings
-    field :event_timeout, :integer, default: 30_000
-    field :buffer_limit_type, Ecto.Enum, values: [:keyframes, :seconds, :bytes], default: :keyframes
-    field :buffer_limit_value, :integer, default: 3
   end
 
   @spec changeset(t(), map()) :: Ecto.Changeset.t()
@@ -48,10 +43,7 @@ defmodule ExNVR.Model.Device.StorageConfig do
       :full_drive_threshold,
       :full_drive_action,
       :record_sub_stream,
-      :schedule,
-      :event_timeout,
-      :buffer_limit_type,
-      :buffer_limit_value
+      :schedule
     ])
     |> common_changeset()
   end

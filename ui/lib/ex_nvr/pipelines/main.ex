@@ -44,6 +44,8 @@ defmodule ExNVR.Pipelines.Main do
   alias ExNVR.Elements.{VideoBufferer, VideoStreamStatReporter}
   alias ExNVR.Model.Device
   alias ExNVR.Pipeline.{Output, Source, StorageMonitor}
+  alias ExNVR.Triggers
+  alias ExNVR.Triggers.Targets.TriggerRecording
 
   @type encoding :: :H264 | :H265
 
@@ -277,18 +279,21 @@ defmodule ExNVR.Pipelines.Main do
   def handle_info({:storage_monitor, :record?, false}, ctx, state) do
     Membrane.Logger.info("[StorageMonitor] stop recording")
 
-    childs_to_delete = [
+    static_children = [
       {:thumbnailer, :sub_stream},
       {:storage, :sub_stream},
-      {:storage, :main_stream},
-      {:video_bufferer, :main_stream}
+      {:storage, :main_stream}
     ]
 
     state = %{maybe_update_device_and_report(state, :streaming) | record_main_stream?: false}
 
     actions =
       Map.keys(ctx.children)
-      |> Enum.filter(&Enum.member?(childs_to_delete, &1))
+      |> Enum.filter(fn
+        {:video_bufferer, _id} -> true
+        {:storage, {:on_event, _id}} -> true
+        child -> Enum.member?(static_children, child)
+      end)
       |> then(&[remove_children: &1])
 
     {actions, state}
@@ -465,22 +470,7 @@ defmodule ExNVR.Pipelines.Main do
 
   defp build_main_stream_storage_spec(state) do
     if Device.recording_mode(state.device) == :on_event do
-      {limit_type, limit_value, event_timeout} = video_bufferer_opts(state.device)
-
-      [
-        get_child(:tee)
-        |> via_out(:push_output)
-        |> child({:video_bufferer, :main_stream}, %VideoBufferer{
-          device_id: state.device.id,
-          limit: {limit_type, limit_value},
-          event_timeout: event_timeout
-        })
-        |> child({:storage, :main_stream}, %Output.Storage{
-          device: state.device,
-          target_segment_duration: state.segment_duration,
-          correct_timestamp: true
-        })
-      ]
+      build_on_event_storage_specs(state)
     else
       [
         get_child(:tee)
@@ -494,12 +484,27 @@ defmodule ExNVR.Pipelines.Main do
     end
   end
 
-  defp video_bufferer_opts(device) do
-    sc = device.storage_config
-    limit_type = sc.buffer_limit_type || :keyframes
-    limit_value = sc.buffer_limit_value || 3
-    event_timeout = sc.event_timeout || 30_000
-    {limit_type, limit_value, event_timeout}
+  defp build_on_event_storage_specs(state) do
+    target_configs = Triggers.trigger_recording_configs_for_device(state.device.id)
+
+    Enum.flat_map(target_configs, fn target_config ->
+      opts = TriggerRecording.to_bufferer_opts(target_config.config)
+
+      [
+        get_child(:tee)
+        |> via_out(:push_output)
+        |> child({:video_bufferer, target_config.id}, %VideoBufferer{
+          topic: TriggerRecording.topic(target_config.id),
+          limit: opts[:limit] || {:keyframes, 3},
+          event_timeout: opts[:event_timeout] || 30_000
+        })
+        |> child({:storage, {:on_event, target_config.id}}, %Output.Storage{
+          device: state.device,
+          target_segment_duration: state.segment_duration,
+          correct_timestamp: true
+        })
+      ]
+    end)
   end
 
   defp build_sub_stream_storage_spec(%{record_main_stream?: false}), do: []
