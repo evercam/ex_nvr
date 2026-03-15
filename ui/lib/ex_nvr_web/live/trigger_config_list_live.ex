@@ -3,6 +3,8 @@ defmodule ExNVRWeb.TriggerConfigListLive do
 
   use ExNVRWeb, :live_view
 
+  import ExNVR.Authorization
+
   alias ExNVR.Triggers
 
   def render(assigns) do
@@ -104,19 +106,21 @@ defmodule ExNVRWeb.TriggerConfigListLive do
   end
 
   def handle_event("delete-trigger", %{"trigger_id" => trigger_id}, socket) do
+    user = socket.assigns.current_user
     trigger = Triggers.get_trigger_config!(String.to_integer(trigger_id))
 
-    case Triggers.delete_trigger_config(trigger) do
-      {:ok, _} ->
-        socket
-        |> assign(trigger_configs: Triggers.list_trigger_configs())
-        |> put_flash(:info, "Trigger #{trigger.name} deleted")
-        |> then(&{:noreply, &1})
+    with :ok <- authorize(user, :trigger, :delete),
+         {:ok, _} <- Triggers.delete_trigger_config(trigger) do
+      socket
+      |> assign(trigger_configs: Triggers.list_trigger_configs())
+      |> put_flash(:info, "Trigger #{trigger.name} deleted")
+      |> then(&{:noreply, &1})
+    else
+      {:error, :unauthorized} ->
+        {:noreply, put_flash(socket, :error, "You are not authorized to perform this action")}
 
       _other ->
-        socket
-        |> put_flash(:error, "Could not delete trigger")
-        |> then(&{:noreply, &1})
+        {:noreply, put_flash(socket, :error, "Could not delete trigger")}
     end
   end
 end

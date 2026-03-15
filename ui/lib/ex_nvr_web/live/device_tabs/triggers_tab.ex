@@ -3,6 +3,8 @@ defmodule ExNVRWeb.DeviceTabs.TriggersTab do
 
   use ExNVRWeb, :live_component
 
+  import ExNVR.Authorization
+
   alias ExNVR.Triggers
 
   @impl true
@@ -106,16 +108,24 @@ defmodule ExNVRWeb.DeviceTabs.TriggersTab do
 
   @impl true
   def handle_event("toggle-trigger", %{"trigger-id" => trigger_id}, socket) do
-    trigger_id = String.to_integer(trigger_id)
-    selected = socket.assigns.selected_ids
+    user = socket.assigns.current_user
 
-    selected =
-      if trigger_id in selected,
-        do: List.delete(selected, trigger_id),
-        else: [trigger_id | selected]
+    case authorize(user, :trigger, :update) do
+      :ok ->
+        trigger_id = String.to_integer(trigger_id)
+        selected = socket.assigns.selected_ids
 
-    Triggers.set_device_trigger_configs(socket.assigns.device.id, selected)
+        selected =
+          if trigger_id in selected,
+            do: List.delete(selected, trigger_id),
+            else: [trigger_id | selected]
 
-    {:noreply, assign(socket, selected_ids: selected, saved: true)}
+        Triggers.set_device_trigger_configs(socket.assigns.device.id, selected)
+
+        {:noreply, assign(socket, selected_ids: selected, saved: true)}
+
+      {:error, :unauthorized} ->
+        {:noreply, put_flash(socket, :error, "You are not authorized to perform this action")}
+    end
   end
 end

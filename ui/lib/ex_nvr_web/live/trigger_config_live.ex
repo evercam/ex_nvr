@@ -3,6 +3,8 @@ defmodule ExNVRWeb.TriggerConfigLive do
 
   use ExNVRWeb, :live_view
 
+  import ExNVR.Authorization
+
   alias ExNVR.Triggers
 
   alias ExNVR.Triggers.{
@@ -266,11 +268,19 @@ defmodule ExNVRWeb.TriggerConfigLive do
   end
 
   def handle_event("save", %{"trigger_config" => params}, socket) do
+    user = socket.assigns.current_user
     trigger_config = socket.assigns.trigger_config
+    action = if trigger_config.id, do: :update, else: :create
 
-    if trigger_config.id,
-      do: do_update(socket, trigger_config, params),
-      else: do_create(socket, params)
+    case authorize(user, :trigger, action) do
+      :ok ->
+        if trigger_config.id,
+          do: do_update(socket, trigger_config, params),
+          else: do_create(socket, params)
+
+      {:error, :unauthorized} ->
+        {:noreply, put_flash(socket, :error, "You are not authorized to perform this action")}
+    end
   end
 
   def handle_event("source-type-changed", %{"source_type" => source_type}, socket) do
@@ -288,82 +298,114 @@ defmodule ExNVRWeb.TriggerConfigLive do
   def handle_event("target-type-changed", _params, socket), do: {:noreply, socket}
 
   def handle_event("add-source", params, socket) do
-    trigger_config = socket.assigns.trigger_config
-    source_type = params["source_type"]
-    fields = fields_for_type(TriggerSources, source_type, :config_fields)
+    user = socket.assigns.current_user
 
-    config =
-      Enum.into(fields, %{}, fn field ->
-        key = Atom.to_string(field.name)
-        {key, params[key]}
-      end)
+    case authorize(user, :trigger, :update) do
+      :ok ->
+        trigger_config = socket.assigns.trigger_config
+        source_type = params["source_type"]
+        fields = fields_for_type(TriggerSources, source_type, :config_fields)
 
-    source_params = %{
-      trigger_config_id: trigger_config.id,
-      source_type: source_type,
-      config: config
-    }
+        config =
+          Enum.into(fields, %{}, fn field ->
+            key = Atom.to_string(field.name)
+            {key, params[key]}
+          end)
 
-    case Triggers.create_source_config(source_params) do
-      {:ok, _} ->
-        trigger_config = Triggers.get_trigger_config!(trigger_config.id)
-        {:noreply, assign(socket, trigger_config: trigger_config)}
+        source_params = %{
+          trigger_config_id: trigger_config.id,
+          source_type: source_type,
+          config: config
+        }
 
-      {:error, _changeset} ->
-        {:noreply, put_flash(socket, :error, "Could not add source")}
+        case Triggers.create_source_config(source_params) do
+          {:ok, _} ->
+            trigger_config = Triggers.get_trigger_config!(trigger_config.id)
+            {:noreply, assign(socket, trigger_config: trigger_config)}
+
+          {:error, _changeset} ->
+            {:noreply, put_flash(socket, :error, "Could not add source")}
+        end
+
+      {:error, :unauthorized} ->
+        {:noreply, put_flash(socket, :error, "You are not authorized to perform this action")}
     end
   end
 
   def handle_event("delete-source", %{"source_id" => source_id}, socket) do
-    source = ExNVR.Repo.get!(TriggerSourceConfig, source_id)
+    user = socket.assigns.current_user
 
-    case Triggers.delete_source_config(source) do
-      {:ok, _} ->
-        trigger_config = Triggers.get_trigger_config!(socket.assigns.trigger_config.id)
-        {:noreply, assign(socket, trigger_config: trigger_config)}
+    case authorize(user, :trigger, :update) do
+      :ok ->
+        source = ExNVR.Repo.get!(TriggerSourceConfig, source_id)
 
-      {:error, _} ->
-        {:noreply, put_flash(socket, :error, "Could not delete source")}
+        case Triggers.delete_source_config(source) do
+          {:ok, _} ->
+            trigger_config = Triggers.get_trigger_config!(socket.assigns.trigger_config.id)
+            {:noreply, assign(socket, trigger_config: trigger_config)}
+
+          {:error, _} ->
+            {:noreply, put_flash(socket, :error, "Could not delete source")}
+        end
+
+      {:error, :unauthorized} ->
+        {:noreply, put_flash(socket, :error, "You are not authorized to perform this action")}
     end
   end
 
   def handle_event("add-target", params, socket) do
-    trigger_config = socket.assigns.trigger_config
-    target_type = params["target_type"]
-    fields = fields_for_type(TriggerTargets, target_type, :config_fields)
+    user = socket.assigns.current_user
 
-    config =
-      Enum.into(fields, %{}, fn field ->
-        key = Atom.to_string(field.name)
-        {key, params[key]}
-      end)
+    case authorize(user, :trigger, :update) do
+      :ok ->
+        trigger_config = socket.assigns.trigger_config
+        target_type = params["target_type"]
+        fields = fields_for_type(TriggerTargets, target_type, :config_fields)
 
-    target_params = %{
-      trigger_config_id: trigger_config.id,
-      target_type: target_type,
-      config: config
-    }
+        config =
+          Enum.into(fields, %{}, fn field ->
+            key = Atom.to_string(field.name)
+            {key, params[key]}
+          end)
 
-    case Triggers.create_target_config(target_params) do
-      {:ok, _} ->
-        trigger_config = Triggers.get_trigger_config!(trigger_config.id)
-        {:noreply, assign(socket, trigger_config: trigger_config)}
+        target_params = %{
+          trigger_config_id: trigger_config.id,
+          target_type: target_type,
+          config: config
+        }
 
-      {:error, _changeset} ->
-        {:noreply, put_flash(socket, :error, "Could not add target")}
+        case Triggers.create_target_config(target_params) do
+          {:ok, _} ->
+            trigger_config = Triggers.get_trigger_config!(trigger_config.id)
+            {:noreply, assign(socket, trigger_config: trigger_config)}
+
+          {:error, _changeset} ->
+            {:noreply, put_flash(socket, :error, "Could not add target")}
+        end
+
+      {:error, :unauthorized} ->
+        {:noreply, put_flash(socket, :error, "You are not authorized to perform this action")}
     end
   end
 
   def handle_event("delete-target", %{"target_id" => target_id}, socket) do
-    target = ExNVR.Repo.get!(TriggerTargetConfig, target_id)
+    user = socket.assigns.current_user
 
-    case Triggers.delete_target_config(target) do
-      {:ok, _} ->
-        trigger_config = Triggers.get_trigger_config!(socket.assigns.trigger_config.id)
-        {:noreply, assign(socket, trigger_config: trigger_config)}
+    case authorize(user, :trigger, :update) do
+      :ok ->
+        target = ExNVR.Repo.get!(TriggerTargetConfig, target_id)
 
-      {:error, _} ->
-        {:noreply, put_flash(socket, :error, "Could not delete target")}
+        case Triggers.delete_target_config(target) do
+          {:ok, _} ->
+            trigger_config = Triggers.get_trigger_config!(socket.assigns.trigger_config.id)
+            {:noreply, assign(socket, trigger_config: trigger_config)}
+
+          {:error, _} ->
+            {:noreply, put_flash(socket, :error, "Could not delete target")}
+        end
+
+      {:error, :unauthorized} ->
+        {:noreply, put_flash(socket, :error, "You are not authorized to perform this action")}
     end
   end
 

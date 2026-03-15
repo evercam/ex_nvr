@@ -330,6 +330,7 @@ defmodule ExNVRWeb.DeviceDetailsLive do
             id="triggers_tab"
             module={TriggersTab}
             device={@device}
+            current_user={@current_user}
           />
         </:tab_content>
       </.tabs>
