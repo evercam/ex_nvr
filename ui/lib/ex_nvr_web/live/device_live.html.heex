@@ -254,40 +254,6 @@
                   ]}
                 />
               </div>
-              <div :if={@recording_mode == "on_event"}>
-                <div class="grid grid-cols-3 gap-5 items-center my-5">
-                  <span class="col-span-2">Buffer limit type:</span>
-                  <.input
-                    field={storage_config[:buffer_limit_type]}
-                    id="settings-buffer-limit-type"
-                    type="select"
-                    label=""
-                    options={[
-                      {"Keyframes", "keyframes"},
-                      {"Seconds", "seconds"},
-                      {"Bytes", "bytes"}
-                    ]}
-                  />
-
-                  <span class="col-span-2">Buffer limit value:</span>
-                  <.input
-                    field={storage_config[:buffer_limit_value]}
-                    id="settings-buffer-limit-value"
-                    type="number"
-                    label=""
-                    min="1"
-                  />
-
-                  <span class="col-span-2">Event timeout (ms):</span>
-                  <.input
-                    field={storage_config[:event_timeout]}
-                    id="settings-event-timeout"
-                    type="number"
-                    label=""
-                    min="1000"
-                  />
-                </div>
-              </div>
               <div :if={@recording_mode != "never"}>
                 <div class="flex items-center justify-between mt-4 mb-2">
                   <h2>Storage address</h2>

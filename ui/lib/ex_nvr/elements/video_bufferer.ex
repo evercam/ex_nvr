@@ -36,9 +36,9 @@ defmodule ExNVR.Elements.VideoBufferer do
       )
 
   def_options(
-    device_id: [
-      spec: binary(),
-      description: "Device ID — used to subscribe to the events PubSub topic"
+    topic: [
+      spec: String.t(),
+      description: "PubSub topic to subscribe to for event signals"
     ],
     limit: [
       spec: {:keyframes, pos_integer()} | {:seconds, pos_integer()} | {:bytes, pos_integer()},
@@ -55,7 +55,7 @@ defmodule ExNVR.Elements.VideoBufferer do
   @impl true
   def handle_init(_ctx, options) do
     state = %{
-      device_id: options.device_id,
+      topic: options.topic,
       limit: options.limit,
       event_timeout: options.event_timeout,
       mode: :buffering,
@@ -71,7 +71,7 @@ defmodule ExNVR.Elements.VideoBufferer do
 
   @impl true
   def handle_setup(_ctx, state) do
-    Phoenix.PubSub.subscribe(ExNVR.PubSub, "events:#{state.device_id}")
+    Phoenix.PubSub.subscribe(ExNVR.PubSub, state.topic)
     {[], state}
   end
 

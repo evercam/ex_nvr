@@ -183,7 +183,7 @@ defmodule ExNVRWeb.DeviceTabs.SettingsTab do
               <.input
                 field={storage_config[:recording_mode]}
                 type="select"
-                options={[{"Always", "always"}, {"Never", "never"}]}
+                options={[{"Always", "always"}, {"On Event", "on_event"}, {"Never", "never"}]}
               />
             </.settings_row>
 

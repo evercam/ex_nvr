@@ -6,14 +6,14 @@ defmodule ExNVR.Elements.VideoBuffererTest do
   alias ExNVR.Elements.VideoBufferer
 
   @ctx %{}
-  @device_id "test-device-123"
+  @topic "trigger_recording:test-123"
   @stream_format %Membrane.H264{width: 1920, height: 1080, alignment: :au}
 
   # --- Helpers ---
 
   defp init(opts \\ []) do
     options = %VideoBufferer{
-      device_id: Keyword.get(opts, :device_id, @device_id),
+      topic: Keyword.get(opts, :topic, @topic),
       limit: Keyword.get(opts, :limit, {:keyframes, 3}),
       event_timeout: Keyword.get(opts, :event_timeout, 30_000)
     }
