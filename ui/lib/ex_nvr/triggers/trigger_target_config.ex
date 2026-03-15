@@ -22,27 +22,6 @@ defmodule ExNVR.Triggers.TriggerTargetConfig do
     target_config
     |> Changeset.cast(params, [:target_type, :config, :enabled, :trigger_config_id])
     |> Changeset.validate_required([:target_type, :trigger_config_id])
-    |> validate_config()
-  end
-
-  defp validate_config(changeset) do
-    target_type = Changeset.get_field(changeset, :target_type)
-    config = Changeset.get_field(changeset, :config) || %{}
-
-    case TriggerTargets.module_for(target_type) do
-      nil ->
-        Changeset.add_error(changeset, :target_type, "unknown target type")
-
-      module ->
-        case module.validate_config(config) do
-          {:ok, validated} ->
-            Changeset.put_change(changeset, :config, validated)
-
-          {:error, errors} ->
-            Enum.reduce(errors, changeset, fn {field, msg}, cs ->
-              Changeset.add_error(cs, :config, "#{field}: #{msg}")
-            end)
-        end
-    end
+    |> TriggerTargets.validate_config()
   end
 end
