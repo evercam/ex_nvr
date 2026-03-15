@@ -63,7 +63,7 @@ defmodule ExNVR.Elements.VideoBufferer do
       buffer_size: 0,
       keyframe_count: 0,
       timeout_ref: nil,
-      stream_format: nil,
+      stream_format: nil
     }
 
     {[], state}

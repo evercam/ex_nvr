@@ -104,6 +104,7 @@ defmodule ExNVR.Elements.VideoBuffererDurationTest do
       {_actions, state} = send_buffers(state, frames)
 
       count = :queue.len(state.buffer)
+
       assert count >= fps * 10 - fps,
              "Expected at least #{fps * 10 - fps} frames, got #{count}"
 
@@ -121,6 +122,7 @@ defmodule ExNVR.Elements.VideoBuffererDurationTest do
       {_actions, state} = send_buffers(state, frames)
 
       count = :queue.len(state.buffer)
+
       assert count >= fps * 3 - fps,
              "Expected at least #{fps * 3 - fps} frames, got #{count}"
 
@@ -280,6 +282,7 @@ defmodule ExNVR.Elements.VideoBuffererDurationTest do
 
       # Verify math: total_frames / 20fps should give approximate duration
       calculated_duration = total_frames / 20
+
       assert calculated_duration > 2.0,
              "Calculated duration #{calculated_duration}s (#{total_frames} frames / 20fps) too short"
     end
@@ -320,10 +323,14 @@ defmodule ExNVR.Elements.VideoBuffererDurationTest do
   defp ffprobe_duration(path) do
     {output, 0} =
       System.cmd("ffprobe", [
-        "-i", path,
-        "-show_entries", "format=duration",
-        "-v", "quiet",
-        "-of", "csv=p=0"
+        "-i",
+        path,
+        "-show_entries",
+        "format=duration",
+        "-v",
+        "quiet",
+        "-of",
+        "csv=p=0"
       ])
 
     output |> String.trim() |> String.to_float()
@@ -332,11 +339,15 @@ defmodule ExNVR.Elements.VideoBuffererDurationTest do
   defp ffprobe_frame_count(path) do
     {output, 0} =
       System.cmd("ffprobe", [
-        "-i", path,
+        "-i",
+        path,
         "-count_frames",
-        "-show_entries", "stream=nb_read_frames",
-        "-v", "quiet",
-        "-of", "csv=p=0"
+        "-show_entries",
+        "stream=nb_read_frames",
+        "-v",
+        "quiet",
+        "-of",
+        "csv=p=0"
       ])
 
     output |> String.trim() |> String.to_integer()
