@@ -289,11 +289,7 @@ defmodule ExNVR.Pipelines.Main do
 
     actions =
       Map.keys(ctx.children)
-      |> Enum.filter(fn
-        {:video_bufferer, _id} -> true
-        {:storage, {:on_event, _id}} -> true
-        child -> Enum.member?(static_children, child)
-      end)
+      |> Enum.filter(&Enum.member?(static_children, &1))
       |> then(&[remove_children: &1])
 
     {actions, state}
@@ -423,6 +419,7 @@ defmodule ExNVR.Pipelines.Main do
 
   defp build_main_stream_spec(state) do
     build_main_stream_storage_spec(state) ++
+      build_video_bufferer_specs(state) ++
       [
         get_child(:tee)
         |> via_out(:push_output)
@@ -444,6 +441,34 @@ defmodule ExNVR.Pipelines.Main do
         |> via_in(:video)
         |> child(:webrtc, %Output.WebRTC{ice_servers: state.ice_servers})
       ]
+  end
+
+  # Create VideoBufferer → Storage chains at stream start.
+  # The bufferer gates what reaches Storage (buffering vs forwarding mode),
+  # so Storage can always be attached.
+  defp build_video_bufferer_specs(state) do
+    if Device.recording_mode(state.device) == :on_event do
+      target_configs = Triggers.trigger_recording_configs_for_device(state.device.id)
+
+      Enum.map(target_configs, fn target_config ->
+        opts = TriggerRecording.to_bufferer_opts(target_config.config)
+
+        get_child(:tee)
+        |> via_out(:push_output)
+        |> child({:video_bufferer, target_config.id}, %VideoBufferer{
+          topic: TriggerRecording.topic(target_config.id),
+          limit: opts[:limit] || {:keyframes, 3},
+          event_timeout: opts[:event_timeout] || 30_000
+        })
+        |> child({:storage, {:on_event, target_config.id}}, %Output.Storage{
+          device: state.device,
+          target_segment_duration: state.segment_duration,
+          correct_timestamp: true
+        })
+      end)
+    else
+      []
+    end
   end
 
   defp build_sub_stream_spec(%{device: device} = state) do
@@ -470,7 +495,8 @@ defmodule ExNVR.Pipelines.Main do
 
   defp build_main_stream_storage_spec(state) do
     if Device.recording_mode(state.device) == :on_event do
-      build_on_event_storage_specs(state)
+      # on_event storage is handled by build_video_bufferer_specs at stream start
+      []
     else
       [
         get_child(:tee)
@@ -482,29 +508,6 @@ defmodule ExNVR.Pipelines.Main do
         })
       ]
     end
-  end
-
-  defp build_on_event_storage_specs(state) do
-    target_configs = Triggers.trigger_recording_configs_for_device(state.device.id)
-
-    Enum.flat_map(target_configs, fn target_config ->
-      opts = TriggerRecording.to_bufferer_opts(target_config.config)
-
-      [
-        get_child(:tee)
-        |> via_out(:push_output)
-        |> child({:video_bufferer, target_config.id}, %VideoBufferer{
-          topic: TriggerRecording.topic(target_config.id),
-          limit: opts[:limit] || {:keyframes, 3},
-          event_timeout: opts[:event_timeout] || 30_000
-        })
-        |> child({:storage, {:on_event, target_config.id}}, %Output.Storage{
-          device: state.device,
-          target_segment_duration: state.segment_duration,
-          correct_timestamp: true
-        })
-      ]
-    end)
   end
 
   defp build_sub_stream_storage_spec(%{record_main_stream?: false}), do: []
