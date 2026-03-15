@@ -110,6 +110,19 @@ defmodule ExNVR.Triggers do
     :ok
   end
 
+  @spec trigger_config_counts_by_device() :: %{binary() => non_neg_integer()}
+  def trigger_config_counts_by_device do
+    from(dtc in DeviceTriggerConfig,
+      join: tc in TriggerConfig,
+      on: tc.id == dtc.trigger_config_id,
+      where: tc.enabled == true,
+      group_by: dtc.device_id,
+      select: {dtc.device_id, count(dtc.trigger_config_id)}
+    )
+    |> Repo.all()
+    |> Map.new()
+  end
+
   @spec trigger_configs_for_device(binary()) :: [TriggerConfig.t()]
   def trigger_configs_for_device(device_id) do
     from(tc in TriggerConfig,
