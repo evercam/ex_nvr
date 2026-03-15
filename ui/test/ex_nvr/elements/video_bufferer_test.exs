@@ -255,7 +255,7 @@ defmodule ExNVR.Elements.VideoBuffererTest do
 
   # --- Event triggers flush ---
 
-  test "event flushes buffer from last keyframe and switches to forwarding" do
+  test "event flushes buffer from first keyframe and switches to forwarding" do
     state = init()
 
     kf1 = h264_buffer(key_frame?: true, payload: <<1>>)
@@ -268,10 +268,10 @@ defmodule ExNVR.Elements.VideoBuffererTest do
 
     {actions, state} = send_event(state)
 
-    # Should flush from last keyframe (kf2) onwards
+    # Should flush from first keyframe (kf1) onwards — the full pre-roll
     flushed = output_buffers(actions)
-    assert length(flushed) == 2
-    assert Enum.map(flushed, & &1.payload) == [<<3>>, <<4>>]
+    assert length(flushed) == 4
+    assert Enum.map(flushed, & &1.payload) == [<<1>>, <<2>>, <<3>>, <<4>>]
     assert state.mode == :forwarding
   end
 
@@ -283,11 +283,10 @@ defmodule ExNVR.Elements.VideoBuffererTest do
     assert state.mode == :forwarding
   end
 
-  test "event with only non-keyframes in buffer flushes everything" do
+  test "event with only non-keyframes in buffer flushes nothing" do
     state = init()
 
-    # Feed frames without a keyframe first (normally shouldn't happen,
-    # but the reduce_while will traverse all and return everything)
+    # No keyframe in buffer — can't start a decodable stream, so nothing flushed.
     f1 = h264_buffer(payload: <<1>>)
     f2 = h264_buffer(payload: <<2>>)
 
@@ -295,7 +294,7 @@ defmodule ExNVR.Elements.VideoBuffererTest do
     {actions, state} = send_event(state)
 
     flushed = output_buffers(actions)
-    assert length(flushed) == 2
+    assert length(flushed) == 0
     assert state.mode == :forwarding
   end
 
@@ -439,11 +438,11 @@ defmodule ExNVR.Elements.VideoBuffererTest do
     {_actions, state} = send_buffers(state, [kf1, f1, kf2, f2])
     assert state.keyframe_count == 2
 
-    # Trigger event — should flush from last keyframe
+    # Trigger event — should flush from first keyframe (full pre-roll)
     {actions, state} = send_event(state)
     flushed = output_buffers(actions)
-    assert length(flushed) == 2
-    assert Enum.map(flushed, & &1.payload) == [<<3>>, <<4>>]
+    assert length(flushed) == 4
+    assert Enum.map(flushed, & &1.payload) == [<<1>>, <<2>>, <<3>>, <<4>>]
     assert state.mode == :forwarding
   end
 
