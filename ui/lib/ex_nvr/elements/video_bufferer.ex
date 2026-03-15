@@ -64,7 +64,6 @@ defmodule ExNVR.Elements.VideoBufferer do
       keyframe_count: 0,
       timeout_ref: nil,
       stream_format: nil,
-      frames_received: 0
     }
 
     {[], state}
@@ -84,13 +83,7 @@ defmodule ExNVR.Elements.VideoBufferer do
   # --- Forwarding mode: pass frames through ---
   @impl true
   def handle_buffer(:input, buffer, _ctx, %{mode: :forwarding} = state) do
-    frames_received = state.frames_received + 1
-
-    if rem(frames_received, 100) == 0 do
-      Membrane.Logger.info("Forwarding stats: received=#{frames_received}, pts=#{inspect(buffer.pts)}")
-    end
-
-    {[buffer: {:output, buffer}], %{state | frames_received: frames_received}}
+    {[buffer: {:output, buffer}], state}
   end
 
   # --- Buffering mode: accumulate frames ---
@@ -103,22 +96,12 @@ defmodule ExNVR.Elements.VideoBufferer do
 
     queue = :queue.in(buffer, state.buffer)
     buffer_size = state.buffer_size + payload_size(buffer.payload)
-    frames_received = state.frames_received + 1
-
-    if rem(frames_received, 100) == 0 do
-      Membrane.Logger.info(
-        "Buffering stats: received=#{frames_received}, " <>
-          "queued=#{:queue.len(queue)}, keyframes=#{keyframe_count}, " <>
-          "pts=#{inspect(buffer.pts)}"
-      )
-    end
 
     state = %{
       state
       | buffer: queue,
         buffer_size: buffer_size,
-        keyframe_count: keyframe_count,
-        frames_received: frames_received
+        keyframe_count: keyframe_count
     }
 
     {[], evict(state)}
@@ -135,8 +118,6 @@ defmodule ExNVR.Elements.VideoBufferer do
 
       :buffering ->
         {buffers, state} = flush_from_keyframe(state)
-
-        log_buffer_span(buffers)
 
         actions =
           if buffers == [] do
@@ -265,25 +246,6 @@ defmodule ExNVR.Elements.VideoBufferer do
         else
           drop_oldest_cvs(new_state)
         end
-    end
-  end
-
-  defp log_buffer_span([]), do: :ok
-
-  defp log_buffer_span(buffers) do
-    first_pts = buffers |> List.first() |> buffer_pts()
-    last_pts = buffers |> List.last() |> buffer_pts()
-
-    if first_pts && last_pts do
-      diff_ms = Membrane.Time.as_milliseconds(last_pts - first_pts, :round)
-
-      Membrane.Logger.info(
-        "Flushing buffer: #{length(buffers)} frames, " <>
-          "first_pts=#{inspect(first_pts)}, last_pts=#{inspect(last_pts)}, " <>
-          "span=#{diff_ms}ms"
-      )
-    else
-      Membrane.Logger.info("Flushing buffer: #{length(buffers)} frames, pts unavailable")
     end
   end
 
