@@ -94,7 +94,7 @@
             <template #main>
                 <!-- stats  -->
                 <div
-                    v-if="isStreamShown"
+                    v-if="showStreamStats"
                     class="absolute z-10 top-5 left-5 max-w-sm bg-slate-800/70 rounded-2xl shadow-xl p-2"
                 >
                     <div
