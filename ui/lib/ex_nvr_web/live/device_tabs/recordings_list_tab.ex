@@ -51,7 +51,9 @@ defmodule ExNVRWeb.DeviceTabs.RecordingsListTab do
               {RecordingListLive.format_date(recording.end_date, @device.timezone)}
             </:col>
             <:col :let={recording} label="Duration">
-              {humanize_duration(DateTime.diff(recording.end_date, recording.start_date, :millisecond))}
+              {humanize_duration(
+                DateTime.diff(recording.end_date, recording.start_date, :millisecond)
+              )}
             </:col>
             <:action :let={recording}>
               <div class="flex justify-end">
@@ -112,7 +114,8 @@ defmodule ExNVRWeb.DeviceTabs.RecordingsListTab do
         <div
           class="absolute inset-0 bg-black/80 backdrop-blur-sm"
           phx-click={RecordingListLive.close_popup()}
-        ></div>
+        >
+        </div>
         <div class="relative z-10 w-full max-w-5xl bg-gray-900 rounded-2xl shadow-2xl overflow-hidden ring-1 ring-white/10">
           <div class="flex items-center justify-between px-5 py-3 bg-gray-800 border-b border-gray-700">
             <div class="flex items-center gap-2 min-w-0">
