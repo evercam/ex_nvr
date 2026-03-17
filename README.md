@@ -105,6 +105,30 @@ If you want to configure some aspects of `ex_nvr`, you can set the following env
 | EXNVR_JSON_LOGGER | Enable json logging, defaults to: `true` |
 | EXNVR_REMOTE_SERVER_URI | The remote server where to send system status. It should be a websocket uri `ws://` or `wss://` |
 | EXNVR_REMOTE_SERVER_TOKEN | A token that will be used for authentication for the websocket connection, it'll be send as a query params with `token` name |
+| EXNVR_OBJECT_DETECTION_HEF | Enables the Hailo detection pipeline when set to a valid `.hef` model path. |
+| EXNVR_OBJECT_DETECTION_STREAM | Selects which stream runs detection. Supported values: `main_stream` and `sub_stream`. Defaults to: `main_stream`. |
+| EXNVR_OBJECT_DETECTION_SCORE_THRESHOLD | Minimum detection score accepted by the post-processing step. Defaults to the value defined in code when unset. |
+| EXNVR_OBJECT_DETECTION_INPUT_LAYER | Optional Hailo input layer override. Use this only when the model layer name cannot be auto-selected correctly. |
+| EXNVR_OBJECT_DETECTION_OUTPUT_LAYER | Optional Hailo output layer override. Use this only when the model layer name cannot be auto-selected correctly. |
+| EXNVR_OBJECT_DETECTION_CLASSES_FILE | Optional path to a JSON file that maps class ids to class names for overlays. When unset, built-in defaults are used. |
+
+### Hailo Object Detection
+
+The Hailo detection and tracking pipeline is disabled by default. To enable it, set `EXNVR_OBJECT_DETECTION_HEF` to a valid model path on the target system.
+
+Example:
+
+```bash
+export EXNVR_OBJECT_DETECTION_HEF=/data/models/yolo11x.hef
+export EXNVR_OBJECT_DETECTION_STREAM=main_stream
+export EXNVR_OBJECT_DETECTION_SCORE_THRESHOLD=0.4
+```
+
+Notes:
+
+* `EXNVR_OBJECT_DETECTION_INPUT_LAYER` and `EXNVR_OBJECT_DETECTION_OUTPUT_LAYER` are only needed when automatic layer selection is not correct for a specific model.
+* `EXNVR_OBJECT_DETECTION_CLASSES_FILE` should point to a JSON object or array describing the class names used by the model.
+* On Nerves, these variables are configured the same way as other runtime environment variables. The target image still needs the Hailo runtime and model file to be present.
 
 ## WebRTC
 

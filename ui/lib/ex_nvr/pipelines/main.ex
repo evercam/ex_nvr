@@ -40,6 +40,7 @@ defmodule ExNVR.Pipelines.Main do
   require Membrane.Logger
 
   alias __MODULE__.State
+  alias ExNVR.AV.Hailo
   alias ExNVR.{Devices, Recordings, Utils}
   alias ExNVR.Elements.VideoStreamStatReporter
   alias ExNVR.Model.Device
@@ -237,6 +238,27 @@ defmodule ExNVR.Pipelines.Main do
   end
 
   @impl true
+  def handle_child_notification(
+        {:tracking_data, payload},
+        {stream, :object_detection},
+        _ctx,
+        %State{} = state
+      )
+      when stream in [:main_stream, :sub_stream] do
+    Phoenix.PubSub.broadcast(
+      ExNVR.PubSub,
+      "device:#{state.device.id}:tracking",
+      {:tracking_data,
+       Map.merge(payload, %{
+         device_id: state.device.id,
+         stream: to_string(stream)
+       })}
+    )
+
+    {[], state}
+  end
+
+  @impl true
   def handle_child_notification(_notification, _element, _ctx, state) do
     {[], state}
   end
@@ -417,6 +439,7 @@ defmodule ExNVR.Pipelines.Main do
 
   defp build_main_stream_spec(state) do
     build_main_stream_storage_spec(state) ++
+      build_main_stream_object_detection_spec() ++
       [
         get_child(:tee)
         |> via_out(:push_output)
@@ -424,7 +447,6 @@ defmodule ExNVR.Pipelines.Main do
         |> child(:hls_sink, %Output.HLS{
           location: Path.join(Utils.hls_dir(state.device.id), "live")
         }),
-        # |> get_child(:hls_sink),
         get_child(:tee)
         |> via_out(:push_output)
         |> child({:snapshooter, :main_stream}, ExNVR.Elements.CVSBufferer),
@@ -455,9 +477,42 @@ defmodule ExNVR.Pipelines.Main do
         stream: :low
       })
     ] ++
+      build_sub_stream_object_detection_spec() ++
       build_sub_stream_storage_spec(device) ++
       build_sub_stream_webrtc_spec(state) ++
       build_sub_stream_bif_spec(state)
+  end
+
+  defp build_main_stream_object_detection_spec do
+    case object_detection_config() do
+      %{hef_file: hef_file, stream: stream} when stream in [:main_stream, :both] ->
+        [
+          get_child(:tee)
+          |> via_out(:push_output)
+          |> child({:main_stream, :object_detection}, %Output.ObjectDetection{
+            hef_file: hef_file
+          })
+        ]
+
+      _other ->
+        []
+    end
+  end
+
+  defp build_sub_stream_object_detection_spec do
+    case object_detection_config() do
+      %{hef_file: hef_file, stream: stream} when stream in [:sub_stream, :both] ->
+        [
+          get_child({:tee, :sub_stream})
+          |> via_out(:push_output)
+          |> child({:sub_stream, :object_detection}, %Output.ObjectDetection{
+            hef_file: hef_file
+          })
+        ]
+
+      _other ->
+        []
+    end
   end
 
   defp build_main_stream_storage_spec(%{record_main_stream?: false}), do: []
@@ -504,7 +559,9 @@ defmodule ExNVR.Pipelines.Main do
   end
 
   defp build_sub_stream_bif_spec(state) do
-    if state.record_main_stream? and state.device.settings.generate_bif do
+    has_address = not is_nil(state.device.storage_config.address)
+
+    if has_address and state.device.settings.generate_bif do
       [
         get_child({:tee, :sub_stream})
         |> via_out(:push_output)
@@ -556,5 +613,26 @@ defmodule ExNVR.Pipelines.Main do
 
   defp ice_servers do
     Application.get_env(:ex_nvr, :ice_servers, "[]") |> Jason.decode(keys: :atoms)
+  end
+
+  defp object_detection_config do
+    with true <- Hailo.available?(),
+         hef_file when is_binary(hef_file) <- System.get_env("EXNVR_OBJECT_DETECTION_HEF"),
+         false <- hef_file == "" do
+      %{hef_file: hef_file, stream: object_detection_stream()}
+    else
+      _other -> nil
+    end
+  end
+
+  defp object_detection_stream do
+    case System.get_env("EXNVR_OBJECT_DETECTION_STREAM", "main_stream") do
+      "main_stream" -> :main_stream
+      "main" -> :main_stream
+      "sub_stream" -> :sub_stream
+      "sub" -> :sub_stream
+      "both" -> :both
+      _other -> :main_stream
+    end
   end
 end

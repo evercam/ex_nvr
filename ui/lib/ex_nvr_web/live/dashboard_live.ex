@@ -2,6 +2,7 @@ defmodule ExNVRWeb.DashboardLive do
   use ExNVRWeb, :live_view
 
   alias Ecto.Changeset
+  alias ExNVR.AV.Hailo
   alias ExNVR.Devices
   alias ExNVR.Model.Device
   alias ExNVR.Recordings
@@ -37,17 +38,21 @@ defmodule ExNVRWeb.DashboardLive do
           stream={@stream}
           device={Map.take(@current_device, [:id, :name, :timezone])}
           live-view-enabled={@live_view_enabled?}
+          live-view-disabled-reason={@live_view_disabled_reason}
+          hailo-available={@hailo_available?}
+          overlay-mode={@overlay_mode}
           start-date={@start_date}
           v-on:switch_stream={JS.push("switch_stream")}
           v-on:switch_device={JS.push("switch_device")}
+          v-on:set-overlay-mode={JS.push("set_overlay_mode")}
           v-on:show-download-modal={show_modal("download-modal")}
           v-on:load-recording={JS.push("load-recording")}
         />
       </div>
 
-      <.modal id="download-modal" class="dark:bg-gray-800/70 dark:backdrop-blur-none">
-        <div class="bg-gray-300 dark:bg-gray-800 p-8 rounded">
-          <h2 class="text-xl text-black dark:text-white font-bold mb-4">Download Footage</h2>
+      <.modal id="download-modal">
+        <div class="p-6">
+          <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Download Footage</h2>
           <.simple_form
             for={@footage_form}
             id="footage_form"
@@ -101,10 +106,7 @@ defmodule ExNVRWeb.DashboardLive do
               </div>
 
               <div class="mr-4 w-full p-2 rounded flex justify-center space-x-4">
-                <.button
-                  class="bg-blue-500 text-white px-4 py-2 rounded flex items-center"
-                  phx-disable-with="Downloading..."
-                >
+                <.button phx-disable-with="Downloading...">
                   Download
                 </.button>
               </div>
@@ -123,7 +125,11 @@ defmodule ExNVRWeb.DashboardLive do
     |> assign_devices()
     |> assign(
       start_date: nil,
-      custom_duration: false
+      custom_duration: false,
+      overlay_mode: "off",
+      tracking_topic: nil,
+      live_view_disabled_reason: nil,
+      hailo_available?: Hailo.available?()
     )
     |> assign(stream_url: "", poster_url: "")
     |> then(&{:ok, &1})
@@ -140,6 +146,7 @@ defmodule ExNVRWeb.DashboardLive do
     socket
     |> assign(current_device: device)
     |> assign(stream: stream, start_date: nil)
+    |> subscribe_tracking(device)
     |> assign_streams()
     |> assign_footage_form(%{"device_id" => device && device.id})
     |> live_view_enabled?()
@@ -153,7 +160,18 @@ defmodule ExNVRWeb.DashboardLive do
     {:noreply, assign_runs(socket)}
   end
 
-  def handle_info(_, socket), do: socket
+  def handle_info({:tracking_data, payload}, socket) do
+    socket =
+      if socket.assigns.overlay_mode != "off" do
+        push_event(socket, "tracking-data", payload)
+      else
+        socket
+      end
+
+    {:noreply, socket}
+  end
+
+  def handle_info(_, socket), do: {:noreply, socket}
 
   def handle_event("switch_device", %{"device" => device_id}, socket) do
     route =
@@ -183,6 +201,27 @@ defmodule ExNVRWeb.DashboardLive do
         |> assign(start_date: new_datetime)
         |> live_view_enabled?()
         |> maybe_push_stream_event(new_datetime)
+      else
+        socket
+      end
+
+    {:noreply, socket}
+  end
+
+  def handle_event("set_overlay_mode", %{"mode" => mode}, socket)
+      when mode in ["off", "detections", "tracking"] do
+    mode =
+      if socket.assigns.hailo_available? do
+        mode
+      else
+        "off"
+      end
+
+    socket = assign(socket, overlay_mode: mode)
+
+    socket =
+      if mode == "off" do
+        push_event(socket, "tracking-clear", %{device_id: socket.assigns.current_device.id})
       else
         socket
       end
@@ -220,6 +259,18 @@ defmodule ExNVRWeb.DashboardLive do
 
   defp assign_devices(socket) do
     assign(socket, devices: Devices.list())
+  end
+
+  defp subscribe_tracking(%{assigns: %{tracking_topic: old_topic}} = socket, device) do
+    if old_topic, do: Phoenix.PubSub.unsubscribe(ExNVR.PubSub, old_topic)
+
+    if device do
+      topic = "device:#{device.id}:tracking"
+      Phoenix.PubSub.subscribe(ExNVR.PubSub, topic)
+      assign(socket, tracking_topic: topic)
+    else
+      assign(socket, tracking_topic: nil)
+    end
   end
 
   defp assign_streams(%{assigns: %{current_device: nil}} = socket), do: socket
@@ -296,15 +347,25 @@ defmodule ExNVRWeb.DashboardLive do
     device = socket.assigns.current_device
     start_date = socket.assigns[:start_date]
 
-    enabled? =
+    {enabled?, reason} =
       cond do
-        is_nil(device) -> false
-        not is_nil(start_date) -> true
-        not ExNVR.Utils.run_main_pipeline?() -> false
-        true -> Device.streaming?(device)
+        is_nil(device) ->
+          {false, nil}
+
+        not is_nil(start_date) ->
+          {true, nil}
+
+        not ExNVR.Utils.run_main_pipeline?() ->
+          {false, "Live view is disabled. The NVR pipeline is not running."}
+
+        Device.streaming?(device) ->
+          {true, nil}
+
+        true ->
+          {false, "Device is not recording. Live view is unavailable until recording starts."}
       end
 
-    assign(socket, live_view_enabled?: enabled?)
+    assign(socket, live_view_enabled?: enabled?, live_view_disabled_reason: reason)
   end
 
   defp parse_datetime(nil, _), do: nil

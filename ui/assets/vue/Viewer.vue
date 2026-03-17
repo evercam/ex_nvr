@@ -79,6 +79,48 @@
                             <EIcon icon="camera" size="xl" class="e-mt-1" />
                         </button>
                     </ETooltip>
+                    <ETooltip
+                        v-if="liveViewEnabled && hailoAvailable"
+                        position="bottom"
+                        :text="
+                            overlayMode === 'detections'
+                                ? 'Disable detection overlay'
+                                : 'Enable detection overlay'
+                        "
+                    >
+                        <button
+                            class="dark:bg-gray-800 dark:border-gray-600 e-h-full text-white dark:text-white px-4 flex items-center dark:hover:bg-gray-600"
+                            :class="overlayMode === 'detections' ? 'bg-emerald-600 hover:bg-emerald-500' : ''"
+                            @click="
+                                $emit('set-overlay-mode', {
+                                    mode: overlayMode === 'detections' ? 'off' : 'detections',
+                                })
+                            "
+                        >
+                            <i class="fa-solid fa-brain e-mt-1"></i>
+                        </button>
+                    </ETooltip>
+                    <ETooltip
+                        v-if="liveViewEnabled && hailoAvailable"
+                        position="bottom"
+                        :text="
+                            overlayMode === 'tracking'
+                                ? 'Disable tracking overlay'
+                                : 'Enable tracking overlay'
+                        "
+                    >
+                        <button
+                            class="dark:bg-gray-800 dark:border-gray-600 e-h-full text-white dark:text-white px-4 flex items-center dark:hover:bg-gray-600"
+                            :class="overlayMode === 'tracking' ? 'bg-emerald-600 hover:bg-emerald-500' : ''"
+                            @click="
+                                $emit('set-overlay-mode', {
+                                    mode: overlayMode === 'tracking' ? 'off' : 'tracking',
+                                })
+                            "
+                        >
+                            <i class="fa-solid fa-location-crosshairs e-mt-1"></i>
+                        </button>
+                    </ETooltip>
                     <ETooltip position="bottom" text="Download footage">
                         <button
                             class="dark:bg-gray-800 dark:border-gray-600 e-h-full text-white dark:text-white px-4 flex items-center dark:hover:bg-gray-600"
@@ -92,7 +134,6 @@
         </ERow>
         <ELayout ref="mainLayout" :height="height">
             <template #main>
-                <!-- stats  -->
                 <div
                     v-if="isStreamShown"
                     class="absolute z-10 top-5 left-5 max-w-sm bg-slate-800/70 rounded-2xl shadow-xl p-2"
@@ -177,7 +218,6 @@
                             >
                         </div>
 
-                        <!-- Codec -->
                         <div class="flex flex-col p-1">
                             <span class="text-sm text-gray-400 font-medium mb-0"
                                 >Codec</span
@@ -190,31 +230,73 @@
                         </div>
                     </div>
                 </div>
-                <EVideoPlayer
-                    id="main"
+
+                <div
                     v-if="liveViewEnabled"
-                    ref="videoPlayer"
-                    :sources="[
-                        {
-                            src: url,
-                        },
-                    ]"
-                    is-hls
-                    is-zoomable
-                    :pause-on-click="false"
-                    :video-options="videoOptions"
-                    :hls-options="{
-                        liveSyncDurationCount: 3,
-                        liveMaxLatencyDurationCount: 6,
-                        manifestLoadingTimeOut: 60000,
-                    }"
-                />
+                    ref="videoStage"
+                    class="relative w-full h-full"
+                >
+                    <EVideoPlayer
+                        id="main"
+                        ref="videoPlayer"
+                        :sources="[
+                            {
+                                src: url,
+                            },
+                        ]"
+                        is-hls
+                        is-zoomable
+                        :pause-on-click="false"
+                        :video-options="videoOptions"
+                        :hls-options="{
+                            liveSyncDurationCount: 3,
+                            liveMaxLatencyDurationCount: 6,
+                            manifestLoadingTimeOut: 60000,
+                        }"
+                    />
+                    <div
+                        v-if="showDetectionOverlay"
+                        class="pointer-events-none absolute inset-0 z-20"
+                    >
+                        <div
+                            v-for="(det, idx) in tracking.detections || []"
+                            :key="`det-${idx}-${det.class_id}`"
+                            class="absolute border-2 border-cyan-400 bg-cyan-500/10"
+                            :style="detectionStyle(det)"
+                        >
+                            <div
+                                class="absolute -top-6 left-0 text-xs font-semibold px-2 py-0.5 bg-black/80 text-cyan-300 whitespace-nowrap"
+                            >
+                                {{ det.class_name || "unknown" }}
+                                {{ formatScore(det.score) }}
+                            </div>
+                        </div>
+                    </div>
+                    <div
+                        v-if="showTrackingOverlay"
+                        class="pointer-events-none absolute inset-0 z-20"
+                    >
+                        <div
+                            v-for="track in tracking.tracks"
+                            :key="track.id"
+                            class="absolute border-2 border-lime-400 bg-lime-500/10"
+                            :style="trackStyle(track)"
+                        >
+                            <div
+                                class="absolute -top-6 left-0 text-xs font-semibold px-2 py-0.5 bg-black/80 text-lime-300 whitespace-nowrap"
+                            >
+                                #{{ track.id }}
+                                {{ track.class_name || "unknown" }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
                 <div
                     v-else
                     class="relative text-lg rounded-tr rounded-tl text-center bg-gray-200 dark:text-gray-200 w-full h-full dark:bg-gray-400 flex justify-center items-center d-flex"
                 >
-                    Device is not recording, live view is not available
+                    {{ liveViewDisabledReason || "Device is not recording, live view is not available" }}
                 </div>
             </template>
 
@@ -296,9 +378,21 @@ export default defineComponent({
             type: Boolean,
             default: false,
         },
+        liveViewDisabledReason: {
+            type: String,
+            default: null,
+        },
         startDate: {
             type: String,
             default: null,
+        },
+        overlayMode: {
+            type: String,
+            default: "off",
+        },
+        hailoAvailable: {
+            type: Boolean,
+            default: false,
         },
     },
     components: {
@@ -313,15 +407,53 @@ export default defineComponent({
                 poster: this.poster,
             };
         },
+        showDetectionOverlay() {
+            return (
+                this.overlayMode === "detections" &&
+                Array.isArray(this.tracking.detections) &&
+                this.tracking.detections.length > 0
+            );
+        },
+        showTrackingOverlay() {
+            return (
+                this.overlayMode === "tracking" &&
+                Array.isArray(this.tracking.tracks) &&
+                this.tracking.tracks.length > 0
+            );
+        },
     },
     watch: {
         url(value) {
             this.startStreaming(value);
         },
+        overlayMode(value) {
+            if (value === "off") {
+                this.tracking = {
+                    frame_width: 1,
+                    frame_height: 1,
+                    detections: [],
+                    tracks: [],
+                };
+            }
+        },
+        stream() {
+            this.tracking = {
+                frame_width: 1,
+                frame_height: 1,
+                detections: [],
+                tracks: [],
+            };
+        },
     },
 
     mounted() {
         this.startStreaming(this.url);
+        window.addEventListener("phx:tracking-data", this.onTrackingData);
+        window.addEventListener("phx:tracking-clear", this.onTrackingClear);
+    },
+    beforeUnmount() {
+        window.removeEventListener("phx:tracking-data", this.onTrackingData);
+        window.removeEventListener("phx:tracking-clear", this.onTrackingClear);
     },
     data() {
         return {
@@ -333,22 +465,138 @@ export default defineComponent({
             stats: {
                 availableLevels: 0,
                 resolution: "",
-                bandwidth: "", // rate at which a fragment finish downloading
+                bandwidth: "",
                 totalVideoFrames: 0,
                 corruptedFrames: 0,
                 droppedFrames: 0,
                 codec: "",
                 bitrate: "",
             },
+            tracking: {
+                frame_width: 1,
+                frame_height: 1,
+                detections: [],
+                tracks: [],
+            },
         };
     },
     methods: {
+        onTrackingData(event) {
+            const payload = event?.detail;
+            if (!payload || payload.device_id !== this.device.id) {
+                return;
+            }
+
+            if (payload.stream && payload.stream !== this.stream) {
+                return;
+            }
+
+            this.tracking = payload;
+        },
+        onTrackingClear(event) {
+            const payload = event?.detail;
+            if (payload && payload.device_id !== this.device.id) {
+                return;
+            }
+
+            this.tracking = {
+                frame_width: 1,
+                frame_height: 1,
+                detections: [],
+                tracks: [],
+            };
+        },
+        formatScore(score) {
+            if (typeof score !== "number") {
+                return "";
+            }
+
+            return `${(score * 100).toFixed(0)}%`;
+        },
+        detectionStyle(det) {
+            const videoRect = this.getVideoRect();
+            const frameWidth = this.tracking.frame_width || 1;
+            const frameHeight = this.tracking.frame_height || 1;
+
+            const x = det.xmin || 0;
+            const y = det.ymin || 0;
+            const w = Math.max(0, (det.xmax || 0) - x);
+            const h = Math.max(0, (det.ymax || 0) - y);
+
+            const left = videoRect.left + (x / frameWidth) * videoRect.width;
+            const top = videoRect.top + (y / frameHeight) * videoRect.height;
+            const width = (w / frameWidth) * videoRect.width;
+            const height = (h / frameHeight) * videoRect.height;
+
+            return {
+                left: `${left}px`,
+                top: `${top}px`,
+                width: `${width}px`,
+                height: `${height}px`,
+            };
+        },
+        trackStyle(track) {
+            const videoRect = this.getVideoRect();
+            const frameWidth = this.tracking.frame_width || 1;
+            const frameHeight = this.tracking.frame_height || 1;
+
+            const left = videoRect.left + (track.x / frameWidth) * videoRect.width;
+            const top = videoRect.top + (track.y / frameHeight) * videoRect.height;
+            const width = (track.width / frameWidth) * videoRect.width;
+            const height = (track.height / frameHeight) * videoRect.height;
+
+            return {
+                left: `${left}px`,
+                top: `${top}px`,
+                width: `${width}px`,
+                height: `${height}px`,
+            };
+        },
+        getVideoRect() {
+            const stage = this.$refs.videoStage;
+            const player =
+                this.$refs.videoPlayer?.$refs?.player ||
+                stage?.querySelector("video");
+
+            if (!stage) {
+                return { left: 0, top: 0, width: 0, height: 0 };
+            }
+
+            const stageWidth = stage.clientWidth || 0;
+            const stageHeight = stage.clientHeight || 0;
+
+            if (!player || !player.videoWidth || !player.videoHeight) {
+                return { left: 0, top: 0, width: stageWidth, height: stageHeight };
+            }
+
+            const videoAspect = player.videoWidth / player.videoHeight;
+            const stageAspect = stageWidth > 0 && stageHeight > 0 ? stageWidth / stageHeight : 1;
+
+            let width = stageWidth;
+            let height = stageHeight;
+            let left = 0;
+            let top = 0;
+
+            if (stageAspect > videoAspect) {
+                height = stageHeight;
+                width = height * videoAspect;
+                left = (stageWidth - width) / 2;
+            } else {
+                width = stageWidth;
+                height = width / videoAspect;
+                top = (stageHeight - height) / 2;
+            }
+
+            return { left, top, width, height };
+        },
         handleResize() {
+            const GAP_PX = 8;
             this.height = `${
                 document.body.clientHeight -
                     this.$refs.topMenu?.$el.clientHeight -
                     this.getNavHeight() -
-                    this.$refs.timeline?.$el?.clientHeight ?? 0
+                    (this.$refs.timeline?.$el?.clientHeight ?? 0) -
+                    GAP_PX
             }px`;
         },
         getNavHeight() {
@@ -359,7 +607,9 @@ export default defineComponent({
             return this.navElement.clientHeight;
         },
         downloadSnapshot(event) {
-            const player = this.$refs.videoPlayer?.$refs.player;
+            const player =
+                this.$refs.videoPlayer?.$refs.player ||
+                this.$refs.videoStage?.querySelector("video");
             var canvas = document.createElement("canvas");
 
             if (!player) {
@@ -420,7 +670,6 @@ export default defineComponent({
 
                 hls.on(Hls.Events.FRAG_LOADED, (event, data) => {
                     this.stats.bytes = data.stats.total;
-                    const duration = data.frag.duration;
                     this.stats.bytes += data.stats.total;
                 });
 
@@ -433,11 +682,9 @@ export default defineComponent({
                     this.stats.codec = level.videoCodec || level.codecs;
                     this.bitrate = convertBitrate(level.bitrate);
                     this.stats.availableLevels = hls.levels.length;
-                    // this.stats.frameRate = level.frameRate;
                     this.stats.resolution = `${hls.levels[data.level].width}x${hls.levels[data.level].height}`;
                 });
 
-                // Playback State Events
                 setInterval(() => {
                     const quality = playerElement.getVideoPlaybackQuality?.();
                     if (quality) {
