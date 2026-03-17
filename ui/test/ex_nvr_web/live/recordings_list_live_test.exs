@@ -5,6 +5,8 @@ defmodule ExNVRWeb.RecordingListLiveTest do
   import ExNVR.{AccountsFixtures, RecordingsFixtures, DevicesFixtures}
   import Phoenix.LiveViewTest
 
+  alias ExNVRWeb.ViewUtils
+
   @moduletag :tmp_dir
   @moduletag :device
 
@@ -28,8 +30,14 @@ defmodule ExNVRWeb.RecordingListLiveTest do
       |> DateTime.shift_zone!(device.timezone)
       |> Calendar.strftime("%b %d, %Y %H:%M:%S")
 
-    assert html =~ "#{expected_start_date}"
-    assert html =~ "#{expected_end_date}"
+    expected_duration =
+      ViewUtils.humanize_duration(
+        DateTime.diff(recording.end_date, recording.start_date, :millisecond)
+      )
+
+    assert html =~ expected_start_date
+    assert html =~ expected_end_date
+    assert html =~ expected_duration
 
     assert lv
            |> element(~s{[id="recording-#{recording.id}-link"]})
@@ -285,6 +293,38 @@ defmodule ExNVRWeb.RecordingListLiveTest do
       html = render(lv)
 
       assert_recording_info(lv, html, device, recording)
+    end
+
+    test "shows preview button for each recording", %{conn: conn, recordings: recordings} do
+      {:ok, lv, _html} =
+        conn
+        |> log_in_user(user_fixture())
+        |> live(~p"/recordings")
+
+      for recording <- recordings do
+        assert lv |> element(~s{[id="thumbnail-#{recording.id}"]}) |> has_element?()
+      end
+    end
+
+    test "video modal is initially hidden", %{conn: conn} do
+      {:ok, lv, _html} =
+        conn
+        |> log_in_user(user_fixture())
+        |> live(~p"/recordings")
+
+      assert lv |> element("#popup-container") |> has_element?()
+      assert lv |> element("#popup-container.hidden") |> has_element?()
+    end
+
+    test "video modal contains player, title and close button", %{conn: conn} do
+      {:ok, lv, _html} =
+        conn
+        |> log_in_user(user_fixture())
+        |> live(~p"/recordings")
+
+      assert lv |> element("#recording-modal-title") |> has_element?()
+      assert lv |> element("#recording-player") |> has_element?()
+      assert lv |> element("button[title='Close']") |> has_element?()
     end
   end
 end

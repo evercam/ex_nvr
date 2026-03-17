@@ -40,7 +40,15 @@ defmodule ExNVR.Devices do
     |> Repo.update()
     |> case do
       {:ok, updated_device} ->
+        create_device_directories(updated_device)
         start_or_stop_supervisor(device, updated_device)
+
+        Phoenix.PubSub.broadcast(
+          ExNVR.PubSub,
+          "device:#{updated_device.id}",
+          {:device_updated, updated_device}
+        )
+
         {:ok, updated_device}
 
       error ->
@@ -129,12 +137,16 @@ defmodule ExNVR.Devices do
 
   @spec create_device_directories(ExNVR.Model.Device.t()) :: :ok
   def create_device_directories(device) do
-    File.mkdir_p!(Device.base_dir(device))
-    File.mkdir_p!(Device.recording_dir(device))
-    File.mkdir_p!(Device.recording_dir(device, :low))
-    File.mkdir_p!(Device.bif_dir(device))
-    File.mkdir_p!(Device.bif_thumbnails_dir(device))
-    File.mkdir_p!(Device.lpr_thumbnails_dir(device))
+    if Device.base_dir(device) do
+      File.mkdir_p!(Device.base_dir(device))
+      File.mkdir_p!(Device.recording_dir(device))
+      File.mkdir_p!(Device.recording_dir(device, :low))
+      File.mkdir_p!(Device.bif_dir(device))
+      File.mkdir_p!(Device.bif_thumbnails_dir(device))
+      File.mkdir_p!(Device.lpr_thumbnails_dir(device))
+    end
+
+    :ok
   end
 
   @spec summary :: list()
@@ -214,8 +226,8 @@ defmodule ExNVR.Devices do
     end
   end
 
-  defp copy_device_file(%Device{type: :file, stream_config: stream_config} = device) do
-    File.cp!(stream_config.temporary_path, Device.file_location(device))
+  defp copy_device_file(%Device{type: :file} = device) do
+    File.cp!(device.stream_config.temporary_path, Device.file_location(device))
   end
 
   defp copy_device_file(_device), do: :ok

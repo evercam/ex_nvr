@@ -27,12 +27,12 @@ defmodule ExNVRWeb.DashboardLive do
 
   def render(assigns) do
     ~H"""
-    <div class="bg-gray-300 e-w-full dark:bg-gray-800">
+    <div class="bg-gray-50 e-w-full dark:bg-gray-800">
       <div :if={@devices == []} class="grid tracking-wide text-lg text-center dark:text-gray-200">
         You have no devices, you can create one
         <span><.link href={~p"/devices"} class="ml-2 dark:text-blue-600">here</.link></span>
       </div>
-      <div :if={@devices != []} class="e-h-full">
+      <div :if={@devices != []} class="e-h-full pt-2">
         <.vue
           v-component="Viewer"
           class="e-h-full"
@@ -45,6 +45,7 @@ defmodule ExNVRWeb.DashboardLive do
           stream={@stream}
           device={Map.take(@current_device, [:id, :name, :timezone])}
           live-view-enabled={@live_view_enabled?}
+          live-view-disabled-reason={@live_view_disabled_reason}
           start-date={@start_date}
           enable-ptz={!is_nil(@onvif_device)}
           v-on:switch_stream={JS.push("switch_stream")}
@@ -54,9 +55,9 @@ defmodule ExNVRWeb.DashboardLive do
         />
       </div>
 
-      <.modal id="download-modal" class="dark:bg-gray-800/70 dark:backdrop-blur-none">
-        <div class="bg-gray-300 dark:bg-gray-800 p-8 rounded">
-          <h2 class="text-xl text-black dark:text-white font-bold mb-4">Download Footage</h2>
+      <.modal id="download-modal">
+        <div class="p-6">
+          <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Download Footage</h2>
           <.simple_form
             for={@footage_form}
             id="footage_form"
@@ -110,10 +111,7 @@ defmodule ExNVRWeb.DashboardLive do
               </div>
 
               <div class="mr-4 w-full p-2 rounded flex justify-center space-x-4">
-                <.button
-                  class="bg-blue-500 text-white px-4 py-2 rounded flex items-center"
-                  phx-disable-with="Downloading..."
-                >
+                <.button phx-disable-with="Downloading...">
                   Download
                 </.button>
               </div>
@@ -378,15 +376,25 @@ defmodule ExNVRWeb.DashboardLive do
     device = socket.assigns.current_device
     start_date = socket.assigns[:start_date]
 
-    enabled? =
+    {enabled?, reason} =
       cond do
-        is_nil(device) -> false
-        not is_nil(start_date) -> true
-        not ExNVR.Utils.run_main_pipeline?() -> false
-        true -> Device.streaming?(device)
+        is_nil(device) ->
+          {false, nil}
+
+        not is_nil(start_date) ->
+          {true, nil}
+
+        not ExNVR.Utils.run_main_pipeline?() ->
+          {false, "Live view is disabled. The NVR pipeline is not running."}
+
+        Device.streaming?(device) ->
+          {true, nil}
+
+        true ->
+          {false, "Device is not recording. Live view is unavailable until recording starts."}
       end
 
-    assign(socket, live_view_enabled?: enabled?)
+    assign(socket, live_view_enabled?: enabled?, live_view_disabled_reason: reason)
   end
 
   defp parse_datetime(nil, _), do: nil

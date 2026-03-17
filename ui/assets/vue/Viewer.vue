@@ -1,114 +1,115 @@
 <template>
-  <ECol
-    v-resize-observer="handleResize"
-    class="dashboard-viewer e-h-full e-p-0 overflow-hidden"
-  >
-    <ERow
-      ref="topMenu"
-      justify="between"
-      align-content="start"
-      class="top-bar dark:bg-gray-900"
+    <ECol
+        v-resize-observer="handleResize"
+        class="dashboard-viewer e-h-full e-p-0 overflow-hidden"
     >
-      <ECol class="e-p-0" cols="5">
-        <ERow>
-          <select
-            :value="device.id"
-            id="device_form_id"
-            name="devices"
-            class="text-sm dark:bg-gray-800 dark:placeholder-gray-400 dark:text-white dark:hover:bg-gray-600 e-border-transparent"
-            @input="
-              $emit('switch_device', {
-                device: $event.target.value,
-              })
-            "
-          >
-            <option
-              v-for="device in devices"
-              :key="device.id"
-              :value="device.id"
-            >
-              {{ device.name }}
-            </option>
-          </select>
-          <select
-            :value="stream"
-            name="streams"
-            class="text-sm dark:bg-gray-800 dark:placeholder-gray-400 dark:text-white dark:hover:bg-gray-600 e-border-transparent"
-            @input="
-              $emit('switch_stream', {
-                stream: $event.target.value,
-              })
-            "
-          >
-            <option
-              v-for="stream in streams"
-              :key="stream.value"
-              :value="stream.value"
-            >
-              {{ stream.name }}
-            </option>
-          </select>
-        </ERow>
-      </ECol>
-      <ETooltip v-if="liveViewEnabled" position="bottom" text="Go live">
-        <button
-          class="dark:bg-gray-800 dark:border-gray-600 e-h-full text-white dark:text-white px-4 flex items-center dark:hover:bg-gray-600"
-          @click="$emit('load-recording', { timestamp: null })"
-        >
-          <span class="">Live</span>
-          <div v-if="!startDate" class="ml-2">
-            <EPulsatingDot :size="12" color="#c5393d" />
-          </div>
-        </button>
-      </ETooltip>
-      <ECol class="e-p-0" cols="5" align-self="stretch">
         <ERow
-          class="right-buttons e-h-full"
-          align-content="stretch"
-          justify="end"
+            ref="topMenu"
+            justify="between"
+            align-content="center"
+            class="top-bar bg-white border-b border-gray-200 dark:bg-gray-900 dark:border-gray-700 px-3 py-2 items-center gap-2"
         >
-          <ETooltip
-            v-if="liveViewEnabled"
-            position="bottom"
-            text="Download current snapshot"
-          >
-            <button
-              class="dark:bg-gray-800 dark:border-gray-600 e-h-full text-white dark:text-white px-4 flex items-center dark:hover:bg-gray-600"
-              @click="downloadSnapshot"
-            >
-              <EIcon icon="camera" size="xl" class="e-mt-1" />
-            </button>
-          </ETooltip>
-          <ETooltip position="bottom" text="Download footage">
-            <button
-              class="dark:bg-gray-800 dark:border-gray-600 e-h-full text-white dark:text-white px-4 flex items-center dark:hover:bg-gray-600"
-              @click="$emit('show-download-modal')"
-            >
-              <EIcon icon="download" size="xl" class="e-mt-1" />
-            </button>
-          </ETooltip>
+            <ECol class="e-p-0" cols="5">
+                <ERow class="items-center gap-2">
+                    <select
+                        :value="device.id"
+                        id="device_form_id"
+                        name="devices"
+                        class="text-sm bg-white dark:bg-gray-800 text-gray-700 dark:text-white border border-gray-200 dark:border-gray-600 rounded-md px-3 py-1.5 h-9 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors"
+                        @input="
+                            $emit('switch_device', {
+                                device: $event.target.value,
+                            })
+                        "
+                    >
+                        <option
+                            v-for="device in devices"
+                            :key="device.id"
+                            :value="device.id"
+                        >
+                            {{ device.name }}
+                        </option>
+                    </select>
+                    <select
+                        :value="stream"
+                        name="streams"
+                        class="text-sm bg-white dark:bg-gray-800 text-gray-700 dark:text-white border border-gray-200 dark:border-gray-600 rounded-md px-3 py-1.5 h-9 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors"
+                        @input="
+                            $emit('switch_stream', {
+                                stream: $event.target.value,
+                            })
+                        "
+                    >
+                        <option
+                            v-for="stream in streams"
+                            :key="stream.value"
+                            :value="stream.value"
+                        >
+                            {{ stream.name }}
+                        </option>
+                    </select>
+                </ERow>
+            </ECol>
+            <ETooltip v-if="liveViewEnabled" position="bottom" :text="!startDate ? 'Currently watching live' : 'Jump to live edge'">
+                <button
+                    :class="!startDate
+                        ? 'bg-red-500 border border-red-600 text-white hover:bg-red-600 h-9 px-3 flex items-center gap-2 rounded-md transition-colors text-sm font-semibold'
+                        : 'bg-gray-50 dark:bg-gray-800 border border-red-300 dark:border-red-700 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 h-9 px-3 flex items-center gap-2 rounded-md transition-colors text-sm font-semibold'"
+                    @click="$emit('load-recording', { timestamp: null })"
+                >
+                    <EPulsatingDot :size="8" :color="!startDate ? '#ffffff' : '#ef4444'" />
+                    <span>{{ !startDate ? 'LIVE' : 'Go Live' }}</span>
+                </button>
+            </ETooltip>
+            <ECol class="e-p-0" cols="5">
+                <ERow
+                    class="right-buttons items-center gap-2"
+                    align-content="center"
+                    justify="end"
+                >
+                    <ETooltip
+                        v-if="liveViewEnabled"
+                        position="bottom"
+                        text="Download current snapshot"
+                    >
+                        <button
+                            class="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 h-9 text-gray-700 dark:text-white px-4 flex items-center rounded-md hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors text-sm font-medium"
+                            @click="downloadSnapshot"
+                        >
+                            <EIcon icon="camera" size="xl" class="e-mt-1" />
+                        </button>
+                    </ETooltip>
+                    <ETooltip position="bottom" text="Download footage">
+                        <button
+                            class="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 h-9 text-gray-700 dark:text-white px-4 flex items-center rounded-md hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors text-sm font-medium"
+                            @click="$emit('show-download-modal')"
+                        >
+                            <EIcon icon="download" size="xl" class="e-mt-1" />
+                        </button>
+                    </ETooltip>
+                </ERow>
+            </ECol>
         </ERow>
-      </ECol>
-    </ERow>
-    <ELayout ref="mainLayout" :height="height">
-      <template #main>
-        <div class="h-full relative">
-          <!-- stats  -->
-          <div
-            v-if="showStreamStats"
-            class="absolute z-10 top-5 left-5 max-w-sm bg-slate-800/70 rounded-2xl shadow-xl p-2"
-          >
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-1 gap-y-1">
-              <div class="flex flex-col p-1">
-                <span class="text-sm text-gray-400 font-medium mb-0"
-                  >Resolution</span
+        <ELayout ref="mainLayout" :height="height">
+            <template #main>
+                <!-- stats  -->
+                <div
+                    v-if="isStreamShown"
+                    class="absolute z-10 top-5 left-5 max-w-sm bg-slate-800/70 rounded-2xl shadow-xl p-2"
                 >
-                <span
-                  id="resolution"
-                  class="text-base text-gray-100 font-semibold"
-                  >{{ stats.resolution }}</span
-                >
-              </div>
+                    <div
+                        class="grid grid-cols-1 sm:grid-cols-2 gap-x-1 gap-y-1"
+                    >
+                        <div class="flex flex-col p-1">
+                            <span class="text-sm text-gray-400 font-medium mb-0"
+                                >Resolution</span
+                            >
+                            <span
+                                id="resolution"
+                                class="text-base text-gray-100 font-semibold"
+                                >{{ stats.resolution }}</span
+                            >
+                        </div>
 
               <div class="flex flex-col p-1">
                 <span class="text-sm text-gray-400 font-medium mb-0"
@@ -270,14 +271,17 @@
             }"
           />
 
-          <div
-            v-else
-            class="rec relative text-lg rounded-tr rounded-tl text-center bg-gray-200 dark:text-gray-200 w-full h-full dark:bg-gray-400 flex justify-center items-center d-flex"
-          >
-            Device is not recording, live view is not available
-          </div>
-        </div>
-      </template>
+                <div
+                    v-else
+                    class="relative rounded-tr rounded-tl text-center bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-200 w-full h-full flex flex-col justify-center items-center gap-3"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-12 h-12 text-gray-400 dark:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25h-9A2.25 2.25 0 002.25 7.5v9a2.25 2.25 0 002.25 2.25z" />
+                        <line x1="3" y1="3" x2="21" y2="21" stroke-width="1.5" />
+                    </svg>
+                    <p class="text-lg font-medium">{{ liveViewDisabledReason || 'Live view is not available' }}</p>
+                </div>
+            </template>
 
       <template #bottom-right>
         <ECol>
@@ -445,6 +449,10 @@ export default defineComponent({
       type: Boolean,
       default: false,
     },
+        liveViewDisabledReason: {
+            type: String,
+            default: null,
+        },
     startDate: {
       type: String,
       default: null,
@@ -499,11 +507,13 @@ export default defineComponent({
   },
   methods: {
     handleResize() {
+            const GAP_PX = 8;
       this.height = `${
         document.body.clientHeight -
           this.$refs.topMenu?.$el.clientHeight -
           this.getNavHeight() -
-          this.$refs.timeline?.$el?.clientHeight ?? 0
+          (this.$refs.timeline?.$el?.clientHeight ?? 0) -
+                    GAP_PX
       }px`;
     },
     getNavHeight() {

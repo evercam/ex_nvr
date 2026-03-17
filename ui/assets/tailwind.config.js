@@ -19,7 +19,10 @@ module.exports = {
     extend: {
       colors: {
         brand: "#FD4F00",
-      }
+      },
+      fontFamily: {
+        sans: ["Geist Sans", "ui-sans-serif", "system-ui", "sans-serif"],
+      },
     },
   },
   plugins: [

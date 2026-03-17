@@ -64,8 +64,9 @@ defmodule ExNVR.DiskMonitor do
     end
   end
 
-  defp get_disk_info(mountpoint) do
+  defp get_disk_info(path) do
     :disksup.get_disk_info()
-    |> Enum.find(fn {mp, _, _, _} -> to_string(mp) == mountpoint end)
+    |> Enum.filter(fn {mp, _, _, _} -> String.starts_with?(path, to_string(mp)) end)
+    |> Enum.max_by(fn {mp, _, _, _} -> byte_size(to_string(mp)) end, fn -> nil end)
   end
 end

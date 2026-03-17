@@ -1,5 +1,5 @@
 <template>
-  <div ref="mainContainer" class="schedule text-white relative">
+  <div ref="mainContainer" class="schedule text-gray-900 dark:text-white relative">
     <!-- Table -->
     <table
         ref="table"
@@ -7,7 +7,7 @@
         class="table-fixed w-full border-separate border-spacing-0 relative"
     >
       <thead>
-      <tr class="h-8">
+      <tr class="h-8 text-black dark:text-white">
         <th class="w-16"></th>
         <th
             v-for="hour in 24"
@@ -19,7 +19,7 @@
       </tr>
       </thead>
       <tbody>
-      <tr v-for="(d, dayIndex) in sortedDays" :key="d.day" class="h-8">
+      <tr v-for="(d, dayIndex) in sortedDays" :key="d.day" class="h-8 text-black dark:text-white">
         <th class="p-1 text-center h-8" scope="row">
           {{ formatDay(d.day) }}
         </th>
@@ -27,7 +27,7 @@
         <td
             v-for="hour in 24"
             :key="hour"
-            class="segment-cell border-b border-white dark:border-gray-700 h-8"
+            class="segment-cell border-b border-gray-200 dark:border-gray-700 h-8"
             :class="{
               'border-l': hour === 1,
               'border-r': hour === 24,
@@ -59,7 +59,7 @@
             :style="
             calculateBarStyle(dayIndex, segment.startTime, segment.endTime)
           "
-            class="segment rounded absolute bg-blue-500/80"
+            class="segment rounded absolute bg-blue-500/80 ring-1 ring-blue-700 dark:ring-blue-300"
             @mousedown.stop="onSegmentMouseDown($event, dayIndex, segmentIndex)"
             @mousemove="onSegmentMouseMove"
             @mouseleave="onSegmentMouseLeave"
