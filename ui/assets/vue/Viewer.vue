@@ -191,14 +191,23 @@
             </div>
           </div>
 
-          <div v-if="showPTZControl" class="flex z-10 gap-5 absolute right-5 p-4">
+          <div
+            v-if="showPTZControls"
+            class="flex z-10 gap-5 absolute right-5 p-4"
+          >
             <div>
-              <div class="flex justify-center">
+              <div class="flex justify-center ml-14 gap-2">
                 <button
                   @click="upPTZ"
                   class="w-12 h-12 bg-gray-800 backdrop-blur-md text-white text-lg rounded-xl flex items-center justify-center shadow-lg border border-gray-700 hover:bg-gray-700 active:scale-95 transition"
                 >
                   <i class="fa-solid fa-angle-up"></i>
+                </button>
+                <button
+                  @click="zoomInPTZ"
+                  class="w-12 h-12 bg-gray-800 backdrop-blur-md text-white text-lg rounded-xl flex items-center justify-center shadow-lg border border-gray-700 hover:bg-gray-700 active:scale-95 transition"
+                >
+                  <i class="fa-solid fa-plus"></i>
                 </button>
               </div>
 
@@ -225,30 +234,22 @@
                 </button>
               </div>
 
-              <div class="flex justify-center">
+              <div class="flex justify-center ml-14 gap-2">
                 <button
                   @click="downPTZ"
                   class="w-12 h-12 bg-gray-800 backdrop-blur-md text-white text-lg rounded-xl flex items-center justify-center shadow-lg border border-gray-700 hover:bg-gray-700 active:scale-95 transition"
                 >
                   <i class="fa-solid fa-angle-down"></i>
                 </button>
+                <button
+                  @click="zoomOutPTZ"
+                  class="w-12 h-12 bg-gray-800 backdrop-blur-md text-white text-lg rounded-xl flex items-center justify-center shadow-lg border border-gray-700 hover:bg-gray-700 active:scale-95 transition"
+                >
+                  <i class="fa-solid fa-minus"></i>
+                </button>
               </div>
             </div>
-            <div class="flex flex-col gap-2">
-              <button
-                @click="zoomInPTZ"
-                class="w-12 h-12 bg-gray-800 backdrop-blur-md text-white text-lg rounded-xl flex items-center justify-center shadow-lg border border-gray-700 hover:bg-gray-700 active:scale-95 transition"
-              >
-                <i class="fa-solid fa-plus"></i>
-              </button>
-
-              <button
-                @click="zoomOutPTZ"
-                class="w-12 h-12 bg-gray-800 backdrop-blur-md text-white text-lg rounded-xl flex items-center justify-center shadow-lg border border-gray-700 hover:bg-gray-700 active:scale-95 transition"
-              >
-                <i class="fa-solid fa-minus"></i>
-              </button>
-            </div>
+            <div class="flex flex-col gap-2"></div>
           </div>
 
           <EVideoPlayer
@@ -265,8 +266,8 @@
             :pause-on-click="false"
             :video-options="videoOptions"
             :hls-options="{
-                        liveSyncDurationCount: 3,
-                        liveMaxLatencyDurationCount: 6,
+              liveSyncDurationCount: 3,
+              liveMaxLatencyDurationCount: 6,
               manifestLoadingTimeOut: 60000,
             }"
           />
@@ -404,7 +405,7 @@
 
 <script>
 import { defineComponent, isProxy, toRaw } from "vue";
-import {useLiveVue} from "live_vue"
+import { useLiveVue } from "live_vue";
 import Timeline from "./Timeline.vue";
 import { makeFullScreen, exitFullScreen } from "@evercam/ui/vue3";
 import Hls from "hls.js";
