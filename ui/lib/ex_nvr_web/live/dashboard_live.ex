@@ -24,7 +24,7 @@ defmodule ExNVRWeb.DashboardLive do
           y: float(),
           zoom: float()
         }
-  @ptz_move_step 0.1
+  @ptz_move_step 0.05
 
   def render(assigns) do
     ~H"""
@@ -134,6 +134,7 @@ defmodule ExNVRWeb.DashboardLive do
       custom_duration: false
     )
     |> assign(stream_url: "", poster_url: "")
+    |> assign(ptz_status: nil, onvif_device: nil)
     |> then(&{:ok, &1})
   end
 
@@ -145,14 +146,13 @@ defmodule ExNVRWeb.DashboardLive do
 
     stream = Map.get(params, "stream", socket.assigns[:stream]) || "sub_stream"
 
-    {ptz_status, onvif_device} =
+    Task.async(fn ->
       get_status(device)
+    end)
 
     socket
     |> assign(current_device: device)
     |> assign(stream: stream, start_date: nil)
-    |> assign(ptz_status: ptz_status)
-    |> assign(onvif_device: onvif_device)
     |> assign_streams()
     |> assign_footage_form(%{"device_id" => device && device.id})
     |> live_view_enabled?()
@@ -164,6 +164,15 @@ defmodule ExNVRWeb.DashboardLive do
 
   def handle_info({event, nil}, socket) when event in [:delete, :new] do
     {:noreply, assign_runs(socket)}
+  end
+
+  def handle_info({ref, {ptz_status, onvif_device} = result}, socket) do
+    Process.demonitor(ref, [:flush])
+
+    {:noreply,
+     socket
+     |> assign(ptz_status: ptz_status)
+     |> assign(onvif_device: onvif_device)}
   end
 
   def handle_info(_, socket), do: socket
@@ -516,6 +525,7 @@ defmodule ExNVRWeb.DashboardLive do
         onvif_device
       }
     else
+      {:error, :no_url} -> {nil, nil}
       {:error, :not_camera} -> {nil, nil}
       {:error, :ptz_not_supported} -> {nil, nil}
     end
