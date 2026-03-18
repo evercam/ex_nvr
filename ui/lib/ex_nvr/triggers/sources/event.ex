@@ -36,7 +36,9 @@ defmodule ExNVR.Triggers.Sources.Event do
   end
 
   @impl true
-  def matches?(source_config, event) do
-    source_config["event_type"] == event.type
+  def matches?(source_config, {:event_created, %{type: type}}) do
+    source_config["event_type"] == type
   end
+
+  def matches?(_source_config, _message), do: false
 end

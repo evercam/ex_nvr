@@ -204,27 +204,31 @@ defmodule ExNVR.TriggersTest do
     test "finds matching triggers for device and event type", %{device: device} do
       full_trigger_fixture(device, %{event_type: "motion_detected"})
 
-      triggers = Triggers.matching_triggers(device.id, "motion_detected")
+      message = {:event_created, %{type: "motion_detected", device_id: device.id}}
+      triggers = Triggers.matching_triggers(device.id, message)
       assert length(triggers) == 1
     end
 
     test "does not match different event type", %{device: device} do
       full_trigger_fixture(device, %{event_type: "motion_detected"})
 
-      assert Triggers.matching_triggers(device.id, "door_open") == []
+      message = {:event_created, %{type: "door_open", device_id: device.id}}
+      assert Triggers.matching_triggers(device.id, message) == []
     end
 
     test "does not match disabled trigger config", %{device: device} do
       full_trigger_fixture(device, %{event_type: "motion_detected", enabled: false})
 
-      assert Triggers.matching_triggers(device.id, "motion_detected") == []
+      message = {:event_created, %{type: "motion_detected", device_id: device.id}}
+      assert Triggers.matching_triggers(device.id, message) == []
     end
 
     test "does not match trigger for different device", %{device: device} do
       other_device = camera_device_fixture()
       full_trigger_fixture(other_device, %{event_type: "motion_detected"})
 
-      assert Triggers.matching_triggers(device.id, "motion_detected") == []
+      message = {:event_created, %{type: "motion_detected", device_id: device.id}}
+      assert Triggers.matching_triggers(device.id, message) == []
     end
 
     test "returns multiple matching triggers", %{device: device} do
@@ -238,7 +242,8 @@ defmodule ExNVR.TriggersTest do
 
       Triggers.set_device_trigger_configs(device.id, [t1.id, t2.id])
 
-      triggers = Triggers.matching_triggers(device.id, "motion_detected")
+      message = {:event_created, %{type: "motion_detected", device_id: device.id}}
+      triggers = Triggers.matching_triggers(device.id, message)
       assert length(triggers) == 2
     end
   end

@@ -52,10 +52,10 @@ defmodule ExNVR.Triggers.Targets.LogMessage do
   end
 
   @impl true
-  def execute(event, config, _opts) do
+  def execute(trigger, config, _opts) do
     level = String.to_existing_atom(config["level"] || "info")
     prefix = config["message_prefix"] || "Trigger"
-    Logger.log(level, "#{prefix}: #{inspect(event)}")
+    Logger.log(level, "#{prefix}: #{inspect(trigger)}")
     :ok
   end
 end

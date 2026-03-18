@@ -19,8 +19,10 @@ defmodule ExNVR.Triggers do
   }
 
   @events_topic "events"
+  @detections_topic "detections"
 
   def events_topic, do: @events_topic
+  def detections_topic, do: @detections_topic
 
   # Trigger Config CRUD
 
@@ -135,14 +137,33 @@ defmodule ExNVR.Triggers do
   end
 
   @doc """
-  Find all enabled trigger configs for a device that match the given event type.
-  Returns configs with their enabled target configs.
-  """
-  @spec matching_triggers(binary(), String.t()) :: [TriggerConfig.t()]
-  def matching_triggers(device_id, event_type) do
-    # Build a fake event struct for matching — only type is needed
-    event = %ExNVR.Events.Event{type: event_type, device_id: device_id}
+  Returns all enabled trigger_recording target configs for a device.
 
+  These are used by the pipeline to build one VideoBufferer + Storage branch
+  per target config when recording_mode is :on_event.
+  """
+  @spec trigger_recording_configs_for_device(binary()) :: [TriggerTargetConfig.t()]
+  def trigger_recording_configs_for_device(device_id) do
+    from(ttc in TriggerTargetConfig,
+      join: tc in TriggerConfig,
+      on: ttc.trigger_config_id == tc.id,
+      join: dtc in DeviceTriggerConfig,
+      on: dtc.trigger_config_id == tc.id,
+      where:
+        dtc.device_id == ^device_id and
+          tc.enabled == true and
+          ttc.enabled == true and
+          ttc.target_type == "trigger_recording"
+    )
+    |> Repo.all()
+  end
+
+  @doc """
+  Find all enabled trigger configs for a device that match the given message.
+  The raw PubSub message is passed to each source's `matches?/2` callback.
+  """
+  @spec matching_triggers(binary(), term()) :: [TriggerConfig.t()]
+  def matching_triggers(device_id, message) do
     from(tc in TriggerConfig,
       join: dtc in DeviceTriggerConfig,
       on: dtc.trigger_config_id == tc.id,
@@ -156,7 +177,7 @@ defmodule ExNVR.Triggers do
       Enum.any?(tc.source_configs, fn sc ->
         case TriggerSources.module_for(sc.source_type) do
           nil -> false
-          module -> module.matches?(sc.config, event)
+          module -> module.matches?(sc.config, message)
         end
       end)
     end)

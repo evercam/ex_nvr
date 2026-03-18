@@ -60,10 +60,11 @@ defmodule ExNVR.Triggers.Targets.DeviceControlTest do
     test "starts recording with action=start" do
       test_pid = self()
       device = %{id: "dev-1", state: :recording}
-      event = %ExNVR.Events.Event{type: "motion", device_id: "dev-1"}
+      trigger = {:event_created, %{type: "motion", device_id: "dev-1"}}
       config = %{"action" => "start"}
 
       opts = [
+        device_id: "dev-1",
         device_loader: fn _id -> device end,
         state_updater: fn dev, state ->
           send(test_pid, {:update, dev.id, state})
@@ -71,17 +72,18 @@ defmodule ExNVR.Triggers.Targets.DeviceControlTest do
         end
       ]
 
-      assert :ok = DeviceControl.execute(event, config, opts)
+      assert :ok = DeviceControl.execute(trigger, config, opts)
       assert_received {:update, "dev-1", :recording}
     end
 
     test "stops recording with action=stop" do
       test_pid = self()
       device = %{id: "dev-1", state: :recording}
-      event = %ExNVR.Events.Event{type: "motion_ended", device_id: "dev-1"}
+      trigger = {:event_created, %{type: "motion_ended", device_id: "dev-1"}}
       config = %{"action" => "stop"}
 
       opts = [
+        device_id: "dev-1",
         device_loader: fn _id -> device end,
         state_updater: fn dev, state ->
           send(test_pid, {:update, dev.id, state})
@@ -89,30 +91,31 @@ defmodule ExNVR.Triggers.Targets.DeviceControlTest do
         end
       ]
 
-      assert :ok = DeviceControl.execute(event, config, opts)
+      assert :ok = DeviceControl.execute(trigger, config, opts)
       assert_received {:update, "dev-1", :stopped}
     end
 
     test "returns error when device not found" do
-      event = %ExNVR.Events.Event{type: "motion", device_id: "missing"}
+      trigger = {:event_created, %{type: "motion", device_id: "missing"}}
       config = %{"action" => "start"}
 
-      opts = [device_loader: fn _id -> nil end]
+      opts = [device_id: "missing", device_loader: fn _id -> nil end]
 
-      assert {:error, :device_not_found} = DeviceControl.execute(event, config, opts)
+      assert {:error, :device_not_found} = DeviceControl.execute(trigger, config, opts)
     end
 
     test "returns error when state update fails" do
       device = %{id: "dev-1", state: :recording}
-      event = %ExNVR.Events.Event{type: "motion", device_id: "dev-1"}
+      trigger = {:event_created, %{type: "motion", device_id: "dev-1"}}
       config = %{"action" => "start"}
 
       opts = [
+        device_id: "dev-1",
         device_loader: fn _id -> device end,
         state_updater: fn _dev, _state -> {:error, :some_reason} end
       ]
 
-      assert {:error, :some_reason} = DeviceControl.execute(event, config, opts)
+      assert {:error, :some_reason} = DeviceControl.execute(trigger, config, opts)
     end
   end
 end

@@ -40,14 +40,19 @@ defmodule ExNVR.Triggers.Sources.EventTest do
   describe "matches?/2" do
     test "matches when event type equals config event_type" do
       config = %{"event_type" => "motion_detected"}
-      event = %ExNVR.Events.Event{type: "motion_detected"}
-      assert Event.matches?(config, event)
+      message = {:event_created, %{type: "motion_detected", device_id: "dev-1"}}
+      assert Event.matches?(config, message)
     end
 
     test "does not match different event type" do
       config = %{"event_type" => "motion_detected"}
-      event = %ExNVR.Events.Event{type: "door_open"}
-      refute Event.matches?(config, event)
+      message = {:event_created, %{type: "door_open", device_id: "dev-1"}}
+      refute Event.matches?(config, message)
+    end
+
+    test "does not match non-event messages" do
+      config = %{"event_type" => "motion_detected"}
+      refute Event.matches?(config, {:detections, "dev-1", {640, 480}, []})
     end
   end
 end

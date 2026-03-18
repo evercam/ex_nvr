@@ -19,5 +19,6 @@ defmodule ExNVR.Triggers.TriggerTarget do
   @callback label() :: String.t()
   @callback config_fields() :: [config_field()]
   @callback validate_config(map()) :: {:ok, map()} | {:error, Keyword.t()}
-  @callback execute(ExNVR.Events.Event.t(), map(), keyword()) :: :ok | {:error, term()}
+  @callback execute(trigger :: term(), config :: map(), opts :: keyword()) ::
+              :ok | {:error, term()}
 end

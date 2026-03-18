@@ -44,14 +44,15 @@ defmodule ExNVR.Triggers.Targets.DeviceControl do
   end
 
   @impl true
-  def execute(event, config, opts) do
+  def execute(_trigger, config, opts) do
+    device_id = Keyword.fetch!(opts, :device_id)
     device_loader = Keyword.get(opts, :device_loader, &ExNVR.Devices.get/1)
     state_updater = Keyword.get(opts, :state_updater, &ExNVR.Devices.update_state/2)
     action = config["action"] || "start"
 
-    case device_loader.(event.device_id) do
+    case device_loader.(device_id) do
       nil ->
-        Logger.warning("Trigger: device #{event.device_id} not found")
+        Logger.warning("Trigger: device #{device_id} not found")
         {:error, :device_not_found}
 
       device ->
