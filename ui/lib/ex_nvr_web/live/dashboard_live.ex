@@ -505,9 +505,8 @@ defmodule ExNVRWeb.DashboardLive do
   @spec get_status(Ecto.Changeset.t()) :: {ptz_t(), ExOnvif.Device.t()} | {nil, nil}
   defp get_status(device) do
     with {:ok, onvif_device} <- Onvif.onvif_device(device),
-        # {:ok, :has_onvif_ptz} <- check_ptz_support(onvif_device),
-         {:ok, status} <-
-           ExOnvif.PTZ.get_status(onvif_device, "Profile_1") do
+         {:ok, :has_onvif_ptz} <- check_ptz_support(onvif_device),
+         {:ok, status} <- ExOnvif.PTZ.get_status(onvif_device, "Profile_1") do
       {
         %{
           x: status.position.pan_tilt.x,
