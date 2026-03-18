@@ -4,6 +4,7 @@ defmodule ExNVRWeb.DashboardLive do
 
   alias Ecto.Changeset
   alias ExNVR.Devices
+  alias ExNVR.Devices.Onvif
   alias ExNVR.Model.Device
   alias ExNVR.Recordings
   alias ExNVRWeb.Router.Helpers, as: Routes
@@ -503,8 +504,8 @@ defmodule ExNVRWeb.DashboardLive do
 
   @spec get_status(Ecto.Changeset.t()) :: {ptz_t(), ExOnvif.Device.t()} | {nil, nil}
   defp get_status(device) do
-    with {:ok, onvif_device} <- ExNVR.Devices.Onvif.onvif_device(device),
-         {:ok, :has_onvif_ptz} <- check_ptz_support(onvif_device),
+    with {:ok, onvif_device} <- Onvif.onvif_device(device),
+        # {:ok, :has_onvif_ptz} <- check_ptz_support(onvif_device),
          {:ok, status} <-
            ExOnvif.PTZ.get_status(onvif_device, "Profile_1") do
       {
