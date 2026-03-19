@@ -1,288 +1,304 @@
 <template>
-    <ECol
-        v-resize-observer="handleResize"
-        class="dashboard-viewer e-h-full e-p-0 overflow-hidden"
+  <ECol
+    v-resize-observer="handleResize"
+    class="dashboard-viewer e-h-full e-p-0 overflow-hidden"
+  >
+    <ERow
+      ref="topMenu"
+      justify="between"
+      align-content="center"
+      class="top-bar bg-white border-b border-gray-200 dark:bg-gray-900 dark:border-gray-700 px-3 py-2 items-center gap-2"
     >
-        <ERow
-            ref="topMenu"
-            justify="between"
-            align-content="center"
-            class="top-bar bg-white border-b border-gray-200 dark:bg-gray-900 dark:border-gray-700 px-3 py-2 items-center gap-2"
-        >
-            <ECol class="e-p-0" cols="5">
-                <ERow class="items-center gap-2">
-                    <select
-                        :value="device.id"
-                        id="device_form_id"
-                        name="devices"
-                        class="text-sm bg-white dark:bg-gray-800 text-gray-700 dark:text-white border border-gray-200 dark:border-gray-600 rounded-md px-3 py-1.5 h-9 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors"
-                        @input="
-                            $emit('switch_device', {
-                                device: $event.target.value,
-                            })
-                        "
-                    >
-                        <option
-                            v-for="device in devices"
-                            :key="device.id"
-                            :value="device.id"
-                        >
-                            {{ device.name }}
-                        </option>
-                    </select>
-                    <select
-                        :value="stream"
-                        name="streams"
-                        class="text-sm bg-white dark:bg-gray-800 text-gray-700 dark:text-white border border-gray-200 dark:border-gray-600 rounded-md px-3 py-1.5 h-9 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors"
-                        @input="
-                            $emit('switch_stream', {
-                                stream: $event.target.value,
-                            })
-                        "
-                    >
-                        <option
-                            v-for="stream in streams"
-                            :key="stream.value"
-                            :value="stream.value"
-                        >
-                            {{ stream.name }}
-                        </option>
-                    </select>
-                </ERow>
-            </ECol>
-            <ETooltip v-if="liveViewEnabled" position="bottom" :text="!startDate ? 'Currently watching live' : 'Jump to live edge'">
-                <button
-                    :class="!startDate
-                        ? 'bg-red-500 border border-red-600 text-white hover:bg-red-600 h-9 px-3 flex items-center gap-2 rounded-md transition-colors text-sm font-semibold'
-                        : 'bg-gray-50 dark:bg-gray-800 border border-red-300 dark:border-red-700 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 h-9 px-3 flex items-center gap-2 rounded-md transition-colors text-sm font-semibold'"
-                    @click="$emit('load-recording', { timestamp: null })"
-                >
-                    <EPulsatingDot :size="8" :color="!startDate ? '#ffffff' : '#ef4444'" />
-                    <span>{{ !startDate ? 'LIVE' : 'Go Live' }}</span>
-                </button>
-            </ETooltip>
-            <ECol class="e-p-0" cols="5">
-                <ERow
-                    class="right-buttons items-center gap-2"
-                    align-content="center"
-                    justify="end"
-                >
-                    <ETooltip
-                        v-if="liveViewEnabled"
-                        position="bottom"
-                        text="Download current snapshot"
-                    >
-                        <button
-                            class="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 h-9 text-gray-700 dark:text-white px-4 flex items-center rounded-md hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors text-sm font-medium"
-                            @click="downloadSnapshot"
-                        >
-                            <EIcon icon="camera" size="xl" class="e-mt-1" />
-                        </button>
-                    </ETooltip>
-                    <ETooltip position="bottom" text="Download footage">
-                        <button
-                            class="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 h-9 text-gray-700 dark:text-white px-4 flex items-center rounded-md hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors text-sm font-medium"
-                            @click="$emit('show-download-modal')"
-                        >
-                            <EIcon icon="download" size="xl" class="e-mt-1" />
-                        </button>
-                    </ETooltip>
-                </ERow>
-            </ECol>
-        </ERow>
-        <ELayout ref="mainLayout" :height="height">
-            <template #main>
-                <!-- stats  -->
-                <div
-                    v-if="showStreamStats"
-                    class="absolute z-10 top-5 left-5 max-w-sm bg-slate-800/70 rounded-2xl shadow-xl p-2"
-                >
-                    <div
-                        class="grid grid-cols-1 sm:grid-cols-2 gap-x-1 gap-y-1"
-                    >
-                        <div class="flex flex-col p-1">
-                            <span class="text-sm text-gray-400 font-medium mb-0"
-                                >Resolution</span
-                            >
-                            <span
-                                id="resolution"
-                                class="text-base text-gray-100 font-semibold"
-                                >{{ stats.resolution }}</span
-                            >
-                        </div>
-
-              <div class="flex flex-col p-1">
-                <span class="text-sm text-gray-400 font-medium mb-0"
-                  >Bitrate</span
-                >
-                <span
-                  id="bitrate"
-                  class="text-base text-gray-100 font-semibold"
-                  >{{ bitrate }}</span
-                >
-              </div>
-
-              <div class="flex flex-col p-1">
-                <span class="text-sm text-gray-400 font-medium mb-0"
-                  >Bandwidth</span
-                >
-                <span
-                  id="bandwidth"
-                  class="text-base text-gray-100 font-semibold"
-                  >{{ stats.bandwidth }}</span
-                >
-              </div>
-
-              <div class="flex flex-col p-1">
-                <span class="text-sm text-gray-400 font-medium mb-0"
-                  >Available Levels</span
-                >
-                <span
-                  id="frameRate"
-                  class="text-base text-gray-100 font-semibold"
-                  >{{ stats.availableLevels }}</span
-                >
-              </div>
-
-              <div class="flex flex-col p-1">
-                <span class="text-sm text-gray-400 font-medium mb-0"
-                  >Total Video Frames</span
-                >
-                <span
-                  id="totalVideoFrames"
-                  class="text-base text-gray-100 font-semibold"
-                  >{{ stats.totalVideoFrames }}</span
-                >
-              </div>
-
-              <div class="flex flex-col p-1">
-                <span class="text-sm text-gray-400 font-medium mb-0"
-                  >Corrupted Frames</span
-                >
-                <span
-                  id="decodedFrames"
-                  class="text-base text-gray-100 font-semibold"
-                  >{{ stats.corruptedFrames }}</span
-                >
-              </div>
-
-              <div class="flex flex-col p-1">
-                <span class="text-sm text-gray-400 font-medium mb-0"
-                  >Dropped Frames</span
-                >
-                <span
-                  id="droppedFrames"
-                  class="text-base text-gray-100 font-semibold"
-                  >{{ stats.droppedFrames }}</span
-                >
-              </div>
-
-              <!-- Codec -->
-              <div class="flex flex-col p-1">
-                <span class="text-sm text-gray-400 font-medium mb-0"
-                  >Codec</span
-                >
-                <span
-                  id="codec"
-                  class="text-base text-gray-100 font-semibold"
-                  >{{ stats.codec }}</span
-                >
-              </div>
-            </div>
-          </div>
-
-          <div
-            v-if="showPTZControls"
-            class="flex z-10 gap-5 absolute right-5 p-4"
+      <ECol class="e-p-0" cols="5">
+        <ERow class="items-center gap-2">
+          <select
+            :value="device.id"
+            id="device_form_id"
+            name="devices"
+            class="text-sm bg-white dark:bg-gray-800 text-gray-700 dark:text-white border border-gray-200 dark:border-gray-600 rounded-md px-3 py-1.5 h-9 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors"
+            @input="
+              $emit('switch_device', {
+                device: $event.target.value,
+              })
+            "
           >
-            <div>
-              <div class="flex justify-center ml-14 gap-2">
-                <button
-                  @click="upPTZ"
-                  class="w-12 h-12 bg-gray-800 backdrop-blur-md text-white text-lg rounded-xl flex items-center justify-center shadow-lg border border-gray-700 hover:bg-gray-700 active:scale-95 transition"
-                >
-                  <i class="fa-solid fa-angle-up"></i>
-                </button>
-                <button
-                  @click="zoomInPTZ"
-                  class="w-12 h-12 bg-gray-800 backdrop-blur-md text-white text-lg rounded-xl flex items-center justify-center shadow-lg border border-gray-700 hover:bg-gray-700 active:scale-95 transition"
-                >
-                  <i class="fa-solid fa-plus"></i>
-                </button>
-              </div>
-
-              <div class="flex justify-between gap-2 my-2">
-                <button
-                  @click="leftPTZ"
-                  class="w-12 h-12 bg-gray-800 backdrop-blur-md text-white text-lg rounded-xl flex items-center justify-center shadow-lg border border-gray-700 hover:bg-gray-700 active:scale-95 transition"
-                >
-                  <i class="fa-solid fa-angle-left"> </i>
-                </button>
-
-                <button
-                  @click="homePTZ"
-                  class="w-12 h-12 bg-gray-800 backdrop-blur-md text-white text-lg rounded-xl flex items-center justify-center shadow-lg border border-gray-700 hover:bg-gray-700 active:scale-95 transition"
-                >
-                  <i class="fa-solid fa-house"></i>
-                </button>
-
-                <button
-                  @click="rightPTZ"
-                  class="w-12 h-12 bg-gray-800 backdrop-blur-md text-white text-lg rounded-xl flex items-center justify-center shadow-lg border border-gray-700 hover:bg-gray-700 active:scale-95 transition"
-                >
-                  <i class="fa-solid fa-angle-right"></i>
-                </button>
-              </div>
-
-              <div class="flex justify-center ml-14 gap-2">
-                <button
-                  @click="downPTZ"
-                  class="w-12 h-12 bg-gray-800 backdrop-blur-md text-white text-lg rounded-xl flex items-center justify-center shadow-lg border border-gray-700 hover:bg-gray-700 active:scale-95 transition"
-                >
-                  <i class="fa-solid fa-angle-down"></i>
-                </button>
-                <button
-                  @click="zoomOutPTZ"
-                  class="w-12 h-12 bg-gray-800 backdrop-blur-md text-white text-lg rounded-xl flex items-center justify-center shadow-lg border border-gray-700 hover:bg-gray-700 active:scale-95 transition"
-                >
-                  <i class="fa-solid fa-minus"></i>
-                </button>
-              </div>
-            </div>
-            <div class="flex flex-col gap-2"></div>
-          </div>
-
-          <EVideoPlayer
-            id="main"
-            v-if="liveViewEnabled"
-            ref="videoPlayer"
-            :sources="[
-              {
-                src: url,
-              },
-            ]"
-            is-hls
-            is-zoomable
-            :pause-on-click="false"
-            :video-options="videoOptions"
-            :hls-options="{
-              liveSyncDurationCount: 3,
-              liveMaxLatencyDurationCount: 6,
-              manifestLoadingTimeOut: 60000,
-            }"
+            <option
+              v-for="device in devices"
+              :key="device.id"
+              :value="device.id"
+            >
+              {{ device.name }}
+            </option>
+          </select>
+          <select
+            :value="stream"
+            name="streams"
+            class="text-sm bg-white dark:bg-gray-800 text-gray-700 dark:text-white border border-gray-200 dark:border-gray-600 rounded-md px-3 py-1.5 h-9 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors"
+            @input="
+              $emit('switch_stream', {
+                stream: $event.target.value,
+              })
+            "
+          >
+            <option
+              v-for="stream in streams"
+              :key="stream.value"
+              :value="stream.value"
+            >
+              {{ stream.name }}
+            </option>
+          </select>
+        </ERow>
+      </ECol>
+      <ETooltip
+        v-if="liveViewEnabled"
+        position="bottom"
+        :text="!startDate ? 'Currently watching live' : 'Jump to live edge'"
+      >
+        <button
+          :class="
+            !startDate
+              ? 'bg-red-500 border border-red-600 text-white hover:bg-red-600 h-9 px-3 flex items-center gap-2 rounded-md transition-colors text-sm font-semibold'
+              : 'bg-gray-50 dark:bg-gray-800 border border-red-300 dark:border-red-700 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 h-9 px-3 flex items-center gap-2 rounded-md transition-colors text-sm font-semibold'
+          "
+          @click="$emit('load-recording', { timestamp: null })"
+        >
+          <EPulsatingDot
+            :size="8"
+            :color="!startDate ? '#ffffff' : '#ef4444'"
           />
+          <span>{{ !startDate ? "LIVE" : "Go Live" }}</span>
+        </button>
+      </ETooltip>
+      <ECol class="e-p-0" cols="5">
+        <ERow
+          class="right-buttons items-center gap-2"
+          align-content="center"
+          justify="end"
+        >
+          <ETooltip
+            v-if="liveViewEnabled"
+            position="bottom"
+            text="Download current snapshot"
+          >
+            <button
+              class="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 h-9 text-gray-700 dark:text-white px-4 flex items-center rounded-md hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors text-sm font-medium"
+              @click="downloadSnapshot"
+            >
+              <EIcon icon="camera" size="xl" class="e-mt-1" />
+            </button>
+          </ETooltip>
+          <ETooltip position="bottom" text="Download footage">
+            <button
+              class="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 h-9 text-gray-700 dark:text-white px-4 flex items-center rounded-md hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors text-sm font-medium"
+              @click="$emit('show-download-modal')"
+            >
+              <EIcon icon="download" size="xl" class="e-mt-1" />
+            </button>
+          </ETooltip>
+        </ERow>
+      </ECol>
+    </ERow>
+    <ELayout ref="mainLayout" :height="height">
+      <template #main>
+        <!-- stats  -->
+        <div
+          v-if="showStreamStats"
+          class="absolute z-10 top-5 left-5 max-w-sm bg-slate-800/70 rounded-2xl shadow-xl p-2"
+        >
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-1 gap-y-1">
+            <div class="flex flex-col p-1">
+              <span class="text-sm text-gray-400 font-medium mb-0"
+                >Resolution</span
+              >
+              <span
+                id="resolution"
+                class="text-base text-gray-100 font-semibold"
+                >{{ stats.resolution }}</span
+              >
+            </div>
 
-                <div
-                    v-else
-                    class="relative rounded-tr rounded-tl text-center bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-200 w-full h-full flex flex-col justify-center items-center gap-3"
-                >
-                    <svg xmlns="http://www.w3.org/2000/svg" class="w-12 h-12 text-gray-400 dark:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25h-9A2.25 2.25 0 002.25 7.5v9a2.25 2.25 0 002.25 2.25z" />
-                        <line x1="3" y1="3" x2="21" y2="21" stroke-width="1.5" />
-                    </svg>
-                    <p class="text-lg font-medium">{{ liveViewDisabledReason || 'Live view is not available' }}</p>
-                </div>
-            </template>
+            <div class="flex flex-col p-1">
+              <span class="text-sm text-gray-400 font-medium mb-0"
+                >Bitrate</span
+              >
+              <span
+                id="bitrate"
+                class="text-base text-gray-100 font-semibold"
+                >{{ bitrate }}</span
+              >
+            </div>
+
+            <div class="flex flex-col p-1">
+              <span class="text-sm text-gray-400 font-medium mb-0"
+                >Bandwidth</span
+              >
+              <span
+                id="bandwidth"
+                class="text-base text-gray-100 font-semibold"
+                >{{ stats.bandwidth }}</span
+              >
+            </div>
+
+            <div class="flex flex-col p-1">
+              <span class="text-sm text-gray-400 font-medium mb-0"
+                >Available Levels</span
+              >
+              <span
+                id="frameRate"
+                class="text-base text-gray-100 font-semibold"
+                >{{ stats.availableLevels }}</span
+              >
+            </div>
+
+            <div class="flex flex-col p-1">
+              <span class="text-sm text-gray-400 font-medium mb-0"
+                >Total Video Frames</span
+              >
+              <span
+                id="totalVideoFrames"
+                class="text-base text-gray-100 font-semibold"
+                >{{ stats.totalVideoFrames }}</span
+              >
+            </div>
+
+            <div class="flex flex-col p-1">
+              <span class="text-sm text-gray-400 font-medium mb-0"
+                >Corrupted Frames</span
+              >
+              <span
+                id="decodedFrames"
+                class="text-base text-gray-100 font-semibold"
+                >{{ stats.corruptedFrames }}</span
+              >
+            </div>
+
+            <div class="flex flex-col p-1">
+              <span class="text-sm text-gray-400 font-medium mb-0"
+                >Dropped Frames</span
+              >
+              <span
+                id="droppedFrames"
+                class="text-base text-gray-100 font-semibold"
+                >{{ stats.droppedFrames }}</span
+              >
+            </div>
+
+            <!-- Codec -->
+            <div class="flex flex-col p-1">
+              <span class="text-sm text-gray-400 font-medium mb-0">Codec</span>
+              <span id="codec" class="text-base text-gray-100 font-semibold">{{
+                stats.codec
+              }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div
+          v-if="showPTZControl"
+          class="flex z-10 gap-5 absolute right-5 p-4"
+        >
+          <div>
+            <div class="flex justify-center ml-14 gap-2">
+              <button
+                @click="upPTZ"
+                class="w-12 h-12 bg-gray-800 backdrop-blur-md text-white text-lg rounded-xl flex items-center justify-center shadow-lg border border-gray-700 hover:bg-gray-700 active:scale-95 transition"
+              >
+                <i class="fa-solid fa-angle-up"></i>
+              </button>
+              <button
+                @click="zoomInPTZ"
+                class="w-12 h-12 bg-gray-800 backdrop-blur-md text-white text-lg rounded-xl flex items-center justify-center shadow-lg border border-gray-700 hover:bg-gray-700 active:scale-95 transition"
+              >
+                <i class="fa-solid fa-plus"></i>
+              </button>
+            </div>
+
+            <div class="flex justify-between gap-2 my-2">
+              <button
+                @click="leftPTZ"
+                class="w-12 h-12 bg-gray-800 backdrop-blur-md text-white text-lg rounded-xl flex items-center justify-center shadow-lg border border-gray-700 hover:bg-gray-700 active:scale-95 transition"
+              >
+                <i class="fa-solid fa-angle-left"> </i>
+              </button>
+
+              <button
+                @click="homePTZ"
+                class="w-12 h-12 bg-gray-800 backdrop-blur-md text-white text-lg rounded-xl flex items-center justify-center shadow-lg border border-gray-700 hover:bg-gray-700 active:scale-95 transition"
+              >
+                <i class="fa-solid fa-house"></i>
+              </button>
+
+              <button
+                @click="rightPTZ"
+                class="w-12 h-12 bg-gray-800 backdrop-blur-md text-white text-lg rounded-xl flex items-center justify-center shadow-lg border border-gray-700 hover:bg-gray-700 active:scale-95 transition"
+              >
+                <i class="fa-solid fa-angle-right"></i>
+              </button>
+            </div>
+
+            <div class="flex justify-center ml-14 gap-2">
+              <button
+                @click="downPTZ"
+                class="w-12 h-12 bg-gray-800 backdrop-blur-md text-white text-lg rounded-xl flex items-center justify-center shadow-lg border border-gray-700 hover:bg-gray-700 active:scale-95 transition"
+              >
+                <i class="fa-solid fa-angle-down"></i>
+              </button>
+              <button
+                @click="zoomOutPTZ"
+                class="w-12 h-12 bg-gray-800 backdrop-blur-md text-white text-lg rounded-xl flex items-center justify-center shadow-lg border border-gray-700 hover:bg-gray-700 active:scale-95 transition"
+              >
+                <i class="fa-solid fa-minus"></i>
+              </button>
+            </div>
+          </div>
+          <div class="flex flex-col gap-2"></div>
+        </div>
+
+        <EVideoPlayer
+          id="main"
+          v-if="liveViewEnabled"
+          ref="videoPlayer"
+          :sources="[
+            {
+              src: url,
+            },
+          ]"
+          is-hls
+          is-zoomable
+          :pause-on-click="false"
+          :video-options="videoOptions"
+          :hls-options="{
+            liveSyncDurationCount: 3,
+            liveMaxLatencyDurationCount: 6,
+            manifestLoadingTimeOut: 60000,
+          }"
+        />
+
+        <div
+          v-else
+          class="relative rounded-tr rounded-tl text-center bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-200 w-full h-full flex flex-col justify-center items-center gap-3"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="w-12 h-12 text-gray-400 dark:text-gray-500"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            stroke-width="1.5"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25h-9A2.25 2.25 0 002.25 7.5v9a2.25 2.25 0 002.25 2.25z"
+            />
+            <line x1="3" y1="3" x2="21" y2="21" stroke-width="1.5" />
+          </svg>
+          <p class="text-lg font-medium">
+            {{ liveViewDisabledReason || "Live view is not available" }}
+          </p>
+        </div>
+      </template>
 
       <template #bottom-right>
         <ECol>
@@ -450,10 +466,10 @@ export default defineComponent({
       type: Boolean,
       default: false,
     },
-        liveViewDisabledReason: {
-            type: String,
-            default: null,
-        },
+    liveViewDisabledReason: {
+      type: String,
+      default: null,
+    },
     startDate: {
       type: String,
       default: null,
@@ -508,13 +524,13 @@ export default defineComponent({
   },
   methods: {
     handleResize() {
-            const GAP_PX = 8;
+      const GAP_PX = 8;
       this.height = `${
         document.body.clientHeight -
-          this.$refs.topMenu?.$el.clientHeight -
-          this.getNavHeight() -
-          (this.$refs.timeline?.$el?.clientHeight ?? 0) -
-                    GAP_PX
+        this.$refs.topMenu?.$el.clientHeight -
+        this.getNavHeight() -
+        (this.$refs.timeline?.$el?.clientHeight ?? 0) -
+        GAP_PX
       }px`;
     },
     getNavHeight() {

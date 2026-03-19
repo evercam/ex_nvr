@@ -514,8 +514,7 @@ defmodule ExNVRWeb.DashboardLive do
   @spec get_status(Ecto.Changeset.t()) :: {ptz_t(), ExOnvif.Device.t()} | {nil, nil}
   defp get_status(device) do
     with {:ok, onvif_device} <- Onvif.onvif_device(device),
-         {:ok, :has_onvif_ptz} <- check_ptz_support(onvif_device),
-         {:ok, status} <- ExOnvif.PTZ.get_status(onvif_device, "Profile_1") do
+         {:ok, status} <- safe_get_status(onvif_device) do
       {
         %{
           x: status.position.pan_tilt.x,
@@ -525,17 +524,15 @@ defmodule ExNVRWeb.DashboardLive do
         onvif_device
       }
     else
-      {:error, :no_url} -> {nil, nil}
-      {:error, :not_camera} -> {nil, nil}
-      {:error, :ptz_not_supported} -> {nil, nil}
+      _ -> {nil, nil}
     end
   end
 
-  defp check_ptz_support(onvif_device) do
-    Map.fetch(onvif_device, :device_service_path)
-    |> case do
-      {:ok, "/onvif/ptz"} -> {:ok, :has_onvif_ptz}
-      _ -> {:error, :ptz_not_supported}
+  defp safe_get_status(onvif_device) do
+    try do
+      ExOnvif.PTZ.get_status(onvif_device, "Profile_1")
+    rescue
+      _ -> {:error, :ptz_service_unavailable}
     end
   end
 
