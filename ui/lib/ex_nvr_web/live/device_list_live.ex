@@ -55,7 +55,10 @@ defmodule ExNVRWeb.DeviceListLive do
           </div>
         </:col>
         <:col :let={device} label="Triggers">
-          <span :if={@trigger_counts[device.id]} class="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+          <span
+            :if={@trigger_counts[device.id]}
+            class="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800 dark:bg-blue-900 dark:text-blue-200"
+          >
             {@trigger_counts[device.id]} active
           </span>
           <span :if={!@trigger_counts[device.id]} class="text-gray-400 dark:text-gray-500 text-sm">
@@ -68,7 +71,11 @@ defmodule ExNVRWeb.DeviceListLive do
   end
 
   def mount(_params, _session, socket) do
-    {:ok, assign(socket, devices: Devices.list(), trigger_counts: Triggers.trigger_config_counts_by_device())}
+    {:ok,
+     assign(socket,
+       devices: Devices.list(),
+       trigger_counts: Triggers.trigger_config_counts_by_device()
+     )}
   end
 
   defp get_type_label(:ip), do: "IP Camera"

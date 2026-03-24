@@ -66,7 +66,7 @@ defmodule ExNVRWeb.DeviceTabs.TriggersTab do
             <.link
               href={~p"/triggers/#{tc.id}"}
               class="text-xs text-blue-600 dark:text-blue-400 hover:underline"
-              phx-click={:stop_propagation}
+              onclick="event.stopPropagation()"
             >
               Edit
             </.link>
@@ -101,7 +101,7 @@ defmodule ExNVRWeb.DeviceTabs.TriggersTab do
      |> assign(assigns)
      |> assign_new(:all_triggers, fn -> Triggers.list_trigger_configs() end)
      |> assign_new(:selected_ids, fn ->
-       Triggers.trigger_configs_for_device(device.id) |> Enum.map(& &1.id)
+       device.id |> Triggers.all_trigger_configs_for_device() |> Enum.map(& &1.id)
      end)
      |> assign_new(:saved, fn -> false end)}
   end

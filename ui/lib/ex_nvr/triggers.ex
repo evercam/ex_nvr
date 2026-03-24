@@ -136,6 +136,17 @@ defmodule ExNVR.Triggers do
     |> Repo.all()
   end
 
+  @spec all_trigger_configs_for_device(binary()) :: [TriggerConfig.t()]
+  def all_trigger_configs_for_device(device_id) do
+    from(tc in TriggerConfig,
+      join: dtc in DeviceTriggerConfig,
+      on: dtc.trigger_config_id == tc.id,
+      where: dtc.device_id == ^device_id,
+      preload: [:source_configs, :target_configs]
+    )
+    |> Repo.all()
+  end
+
   @doc """
   Returns all enabled trigger_recording target configs for a device.
 
