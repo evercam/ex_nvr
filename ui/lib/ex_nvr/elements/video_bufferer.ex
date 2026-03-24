@@ -225,8 +225,9 @@ defmodule ExNVR.Elements.VideoBufferer do
     end
   end
 
-  # Drop all frames from the front up to and including the oldest keyframe
-  # (i.e. remove one coded video sequence).
+  # Drop all frames belonging to the oldest coded video sequence:
+  # the leading keyframe and every non-keyframe that follows it,
+  # stopping just before the next keyframe.
   defp drop_oldest_cvs(state) do
     case :queue.out(state.buffer) do
       {:empty, _} ->
@@ -241,10 +242,20 @@ defmodule ExNVR.Elements.VideoBufferer do
               if(Utils.keyframe(buf), do: state.keyframe_count - 1, else: state.keyframe_count)
         }
 
-        if Utils.keyframe(buf) do
-          new_state
-        else
-          drop_oldest_cvs(new_state)
+        # If we just dropped a non-keyframe, keep dropping (looking for the keyframe).
+        # If we dropped a keyframe, continue dropping trailing non-keyframes.
+        case :queue.peek(new_state.buffer) do
+          {:value, next_buf} ->
+            if Utils.keyframe(next_buf) do
+              # Next frame starts a new CVS — stop here
+              new_state
+            else
+              # Still in the same CVS (or leading orphans) — keep dropping
+              drop_oldest_cvs(new_state)
+            end
+
+          :empty ->
+            new_state
         end
     end
   end
