@@ -155,12 +155,11 @@ defmodule ExNVR.Elements.VideoBuffererTest do
     buffers = [kf1, f1a, f1b, kf2, f2a, kf3, f3a]
     {_actions, state} = send_buffers(state, buffers)
 
-    # drop_oldest_cvs removes frames up to and including the first keyframe.
-    # Since kf1 is at the front, only kf1 is removed, leaving the trailing
-    # non-keyframes from CVS 1 as orphans.
+    # drop_oldest_cvs removes the entire oldest CVS (keyframe + its trailing
+    # non-keyframes up to the next keyframe). CVS 1 = [kf1, f1a, f1b] is gone.
     assert state.keyframe_count == 2
     remaining = :queue.to_list(state.buffer)
-    assert Enum.map(remaining, & &1.payload) == [<<2>>, <<3>>, <<4>>, <<5>>, <<6>>, <<7>>]
+    assert Enum.map(remaining, & &1.payload) == [<<4>>, <<5>>, <<6>>, <<7>>]
   end
 
   test "keyframe limit of 1 evicts until only one keyframe remains" do
@@ -173,10 +172,10 @@ defmodule ExNVR.Elements.VideoBuffererTest do
 
     {_actions, state} = send_buffers(state, [kf1, f1, kf2, f2])
 
-    # kf1 evicted when kf2 pushed (kf_count 2 > 1), orphaning f1
+    # kf1 + f1 evicted as a complete CVS when kf2 pushed (kf_count 2 > 1)
     assert state.keyframe_count == 1
     remaining = :queue.to_list(state.buffer)
-    assert Enum.map(remaining, & &1.payload) == [<<2>>, <<3>>, <<4>>]
+    assert Enum.map(remaining, & &1.payload) == [<<3>>, <<4>>]
   end
 
   # --- Bytes eviction ---
@@ -504,11 +503,11 @@ defmodule ExNVR.Elements.VideoBuffererTest do
 
     {_actions, state} = send_buffers(state, buffers)
 
-    # Each eviction drops the front keyframe, leaving its trailing non-keyframe.
-    # After 4 CVSs with limit 1: last orphaned non-keyframe + latest CVS remain.
+    # Each eviction drops an entire CVS (keyframe + trailing non-keyframes).
+    # After 4 CVSs with limit 1: only the latest CVS remains.
     assert state.keyframe_count == 1
     remaining = :queue.to_list(state.buffer)
-    assert Enum.map(remaining, & &1.payload) == [<<3, 1>>, <<4, 0>>, <<4, 1>>]
+    assert Enum.map(remaining, & &1.payload) == [<<4, 0>>, <<4, 1>>]
   end
 
   test "bytes eviction updates keyframe count correctly" do
