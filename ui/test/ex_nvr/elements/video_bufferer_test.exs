@@ -57,7 +57,7 @@ defmodule ExNVR.Elements.VideoBuffererTest do
   end
 
   defp send_timeout(state) do
-    VideoBufferer.handle_info(:event_timeout, @ctx, state)
+    VideoBufferer.handle_info({:event_timeout, state.timeout_ref}, @ctx, state)
   end
 
   defp output_buffers(actions) do
@@ -338,6 +338,38 @@ defmodule ExNVR.Elements.VideoBuffererTest do
 
     assert actions == []
     assert state.mode == :buffering
+  end
+
+  # --- Timer race condition ---
+
+  test "stale timeout message after reset does not cause premature transition" do
+    # Use a real (very short) timer so it fires into our process mailbox
+    state = init(event_timeout: 1)
+
+    # First event: start forwarding with a 1ms timer
+    {_actions, state} = send_event(state)
+    assert state.mode == :forwarding
+    stale_ref = state.timeout_ref
+
+    # Wait for the timer to fire — {:event_timeout, stale_ref} is now in our mailbox
+    Process.sleep(10)
+
+    # A new event arrives, which calls reset_timeout.
+    # cancel_timer returns false (already fired), but the stale message remains.
+    {_actions, state} = send_event(state)
+    assert state.mode == :forwarding
+    assert state.timeout_ref != stale_ref
+
+    # Prove the stale message is in the mailbox
+    assert_receive {:event_timeout, ^stale_ref}
+
+    # Membrane will call handle_info with this stale message.
+    # It should NOT cause a transition back to buffering.
+    {actions, state} =
+      VideoBufferer.handle_info({:event_timeout, stale_ref}, @ctx, state)
+
+    refute has_discontinuity?(actions), "stale timeout should not send discontinuity"
+    assert state.mode == :forwarding, "stale timeout should not switch back to buffering"
   end
 
   # --- Recurring events extend forwarding ---
