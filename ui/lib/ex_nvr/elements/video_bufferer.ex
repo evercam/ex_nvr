@@ -131,8 +131,9 @@ defmodule ExNVR.Elements.VideoBufferer do
   end
 
   # --- Timeout: switch back to buffering, send discontinuity ---
+  # Only act on the timeout if the ref matches the current one (ignores stale messages).
   @impl true
-  def handle_info(:event_timeout, _ctx, %{mode: :forwarding} = state) do
+  def handle_info({:event_timeout, ref}, _ctx, %{mode: :forwarding, timeout_ref: ref} = state) do
     Membrane.Logger.info("Event timeout reached, switching to buffering mode")
 
     state = %{
@@ -147,9 +148,10 @@ defmodule ExNVR.Elements.VideoBufferer do
     {[event: {:output, %Membrane.Event.Discontinuity{}}], state}
   end
 
+  # Stale or non-matching timeout — ignore.
   @impl true
-  def handle_info(:event_timeout, _ctx, state) do
-    {[], %{state | timeout_ref: nil}}
+  def handle_info({:event_timeout, _ref}, _ctx, state) do
+    {[], state}
   end
 
   @impl true
@@ -161,7 +163,8 @@ defmodule ExNVR.Elements.VideoBufferer do
 
   defp reset_timeout(state) do
     if state.timeout_ref, do: Process.cancel_timer(state.timeout_ref)
-    ref = Process.send_after(self(), :event_timeout, state.event_timeout)
+    ref = make_ref()
+    Process.send_after(self(), {:event_timeout, ref}, state.event_timeout)
     %{state | timeout_ref: ref}
   end
 
