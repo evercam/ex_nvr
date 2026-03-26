@@ -145,6 +145,7 @@ defmodule ExNVRWeb.Components.Sidebar do
         ],
         [
           %{label: "Devices", icon: "hero-video-camera-solid", href: ~p"/devices"},
+          %{label: "Triggers", icon: "hero-bolt-solid", href: ~p"/triggers", role: :admin},
           %{label: "Users", icon: "hero-users-solid", href: ~p"/users", role: :admin},
           %{
             label: "Onvif Discovery",
@@ -208,6 +209,7 @@ defmodule ExNVRWeb.Components.Sidebar do
         ],
         [
           %{label: "Devices", icon: "hero-video-camera-solid", href: ~p"/devices"},
+          %{label: "Triggers", icon: "hero-bolt-solid", href: ~p"/triggers", role: :admin},
           %{label: "Users", icon: "hero-users-solid", href: ~p"/users", role: :admin},
           %{
             label: "Onvif Discovery",
