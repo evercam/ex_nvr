@@ -7,6 +7,8 @@ defmodule ExNVR.Triggers.Targets.DeviceControl do
 
   @behaviour ExNVR.Triggers.TriggerTarget
 
+  alias ExNVR.Model.Device
+
   require Logger
 
   @impl true
@@ -74,6 +76,6 @@ defmodule ExNVR.Triggers.Targets.DeviceControl do
   defp resolve_state("stop", _device), do: :stopped
 
   defp resolve_state("toggle", device) do
-    if ExNVR.Model.Device.recording?(device), do: :stopped, else: :recording
+    if Device.recording?(device), do: :stopped, else: :recording
   end
 end

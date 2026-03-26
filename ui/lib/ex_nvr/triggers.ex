@@ -184,13 +184,15 @@ defmodule ExNVR.Triggers do
     )
     |> Repo.all()
     |> Enum.uniq_by(& &1.id)
-    |> Enum.filter(fn tc ->
-      Enum.any?(tc.source_configs, fn sc ->
-        case TriggerSources.module_for(sc.source_type) do
-          nil -> false
-          module -> module.matches?(sc.config, message)
-        end
-      end)
+    |> Enum.filter(&source_matches?(&1, message))
+  end
+
+  defp source_matches?(trigger_config, message) do
+    Enum.any?(trigger_config.source_configs, fn sc ->
+      case TriggerSources.module_for(sc.source_type) do
+        nil -> false
+        module -> module.matches?(sc.config, message)
+      end
     end)
   end
 end

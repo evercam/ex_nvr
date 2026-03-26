@@ -27,15 +27,19 @@ defmodule ExNVR.Triggers.TriggerSources do
         Ecto.Changeset.add_error(changeset, :source_type, "unknown source type")
 
       module ->
-        case module.validate_config(config) do
-          {:ok, validated} ->
-            Ecto.Changeset.put_change(changeset, :config, validated)
+        apply_module_validation(changeset, module, config)
+    end
+  end
 
-          {:error, errors} ->
-            Enum.reduce(errors, changeset, fn {field, msg}, cs ->
-              Ecto.Changeset.add_error(cs, :config, "#{field}: #{msg}")
-            end)
-        end
+  defp apply_module_validation(changeset, module, config) do
+    case module.validate_config(config) do
+      {:ok, validated} ->
+        Ecto.Changeset.put_change(changeset, :config, validated)
+
+      {:error, errors} ->
+        Enum.reduce(errors, changeset, fn {field, msg}, cs ->
+          Ecto.Changeset.add_error(cs, :config, "#{field}: #{msg}")
+        end)
     end
   end
 

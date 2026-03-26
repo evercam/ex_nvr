@@ -5,6 +5,7 @@ defmodule ExNVR.Triggers.ListenerTest do
   import ExNVR.DevicesFixtures
   import ExNVR.TriggersFixtures
 
+  alias Ecto.Adapters.SQL.Sandbox
   alias ExNVR.Events
   alias ExNVR.Triggers
 
@@ -35,7 +36,7 @@ defmodule ExNVR.Triggers.ListenerTest do
       # Start a listener for this test
       start_supervised!(Triggers.Listener)
       # Allow the listener to access the sandbox
-      Ecto.Adapters.SQL.Sandbox.allow(ExNVR.Repo, self(), Process.whereis(Triggers.Listener))
+      Sandbox.allow(ExNVR.Repo, self(), Process.whereis(Triggers.Listener))
 
       log =
         capture_log([level: :warning], fn ->
@@ -49,7 +50,7 @@ defmodule ExNVR.Triggers.ListenerTest do
 
     test "listener ignores events without matching triggers", %{device: device} do
       start_supervised!(Triggers.Listener)
-      Ecto.Adapters.SQL.Sandbox.allow(ExNVR.Repo, self(), Process.whereis(Triggers.Listener))
+      Sandbox.allow(ExNVR.Repo, self(), Process.whereis(Triggers.Listener))
 
       log =
         capture_log([level: :warning], fn ->
