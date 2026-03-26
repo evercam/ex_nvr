@@ -293,7 +293,7 @@ defmodule ExNVR.Elements.VideoBuffererTest do
     {actions, state} = send_event(state)
 
     flushed = output_buffers(actions)
-    assert length(flushed) == 0
+    assert flushed == []
     assert state.mode == :forwarding
   end
 
