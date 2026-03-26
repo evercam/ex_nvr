@@ -4,6 +4,7 @@ defmodule ExNVRWeb.DeviceListLive do
   use ExNVRWeb, :live_view
 
   alias ExNVR.Devices
+  alias ExNVR.Triggers
 
   def render(assigns) do
     ~H"""
@@ -53,13 +54,28 @@ defmodule ExNVRWeb.DeviceListLive do
             {String.upcase(to_string(device.state))}
           </div>
         </:col>
+        <:col :let={device} label="Triggers">
+          <span
+            :if={@trigger_counts[device.id]}
+            class="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800 dark:bg-blue-900 dark:text-blue-200"
+          >
+            {@trigger_counts[device.id]} active
+          </span>
+          <span :if={!@trigger_counts[device.id]} class="text-gray-400 dark:text-gray-500 text-sm">
+            None
+          </span>
+        </:col>
       </.table>
     </div>
     """
   end
 
   def mount(_params, _session, socket) do
-    {:ok, assign(socket, devices: Devices.list())}
+    {:ok,
+     assign(socket,
+       devices: Devices.list(),
+       trigger_counts: Triggers.trigger_config_counts_by_device()
+     )}
   end
 
   defp get_type_label(:ip), do: "IP Camera"

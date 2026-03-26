@@ -7,7 +7,7 @@ defmodule ExNVRWeb.DeviceDetailsLive do
 
   alias ExNVR.Devices
   alias ExNVR.Model.Device
-  alias ExNVRWeb.DeviceTabs.{EventsListTab, RecordingsListTab, SettingsTab, StatsTab}
+  alias ExNVRWeb.DeviceTabs.{EventsListTab, RecordingsListTab, SettingsTab, StatsTab, TriggersTab}
   alias ExNVRWeb.Router.Helpers, as: Routes
 
   @snapshot_refresh_interval to_timeout(second: 10)
@@ -25,6 +25,7 @@ defmodule ExNVRWeb.DeviceDetailsLive do
         <:tab id="stats" label="Stats" />
         <:tab id="settings" label="Settings" />
         <:tab id="events" label="Events" />
+        <:tab id="triggers" label="Triggers" />
         
     <!-- device details tab -->
         <:tab_content for="details">
@@ -321,6 +322,15 @@ defmodule ExNVRWeb.DeviceDetailsLive do
             module={EventsListTab}
             device={@device}
             params={@params}
+          />
+        </:tab_content>
+
+        <:tab_content for="triggers">
+          <.live_component
+            id="triggers_tab"
+            module={TriggersTab}
+            device={@device}
+            current_user={@current_user}
           />
         </:tab_content>
       </.tabs>

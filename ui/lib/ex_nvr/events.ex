@@ -96,9 +96,18 @@ defmodule ExNVR.Events do
   end
 
   defp do_create_event(device_id, params) do
-    %Event{device_id: device_id}
-    |> Event.changeset(params)
-    |> Repo.insert()
+    with {:ok, event} <-
+           %Event{device_id: device_id}
+           |> Event.changeset(params)
+           |> Repo.insert() do
+      Phoenix.PubSub.broadcast(
+        ExNVR.PubSub,
+        ExNVR.Triggers.events_topic(),
+        {:event_created, event}
+      )
+
+      {:ok, event}
+    end
   end
 
   defp maybe_include_lpr_thumbnails(true, entries) do
