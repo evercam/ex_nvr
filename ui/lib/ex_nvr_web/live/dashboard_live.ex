@@ -515,7 +515,7 @@ defmodule ExNVRWeb.DashboardLive do
   defp get_status(device) do
     with {:ok, onvif_device} <- Onvif.onvif_device(device),
          ptz_available when not is_nil(ptz_available) <- onvif_device.ptz_ver20_service_path,
-         {:ok, status} <-  ExOnvif.API.get_status(onvif_device, "Profile_1") do
+         {:ok, status} <- ExOnvif.API.get_status(onvif_device, "Profile_1") do
       {
         %{
           x: status.position.pan_tilt.x,
