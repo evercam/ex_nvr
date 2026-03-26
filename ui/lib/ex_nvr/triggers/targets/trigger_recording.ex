@@ -24,10 +24,11 @@ defmodule ExNVR.Triggers.Targets.TriggerRecording do
       %{
         name: :event_timeout,
         type: :integer,
-        label: "Event timeout (ms)",
+        label: "Event timeout (seconds)",
         required: false,
-        default: 30_000,
-        placeholder: "30000",
+        default: 30,
+        placeholder: "30",
+        min: 1,
         options: nil
       },
       %{
@@ -46,6 +47,7 @@ defmodule ExNVR.Triggers.Targets.TriggerRecording do
         required: false,
         default: 3,
         placeholder: "3",
+        min: 1,
         options: nil
       }
     ]
@@ -55,21 +57,33 @@ defmodule ExNVR.Triggers.Targets.TriggerRecording do
   def validate_config(config) do
     config = for {k, v} <- config, into: %{}, do: {to_string(k), v}
 
-    {:ok,
-     %{
-       "event_timeout" => parse_int(config["event_timeout"], 30_000),
-       "buffer_limit_type" => config["buffer_limit_type"] || "keyframes",
-       "buffer_limit_value" => parse_int(config["buffer_limit_value"], 3)
-     }}
+    event_timeout = parse_int(config["event_timeout"], 30)
+    buffer_limit_value = parse_int(config["buffer_limit_value"], 3)
+    buffer_limit_type = config["buffer_limit_type"] || "keyframes"
+
+    errors =
+      []
+      |> validate_positive(:event_timeout, event_timeout)
+      |> validate_positive(:buffer_limit_value, buffer_limit_value)
+
+    if errors == [] do
+      {:ok,
+       %{
+         "event_timeout" => event_timeout,
+         "buffer_limit_type" => buffer_limit_type,
+         "buffer_limit_value" => buffer_limit_value
+       }}
+    else
+      {:error, errors}
+    end
   end
 
   @impl true
-  def execute(event, _config, opts) do
+  def execute(trigger, _config, opts) do
     target_config_id = Keyword.fetch!(opts, :target_config_id)
+    device_id = Keyword.fetch!(opts, :device_id)
 
-    Logger.info(
-      "Trigger: signaling video bufferer #{target_config_id} for device #{event.device_id}"
-    )
+    Logger.info("Trigger: signaling video bufferer #{target_config_id} for device #{device_id}")
 
     Phoenix.PubSub.broadcast(
       ExNVR.PubSub,
@@ -92,11 +106,18 @@ defmodule ExNVR.Triggers.Targets.TriggerRecording do
         _ -> :keyframes
       end
 
+    event_timeout_s = config["event_timeout"] || 30
+
     [
-      event_timeout: config["event_timeout"] || 30_000,
+      event_timeout: event_timeout_s * 1000,
       limit: {limit_type, config["buffer_limit_value"] || 3}
     ]
   end
+
+  defp validate_positive(errors, _field, value) when is_integer(value) and value >= 1, do: errors
+
+  defp validate_positive(errors, field, _value),
+    do: [{field, "must be a positive integer"} | errors]
 
   defp parse_int(nil, default), do: default
   defp parse_int(val, _default) when is_integer(val), do: val

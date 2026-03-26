@@ -245,21 +245,18 @@ defmodule ExNVR.Elements.VideoBufferer do
               if(Utils.keyframe(buf), do: state.keyframe_count - 1, else: state.keyframe_count)
         }
 
-        # If we just dropped a non-keyframe, keep dropping (looking for the keyframe).
-        # If we dropped a keyframe, continue dropping trailing non-keyframes.
-        case :queue.peek(new_state.buffer) do
-          {:value, next_buf} ->
-            if Utils.keyframe(next_buf) do
-              # Next frame starts a new CVS — stop here
-              new_state
-            else
-              # Still in the same CVS (or leading orphans) — keep dropping
-              drop_oldest_cvs(new_state)
-            end
+        # If the next frame starts a new CVS (keyframe) or the queue is empty, stop.
+        # Otherwise keep dropping — we're still in the same CVS (or leading orphans).
+        if next_starts_new_cvs?(new_state.buffer),
+          do: new_state,
+          else: drop_oldest_cvs(new_state)
+    end
+  end
 
-          :empty ->
-            new_state
-        end
+  defp next_starts_new_cvs?(queue) do
+    case :queue.peek(queue) do
+      {:value, buf} -> Utils.keyframe(buf)
+      :empty -> true
     end
   end
 

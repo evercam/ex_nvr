@@ -142,7 +142,7 @@ defmodule ExNVR.Elements.VideoBuffererDurationTest do
       {actions, _state} = send_event(state)
 
       flushed = output_buffers(actions)
-      assert length(flushed) > 0, "Expected flushed frames, got none"
+      assert flushed != [], "Expected flushed frames, got none"
 
       first_pts = hd(flushed).pts
       last_pts = List.last(flushed).pts
@@ -237,7 +237,7 @@ defmodule ExNVR.Elements.VideoBuffererDurationTest do
       Pipeline.terminate(pid)
 
       assert {:ok, {recordings, _meta}} = ExNVR.Recordings.list()
-      assert length(recordings) > 0
+      assert recordings != []
 
       total_duration =
         recordings
@@ -265,7 +265,7 @@ defmodule ExNVR.Elements.VideoBuffererDurationTest do
       Pipeline.terminate(pid)
 
       assert {:ok, {recordings, _meta}} = ExNVR.Recordings.list()
-      assert length(recordings) > 0
+      assert recordings != []
 
       total_frames =
         recordings

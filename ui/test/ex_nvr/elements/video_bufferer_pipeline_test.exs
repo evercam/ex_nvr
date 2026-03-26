@@ -87,7 +87,7 @@ defmodule ExNVR.Elements.VideoBuffererPipelineTest do
     Pipeline.terminate(pid)
 
     assert {:ok, {recordings, _meta}} = ExNVR.Recordings.list()
-    assert length(recordings) > 0
+    assert recordings != []
   end
 
   test "event timeout sends discontinuity and creates a segment boundary", %{device: device} do
@@ -106,7 +106,7 @@ defmodule ExNVR.Elements.VideoBuffererPipelineTest do
     Pipeline.terminate(pid)
 
     assert {:ok, {recordings, _meta}} = ExNVR.Recordings.list()
-    assert length(recordings) > 0
+    assert recordings != []
   end
 
   defp start_pipeline(device, topic, opts \\ []) do
