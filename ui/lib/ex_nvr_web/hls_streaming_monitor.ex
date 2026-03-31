@@ -17,13 +17,21 @@ defmodule ExNVRWeb.HlsStreamingMonitor do
     GenServer.start_link(__MODULE__, nil, name: __MODULE__)
   end
 
-  def register(id, cleanup_fn) do
+  def register(id, path, cleanup_fn) do
     Logger.info("Register new HLS stream: #{id}")
-    :ets.insert(__MODULE__, {id, cleanup_fn, current_time_s()})
+    :ets.insert(__MODULE__, {id, path, cleanup_fn, current_time_s()})
+  end
+
+  @spec path(String.t()) :: {:ok, Path.t()} | :error
+  def path(id) do
+    case :ets.lookup(__MODULE__, id) do
+      [{^id, path, _cleanup_fn, _last_access_time}] -> {:ok, path}
+      [] -> :error
+    end
   end
 
   def update_last_access_time(id) do
-    :ets.update_element(__MODULE__, id, {3, current_time_s()})
+    :ets.update_element(__MODULE__, id, {4, current_time_s()})
   end
 
   @impl true
@@ -51,10 +59,10 @@ defmodule ExNVRWeb.HlsStreamingMonitor do
 
   defp maybe_clean_up do
     :ets.tab2list(__MODULE__)
-    |> Enum.filter(fn {_, _, last_access_time} ->
+    |> Enum.filter(fn {_, _, _, last_access_time} ->
       current_time_s() - last_access_time >= @stale_time
     end)
-    |> Enum.each(fn {key, clean_up_fn, _} ->
+    |> Enum.each(fn {key, _, clean_up_fn, _} ->
       Logger.info(
         "HLS stream not used for more than #{@stale_time} seconds, stop streaming and clean up"
       )

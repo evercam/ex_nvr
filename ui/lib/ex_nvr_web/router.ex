@@ -72,7 +72,7 @@ defmodule ExNVRWeb.Router do
     scope "/devices/:device_id" do
       pipe_through(ExNVRWeb.Plug.Device)
 
-      get("/hls/:segment_name", API.DeviceStreamingController, :hls_stream_segment)
+      get "/hls/*path", API.DeviceStreamingController, :hls_stream_segment
     end
   end
 
@@ -151,9 +151,11 @@ defmodule ExNVRWeb.Router do
       ] do
       live("/devices/:id", DeviceLive, :edit)
 
-      live("/remote-storages", RemoteStorageListLive, :list)
-      live("/remote-storages/:id", RemoteStorageLive, :edit)
-      live("/removable-storage", RemovableStorageLive)
+      live "/triggers", TriggerConfigListLive, :list
+      live "/triggers/:id", TriggerConfigLive, :edit
+
+      live "/remote-storages", RemoteStorageListLive, :list
+      live "/remote-storages/:id", RemoteStorageLive, :edit
 
       live("/onvif-discovery", OnvifDiscoveryLive, :onvif_discovery)
 

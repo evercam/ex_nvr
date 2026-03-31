@@ -11,12 +11,18 @@ defmodule ExNVRWeb.API.DeviceStreamingControllerTest do
   @moduletag :tmp_dir
   @moduletag :device
 
-  @manifest """
+  @high_manifest """
   #EXTM3U
   #EXT-X-VERSION:7
   #EXT-X-INDEPENDENT-SEGMENTS
   #EXT-X-STREAM-INF:BANDWIDTH=1138520,CODECS="avc1.42e00a"
   main_stream.m3u8
+  """
+
+  @low_manifest """
+  #EXTM3U
+  #EXT-X-VERSION:7
+  #EXT-X-INDEPENDENT-SEGMENTS
   #EXT-X-STREAM-INF:BANDWIDTH=138520,CODECS="avc1.42e00a"
   sub_stream.m3u8
   """
@@ -29,8 +35,13 @@ defmodule ExNVRWeb.API.DeviceStreamingControllerTest do
     setup %{device: device} do
       Path.join(ExNVR.Utils.hls_dir(device.id), "live")
       |> tap(&File.mkdir_p!/1)
-      |> Path.join("index.m3u8")
-      |> File.write!(@manifest)
+      |> Path.join("master.m3u8")
+      |> File.write!(@high_manifest)
+
+      Path.join(ExNVR.Utils.hls_dir(device.id, :low), "live")
+      |> tap(&File.mkdir_p!/1)
+      |> Path.join("master.m3u8")
+      |> File.write!(@low_manifest)
 
       :ok
     end
@@ -38,13 +49,12 @@ defmodule ExNVRWeb.API.DeviceStreamingControllerTest do
     test "get manifest file", %{conn: conn, device: device} do
       conn = get(conn, ~p"/api/devices/#{device.id}/hls/index.m3u8")
 
-      assert ["application/vnd.apple.mpegurl; charset=utf-8"] =
+      assert ["application/vnd.apple.mpegurl"] =
                get_resp_header(conn, "content-type")
 
       body = response(conn, 200)
 
       assert body =~ "main_stream.m3u8"
-      assert body =~ "sub_stream.m3u8"
     end
 
     test "get manifest file for not recorded date", %{conn: conn, device: device} do

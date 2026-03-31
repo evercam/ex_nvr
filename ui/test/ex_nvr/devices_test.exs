@@ -87,21 +87,6 @@ defmodule ExNVR.DevicesTest do
              } = errors_on(changeset)
     end
 
-    test "requires stream config when type is webcam" do
-      {:error, changeset} =
-        Devices.create(%{
-          name: @valid_camera_name,
-          type: "webcam",
-          stream_config: %{},
-          settings: valid_device_settings()
-        })
-
-      assert %{
-               stream_config: %{framerate: ["can't be blank"]},
-               storage_config: ["can't be blank"]
-             } = errors_on(changeset)
-    end
-
     test "requires stream_uri" do
       {:error, changeset} =
         Devices.create(%{
@@ -262,6 +247,23 @@ defmodule ExNVR.DevicesTest do
 
       assert %{snapshot_config: %{schedule: ["Schedule time intervals must not overlap"]}} =
                errors_on(changeset)
+    end
+
+    test "validate framerate and resolution" do
+      {:error, changeset} =
+        Devices.create(%{
+          name: @valid_camera_name,
+          type: "webcam",
+          stream_config: %{framerate: 4.5, resolution: "1920"},
+          settings: valid_device_settings()
+        })
+
+      assert %{
+               stream_config: %{
+                 framerate: ["must be greater than or equal to 5"],
+                 resolution: ["should be in WIDTHxHEIGHT format"]
+               }
+             } = errors_on(changeset)
     end
 
     test "create a new device", %{tmp_dir: tmp_dir} do
@@ -495,5 +497,67 @@ defmodule ExNVR.DevicesTest do
              Device.recording_dir(device, :low)
 
     assert Path.join([ctx.tmp_dir, "ex_nvr", device.id, "bif"]) == Device.bif_dir(device)
+  end
+
+  describe "recording_mode" do
+    test "defaults to :always for new devices", %{tmp_dir: tmp_dir} do
+      device = camera_device_fixture(tmp_dir)
+      assert device.storage_config.recording_mode == :always
+      assert Device.recording_mode(device) == :always
+    end
+
+    test "create device with recording_mode :never does not require address" do
+      {:ok, device} =
+        Devices.create(
+          valid_device_attributes(%{
+            storage_config: %{recording_mode: :never, address: nil}
+          })
+        )
+
+      assert device.storage_config.recording_mode == :never
+      assert device.storage_config.address == nil
+    end
+
+    test "create device with recording_mode :never does not create directories" do
+      {:ok, device} =
+        Devices.create(
+          valid_device_attributes(%{
+            storage_config: %{recording_mode: :never, address: nil}
+          })
+        )
+
+      assert Device.base_dir(device) == nil
+    end
+
+    test "create device with recording_mode :always requires address" do
+      {:error, changeset} =
+        Devices.create(
+          valid_device_attributes(%{
+            storage_config: %{recording_mode: :always, address: nil}
+          })
+        )
+
+      assert %{storage_config: %{address: ["can't be blank"]}} = errors_on(changeset)
+    end
+
+    test "update device recording_mode", %{tmp_dir: tmp_dir} do
+      device = camera_device_fixture(tmp_dir)
+      assert device.storage_config.recording_mode == :always
+
+      {:ok, updated} =
+        Devices.update(device, %{storage_config: %{recording_mode: :never}})
+
+      assert updated.storage_config.recording_mode == :never
+    end
+
+    test "recording_mode helper defaults to :always for legacy devices" do
+      device = %Device{storage_config: %{recording_mode: nil}}
+      assert Device.recording_mode(device) == :always
+    end
+
+    test "base_dir returns nil when address is nil" do
+      device = %Device{id: "test-id", storage_config: %{address: nil}}
+      assert Device.base_dir(device) == nil
+    end
   end
 end

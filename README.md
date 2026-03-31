@@ -44,7 +44,7 @@ There's currently no automated docker build for `arm/v7` since building the imag
 the workaround is to build the image on the target host itself
 
 ```bash
-docker build -t ex_nvr:0.24.0 -f Dockerfile .
+docker build -t ex_nvr:0.25.0 -f Dockerfile .
 ```
 
 ### Releases
@@ -188,4 +188,5 @@ The project is in a `poncho` style, it consists of the following (sub)projects:
 
    * `video_processor` - Nif app that contains video encoding, decoding and processing logic.
    * `ui` - Contains the core logic of `ex_nvr` and a live view app.
-   * `nerves_fw` - Contains nerves firmware image. Check [here](/nerves_fw/README.md)
+   * `nerves_fw` - Contains nerves firmware image for Evercam. Check [here](/nerves_fw/README.md)
+   * `nerves_community` - Contains community nerves images for `ex_nvr`. Check [here](/nerves_community/README.md)

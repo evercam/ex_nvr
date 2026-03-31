@@ -153,7 +153,7 @@ defmodule ExNVRWeb.DeviceLiveTest do
       assert created_device.name == "My Device"
       assert created_device.type == :webcam
       assert created_device.storage_config.address == "/tmp"
-      assert created_device.stream_config.framerate == "20"
+      assert created_device.stream_config.framerate == 20.0
       assert created_device.stream_config.resolution == "1280x720"
 
       assert Phoenix.Flash.get(conn.assigns.flash, :info) == "Device created successfully"
@@ -178,6 +178,143 @@ defmodule ExNVRWeb.DeviceLiveTest do
 
       assert result =~ "invalid rtsp uri"
       assert Enum.empty?(Devices.list())
+    end
+  end
+
+  describe "Create device with recording_mode" do
+    test "create a device with recording_mode never (no address needed)", %{conn: conn} do
+      {:ok, lv, _} = live(conn, ~p"/devices/new")
+
+      {:ok, conn} =
+        lv
+        |> form("#device_form", %{
+          "device" => %{
+            "name" => "No Recording Device",
+            "type" => "ip",
+            "credentials" => %{
+              "username" => "user",
+              "password" => "pass"
+            },
+            "stream_config" => %{
+              "stream_uri" => "rtsp://localhost:554"
+            },
+            "storage_config" => %{
+              "recording_mode" => "never"
+            }
+          }
+        })
+        |> render_submit()
+        |> follow_redirect(conn, ~p"/devices")
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) == "Device created successfully"
+
+      assert [device] = Devices.list()
+      assert device.storage_config.recording_mode == :never
+      assert device.storage_config.address == nil
+    end
+
+    test "create a device with recording_mode always requires address", %{conn: conn} do
+      {:ok, lv, _} = live(conn, ~p"/devices/new")
+
+      result =
+        lv
+        |> form("#device_form", %{
+          "device" => %{
+            "name" => "Recording Device",
+            "type" => "ip",
+            "credentials" => %{
+              "username" => "user",
+              "password" => "pass"
+            },
+            "stream_config" => %{
+              "stream_uri" => "rtsp://localhost:554"
+            },
+            "storage_config" => %{
+              "recording_mode" => "always"
+            }
+          }
+        })
+        |> render_submit()
+
+      assert result =~ "can&#39;t be blank"
+      assert Enum.empty?(Devices.list())
+    end
+
+    test "recording_mode never hides storage address in UI", %{conn: conn} do
+      {:ok, lv, _} = live(conn, ~p"/devices/new")
+
+      html =
+        render_change(lv, :validate, %{
+          "device" => %{
+            "storage_config" => %{"recording_mode" => "never"}
+          }
+        })
+
+      refute html =~ "Storage address"
+    end
+
+    test "recording_mode always shows storage address in UI", %{conn: conn} do
+      {:ok, lv, _} = live(conn, ~p"/devices/new")
+
+      html =
+        render_change(lv, :validate, %{
+          "device" => %{
+            "storage_config" => %{"recording_mode" => "always"}
+          }
+        })
+
+      assert html =~ "Storage address"
+    end
+
+    test "toggle between volume and custom path", %{conn: conn} do
+      {:ok, lv, html} = live(conn, ~p"/devices/new")
+
+      # Default: volume mode
+      assert html =~ "Use custom path"
+      refute html =~ ~s(id="settings-storage-address-custom")
+
+      # Toggle to custom
+      html = render_click(lv, "toggle_storage_address_mode")
+      assert html =~ "Select volume"
+      assert html =~ ~s(id="settings-storage-address-custom")
+
+      # Toggle back to volume
+      html = render_click(lv, "toggle_storage_address_mode")
+      assert html =~ "Use custom path"
+    end
+
+    test "create device with custom storage path", %{conn: conn} do
+      {:ok, lv, _} = live(conn, ~p"/devices/new")
+
+      # Toggle to custom path mode
+      render_click(lv, "toggle_storage_address_mode")
+
+      {:ok, conn} =
+        lv
+        |> form("#device_form", %{
+          "device" => %{
+            "name" => "Custom Path Device",
+            "type" => "ip",
+            "credentials" => %{
+              "username" => "user",
+              "password" => "pass"
+            },
+            "stream_config" => %{
+              "stream_uri" => "rtsp://localhost:554"
+            },
+            "storage_config" => %{
+              "recording_mode" => "always",
+              "address" => "/tmp"
+            }
+          }
+        })
+        |> render_submit()
+        |> follow_redirect(conn, ~p"/devices")
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) == "Device created successfully"
+
+      assert [device] = Devices.list()
+      assert device.storage_config.address == "/tmp"
     end
   end
 

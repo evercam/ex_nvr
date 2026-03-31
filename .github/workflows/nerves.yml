@@ -49,9 +49,6 @@ jobs:
       NERVES_HUB_PRODUCT_KEY: ${{ secrets.NERVES_HUB_PRODUCT_KEY }}
       NERVES_HUB_PRODUCT_SECRET: ${{ secrets.NERVES_HUB_PRODUCT_SECRET }}
       SECRET_KEY_BASE: ${{ secrets.SECRET_KEY_BASE }}
-      REMOTE_CONFIGURER_URL: ${{ vars.REMOTE_CONFIGURER_URL }}
-      REMOTE_CONFIGURER_TOKEN: ${{ secrets.REMOTE_CONFIGURER_TOKEN }}
-      REMOTE_CONFIGURER_VERSION: ${{ vars.REMOTE_CONFIGURER_VERSION }}
       NH_TOKEN: ${{ secrets.NH_TOKEN }}
       NERVES_HUB_URI: ${{ vars.NERVES_HUB_URI }}
       NERVES_HUB_DEVICES_URI: ${{ vars.NERVES_HUB_DEVICES_URI }}
@@ -73,8 +70,8 @@ jobs:
 
       - uses: erlef/setup-beam@v1.18
         with:
-          otp-version: 27.3.3
-          elixir-version: 1.18.3
+          otp-version: 28.1.1
+          elixir-version: 1.19.5-otp-28
 
       - name: Set platform env variable
         run: echo "NERVES_FW_PLATFORM=giraffe" >> $GITHUB_ENV

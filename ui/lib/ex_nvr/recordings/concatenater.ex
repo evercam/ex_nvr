@@ -57,12 +57,12 @@ defmodule ExNVR.Recordings.Concatenater do
           {:ok, {ExMP4.Sample.t(), DateTime.t()}, t()} | {:error, :end_of_stream}
   def next_sample(%__MODULE__{} = state, track_id) do
     track_details = Map.fetch!(state.tracks, track_id)
-    %{reducer: reducer, bit_stream_filter: filter, track: track} = track_details
+    %{bit_stream_filter: filter, track: track} = track_details
     %{reader: reader, current_recording: recording} = state
     timescale = track.timescale
 
-    case reducer.({:cont, nil}) do
-      {:suspended, sample_metadata, new_reducer} ->
+    case ExMP4.Track.next_sample(track) do
+      {sample_metadata, track} ->
         sample = read_sample(reader, sample_metadata, filter)
 
         dts_in_ms = timescalify(sample.dts, timescale, :millisecond)
@@ -75,12 +75,12 @@ defmodule ExNVR.Recordings.Concatenater do
             duration: timescalify(sample.duration, timescale, @video_timescale)
         }
 
-        track_details = %{track_details | reducer: new_reducer}
+        track_details = %{track_details | track: track}
         state = %__MODULE__{state | tracks: Map.put(state.tracks, track_id, track_details)}
 
         {:ok, {sample, sample_timestamp}, state}
 
-      {:done, nil} ->
+      :done ->
         # For now we only have one track, once we add support
         # for audio tracks we should first make sure that
         # all tracks are finished before opening a new file
@@ -169,8 +169,6 @@ defmodule ExNVR.Recordings.Concatenater do
   defp maybe_seek(%{track: track} = track_details, state) do
     %{current_recording: recording, start_date: start_date} = state
 
-    reducer = &Enumerable.reduce(track, &1, fn elem, _acc -> {:suspend, elem} end)
-
     case DateTime.compare(recording.start_date, start_date) do
       :lt ->
         offset =
@@ -190,13 +188,14 @@ defmodule ExNVR.Recordings.Concatenater do
             end
           end)
 
-        track_details
-        |> Map.put(:reducer, read_until(reducer, keyframe_dts))
-        |> Map.put(:offset_from_start_date, offset - keyframe_dts)
-        |> Map.put(:offset, timescalify(keyframe_dts, track.timescale, @video_timescale))
+        Map.merge(track_details, %{
+          track: read_until(track, keyframe_dts),
+          offset_from_start_date: offset - keyframe_dts,
+          offset: timescalify(keyframe_dts, track.timescale, @video_timescale)
+        })
 
       _other ->
-        Map.merge(track_details, %{reducer: reducer, offset: 0, offset_from_start_date: 0})
+        Map.merge(track_details, %{offset: 0, offset_from_start_date: 0})
     end
   end
 
@@ -216,13 +215,10 @@ defmodule ExNVR.Recordings.Concatenater do
     Map.put(track_details, :offset, old_offset + old_duration)
   end
 
-  defp read_until(reducer, dts) do
-    {:suspended, sample_metadata, new_reducer} = reducer.({:cont, nil})
-
-    if sample_metadata.dts == dts do
-      reducer
-    else
-      read_until(new_reducer, dts)
+  defp read_until(track, dts) do
+    case ExMP4.Track.next_sample(track) do
+      {%{dts: ^dts}, _track} -> track
+      {_sample_metadata, track} -> read_until(track, dts)
     end
   end
 

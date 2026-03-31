@@ -22,6 +22,9 @@ defmodule ExNVR.Nerves.SystemSettings do
     @primary_key false
     @derive JSON.Encoder
     embedded_schema do
+      field :kit_serial, :string
+      field :configured, :boolean, default: false
+
       embeds_one :power_schedule, PowerSchedule, primary_key: false, on_replace: :update do
         @derive JSON.Encoder
         field :schedule, :map
@@ -46,13 +49,13 @@ defmodule ExNVR.Nerves.SystemSettings do
 
         field :ac_failure_action, Ecto.Enum,
           values: ~w(power_off stop_recording nothing)a,
-          default: :nothing
+          default: :stop_recording
 
         field :low_battery_action, Ecto.Enum,
           values: ~w(power_off stop_recording nothing)a,
-          default: :stop_recording
+          default: :nothing
 
-        field :trigger_after, :integer, default: 5
+        field :trigger_after, :integer, default: 30
       end
     end
 
@@ -64,7 +67,7 @@ defmodule ExNVR.Nerves.SystemSettings do
 
     def changeset(settings \\ %__MODULE__{}, params) do
       settings
-      |> cast(params, [])
+      |> cast(params, [:kit_serial, :configured])
       |> cast_embed(:power_schedule, with: &power_schedule_changeset/2)
       |> cast_embed(:router, with: &router_changeset/2)
       |> cast_embed(:ups, with: &ups_changeset/2)
@@ -126,6 +129,19 @@ defmodule ExNVR.Nerves.SystemSettings do
     GenServer.call(pid, :get_settings)
   end
 
+  @spec update(map()) :: {:ok, State.t()} | {:error, Ecto.Changeset.t()}
+  def update(pid \\ __MODULE__, params) do
+    GenServer.call(pid, {:update_settings, params})
+  end
+
+  @spec update!(map()) :: State.t()
+  def update!(pid \\ __MODULE__, params) do
+    case update(pid, params) do
+      {:ok, settings} -> settings
+      {:error, changeset} -> raise "Failed to update system settings: #{inspect(changeset)}"
+    end
+  end
+
   def update_router_settings(pid \\ __MODULE__, params) do
     GenServer.call(pid, {:update_router_settings, params})
   end
@@ -162,6 +178,14 @@ defmodule ExNVR.Nerves.SystemSettings do
   @impl true
   def handle_call(:get_settings, _from, state) do
     {:reply, state.settings, state}
+  end
+
+  @impl true
+  def handle_call({:update_settings, params}, _from, state) do
+    case do_update_settings(state, params) do
+      {:ok, state} -> {:reply, {:ok, state.settings}, state}
+      error -> {:reply, error, state}
+    end
   end
 
   @impl true

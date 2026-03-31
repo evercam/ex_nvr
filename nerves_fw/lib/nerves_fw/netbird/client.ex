@@ -32,7 +32,10 @@ defmodule ExNVR.Nerves.Netbird.Client do
 
   @impl true
   def handle_call({:up, management_url, setup_key, host}, _from, state) do
-    args = ["up", "--management-url", management_url, "-k", setup_key] ++ common_args(state)
+    args =
+      ["up", "--management-url", management_url, "-k", setup_key, "--disable-firewall"] ++
+        common_args(state)
+
     args = if host, do: args ++ ["--hostname", host], else: args
 
     {:reply, run_cmd(args), state}

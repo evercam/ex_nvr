@@ -113,10 +113,9 @@ defmodule ExNVRWeb.UserAuth do
       true ->
         conn = fetch_cookies(conn, signed: [@remember_me_cookie])
 
-        if token = conn.cookies[@remember_me_cookie] do
-          {token, "session", put_token_in_session(conn, token)}
-        else
-          {nil, "session", conn}
+        case conn.cookies[@remember_me_cookie] do
+          nil -> {nil, "session", conn}
+          token -> {token, "session", put_token_in_session(conn, token)}
         end
     end
   end

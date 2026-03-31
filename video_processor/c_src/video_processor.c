@@ -1,6 +1,3 @@
-#ifndef NVR_ENCODER_H
-#define NVR_ENCODER_H
-
 #include "video_processor.h"
 #include <libavutil/imgutils.h>
 
@@ -91,6 +88,11 @@ ERL_NIF_TERM new_encoder(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
 
   if (!encoder_config.codec) {
     ret = nif_raise(env, "unknown_codec");
+    goto clean;
+  }
+
+  if (format == NULL) {
+    ret = nif_raise(env, "missing_format");
     goto clean;
   }
 
@@ -619,5 +621,3 @@ static int load(ErlNifEnv *env, void **priv, ERL_NIF_TERM load_info) {
 }
 
 ERL_NIF_INIT(Elixir.ExNVR.AV.VideoProcessor.NIF, funcs, &load, NULL, NULL, NULL);
-
-#endif // NVR_ENCODER_H

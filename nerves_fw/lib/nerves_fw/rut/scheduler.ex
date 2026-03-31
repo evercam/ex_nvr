@@ -125,7 +125,7 @@ defmodule ExNVR.Nerves.RUT.Scheduler do
     new_instances =
       Enum.reduce(rest, [first_instance], fn instance2, [instance1 | rest] ->
         if collapse?(instance1, instance2) do
-          instance1 = %Instance{
+          instance1 = %{
             instance1
             | end_day: instance2.end_day,
               end_time: instance2.end_time
@@ -137,7 +137,7 @@ defmodule ExNVR.Nerves.RUT.Scheduler do
         end
       end)
 
-    last_instance = List.first(new_instances)
+    %Instance{} = last_instance = List.first(new_instances)
     first_instance = List.last(new_instances)
 
     # Check if we can collapse last instance with the first instance

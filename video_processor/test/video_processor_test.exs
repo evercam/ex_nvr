@@ -22,8 +22,9 @@ defmodule ExNVR.AV.VideoProcessorTest do
 
   describe "convert/2" do
     setup do
-      converter =
-        VideoProcessor.new_converter(
+      %{
+        data: File.read!("test/fixtures/encoder/frame_360x240.yuv"),
+        options: [
           in_width: 360,
           in_height: 240,
           in_format: :yuv420p,
@@ -31,17 +32,27 @@ defmodule ExNVR.AV.VideoProcessorTest do
           out_height: 120,
           out_format: :rgb24,
           pad?: false
-        )
-
-      %{converter: converter}
+        ]
+      }
     end
 
-    test "convert a frame", %{converter: converter} do
-      data = File.read!("test/fixtures/encoder/frame_360x240.yuv")
+    test "convert a frame", %{data: data, options: options} do
+      converter = VideoProcessor.new_converter(options)
 
       converted_data = VideoProcessor.convert(converter, data)
       assert is_binary(converted_data)
       assert byte_size(converted_data) == 180 * 120 * 3
+    end
+
+    test "convert and pad a frame", %{data: data, options: options} do
+      converter =
+        VideoProcessor.new_converter(Keyword.merge(options, pad?: true, out_height: 180))
+
+      Enum.each(1..10, fn _idx ->
+        converted_data = VideoProcessor.convert(converter, data)
+        assert is_binary(converted_data)
+        assert byte_size(converted_data) == 180 * 180 * 3
+      end)
     end
   end
 end

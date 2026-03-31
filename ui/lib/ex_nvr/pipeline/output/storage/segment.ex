@@ -54,43 +54,40 @@ defmodule ExNVR.Pipeline.Output.Storage.Segment do
   def size(segment), do: segment.metadata.size
 
   @spec add_duration(t(), Membrane.Time.t()) :: t()
-  def add_duration(segment, duration) do
+  def add_duration(%__MODULE__{} = segment, duration) do
     current_duration = segment.duration + duration
 
     %__MODULE__{
       segment
       | end_date: segment.end_date + duration,
         duration: current_duration,
-        metadata: %SegmentMetadata{segment.metadata | media_duration: current_duration}
+        metadata: %{segment.metadata | media_duration: current_duration}
     }
   end
 
   @spec with_wall_clock_duration(t(), Membrane.Time.t()) :: t()
-  def with_wall_clock_duration(segment, wall_clock_duration) do
+  def with_wall_clock_duration(%__MODULE__{} = segment, wall_clock_duration) do
     %__MODULE__{
       segment
-      | metadata: %SegmentMetadata{segment.metadata | wall_clock_duration: wall_clock_duration}
+      | metadata: %{segment.metadata | wall_clock_duration: wall_clock_duration}
     }
   end
 
   @spec with_realtime_duration(t(), Membrane.Time.t()) :: t()
-  def with_realtime_duration(segment, realtime_duration) do
-    %__MODULE__{
-      segment
-      | metadata: %SegmentMetadata{segment.metadata | realtime_duration: realtime_duration}
-    }
+  def with_realtime_duration(%__MODULE__{} = segment, realtime_duration) do
+    %__MODULE__{segment | metadata: %{segment.metadata | realtime_duration: realtime_duration}}
   end
 
   @doc """
   Add the size in bytes to the overall size of the segment
   """
   @spec add_size(t(), non_neg_integer()) :: t()
-  def add_size(segment, size_in_bytes) do
+  def add_size(%__MODULE__{} = segment, size_in_bytes) do
     current_size = segment.metadata.size
 
     %__MODULE__{
       segment
-      | metadata: %SegmentMetadata{segment.metadata | size: current_size + size_in_bytes}
+      | metadata: %{segment.metadata | size: current_size + size_in_bytes}
     }
   end
 end

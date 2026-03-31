@@ -12,16 +12,42 @@ defmodule ExNVRWeb.DeviceTabs.EventsListTab do
 
   @impl true
   def render(assigns) do
-    ~H'''
-    <div class="text-center text-gray-500 dark:text-gray-400">
-      <.event_filter_form meta={@meta} events={@events} target={@myself} />
+    ~H"""
+    <div>
+      <div class="flex justify-between items-end mb-4">
+        <.event_filter_form meta={@meta} events={@events} target={@myself} />
+        <.pagination meta={@meta} target={@myself} />
+      </div>
 
-      <div
-        class="list-table text-center text-gray-500 dark:text-gray-400 overflow-y-auto h-[72vh]"
-        id="recordings-tab"
-      >
+      <div :if={@events == []} class="flex items-center justify-center py-24">
+        <div class="text-center p-8 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm">
+          <div class="flex justify-center mb-4">
+            <div class="flex items-center justify-center w-14 h-14 rounded-full bg-gray-100 dark:bg-gray-700">
+              <svg
+                class="w-7 h-7 text-gray-400 dark:text-gray-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="1.5"
+                  d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
+                />
+              </svg>
+            </div>
+          </div>
+          <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-1">No Events Found</h2>
+          <p class="text-gray-500 dark:text-gray-400 text-sm">
+            No events match the current filters.
+          </p>
+        </div>
+      </div>
+
+      <div :if={@events != []} id="events-tab">
         <Flop.Phoenix.table
-          id="events-tab"
+          id="events-table"
           opts={ExNVRWeb.FlopConfig.table_opts()}
           items={@events}
           meta={@meta}
@@ -38,25 +64,16 @@ defmodule ExNVRWeb.DeviceTabs.EventsListTab do
             {Calendar.strftime(event.time, "%b %d, %Y %H:%M:%S %Z")}
           </:col>
           <:col :let={event} label="Data">
-            {Jason.encode!(event.metadata)}
+            <.metadata_display metadata={event.metadata} />
           </:col>
         </Flop.Phoenix.table>
       </div>
-
-      <div class="fixed bottom-0  right-10 w-full">
-        <div class="bg-gray-300 dark:bg-gray-800">
-          <div class="pb-5">
-            <.pagination meta={@meta} target={@myself} />
-          </div>
-        </div>
-      </div>
     </div>
-    '''
+    """
   end
 
   def event_filter_form(%{meta: meta, events: events} = assigns) do
-    assigns =
-      assign(assigns, form: to_form(meta), events: events)
+    assigns = assign(assigns, form: to_form(meta), events: events)
 
     ~H"""
     <.form
@@ -64,23 +81,23 @@ defmodule ExNVRWeb.DeviceTabs.EventsListTab do
       for={@form}
       id="event-tab-filter-form"
       phx-change="filter-events"
-      class="flex space-x-4"
+      class="flex items-end gap-4"
     >
       <Flop.Phoenix.filter_fields
         :let={f}
         form={@form}
         fields={[
-          type: [op: :like, placeholder: "Filter by event type"],
-          time: [op: :>=, label: "Min event time"],
-          time: [op: :<=, label: "Max event time"]
+          type: [op: :like, placeholder: "e.g. motion", label: "Event Type"],
+          time: [op: :>=, type: "datetime-local", label: "From"],
+          time: [op: :<=, type: "datetime-local", label: "To"]
         ]}
       >
         <div>
           <.input
-            class="border rounded p-1"
             field={f.field}
             label={f.label}
             type={f.type}
+            l_class="text-left"
             phx-debounce="500"
             {f.rest}
           />
@@ -106,7 +123,6 @@ defmodule ExNVRWeb.DeviceTabs.EventsListTab do
      socket
      |> assign(assigns)
      |> assign_new(:pagination_params, fn -> %{} end)
-     |> assign_new(:filter_params, fn -> %{} end)
      |> load_events(params)}
   end
 

@@ -53,9 +53,13 @@ defmodule ExNVRWeb.CoreComponents do
       data-cancel={JS.exec(@on_cancel, "phx-remove")}
       class="fixed top-0 left-0 right-0 z-50 hidden w-full p-4 overflow-x-hidden overflow-y-auto md:inset-0 h-[calc(100%-1rem)] max-h-full justify-center"
     >
-      <div id={"#{@id}-bg"} class="bg-zinc-50/90 fixed inset-0 transition-opacity" aria-hidden="true" />
       <div
-        class={["fixed inset-0 overflow-y-auto", @class || "dark:bg-gray-400"]}
+        id={"#{@id}-bg"}
+        class="bg-gray-900/60 fixed inset-0 transition-opacity"
+        aria-hidden="true"
+      />
+      <div
+        class={["fixed inset-0 overflow-y-auto", @class]}
         aria-labelledby={"#{@id}-title"}
         aria-describedby={"#{@id}-description"}
         role="dialog"
@@ -69,16 +73,16 @@ defmodule ExNVRWeb.CoreComponents do
               phx-window-keydown={JS.exec("data-cancel", to: "##{@id}")}
               phx-key="escape"
               phx-click-away={JS.exec("data-cancel", to: "##{@id}")}
-              class="shadow-zinc-700/10 ring-zinc-700/10 relative hidden rounded-lg bg-gray-300 p-2 shadow-lg ring-1 transition shadow dark:bg-gray-800"
+              class="relative hidden rounded-xl bg-white p-2 shadow-xl ring-1 ring-gray-200 transition dark:bg-gray-800 dark:ring-gray-700"
             >
-              <div class="absolute top-6 right-5">
+              <div class="absolute top-4 right-4">
                 <button
                   phx-click={JS.exec("data-cancel", to: "##{@id}")}
                   type="button"
-                  class="-m-3 flex-none p-3 opacity-20 hover:opacity-40"
+                  class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700 dark:hover:text-gray-200"
                   aria-label={gettext("close")}
                 >
-                  <.icon name="hero-x-mark-solid dark:bg-white" class="h-5 w-5" />
+                  <.icon name="hero-x-mark-solid" class="h-5 w-5" />
                 </button>
               </div>
               <div id={"#{@id}-content"}>
@@ -107,26 +111,23 @@ defmodule ExNVRWeb.CoreComponents do
       data-cancel={JS.exec(@on_cancel, "phx-remove")}
       tabindex="-1"
       aria-hidden="true"
-      class="hidden overflow-y-auto overflow-x-hidden fixed top-0 right-0 left-0 z-50 justify-center items-center w-full md:inset-0 h-[calc(100%-1rem)] max-h-full"
+      class="hidden bg-gray-900/60 overflow-y-auto overflow-x-hidden fixed top-0 right-0 left-0 z-50 justify-center items-center w-full md:inset-0 h-[calc(100%-1rem)] max-h-full"
     >
       <div class="relative p-4 w-full max-w-md max-h-full">
-        <!-- Modal content -->
-        <div class="relative bg-white rounded-lg shadow-sm dark:bg-gray-700">
-          <!-- Modal header -->
-          <div class="flex items-center justify-between p-4 md:p-5 border-b rounded-t dark:border-gray-600 border-gray-200">
-            <h3 class="text-xl font-semibold text-gray-900 dark:text-white">
+        <div class="relative bg-white rounded-xl shadow-xl ring-1 ring-gray-200 dark:bg-gray-800 dark:ring-gray-700">
+          <div class="flex items-center justify-between p-4 md:p-5 border-b border-gray-200 dark:border-gray-700 rounded-t-xl">
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
               {render_slot(@header)}
             </h3>
             <button
               type="button"
-              class="end-2.5 text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm w-8 h-8 ms-auto inline-flex justify-center items-center dark:hover:bg-gray-600 dark:hover:text-white"
+              class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700 dark:hover:text-gray-200 ms-auto inline-flex justify-center items-center"
               phx-click={JS.exec("data-cancel", to: "##{@id}")}
             >
-              <.icon name="hero-x-mark-solid dark:bg-white" class="h-5 w-5" />
+              <.icon name="hero-x-mark-solid" class="h-5 w-5" />
               <span class="sr-only">Close modal</span>
             </button>
           </div>
-          <!-- Modal body -->
           <div class="p-4 md:p-5">
             {render_slot(@inner_block)}
           </div>
@@ -266,10 +267,10 @@ defmodule ExNVRWeb.CoreComponents do
     <button
       type={@type}
       class={[
-        "phx-submit-loading:opacity-75 inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium",
-        "ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-        "focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4",
-        "[&_svg]:shrink-0 text-primary-foreground h-10 px-4 py-2 bg-blue-600 hover:bg-blue-700 dark:text-white",
+        "phx-submit-loading:opacity-75 inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-semibold",
+        "transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2",
+        "disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+        "text-white h-10 px-4 py-2 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 shadow-sm",
         @class
       ]}
       {@rest}
@@ -367,9 +368,9 @@ defmodule ExNVRWeb.CoreComponents do
           value="true"
           checked={@checked}
           class={[
-            "rounded text-black border-gray-300 rounded bg-gray-50 focus:ring-3 focus:ring-blue-300",
-            "dark:bg-gray-700 dark:border-gray-600 dark:focus:ring-blue-600",
-            "dark:ring-offset-gray-800 dark:focus:ring-offset-gray-80"
+            "rounded text-blue-600 border-gray-300 bg-gray-50 focus:ring-3 focus:ring-blue-300",
+            "dark:bg-gray-700 dark:border-gray-600 dark:text-blue-500 dark:focus:ring-blue-600",
+            "dark:ring-offset-gray-800"
           ]}
           {@rest}
         />
@@ -465,19 +466,30 @@ defmodule ExNVRWeb.CoreComponents do
     ~H"""
     <div phx-feedback-for={@name}>
       <.label for={@id}>{@label}</.label>
-      <select
-        id={@id}
-        name={@name}
-        class={[
-          "mt-1 block w-full rounded-md border border-gray-300 bg-white shadow-sm focus:border-zinc-400 focus:ring-0 text-sm",
-          "dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-        ]}
-        multiple={@multiple}
-        {@rest}
-      >
-        <option :if={@prompt} value="">{@prompt}</option>
-        {Phoenix.HTML.Form.options_for_select(@options, @value)}
-      </select>
+      <div class="relative">
+        <select
+          id={@id}
+          name={@name}
+          class={[
+            "mt-1 block w-full rounded-md border border-gray-300 bg-white shadow-sm focus:border-zinc-400 focus:ring-0 text-sm",
+            "placeholder-gray-400 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+          ]}
+          multiple={@multiple}
+          {@rest}
+        >
+          <option :if={@prompt} value="" disabled selected hidden>{@prompt}</option>
+          {Phoenix.HTML.Form.options_for_select(@options, @value)}
+        </select>
+        <button
+          :if={@prompt && @value not in ["", nil]}
+          type="button"
+          class="absolute right-7 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+          phx-click={JS.dispatch("phx:clear-select", detail: %{select_id: @id})}
+          aria-label="Clear selection"
+        >
+          <.icon name="hero-x-mark" class="w-3.5 h-3.5" />
+        </button>
+      </div>
       <.error :for={msg <- @errors}>{msg}</.error>
     </div>
     """
@@ -494,7 +506,7 @@ defmodule ExNVRWeb.CoreComponents do
           "mt-2 block w-full rounded-lg text-zinc-900 focus:ring-0 sm:text-sm sm:leading-6",
           "phx-no-feedback:border-zinc-300 phx-no-feedback:focus:border-zinc-400",
           "min-h-[6rem] border-zinc-300 focus:border-zinc-400 dark:bg-gray-700",
-          "dark:border-gray-600 dark:placeholder-gray-400 dark:text-white",
+          "placeholder-gray-400 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white",
           "dark:focus:ring-blue-500 dark:focus:border-blue-500",
           @errors != [] && "border-rose-400 focus:border-rose-400"
         ]}
@@ -519,7 +531,7 @@ defmodule ExNVRWeb.CoreComponents do
           "mt-1 block w-full rounded-lg text-black focus:ring-0 sm:text-sm sm:leading-6",
           "phx-no-feedback:border-zinc-300 phx-no-feedback:focus:border-zinc-400",
           "border-zinc-300 focus:border-zinc-400 dark:bg-gray-600 dark:border-gray-500",
-          "dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500",
+          "placeholder-gray-400 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500",
           "text-black",
           @errors != [] && "border-rose-400 focus:border-rose-400"
         ]}
@@ -725,7 +737,7 @@ defmodule ExNVRWeb.CoreComponents do
 
   def card(assigns) do
     ~H"""
-    <div class={@class <> " p-4 bg-gray-300 border border-gray-500 rounded-lg shadow sm:p-6 md:p-8 dark:bg-gray-800 dark:border-gray-700"}>
+    <div class={@class <> " p-4 bg-white border border-gray-200 rounded-lg shadow sm:p-6 md:p-8 dark:bg-gray-800 dark:border-gray-700"}>
       {render_slot(@inner_block)}
     </div>
     """
@@ -748,7 +760,7 @@ defmodule ExNVRWeb.CoreComponents do
   def pagination(assigns) do
     ~H"""
     <div aria-label="Pagination" class="flex justify-end mt-4">
-      <ul :if={@meta.total_pages > 0} class="flex items-center -space-x-px h-8 text-sm">
+      <ul :if={@meta.total_pages > 1} class="flex items-center -space-x-px h-8 text-sm">
         <li>
           <a
             href="#"
@@ -756,12 +768,12 @@ defmodule ExNVRWeb.CoreComponents do
             phx-value-page={@meta.previous_page}
             class={
               [
-                "flex items-center justify-center px-3 h-8 ml-0 leading-tight bg-white border border-gray-300 rounded-l-lg"
+                "flex items-center justify-center px-3 h-8 ml-0 leading-tight bg-white border border-gray-300 rounded-l-lg dark:bg-gray-800 dark:border-gray-700"
               ] ++
                 if not @meta.has_previous_page?,
-                  do: ["pointer-events-none text-gray-300"],
+                  do: ["pointer-events-none text-gray-300 dark:text-gray-600"],
                   else: [
-                    "text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
+                    "text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
                   ]
             }
           >
@@ -798,12 +810,12 @@ defmodule ExNVRWeb.CoreComponents do
             phx-value-page={@meta.next_page}
             class={
               [
-                "flex items-center justify-center px-3 h-8 leading-tight border border-gray-300 bg-white rounded-r-lg"
+                "flex items-center justify-center px-3 h-8 leading-tight border border-gray-300 bg-white rounded-r-lg dark:bg-gray-800 dark:border-gray-700"
               ] ++
                 if not @meta.has_next_page?,
-                  do: ["pointer-events-none text-gray-300"],
+                  do: ["pointer-events-none text-gray-300 dark:text-gray-600"],
                   else: [
-                    "text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
+                    "text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
                   ]
             }
           >
@@ -985,9 +997,9 @@ defmodule ExNVRWeb.CoreComponents do
         id={@id}
         phx-hook="HighlightSyntax"
         data-lang={@lang}
-        class="relative bg-gray-100 dark:bg-gray-800 rounded-md overflow-x-auto border border-white dark:bg-gray-800 dark:border-gray-700"
+        class="relative bg-gray-100 dark:bg-gray-800 rounded-md overflow-x-auto border border-gray-200 dark:border-gray-700"
       >
-        <pre class="text-sm text-gray-400 p-5"><code><%= @code %></code></pre>
+        <pre class="text-sm text-gray-700 dark:text-gray-400 p-5"><code><%= @code %></code></pre>
       </div>
 
       <div class="absolute top-3 right-3 gap-2">
@@ -1003,4 +1015,37 @@ defmodule ExNVRWeb.CoreComponents do
   defdelegate tabs(assigns), to: Components.Tabs
 
   defdelegate icon(assigns), to: Components.Icon
+
+  @doc """
+  Renders an event metadata map as a formatted key-value list.
+  """
+  attr :metadata, :map, required: true
+
+  def metadata_display(%{metadata: metadata} = assigns) when map_size(metadata) == 0 do
+    assigns = assign(assigns, :entries, [])
+
+    ~H"""
+    <span class="text-gray-400 dark:text-gray-500 text-xs italic">—</span>
+    """
+  end
+
+  def metadata_display(assigns) do
+    assigns = assign(assigns, :entries, Map.to_list(assigns.metadata))
+
+    ~H"""
+    <dl class="space-y-0.5 text-sm">
+      <div :for={{key, value} <- @entries} class="flex gap-1.5 flex-wrap">
+        <dt class="font-semibold text-gray-600 dark:text-gray-400 capitalize whitespace-nowrap">
+          {key |> to_string() |> String.replace("_", " ")}:
+        </dt>
+        <dd class="text-gray-900 dark:text-gray-100 break-all">
+          {format_metadata_value(value)}
+        </dd>
+      </div>
+    </dl>
+    """
+  end
+
+  defp format_metadata_value(value) when is_map(value) or is_list(value), do: Jason.encode!(value)
+  defp format_metadata_value(value), do: to_string(value)
 end

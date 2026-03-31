@@ -31,7 +31,7 @@ defmodule ExNVRWeb.Application do
         {DynamicSupervisor, [name: ExNVR.Hardware.Supervisor, strategy: :one_for_one]},
         {ExNVR.Hardware.SerialPortChecker, []},
         Task.child_spec(fn -> ExNVR.start() end)
-      ] ++ remote_connector()
+      ] ++ trigger_listener() ++ remote_connector()
 
     opts = [strategy: :one_for_one, name: ExNVRWeb.Supervisor]
     Supervisor.start_link(children, opts)
@@ -41,6 +41,14 @@ defmodule ExNVRWeb.Application do
   def config_change(changed, _new, removed) do
     ExNVRWeb.Endpoint.config_change(changed, removed)
     :ok
+  end
+
+  defp trigger_listener do
+    if Application.get_env(:ex_nvr, :run_trigger_listener, true) do
+      [ExNVR.Triggers.Listener]
+    else
+      []
+    end
   end
 
   defp remote_connector do

@@ -80,8 +80,8 @@ defmodule ExNVR.Model.Device do
       field :filename, :string
       field :temporary_path, :string, virtual: true
       field :duration, :integer
-      field :framerate, :string
-      field :resolution, :string, default: "640x480"
+      field :framerate, :float, default: 8.0
+      field :resolution, :string
     end
 
     def changeset(struct, params, device_type) do
@@ -119,7 +119,10 @@ defmodule ExNVR.Model.Device do
     end
 
     defp validate_device_config(changeset, :webcam) do
-      validate_required(changeset, [:framerate, :resolution])
+      changeset
+      |> validate_required([:framerate])
+      |> validate_number(:framerate, greater_than_or_equal_to: 5, less_than_or_equal_to: 30)
+      |> validate_format(:resolution, ~r/^\d+x\d+$/, message: "should be in WIDTHxHEIGHT format")
     end
 
     defp validate_uri(field, uri, protocl \\ "rtsp") do
@@ -240,7 +243,15 @@ defmodule ExNVR.Model.Device do
 
   # directories path
 
-  @spec base_dir(t()) :: Path.t()
+  @spec recording_mode(t()) :: :never | :always | :on_event
+  def recording_mode(%__MODULE__{storage_config: %{recording_mode: mode}}) when not is_nil(mode),
+    do: mode
+
+  def recording_mode(%__MODULE__{}), do: :always
+
+  @spec base_dir(t()) :: Path.t() | nil
+  def base_dir(%__MODULE__{storage_config: %{address: nil}}), do: nil
+
   def base_dir(%__MODULE__{id: id, storage_config: %{address: path}}),
     do: Path.join([path, "ex_nvr", id])
 
@@ -375,7 +386,7 @@ defmodule ExNVR.Model.Device do
   defp do_build_uri(stream_uri, userinfo) do
     stream_uri
     |> URI.parse()
-    |> then(&%URI{&1 | userinfo: userinfo})
+    |> then(&%{&1 | userinfo: userinfo})
     |> URI.to_string()
   end
 end

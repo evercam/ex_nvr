@@ -135,13 +135,6 @@ defmodule ExNVR.Pipelines.Main do
 
   @impl true
   def handle_setup(_ctx, %{device: device} = state) do
-    spec =
-      [
-        child(:hls_sink, %Output.HLS{
-          location: Path.join(Utils.hls_dir(device.id), "live")
-        })
-      ] ++ build_device_spec(device)
-
     {:ok, pid} = StorageMonitor.start_link(device: device)
     state = %{state | storage_monitor: pid}
 
@@ -149,7 +142,7 @@ defmodule ExNVR.Pipelines.Main do
     # may happens on application crash
     device_state = if state.device.type == :file, do: :streaming, else: :failed
     Recordings.deactivate_runs(state.device)
-    {[spec: spec], maybe_update_device_and_report(state, device_state)}
+    {[spec: build_device_spec(device)], maybe_update_device_and_report(state, device_state)}
   end
 
   @impl true
@@ -198,6 +191,12 @@ defmodule ExNVR.Pipelines.Main do
   end
 
   @impl true
+  def handle_child_notification({:stream_failed, reason}, :webcam, _ctx, state) do
+    Membrane.Logger.error("Webcam stream failed: #{inspect(reason)}")
+    {[], maybe_update_device_and_report(state, :failed)}
+  end
+
+  @impl true
   def handle_child_notification({:snapshot, snapshot}, _element, _ctx, state) do
     state.live_snapshot_waiting_pids
     |> Enum.map(&{:reply_to, {&1, {:ok, snapshot}}})
@@ -216,13 +215,23 @@ defmodule ExNVR.Pipelines.Main do
   end
 
   @impl true
-  def handle_child_notification({:stats, stats}, {:stats_reporter, :main_stream}, _ctx, state) do
+  def handle_child_notification(
+        {:stats, stats},
+        {:stats_reporter, :main_stream},
+        _ctx,
+        %State{} = state
+      ) do
     track = state.main_stream_video_track
     {[], %State{state | main_stream_video_track: %{track | stats: stats}}}
   end
 
   @impl true
-  def handle_child_notification({:stats, stats}, {:stats_reporter, :sub_stream}, _ctx, state) do
+  def handle_child_notification(
+        {:stats, stats},
+        {:stats_reporter, :sub_stream},
+        _ctx,
+        %State{} = state
+      ) do
     track = state.sub_stream_video_track
     {[], %State{state | sub_stream_video_track: %{track | stats: stats}}}
   end
@@ -393,13 +402,11 @@ defmodule ExNVR.Pipelines.Main do
   end
 
   defp build_device_spec(%{type: :webcam} = device) do
-    [width, height] = String.split(device.stream_config.resolution, "x")
-
     [
-      child(:source, %Source.Webcam{
+      child(:webcam, %Source.Webcam{
         device: device.url,
         framerate: device.stream_config.framerate,
-        resolution: {String.to_integer(width), String.to_integer(height)}
+        resolution: device.stream_config.resolution
       })
     ]
   end
@@ -413,8 +420,11 @@ defmodule ExNVR.Pipelines.Main do
       [
         get_child(:tee)
         |> via_out(:push_output)
-        |> via_in(Pad.ref(:main_stream, :video))
-        |> get_child(:hls_sink),
+        |> via_in(:video)
+        |> child(:hls_sink, %Output.HLS{
+          location: Path.join(Utils.hls_dir(state.device.id), "live")
+        }),
+        # |> get_child(:hls_sink),
         get_child(:tee)
         |> via_out(:push_output)
         |> child({:snapshooter, :main_stream}, ExNVR.Elements.CVSBufferer),
@@ -434,8 +444,10 @@ defmodule ExNVR.Pipelines.Main do
     [
       get_child({:tee, :sub_stream})
       |> via_out(:push_output)
-      |> via_in(Pad.ref(:sub_stream, :video))
-      |> get_child(:hls_sink),
+      |> via_in(:video)
+      |> child({:hls_sink, :sub_stream}, %Output.HLS{
+        location: Path.join(Utils.hls_dir(device.id, :low), "live")
+      }),
       get_child({:tee, :sub_stream})
       |> via_out(:push_output)
       |> child({:stats_reporter, :sub_stream}, %VideoStreamStatReporter{
@@ -492,7 +504,9 @@ defmodule ExNVR.Pipelines.Main do
   end
 
   defp build_sub_stream_bif_spec(state) do
-    if state.record_main_stream? and state.device.settings.generate_bif do
+    has_address = not is_nil(state.device.storage_config.address)
+
+    if has_address and state.device.settings.generate_bif do
       [
         get_child({:tee, :sub_stream})
         |> via_out(:push_output)

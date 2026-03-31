@@ -1,11 +1,16 @@
 defmodule ExNVRWeb.DeviceTabs.RecordingsListTab do
-  @moduledoc false
-
+  @moduledoc """
+    recordings list tab
+      recordings list
+      filters
+      pagination
+  """
   use ExNVRWeb, :live_component
 
   require Logger
 
   import ExNVRWeb.RecordingListLive, only: [recording_details_popover: 1]
+  import ExNVRWeb.ViewUtils, only: [humanize_duration: 1]
 
   alias ExNVR.Recordings
   alias ExNVRWeb.RecordingListLive
@@ -15,13 +20,20 @@ defmodule ExNVRWeb.DeviceTabs.RecordingsListTab do
   def render(assigns) do
     ~H"""
     <div>
-      <div class="text-center text-gray-500 dark:text-gray-400" id="recordings-tab">
-        <.filter_form
-          meta={@meta}
-          recordings={@recordings}
-          target={@myself}
-          id="recording-filter-form"
-        />
+      <div
+        class="text-center text-gray-500 dark:text-gray-400"
+        id="recordings-tab"
+        phx-hook="FlowbiteInit"
+      >
+        <div class="flex justify-between items-end mb-2">
+          <.filter_form
+            meta={@meta}
+            recordings={@recordings}
+            target={@myself}
+            id="recording-filter-form"
+          />
+          <.pagination meta={@meta} target={@myself} />
+        </div>
 
         <div>
           <Flop.Phoenix.table
@@ -37,6 +49,11 @@ defmodule ExNVRWeb.DeviceTabs.RecordingsListTab do
             </:col>
             <:col :let={recording} label="End-date" field={:end_date}>
               {RecordingListLive.format_date(recording.end_date, @device.timezone)}
+            </:col>
+            <:col :let={recording} label="Duration">
+              {humanize_duration(
+                DateTime.diff(recording.end_date, recording.start_date, :millisecond)
+              )}
             </:col>
             <:action :let={recording}>
               <div class="flex justify-end">
@@ -88,26 +105,38 @@ defmodule ExNVRWeb.DeviceTabs.RecordingsListTab do
             </:action>
           </Flop.Phoenix.table>
         </div>
-
-        <div class="fixed bottom-0  right-10 w-full">
-          <div class="bg-gray-300 dark:bg-gray-800">
-            <div class="pb-5">
-              <.pagination meta={@meta} target={@myself} />
-            </div>
-          </div>
-        </div>
       </div>
+      <!-- Video Modal -->
       <div
         id="popup-container"
-        class="popup-container fixed top-0 left-0 w-full h-full bg-black bg-opacity-75 flex justify-center items-center hidden"
+        class="popup-container fixed inset-0 z-50 hidden flex items-center justify-center p-4"
       >
-        <button
-          class="popup-close absolute top-4 right-4 text-white"
+        <div
+          class="absolute inset-0 bg-black/80 backdrop-blur-sm"
           phx-click={RecordingListLive.close_popup()}
         >
-          ×
-        </button>
-        <video id="recording-player" autoplay class="w-full h-auto max-w-full max-h-[80%]"></video>
+        </div>
+        <div class="relative z-10 w-full max-w-5xl bg-gray-900 rounded-2xl shadow-2xl overflow-hidden ring-1 ring-white/10">
+          <div class="flex items-center justify-between px-5 py-3 bg-gray-800 border-b border-gray-700">
+            <div class="flex items-center gap-2 min-w-0">
+              <.icon name="hero-film-solid" class="w-5 h-5 text-blue-400 flex-shrink-0" />
+              <p id="recording-modal-title" class="text-sm font-medium text-white truncate">
+                Recording Preview
+              </p>
+            </div>
+            <button
+              class="ml-4 flex-shrink-0 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg p-1.5 transition-colors"
+              phx-click={RecordingListLive.close_popup()}
+              title="Close"
+            >
+              <.icon name="hero-x-mark-solid" class="w-5 h-5" />
+            </button>
+          </div>
+          <div class="bg-black">
+            <video id="recording-player" controls autoplay class="w-full max-h-[75vh] outline-none">
+            </video>
+          </div>
+        </div>
       </div>
     </div>
     """
@@ -240,7 +269,6 @@ defmodule ExNVRWeb.DeviceTabs.RecordingsListTab do
     case Recordings.list(nested_filter_params) do
       {:ok, {recordings, meta}} ->
         socket
-        |> push_event("reload-popovers", %{})
         |> assign(meta: meta, recordings: recordings, sort_params: sort_params)
 
       {:error, meta} ->

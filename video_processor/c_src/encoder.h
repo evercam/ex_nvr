@@ -3,7 +3,6 @@
 
 #include "utils.h"
 #include <erl_nif.h>
-#include <libavcodec/avcodec.h>
 #include <libavutil/pixdesc.h>
 
 typedef struct Encoder Encoder;

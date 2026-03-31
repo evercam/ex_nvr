@@ -19,10 +19,10 @@ defmodule ExNVRWeb.Components.Sidebar do
     ~H"""
     <aside
       id="logo-sidebar"
-      class="fixed top-0 left-0 z-40 w-64 h-screen pt-20 transition-transform -translate-x-full bg-zinc-900 border-r border-white sm:translate-x-0 dark:bg-gray-800 dark:border-gray-700"
+      class="fixed top-0 left-0 z-40 w-64 h-screen pt-20 transition-transform -translate-x-full bg-gray-900 border-r border-gray-700 sm:translate-x-0 dark:bg-gray-800 dark:border-gray-700"
       aria-label="Sidebar"
     >
-      <div class="flex flex-col justify-between h-full px-3 pb-4 overflow-y-auto bg-zinc-900 dark:bg-gray-800">
+      <div class="flex flex-col justify-between h-full px-3 pb-4 overflow-y-auto bg-gray-900 dark:bg-gray-800">
         <div>
           <.sidebar_group
             :for={{group, index} <- @groups}
@@ -32,7 +32,7 @@ defmodule ExNVRWeb.Components.Sidebar do
           />
         </div>
 
-        <ul class="pt-4 mt-4 space-y-2 font-medium border-t border-white dark:border-gray-700">
+        <ul class="pt-4 mt-4 space-y-2 font-medium border-t border-gray-700 dark:border-gray-700">
           <li class="font-medium text-center text-white dark:text-white">
             Version {Application.spec(:ex_nvr, :vsn)}
           </li>
@@ -49,7 +49,7 @@ defmodule ExNVRWeb.Components.Sidebar do
   defp sidebar_group(assigns) do
     class =
       case assigns[:border] do
-        true -> "pt-4 mt-4 border-t border-white dark:border-gray-700"
+        true -> "pt-4 mt-4 border-t border-gray-700 dark:border-gray-700"
         _ -> ""
       end
 
@@ -97,7 +97,7 @@ defmodule ExNVRWeb.Components.Sidebar do
       <button
         :if={@children != []}
         type="button"
-        class="flex items-center justify-between w-full p-2 text-white rounded-lg hover:bg-gray-500 dark:hover:bg-gray-700"
+        class="flex items-center justify-between w-full p-2 text-white rounded-lg hover:bg-gray-700 dark:hover:bg-gray-700"
         aria-controls={"dropdown-#{@label}"}
         data-collapse-toggle={"dropdown-#{@label}"}
         aria-expanded={@has_active_child}
@@ -145,6 +145,7 @@ defmodule ExNVRWeb.Components.Sidebar do
         ],
         [
           %{label: "Devices", icon: "hero-video-camera-solid", href: ~p"/devices"},
+          %{label: "Triggers", icon: "hero-bolt-solid", href: ~p"/triggers", role: :admin},
           %{label: "Users", icon: "hero-users-solid", href: ~p"/users", role: :admin},
           %{
             label: "Onvif Discovery",
@@ -208,6 +209,7 @@ defmodule ExNVRWeb.Components.Sidebar do
         ],
         [
           %{label: "Devices", icon: "hero-video-camera-solid", href: ~p"/devices"},
+          %{label: "Triggers", icon: "hero-bolt-solid", href: ~p"/triggers", role: :admin},
           %{label: "Users", icon: "hero-users-solid", href: ~p"/users", role: :admin},
           %{
             label: "Onvif Discovery",
@@ -270,7 +272,7 @@ defmodule ExNVRWeb.Components.Sidebar do
       "flex items-center p-2 text-white rounded-lg bg-opacity-10 dark:bg-opacity-10 bg-blue-600 dark:bg-blue-500 text-blue-600 dark:text-blue-500"
 
   defp link_classes(false = _active),
-    do: "flex items-center p-2 text-white rounded-lg hover:bg-gray-500 dark:hover:bg-gray-700"
+    do: "flex items-center p-2 text-white rounded-lg hover:bg-gray-700 dark:hover:bg-gray-700"
 
   defp icon_classes(true = _active), do: "w-6 h-6 text-blue-600 dark:text-blue-500"
   defp icon_classes(false = _active), do: "w-6 h-6 text-gray-400 dark:text-gray-400"
