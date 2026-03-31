@@ -79,7 +79,7 @@ defmodule ExNVR.Triggers.Targets.TriggerRecording do
   end
 
   @impl true
-  def execute(trigger, _config, opts) do
+  def execute(_trigger, _config, opts) do
     target_config_id = Keyword.fetch!(opts, :target_config_id)
     device_id = Keyword.fetch!(opts, :device_id)
 
