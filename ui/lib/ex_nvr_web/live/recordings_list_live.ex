@@ -7,8 +7,9 @@ defmodule ExNVRWeb.RecordingListLive do
   import ExNVRWeb.DeviceLive, only: [get_disks_data: 0, humanize_capacity: 1]
   import ExNVRWeb.ViewUtils
 
-  alias ExNVR.RemovableStorage.Export
-  alias ExNVR.{Devices, Recordings}
+  alias ExNVR.Devices
+  alias ExNVR.Recordings
+  alias ExNVR.Recordings.Export
   alias ExNVRWeb.Router.Helpers, as: Routes
 
   @impl true
@@ -633,7 +634,7 @@ defmodule ExNVRWeb.RecordingListLive do
     device = Enum.find(socket.assigns.devices, &(&1.id == device_id))
 
     Task.start(fn ->
-      ExNVR.Recordings.Export.export_to_usb(
+       Export.export_to_usb(
         type,
         device,
         start_date,
