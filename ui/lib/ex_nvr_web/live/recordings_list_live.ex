@@ -6,7 +6,6 @@ defmodule ExNVRWeb.RecordingListLive do
   use ExNVRWeb, :live_view
 
   import ExNVRWeb.ViewUtils
-  import ExNVRWeb.DeviceLive, only: [get_disks_data: 0, humanize_capacity: 1]
 
   alias ExNVR.{Devices, Recordings}
   alias ExNVRWeb.Router.Helpers, as: Routes
@@ -19,7 +18,7 @@ defmodule ExNVRWeb.RecordingListLive do
         <!-- filters -->
         <div class="flex gap-5 ">
           <.filter_form meta={@meta} devices={@devices} id="recording-filter-form" />
-          <div class="relative min-w-40">
+          <div class="relative min-w-40 mb-4">
             <button
               phx-click={show_modal("copy-to-usb-modal")}
               class="absolute bottom-0 py-2 px-3 flex gap-2 rounded-md bg-blue-500 text-white "
@@ -96,7 +95,7 @@ defmodule ExNVRWeb.RecordingListLive do
                       d="M8.5 11.5 11 14l4-4m6 2a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
                     />
                   </svg>
-                  <span class="font-bold  text-gray-500 "> Destination </span>
+                  <span class="font-bold"> Destination </span>
                 </span>
               </li>
               
@@ -243,48 +242,38 @@ defmodule ExNVRWeb.RecordingListLive do
                   label="Export format"
                   errors={@errors}
                   options={[
-                    {"External Drive", "usb"}
+                    {"External Drive", "usb"},
+                    {"Remote Storage", "remote"}
                   ]}
                 />
 
                 <h2 :if={@export_to == "External Drive"} class="mb-2 text-gray-300 text-sm mt-5">
                   Select Your External Drive
                 </h2>
+                <div :if={@removable_device != nil && @export_to == "External Drive"}>
+                  <%= for device <- @removable_device.partitions do %>
+                    <label class="flex items-center p-3 mb-5  rounded-lg border border-gray-600 bg-gray-700 cursor-pointer">
+                      <!--Radio -->
+                      <input
+                        type="radio"
+                        name="destination"
+                        value={device.mountpoints}
+                        class="form-radio h-4 w-4 mt-2 text-blue-500 border-gray-500 bg-gray-600"
+                      />
+                      <span class="ml-2 text-sm text-gray-300">
+                        {device.mountpoints || "/"}
+                      </span>
 
-                <div :if={@disks_data != nil && @export_to == "External Drive"}>
-                  <.input
-                    :let={option}
-                    value=""
-                    name="destination"
-                    type="radio"
-                    options={@disks_data}
-                    l_class="flex items-center p-3 mb-5 rounded-lg border border-gray-600 bg-gray-700 cursor-pointer"
-                  >
-                    <div class="w-full px-2 font-normal text-xs">
-                      <div class="flex justify-between mb-1">
-                        <span class="text-black dark:text-white">
-                          {elem(option, 0)}
-                        </span>
-                        <span class="text-black dark:text-white">
-                          {humanize_capacity(elem(option, 1))}
-                        </span>
+                      <div class="grow flex flex-col space-y-1 ml-3">
+                        <span class="text-xs text-gray-400 self-end">{device.size}</span>
                       </div>
-                      <div class="w-full bg-gray-200 rounded-full dark:bg-gray-700">
-                        <div
-                          class="bg-blue-800 text-xs font-medium text-blue-100 text-center leading-none rounded-full"
-                          style={"width: #{elem(option, 1) |> elem(1)}%"}
-                        >
-                          {elem(option, 1) |> elem(1)}%
-                        </div>
-                      </div>
-                    </div>
-                  </.input>
-
+                    </label>
+                  <% end %>
                   <%= if @errors[:usb_size] do %>
                     <p class="text-red-500 text-sm">{@errors[:usb_size]}</p>
                   <% end %>
                 </div>
-                <h2 :if={@disks_data == nil && @export_to == "External Drive"}>
+                <h2 :if={@removable_device == nil && @export_to == "External Drive"}>
                   No usb detected
                 </h2>
               </div>
@@ -509,9 +498,10 @@ defmodule ExNVRWeb.RecordingListLive do
 
   @impl true
   def mount(params, _session, socket) do
+    Phoenix.PubSub.subscribe(ExNVR.PubSub, "removable_storage_topic")
     Phoenix.PubSub.subscribe(ExNVR.PubSub, "export_notifacation")
+    Phoenix.PubSub.subscribe(ExNVR.PubSub, "here")
     Recordings.subscribe_to_recording_events()
-    disks_data = get_disks_data()
 
     {:ok,
      assign(socket,
@@ -529,8 +519,7 @@ defmodule ExNVRWeb.RecordingListLive do
        errors: %{},
        total_rec_size: nil,
        export_started: false,
-       export_progress_percentage: 0,
-       disks_data: disks_data
+       export_progress_percentage: 0
      )}
   end
 
@@ -745,6 +734,12 @@ defmodule ExNVRWeb.RecordingListLive do
 
     total_rec_size =
       get_total_recording_size(device, start_date, end_date, 0, false)
+
+    Enum.reduce(recordings, 0, fn rec, acc ->
+      {:ok, details} = Recordings.details(device, rec)
+
+      acc + details.size
+    end)
 
     socket = assign(socket, :total_rec_size, (total_rec_size / 1_000_000) |> Float.floor(2))
 

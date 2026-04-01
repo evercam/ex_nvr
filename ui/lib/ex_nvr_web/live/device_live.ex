@@ -35,7 +35,6 @@ defmodule ExNVRWeb.DeviceLive do
     device = Devices.get!(device_id)
     device_params = get_device_params(socket.assigns.flash) |> Map.delete(:name)
     recording_mode = Atom.to_string(Device.recording_mode(device))
-
     disks_data = get_disks_data()
 
     storage_address_mode =
@@ -196,12 +195,20 @@ defmodule ExNVRWeb.DeviceLive do
 
   defp do_decode_schedule(schedule), do: schedule
 
-  def humanize_capacity({capacity, _percentag}) do
+  defp humanize_capacity({capacity, _percentag}) do
     cond do
       capacity / 1_000_000_000 >= 1 -> "#{Float.round(capacity / 1024 ** 3, 2)} TiB"
       capacity / 1_000_000 >= 1 -> "#{Float.round(capacity / 1024 ** 2, 2)} GiB"
       true -> "#{Float.round(capacity / 1024, 2)} MiB"
     end
+  end
+
+  defp detect_storage_address_mode(nil, _disks_data), do: "volume"
+
+  defp detect_storage_address_mode(address, disks_data) do
+    volume_paths = Enum.map(disks_data, &elem(&1, 0))
+
+    if address in volume_paths, do: "volume", else: "custom"
   end
 
   def detect_storage_address_mode(nil, _disks_data), do: "volume"
