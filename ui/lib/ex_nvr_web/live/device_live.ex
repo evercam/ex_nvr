@@ -195,7 +195,7 @@ defmodule ExNVRWeb.DeviceLive do
 
   defp do_decode_schedule(schedule), do: schedule
 
-  defp humanize_capacity({capacity, _percentag}) do
+  def humanize_capacity({capacity, _percentag}) do
     cond do
       capacity / 1_000_000_000 >= 1 -> "#{Float.round(capacity / 1024 ** 3, 2)} TiB"
       capacity / 1_000_000 >= 1 -> "#{Float.round(capacity / 1024 ** 2, 2)} GiB"
@@ -206,14 +206,6 @@ defmodule ExNVRWeb.DeviceLive do
   defp detect_storage_address_mode(nil, _disks_data), do: "volume"
 
   defp detect_storage_address_mode(address, disks_data) do
-    volume_paths = Enum.map(disks_data, &elem(&1, 0))
-
-    if address in volume_paths, do: "volume", else: "custom"
-  end
-
-  def detect_storage_address_mode(nil, _disks_data), do: "volume"
-
-  def detect_storage_address_mode(address, disks_data) do
     volume_paths = Enum.map(disks_data, &elem(&1, 0))
 
     if address in volume_paths, do: "volume", else: "custom"
