@@ -5,9 +5,9 @@ defmodule ExNVR.Recordings.Export do
     
   """
 
-    alias ExNVR.Model.{Device, Recording}
-    alias ExNVR.Recordings
-    alias ExNVR.Recordings.VideoAssembler
+  alias ExNVR.Model.{Device, Recording}
+  alias ExNVR.Recordings
+  alias ExNVR.Recordings.VideoAssembler
 
   use GenServer
 

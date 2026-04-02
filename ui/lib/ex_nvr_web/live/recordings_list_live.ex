@@ -63,7 +63,7 @@ defmodule ExNVRWeb.RecordingListLive do
           id="copy-to-usb-modal"
           class="bg-gray-900/70 p-3 flex items-center justify-center  w-full"
         >
-          <div class="p-5 w-[60rem]">
+          <div class="p-5 w-240">
             
     <!-- stepperr -->
 
@@ -168,39 +168,9 @@ defmodule ExNVRWeb.RecordingListLive do
               for={}
               phx-change="validate-export-to-usb-configs"
               class="mt-5"
-              phx-submit="export_to_usb"
+              phx-submit="export-to-usb"
             >
-              <!-- filters -> device, start date, end date -->
-              <div class="flex justify-between gap-5 hidden bg-red-300">
-                <Flop.Phoenix.filter_fields
-                  :let={f}
-                  form={to_form(@meta)}
-                  fields={[
-                    device_id: [
-                      op: :==,
-                      type: "select",
-                      options: Enum.map(@devices, &{&1.name, &1.id}),
-                      prompt: "Choose your device",
-                      label: "Device"
-                    ],
-                    start_date: [op: :>=, type: "datetime-local", label: "Start Date"],
-                    end_date: [op: :<=, type: "datetime-local", label: "End Date"]
-                  ]}
-                >
-                  <div>
-                    <.input
-                      class="border rounded p-1"
-                      field={f.field}
-                      type={f.type}
-                      label={f.label}
-                      phx-debounce="500"
-                      {f.rest}
-                    />
-                  </div>
-                </Flop.Phoenix.filter_fields>
-              </div>
-              
-    <!-- destination -->
+              <!-- destination -->
               <div :if={@step == 2} class="my-3">
                 <h2 class="mb-2 text-gray-300 text-sm">Export format</h2>
                 <.input
@@ -244,8 +214,7 @@ defmodule ExNVRWeb.RecordingListLive do
                   label="Export format"
                   errors={@errors}
                   options={[
-                    {"External Drive", "usb"},
-                    {"Remote Storage", "remote"}
+                    {"External Drive", "usb"}
                   ]}
                 />
 
@@ -382,19 +351,19 @@ defmodule ExNVRWeb.RecordingListLive do
     <!-- Video Modal -->
     <div
       id="popup-container"
-      class="popup-container fixed inset-0 z-50 hidden flex items-center justify-center p-4"
+      class="popup-container fixed inset-0 z-50 hidden p-4"
     >
       <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" phx-click={close_popup()}></div>
       <div class="relative z-10 w-full max-w-5xl bg-gray-900 rounded-2xl shadow-2xl overflow-hidden ring-1 ring-white/10">
         <div class="flex items-center justify-between px-5 py-3 bg-gray-800 border-b border-gray-700">
           <div class="flex items-center gap-2 min-w-0">
-            <.icon name="hero-film-solid" class="w-5 h-5 text-blue-400 flex-shrink-0" />
+            <.icon name="hero-film-solid" class="w-5 h-5 text-blue-400 shrink-0" />
             <p id="recording-modal-title" class="text-sm font-medium text-white truncate">
               Recording Preview
             </p>
           </div>
           <button
-            class="ml-4 flex-shrink-0 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg p-1.5 transition-colors"
+            class="ml-4 shrink-0 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg p-1.5 transition-colors"
             phx-click={close_popup()}
             title="Close"
           >
@@ -603,11 +572,6 @@ defmodule ExNVRWeb.RecordingListLive do
     {:noreply, assign(socket, :files_details, files_details)}
   end
 
-  @impl true
-  def handle_event("validate-before-opening-modal", params, socket) do
-    {:noreply, socket}
-  end
-
   # export to usb
   @impl true
   def handle_event("validate-export-to-usb-configs", params, socket) do
@@ -619,7 +583,7 @@ defmodule ExNVRWeb.RecordingListLive do
   end
 
   @impl true
-  def handle_event("export_to_usb", params, socket) do
+  def handle_event("export-to-usb", params, socket) do
     Phoenix.PubSub.subscribe(ExNVR.PubSub, "export_notifacation")
 
     type =
@@ -629,12 +593,12 @@ defmodule ExNVRWeb.RecordingListLive do
       end
 
     {device_id, start_date, end_date} =
-      get_values(params["filters"])
+      get_values(socket.assigns.filter_params["filters"])
 
     device = Enum.find(socket.assigns.devices, &(&1.id == device_id))
 
     Task.start(fn ->
-       Export.export_to_usb(
+      Export.export_to_usb(
         type,
         device,
         start_date,
@@ -717,12 +681,15 @@ defmodule ExNVRWeb.RecordingListLive do
 
   def update_assigns(socket, "destination", params) do
     device =
-      Enum.find(socket.assigns.devices, &(&1.id == params["filters"]["0"]["value"]))
+      Enum.find(
+        socket.assigns.devices,
+        &(&1.id == socket.assigns.filter_params["filters"]["0"]["value"])
+      )
 
-    device_id = params["filters"]["0"]["value"]
-    start_date = params["filters"]["1"]["value"]
+    device_id = socket.assigns.filter_params["filters"]["0"]["value"]
+    start_date = socket.assigns.filter_params["filters"]["1"]["value"]
 
-    end_date = params["filters"]["2"]["value"]
+    end_date = socket.assigns.filter_params["filters"]["2"]["value"]
 
     recordings =
       Recordings.get_recordings_between(

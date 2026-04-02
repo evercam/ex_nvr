@@ -390,7 +390,7 @@ defmodule ExNVRWeb.CoreComponents do
           id={@id}
           name={@name}
           class={[
-            "rounded text-zinc-900 border-gray-300 rounded bg-gray-50 focus:ring-3 focus:ring-blue-300",
+            "rounded text-zinc-900 border-gray-300 bg-gray-50 focus:ring-3 focus:ring-blue-300",
             "dark:bg-gray-700 dark:border-gray-600 dark:focus:ring-blue-600",
             "dark:ring-offset-gray-800 dark:focus:ring-offset-gray-80"
           ]}
@@ -420,7 +420,7 @@ defmodule ExNVRWeb.CoreComponents do
                 id={@id}
                 name={@name}
                 class={[
-                  "rounded text-zinc-900 border-gray-300 rounded bg-gray-50 focus:ring-3 focus:ring-blue-300",
+                  "rounded text-zinc-900 border-gray-300 bg-gray-50 focus:ring-3 focus:ring-blue-300",
                   "dark:bg-gray-700 dark:border-gray-600 dark:focus:ring-blue-600",
                   "dark:ring-offset-gray-800 dark:focus:ring-offset-gray-80"
                 ]}
