@@ -26,7 +26,7 @@ relates_to:
 
 Live streaming operates independently of recording. A [device](../domain/device.md) in `:streaming` state (connected but not recording) still serves live video to HLS and WebRTC clients. This means operators can monitor cameras in real-time even when recording is disabled by schedule, manual stop, or `recording_mode: :never`.
 
-The feature also includes **live snapshots** — on-demand JPEG frames decoded from the live stream without decoding every frame. The `CVSBufferer` element keeps only the last Coded Video Sequence (keyframe + dependent frames) in memory and decodes it on request.
+The feature also includes **live snapshots** — on-demand JPEG frames fetched via the camera's HTTP snapshot endpoint, with a fallback to decoding from the live stream. When the HTTP snapshot is unavailable, the `CVSBufferer` element keeps only the last Coded Video Sequence (keyframe + dependent frames) in memory and decodes it on request.
 
 Additionally, **stream statistics** (bitrate, FPS, resolution, GOP size) are computed by the `VideoStreamStatReporter` element and broadcast via PubSub for the device details UI.
 

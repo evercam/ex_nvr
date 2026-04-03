@@ -25,13 +25,13 @@ paths:
   - nerves_fw/lib/nerves_fw/system_settings.ex
   - nerves_fw/lib/nerves_fw/health/metadata.ex
 relates_to:
-  concepts: [device]
+  concepts: [device, schedule]
   features: [system-monitoring]
 ---
 
 ## Overview
 
-**Nerves firmware** is the embedded device layer that runs ExNVR on Raspberry Pi hardware as a self-contained Linux appliance. It handles everything that a traditional NVR server takes for granted but an embedded device must manage explicitly: disk mounting, VPN connectivity, power management (UPS and solar), remote provisioning, and hardware GPIO monitoring.
+**Nerves firmware** is the embedded device layer that runs ExNVR on Raspberry Pi hardware as a self-contained Linux appliance. It handles everything that a traditional NVR server takes for granted but an embedded device must manage explicitly: disk mounting, VPN connectivity, power management (UPS monitoring via GPIO and scheduled power cycling), remote provisioning, observability (log and metric shipping to Grafana Cloud), and router integration.
 
 The firmware is built with [Nerves](https://nerves-project.org/) and ships as complete images for three hardware targets:
 - **RPi4** and **RPi5** — Via `nerves_fw/` (Evercam branded) and `nerves_community/` (community images)

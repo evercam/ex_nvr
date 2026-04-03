@@ -12,7 +12,7 @@ paths:
   - ui/lib/ex_nvr_web/live/device_tabs/triggers_tab.ex
 relates_to:
   concepts: [trigger-config, event, device]
-  features: [event-ingestion, device-management]
+  features: [event-ingestion, device-management, video-recording]
 ---
 
 ## Overview

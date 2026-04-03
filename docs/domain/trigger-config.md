@@ -28,7 +28,7 @@ relates_to:
 
 ## Overview
 
-A **Trigger Config** is a named automation rule that connects event sources to target actions. It is the configuration layer of ExNVR's event-driven automation system — "when X happens, do Y." For example: "when a `motion_detected` event arrives on a camera, start recording on another camera" or "when any event arrives, log a message."
+A **Trigger Config** is a named automation rule that connects event sources to target actions. It is the configuration layer of ExNVR's event-driven automation system — "when X happens, do Y." For example: "when a `motion_detected` event arrives on a camera, start recording on that camera" or "when any event arrives, log a message."
 
 The trigger system is designed as a pluggable source-to-target pipeline with three separate entities:
 

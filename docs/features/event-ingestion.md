@@ -27,13 +27,15 @@ relates_to:
 
 **Event ingestion** is the feature that brings external signals into ExNVR — motion detected, license plate recognized, door opened, temperature exceeded. These signals arrive as [events](../domain/event.md) (generic) or [LPR events](../domain/lpr-event.md) (license plate recognition), and once inside the system, they can trigger automated actions via the [trigger system](triggers.md).
 
-Events enter ExNVR through two paths:
+Events enter ExNVR through three paths:
 
-1. **Webhook API** — External systems (cameras, analytics engines, IoT platforms) push events via HTTP POST to `/api/devices/:device_id/events`. Authentication uses a per-user **webhook token** instead of standard session/API auth, making it easy for headless systems to integrate. The entire request body is stored as the event's metadata, so ExNVR doesn't need to know the payload schema in advance.
+1. **Generic event webhook** — External systems (cameras, analytics engines, IoT platforms) push events via HTTP POST to `/api/devices/:device_id/events`. Authentication uses a per-user **webhook token** instead of standard session/API auth, making it easy for headless systems to integrate. The entire request body is stored as the event's metadata, so ExNVR doesn't need to know the payload schema in advance.
 
-2. **Camera polling** — For [LPR events](../domain/lpr-event.md), the `LPREventPuller` GenServer (part of each [device's](../domain/device.md) supervision tree) polls the camera's HTTP API every 10 seconds for new plate detections. This supports Hikvision and Milesight cameras with vendor-specific HTTP clients.
+2. **LPR camera polling** — The `LPREventPuller` GenServer (part of each [device's](../domain/device.md) supervision tree) polls the camera's HTTP API every 10 seconds for new plate detections. This supports Hikvision and Milesight cameras with vendor-specific HTTP clients.
 
-Both paths feed into the same `ExNVR.Events` context, which stores the event and (for generic events) broadcasts it on PubSub for the trigger system to evaluate.
+3. **LPR webhook** — External systems can push [LPR events](../domain/lpr-event.md) via `POST /api/devices/:device_id/events/lpr` with webhook token auth. Currently only Milesight camera payloads are parsed; other vendors return a 404.
+
+All three paths feed into the same `ExNVR.Events` context, which stores the event and (for generic events) broadcasts it on PubSub for the trigger system to evaluate.
 
 The ingested events are browsable in the UI through two pages: a generic events table (`/events/generic`) and a dedicated LPR events browser (`/events/lpr`) with plate image thumbnails, snapshot preview, and clip playback.
 

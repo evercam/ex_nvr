@@ -18,8 +18,8 @@ paths:
   - ui/lib/ex_nvr_web/live/device_tabs/**/*.ex
   - ui/lib/ex_nvr/authorization.ex
 relates_to:
-  concepts: [recording, run, schedule, event, lpr-event, remote-storage]
-  features: [device-management, video-recording, live-streaming, onvif-discovery, snapshot-upload, bif-thumbnails]
+  concepts: [recording, run, schedule, event, lpr-event, remote-storage, trigger-config]
+  features: [device-management, video-recording, live-streaming, onvif-discovery, snapshot-upload, bif-thumbnails, triggers]
 ---
 
 ## Overview

@@ -15,7 +15,7 @@ paths:
   - ui/lib/ex_nvr/hardware/victron.ex
   - ui/lib/ex_nvr/hardware/serial_port_checker.ex
 relates_to:
-  concepts: [device]
+  concepts: [device, recording]
   features: [nerves-firmware]
 ---
 
@@ -25,7 +25,7 @@ relates_to:
 
 The feature has three layers:
 
-1. **System status API** — A GenServer (`ExNVR.SystemStatus`) that collects system metrics every 15 seconds and serves them via `GET /api/system/status`. Used by external monitoring dashboards and the Evercam cloud platform (via Slipstream WebSocket) to track NVR health.
+1. **System status API** — A GenServer (`ExNVR.SystemStatus`) that collects system metrics every 15 seconds and serves them via `GET /api/system/status`. Used by external monitoring dashboards to track NVR health.
 
 2. **Prometheus metrics** — Four PromEx plugins that expose metrics in Prometheus format for Grafana dashboards: device state, camera stream info, per-frame stream statistics, recording segment metrics, and Victron solar charger data.
 
