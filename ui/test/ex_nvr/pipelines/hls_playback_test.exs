@@ -3,10 +3,12 @@ defmodule ExNVR.Pipelines.HlsPlaybackTest do
 
   use ExNVR.DataCase
 
+  Code.require_file("../../support/hls/assertions_test.exs", __DIR__)
+
   import ExNVR.{DevicesFixtures, RecordingsFixtures}
-  import ExNVR.HLS.Assertions
   import Membrane.Testing.Assertions
 
+  alias ExNVR.HLS.AssertionsTest
   alias ExNVR.Pipelines.HlsPlayback
   alias Membrane.Testing
 
@@ -36,7 +38,7 @@ defmodule ExNVR.Pipelines.HlsPlaybackTest do
 
       assert_pipeline_notified(pid, :sink, {:track_playable, nil})
 
-      check_hls_playlist(dir, 2)
+      AssertionsTest.check_hls_playlist(dir, 2)
 
       HlsPlayback.stop_streaming(pid)
     end
@@ -48,7 +50,7 @@ defmodule ExNVR.Pipelines.HlsPlaybackTest do
 
       assert_pipeline_notified(pid, :sink, {:track_playable, nil})
 
-      check_hls_playlist(dir, 2)
+      AssertionsTest.check_hls_playlist(dir, 2)
 
       HlsPlayback.stop_streaming(pid)
     end

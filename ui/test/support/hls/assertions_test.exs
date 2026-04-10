@@ -1,4 +1,4 @@
-defmodule ExNVR.HLS.Assertions do
+defmodule ExNVR.HLS.AssertionsTest do
   @moduledoc false
   use ExUnit.Case
 
