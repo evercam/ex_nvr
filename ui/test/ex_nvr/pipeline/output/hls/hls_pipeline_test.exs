@@ -54,7 +54,7 @@ defmodule ExNVR.Pipeline.Output.HLSPipelineTest do
       assert_pipeline_notified(pid, :sink, {:track_playable, nil})
       assert_end_of_stream(pid, :parser)
 
-     AssertionsTest.check_hls_playlist(out_dir, 2)
+      AssertionsTest.check_hls_playlist(out_dir, 2)
 
       Testing.Pipeline.terminate(pid)
     end
