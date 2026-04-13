@@ -2,9 +2,9 @@ defmodule ExNVR.Pipelines.HlsPlaybackTest do
   @moduledoc false
 
   use ExNVR.DataCase
+  use ExNVR.HLS.Assertions
 
   import ExNVR.{DevicesFixtures, RecordingsFixtures}
-  import ExNVR.HLS.Assertions
   import Membrane.Testing.Assertions
 
   alias ExNVR.Pipelines.HlsPlayback
