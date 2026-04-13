@@ -195,7 +195,7 @@ defmodule ExNVRWeb.DeviceLive do
 
   defp do_decode_schedule(schedule), do: schedule
 
-  defp humanize_capacity({capacity, _percentag}) do
+  def humanize_capacity({capacity, _percentag}) do
     cond do
       capacity / 1_000_000_000 >= 1 -> "#{Float.round(capacity / 1024 ** 3, 2)} TiB"
       capacity / 1_000_000 >= 1 -> "#{Float.round(capacity / 1024 ** 2, 2)} GiB"
@@ -211,7 +211,7 @@ defmodule ExNVRWeb.DeviceLive do
     if address in volume_paths, do: "volume", else: "custom"
   end
 
-  defp get_disks_data do
+  def get_disks_data do
     if Application.get_env(:ex_nvr, :env) == :test do
       [{"/tmp", {1_000_000, 1}}]
     else

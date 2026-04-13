@@ -67,7 +67,7 @@ defmodule ExNVRWeb.CoreComponents do
         tabindex="0"
       >
         <div class="flex min-h-full items-center justify-center">
-          <div class="w-full max-w-lg p-4 sm:p-6 lg:py-8">
+          <div class="w-full max-w-xlg p-4 sm:p-6 lg:py-8">
             <.focus_wrap
               id={"#{@id}-container"}
               phx-window-keydown={JS.exec("data-cancel", to: "##{@id}")}
@@ -390,7 +390,7 @@ defmodule ExNVRWeb.CoreComponents do
           id={@id}
           name={@name}
           class={[
-            "rounded text-zinc-900 border-gray-300 rounded bg-gray-50 focus:ring-3 focus:ring-blue-300",
+            "rounded text-zinc-900 border-gray-300 bg-gray-50 focus:ring-3 focus:ring-blue-300",
             "dark:bg-gray-700 dark:border-gray-600 dark:focus:ring-blue-600",
             "dark:ring-offset-gray-800 dark:focus:ring-offset-gray-80"
           ]}
@@ -408,7 +408,7 @@ defmodule ExNVRWeb.CoreComponents do
   def input(%{type: "radio"} = assigns) do
     ~H"""
     <div phx-feedback-for={@name}>
-      <ul class="border border-gray-200 rounded-lg dark:border-gray-600">
+      <ul class="border border-gray-200 flex rounded-lg dark:border-gray-600">
         <li
           :for={option <- @options}
           class="p-2 w-full border-b border-gray-200 rounded-t-lg dark:border-gray-600"
@@ -420,7 +420,7 @@ defmodule ExNVRWeb.CoreComponents do
                 id={@id}
                 name={@name}
                 class={[
-                  "rounded text-zinc-900 border-gray-300 rounded bg-gray-50 focus:ring-3 focus:ring-blue-300",
+                  "rounded text-zinc-900 border-gray-300 bg-gray-50 focus:ring-3 focus:ring-blue-300",
                   "dark:bg-gray-700 dark:border-gray-600 dark:focus:ring-blue-600",
                   "dark:ring-offset-gray-800 dark:focus:ring-offset-gray-80"
                 ]}
@@ -428,7 +428,7 @@ defmodule ExNVRWeb.CoreComponents do
                 checked={elem(option, 0) == @value}
                 {@rest}
               />
-              {@label}
+              {elem(option, 0)}
             </label>
             {render_slot(@inner_block, option)}
           </div>

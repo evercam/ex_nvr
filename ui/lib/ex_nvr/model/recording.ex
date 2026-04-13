@@ -56,6 +56,11 @@ defmodule ExNVR.Model.Recording do
     |> order_by(asc: :start_date)
   end
 
+  def count_recordings_between_dates(query \\ __MODULE__, start_date, end_date) do
+    where(query, [r], r.start_date <= ^end_date and r.end_date > ^start_date)
+    |> select([r], count(r.id))
+  end
+
   def with_device(query \\ __MODULE__, device_id) do
     where(query, [r], r.device_id == ^device_id)
   end
