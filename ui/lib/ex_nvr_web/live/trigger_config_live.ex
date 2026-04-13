@@ -211,6 +211,7 @@ defmodule ExNVRWeb.TriggerConfigLive do
         name={Atom.to_string(field.name)}
         value={field.default}
         placeholder={field.placeholder}
+        min={field[:min]}
         class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
       />
       <input
