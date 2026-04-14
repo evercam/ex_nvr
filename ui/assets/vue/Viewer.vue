@@ -595,15 +595,16 @@ export default defineComponent({
       live.pushEvent("down");
     },
     homePTZ() {
-      console.log("homepreset");
+      const live = useLiveVue();
+      live.pushEvent("home");
     },
     zoomInPTZ() {
       const live = useLiveVue();
-      live.pushEvent("zoom", { zoom_in: true, zoom_out: false });
+      live.pushEvent("zoom_in");
     },
     zoomOutPTZ() {
       const live = useLiveVue();
-      live.pushEvent("zoom", { zoom_out: true, zoom_in: false });
+      live.pushEvent("zoom_out");
     },
     startStreaming(streamUrl) {
       const component = this.$refs.videoPlayer;
