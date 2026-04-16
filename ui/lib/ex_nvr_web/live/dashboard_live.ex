@@ -268,13 +268,13 @@ defmodule ExNVRWeb.DashboardLive do
 
         new_pos =
           case direction do
-            "up" -> %{pos | y: clamp(pos.y - @ptz_move_step)}
-            "down" -> %{pos | y: clamp(pos.y + @ptz_move_step)}
-            "left" -> %{pos | x: clamp(pos.x - @ptz_move_step)}
-            "right" -> %{pos | x: clamp(pos.x + @ptz_move_step)}
+            "up" -> put_in(pos.pan_tilt.y, clamp(pos.pan_tilt.y - @ptz_move_step))
+            "down" -> put_in(pos.pan_tilt.y, clamp(pos.pan_tilt.y + @ptz_move_step))
+            "left" -> put_in(pos.pan_tilt.x, clamp(pos.pan_tilt.x - @ptz_move_step))
+            "right" -> put_in(pos.pan_tilt.x, clamp(pos.pan_tilt.x + @ptz_move_step))
           end
 
-        move_ptz(onvif_device, new_pos)
+        move_ptz(socket, onvif_device, new_pos)
         {:noreply, assign(socket, :ptz_status, new_pos)}
     end
   end
@@ -294,17 +294,26 @@ defmodule ExNVRWeb.DashboardLive do
           end
 
         new_pos = %{pos | zoom: new_zoom}
-        move_ptz(onvif_device, new_pos)
+        move_ptz(socket, onvif_device, new_pos)
         {:noreply, assign(socket, :ptz_status, new_pos)}
     end
   end
 
-  @spec move_ptz(ExOnvif.Device.t(), ptz_t(), String.t()) :: :ok
-  @spec move_ptz(ExOnvif.Device.t(), ptz_t()) :: :ok
-  defp move_ptz(onvif_device, %{x: x, y: y, zoom: zoom} = _ptz, profile_token \\ "Profile_1") do
-    ptz_vector = PTZ.Vector.new(x, y, zoom)
-    abs_move = PTZ.AbsoluteMove.new(profile_token, ptz_vector)
+  @spec move_ptz(any(), ExOnvif.Device.t(), PTZ.Vector.t()) :: :ok
+  defp move_ptz(socket, onvif_device, ptz_vector) do
+    profile_token =
+      case socket.assigns.stream do
+        "main_stream" ->
+          socket.assigns.current_device.stream_config.profile_token
 
+        "sub_stream" ->
+          socket.assigns.current_device.stream_config.sub_profile_token
+
+        _ ->
+          "Profile_1"
+      end
+
+    abs_move = PTZ.AbsoluteMove.new(profile_token, ptz_vector)
     PTZ.absolute_move(onvif_device, abs_move)
   end
 
@@ -513,15 +522,17 @@ defmodule ExNVRWeb.DashboardLive do
 
   @spec get_status(Ecto.Changeset.t()) :: {ptz_t(), ExOnvif.Device.t()} | {nil, nil}
   defp get_status(device) do
+    {}
+
     with {:ok, onvif_device} <- Onvif.onvif_device(device),
          ptz_available when not is_nil(ptz_available) <- onvif_device.ptz_ver20_service_path,
-         {:ok, status} <- ExOnvif.API.get_status(onvif_device, "Profile_1") do
+         {:ok, status} <- ExOnvif.PTZ.get_status(onvif_device, "Profile_1") do
       {
-        %{
-          x: status.position.pan_tilt.x,
-          y: status.position.pan_tilt.y,
-          zoom: status.position.zoom
-        },
+        PTZ.Vector.new(
+          status.position.pan_tilt.x,
+          status.position.pan_tilt.y,
+          status.position.zoom
+        ),
         onvif_device
       }
     else
