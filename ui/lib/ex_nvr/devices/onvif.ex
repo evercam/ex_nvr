@@ -8,7 +8,6 @@ defmodule ExNVR.Devices.Onvif do
   alias ExOnvif.Devices.SystemDateAndTime
   alias ExOnvif.Media2
   alias ExOnvif.Media2.Profile.VideoEncoder
-  alias ExOnvif.PTZ
   alias ExOnvif.Search
   alias ExOnvif.Search.{FindRecordings, GetRecordingSearchResults}
 

@@ -161,15 +161,6 @@ defmodule ExNVRWeb.DashboardLive do
     {:noreply, assign_runs(socket)}
   end
 
-  def handle_info({ref, {ptz_status, onvif_device} = result}, socket) do
-    Process.demonitor(ref, [:flush])
-
-    {:noreply,
-     socket
-     |> assign(ptz_status: ptz_status)
-     |> assign(onvif_device: onvif_device)}
-  end
-
   def handle_info(_, socket), do: socket
 
   def handle_event("switch_device", %{"device" => device_id}, socket) do
@@ -515,7 +506,7 @@ defmodule ExNVRWeb.DashboardLive do
     end
   end
 
-  @spec get_status(Ecto.Changeset.t()) :: {ptz_t(), ExOnvif.Device.t()} | {nil, nil}
+  @spec get_status(Ecto.Changeset.t()) :: {PTZ.Vector.t(), ExOnvif.Device.t()} | {nil, nil}
   defp get_status(device) do
     {}
 
