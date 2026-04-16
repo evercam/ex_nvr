@@ -1,10 +1,10 @@
 defmodule ExNVR.Pipeline.Output.HLSPipelineTest do
   @moduledoc false
   use ExUnit.Case, async: true
+  use ExNVR.HLS.Assertions
 
   require Membrane.Pad
 
-  import ExNVR.HLS.Assertions
   import Membrane.ChildrenSpec
   import Membrane.Testing.Assertions
 
