@@ -20,11 +20,6 @@ defmodule ExNVRWeb.DashboardLive do
     {"Custom", ""}
   ]
 
-  @type ptz_t() :: %{
-          x: float(),
-          y: float(),
-          zoom: float()
-        }
   @ptz_move_step 0.05
 
   def render(assigns) do
