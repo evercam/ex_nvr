@@ -45,7 +45,7 @@ defmodule ExNVRWeb.RecordingListLive do
           </div>
         </div>
 
-        <div>
+        <div class="bg-blue-400">
           <div
             :if={@export_started}
             class="w-full my-5 bg-gray-400 rounded-full"
@@ -480,6 +480,7 @@ defmodule ExNVRWeb.RecordingListLive do
   @impl true
   def mount(params, _session, socket) do
     Phoenix.PubSub.subscribe(ExNVR.PubSub, "export_notifacation")
+    Phoenix.PubSub.subscribe(ExNVR.PubSub, "removable_device_detected")
     Recordings.subscribe_to_recording_events()
 
     {:ok,
@@ -513,6 +514,16 @@ defmodule ExNVRWeb.RecordingListLive do
      |> assign(
        export_progress_percentage: percentage,
        export_started: percentage != 100
+     )}
+  end
+
+  @impl true
+  def handle_info(:removable_devices_detected, socket) do
+    {:noreply,
+     put_flash(
+       socket,
+       :info,
+       "New removable device detected, you can now export your recordings to usb"
      )}
   end
 

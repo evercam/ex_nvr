@@ -6,6 +6,8 @@ defmodule ExNVR.Nerves.DiskMounter do
 
   use GenServer
 
+  @usb_mountpoint "/data/usb"
+
   def start_link(opts) do
     GenServer.start_link(__MODULE__, opts, name: __MODULE__)
   end
@@ -26,6 +28,10 @@ defmodule ExNVR.Nerves.DiskMounter do
     GenServer.call(__MODULE__, :mount)
   end
 
+  def mount_usb do
+    GenServer.call(__MODULE__, :usb_mount)
+  end
+
   def umount(lazy? \\ true) do
     GenServer.call(__MODULE__, {:umount, lazy?})
   end
@@ -35,9 +41,10 @@ defmodule ExNVR.Nerves.DiskMounter do
     NervesUEvent.subscribe([])
 
     fstab = Keyword.get(opts, :fstab, "/data/fstab")
+
     unless File.exists?(fstab), do: File.touch(fstab)
 
-    {:ok, %{fstab: fstab}, {:continue, :mount}}
+    {:ok, %{fstab: fstab, devname: []}, {:continue, :mount}}
   end
 
   @impl true
@@ -83,6 +90,30 @@ defmodule ExNVR.Nerves.DiskMounter do
     {:reply, :ok, state}
   end
 
+  def handle_call(:usb_mount, _from, state) do
+    Logger.info("Mounting USB devices: #{inspect(state)}")
+
+    exit_code =
+      state.devname
+      |> Enum.map(fn dev ->
+        {block_info, 0} =
+          System.cmd("lsblk", ["-J", "-o", "NAME,SIZE,TYPE,MOUNTPOINT,LABEL", "/dev/#{dev}"])
+
+        Jason.decode!(block_info)["blockdevices"]
+        |> List.first()
+        |> mount_usb_partition(state)
+      end)
+
+    if exit_code != 0 do
+      Logger.error("""
+      Could not mount from fstab
+      Error: #{output}
+      """)
+    end
+
+    {:reply, :ok, state}
+  end
+
   @impl true
   def handle_call({:umount, lazy?}, _from, state) do
     Logger.info("[DiskMounter] unmouting all filesystems declared in fstab")
@@ -98,9 +129,24 @@ defmodule ExNVR.Nerves.DiskMounter do
   end
 
   @impl true
-  def handle_info(%PropertyTable.Event{value: %{"subsystem" => "block"}} = event, state) do
-    Logger.warning("New block device connected: #{inspect(event.value)}")
+  def handle_info(
+        %PropertyTable.Event{value: %{"subsystem" => "block", "devtype" => "disk"}} = event,
+        state
+      ) do
     mount_all(state)
+
+    state =
+      %{
+        (state || %{devname: []})
+        | devname: (state.devname ++ [event.value["devname"]]) |> Enum.uniq()
+      }
+
+    Phoenix.PubSub.broadcast(
+      ExNVR.PubSub,
+      "removable_device_detected",
+      :removable_device_detected
+    )
+
     {:noreply, state}
   end
 
@@ -131,5 +177,21 @@ defmodule ExNVR.Nerves.DiskMounter do
       Error: #{output}
       """)
     end
+  end
+
+  defp mount_usb_partition(block_info, state) do
+    block_info["children"]
+    |> Enum.map(fn partition ->
+      if partition["mountpoint"] == nil do
+        mountpoint = @usb_mountpoint <> "/#{partition["label"] || partition["name"]}"
+
+        File.mkdir_p!(mountpoint)
+
+        {output, exit_code} =
+          System.cmd("mount", ["/dev/#{partition["name"]}", mountpoint], stderr_to_stdout: true)
+
+        exit_code
+      end
+    end)
   end
 end
