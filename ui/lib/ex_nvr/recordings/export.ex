@@ -21,9 +21,6 @@ defmodule ExNVR.Recordings.Export do
           String.t()
         ) :: :ok
   def export_to_usb(:full, device, start_date, end_date, dest) do
-    rec =
-      Recordings.get_recordings_between(device.id, start_date, end_date)
-
     {:ok, start_date, _} = DateTime.from_iso8601(start_date <> ":00Z")
     {:ok, end_date, _} = DateTime.from_iso8601(end_date <> ":00Z")
 

@@ -594,7 +594,7 @@ defmodule ExNVRWeb.RecordingListLive do
   end
 
   @impl true
-  def handle_event("export-to-usb", params, socket) do
+  def handle_event("export-to-usb", _params, socket) do
     Phoenix.PubSub.subscribe(ExNVR.PubSub, "export_notifacation")
 
     type =
@@ -701,14 +701,6 @@ defmodule ExNVRWeb.RecordingListLive do
     start_date = socket.assigns.filter_params["filters"]["1"]["value"]
 
     end_date = socket.assigns.filter_params["filters"]["2"]["value"]
-
-    recordings =
-      Recordings.get_recordings_between(
-        device_id,
-        :high,
-        start_date,
-        end_date
-      )
 
     total_rec_size =
       get_total_recording_size(device, start_date, end_date, 0, false)

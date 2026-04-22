@@ -107,7 +107,7 @@ defmodule ExNVR.Nerves.DiskMounter do
     if exit_code != 0 do
       Logger.error("""
       Could not mount from fstab
-      Error: #{output}
+      Error: #{state.devname}
       """)
     end
 
