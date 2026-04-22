@@ -1,0 +1,21 @@
+<div style="position: relative; width: 100%; height: 100vh; background: #000; overflow: hidden;">
+  <canvas
+    id="hevcCanvas"
+    style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain;"
+  />
+  <pre
+    :if={Application.get_env(:ex_nvr, :env) == :dev}
+    id="webRtcLogs"
+    style="position: absolute; top: 0; left: 0; margin: 0; padding: 4px; color: #0f0; font-size: 0.65rem; background: rgba(0,0,0,0.6); max-height: 40%; overflow-y: auto; pointer-events: none; z-index: 10; white-space: pre-wrap;"
+  />
+  <div id="webRtcPlayer" data-device={@device.id} data-stream={@stream} style="display: none;" />
+  <script>
+    window.token = "<%= @user_token %>"
+  </script>
+  <script
+    defer
+    phx-track-static
+    type="module"
+    src={static_path(@conn, "/assets/libav-player.js")}
+  />
+</div>

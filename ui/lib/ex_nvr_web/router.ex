@@ -105,6 +105,7 @@ defmodule ExNVRWeb.Router do
 
     get "/", PageController, :home
     get "/webrtc/:device_id", PageController, :webrtc
+    get "/libav/:device_id", PageController, :libav
 
     import Phoenix.LiveDashboard.Router
     live_dashboard "/live-dashboard", metrics: ExNVRWeb.Telemetry
