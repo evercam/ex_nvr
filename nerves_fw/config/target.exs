@@ -211,6 +211,8 @@ end
 # of this file so it overrides the configuration defined above.
 # Uncomment to use target specific configurations
 
-if Mix.target() == :giraffe do
-  import_config "giraffe.exs"
+case Mix.target() do
+  :giraffe -> import_config "giraffe.exs"
+  :recomputer_r22 -> import_config "recomputer_r22.exs"
+  _ -> :ok
 end
