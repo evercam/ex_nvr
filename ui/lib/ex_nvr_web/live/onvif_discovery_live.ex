@@ -92,7 +92,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
           </.simple_form>
         </div>
       </div>
-
+      
     <!-- Device Discovery Section -->
       <div class="w-3/4 flex justify-between items-center bg-white dark:bg-gray-800 p-5 border border-gray-200 rounded-lg dark:border-gray-700 dark:text-white mr-5">
         <div class="flex items-center space-x-2">
@@ -109,7 +109,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
           <.icon name="hero-magnifying-glass-solid" class="w-4 h-4" /> Scan Network
         </.button>
       </div>
-
+      
     <!-- Device List Section -->
       <div class="w-3/4 flex flex-col space-y-5 bg-white dark:bg-gray-800 p-5 border border-gray-200 rounded-lg dark:border-gray-700 dark:text-white mr-5">
         <span class="text-md font-bold">
@@ -148,7 +148,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
       </div>
 
       <.separator :if={@selected_device} class="w-3/4 mr-5" />
-
+      
     <!-- Device Details Section -->
       <div :if={@selected_device} class="w-3/4 flex flex-col space-y-2 mr-5">
         <div class="flex justify-between items-center border border-gray-200 rounded-lg bg-white dark:border-gray-700 dark:bg-gray-800 dark:text-white p-5">
