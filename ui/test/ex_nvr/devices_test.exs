@@ -155,6 +155,48 @@ defmodule ExNVR.DevicesTest do
                errors_on(changeset)
     end
 
+    test "require third stream uri when storage_stream is :third_stream", %{tmp_dir: tmp_dir} do
+      {:error, changeset} =
+        Devices.create(
+          valid_device_attributes(%{
+            name: @valid_camera_name,
+            storage_config: %{address: tmp_dir, storage_stream: :third_stream}
+          })
+        )
+
+      assert %{storage_config: %{storage_stream: ["third stream uri is not set"]}} =
+               errors_on(changeset)
+    end
+
+    test "accept :third_stream when third_stream_uri is set", %{tmp_dir: tmp_dir} do
+      third_uri = valid_rtsp_url()
+
+      {:ok, device} =
+        Devices.create(
+          valid_device_attributes(%{
+            name: @valid_camera_name,
+            stream_config: %{third_stream_uri: third_uri},
+            storage_config: %{address: tmp_dir, storage_stream: :third_stream}
+          })
+        )
+
+      assert device.storage_config.storage_stream == :third_stream
+      assert device.stream_config.third_stream_uri == third_uri
+    end
+
+    test "main_stream is the default and does not require third_stream_uri", %{tmp_dir: tmp_dir} do
+      {:ok, device} =
+        Devices.create(
+          valid_device_attributes(%{
+            name: @valid_camera_name,
+            storage_config: %{address: tmp_dir}
+          })
+        )
+
+      assert device.storage_config.storage_stream == :main_stream
+      assert is_nil(device.stream_config.third_stream_uri)
+    end
+
     test "require upload_interval, remote_storage when snapshot config is enabled" do
       {:error, changeset} =
         Devices.create(%{snapshot_config: %{enabled: true}})
@@ -361,6 +403,31 @@ defmodule ExNVR.DevicesTest do
       assert device.storage_config.full_drive_threshold == 15.5
       assert device.storage_config.full_drive_action == :overwrite
       assert device.storage_config.record_sub_stream == :always
+    end
+
+    test "switching storage_stream to :third_stream without third_stream_uri is rejected", %{
+      device: device
+    } do
+      {:error, changeset} =
+        Devices.update(device, %{storage_config: %{storage_stream: :third_stream}})
+
+      assert %{storage_config: %{storage_stream: ["third stream uri is not set"]}} =
+               errors_on(changeset)
+    end
+
+    test "switching to :third_stream succeeds when third_stream_uri is also set", %{
+      device: device
+    } do
+      third_uri = valid_rtsp_url()
+
+      {:ok, updated} =
+        Devices.update(device, %{
+          stream_config: %{third_stream_uri: third_uri},
+          storage_config: %{storage_stream: :third_stream}
+        })
+
+      assert updated.storage_config.storage_stream == :third_stream
+      assert updated.stream_config.third_stream_uri == third_uri
     end
   end
 

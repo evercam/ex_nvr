@@ -360,7 +360,32 @@ defmodule ExNVR.Model.Device do
     |> Changeset.cast_embed(:settings)
     |> Changeset.cast_embed(:snapshot_config)
     |> validate_config()
+    |> validate_storage_stream()
     |> maybe_set_default_settings()
+  end
+
+  defp validate_storage_stream(%Changeset{valid?: false} = changeset), do: changeset
+
+  defp validate_storage_stream(%Changeset{} = changeset) do
+    storage_stream = Changeset.get_field(changeset, :storage_config).storage_stream
+    third_stream_uri = Changeset.get_field(changeset, :stream_config).third_stream_uri
+
+    if storage_stream == :third_stream and third_stream_uri in [nil, ""] do
+      add_storage_config_error(changeset, :storage_stream, "third stream uri is not set")
+    else
+      changeset
+    end
+  end
+
+  defp add_storage_config_error(%Changeset{changes: changes} = changeset, field, message) do
+    case Map.get(changes, :storage_config) do
+      %Changeset{} = child ->
+        new_child = Changeset.add_error(child, field, message)
+        %{changeset | changes: Map.put(changes, :storage_config, new_child), valid?: false}
+
+      _other ->
+        Changeset.add_error(changeset, :storage_config, "#{field} #{message}")
+    end
   end
 
   defp validate_config(%Changeset{} = changeset) do
@@ -378,17 +403,29 @@ defmodule ExNVR.Model.Device do
       else: Changeset.put_embed(changeset, :settings, %Settings{})
   end
 
-  defp build_stream_uri(%__MODULE__{stream_config: config, credentials: credentials_config}) do
+  defp build_stream_uri(
+         %__MODULE__{stream_config: config, credentials: credentials_config} = device
+       ) do
     userinfo =
       if to_string(credentials_config.username) != "" and
            to_string(credentials_config.password) != "" do
         "#{credentials_config.username}:#{credentials_config.password}"
       end
 
-    {do_build_uri(config.stream_uri, userinfo), do_build_uri(config.sub_stream_uri, userinfo)}
+    {do_build_uri(high_quality_stream_uri(device), userinfo),
+     do_build_uri(config.sub_stream_uri, userinfo)}
   end
 
   defp build_stream_uri(_), do: nil
+
+  defp high_quality_stream_uri(%__MODULE__{
+         stream_config: config,
+         storage_config: %{storage_stream: :third_stream}
+       })
+       when is_binary(config.third_stream_uri) and config.third_stream_uri != "",
+       do: config.third_stream_uri
+
+  defp high_quality_stream_uri(%__MODULE__{stream_config: config}), do: config.stream_uri
 
   defp do_build_uri(nil, _userinfo), do: nil
 
