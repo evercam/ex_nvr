@@ -57,7 +57,8 @@ defmodule ExNVR.Model.Device do
             sub_snapshot_uri: url(),
             sub_profile_token: String.t(),
             third_stream_uri: url(),
-            third_profile_token: url(),
+            third_snapshot_uri: url(),
+            third_profile_token: String.t(),
             filename: String.t(),
             temporary_path: Path.t(),
             duration: Membrane.Time.t(),
@@ -75,6 +76,7 @@ defmodule ExNVR.Model.Device do
       field :sub_snapshot_uri, :string
       field :sub_profile_token, :string
       field :third_stream_uri, :string
+      field :third_snapshot_uri, :string
       field :third_profile_token, :string
       # File settings
       field :filename, :string
@@ -93,6 +95,9 @@ defmodule ExNVR.Model.Device do
         :sub_stream_uri,
         :sub_snapshot_uri,
         :sub_profile_token,
+        :third_stream_uri,
+        :third_snapshot_uri,
+        :third_profile_token,
         :filename,
         :temporary_path,
         :duration,
@@ -106,11 +111,15 @@ defmodule ExNVR.Model.Device do
       validate_required(changeset, [:stream_uri])
       |> Changeset.validate_change(:stream_uri, &validate_uri/2)
       |> Changeset.validate_change(:sub_stream_uri, &validate_uri/2)
+      |> Changeset.validate_change(:third_stream_uri, &validate_uri/2)
       |> Changeset.validate_change(:snapshot_uri, fn :snapshot_uri, snapshot_uri ->
         validate_uri(:snapshot_uri, snapshot_uri, "http")
       end)
       |> Changeset.validate_change(:sub_snapshot_uri, fn :sub_snapshot_uri, snapshot_uri ->
         validate_uri(:sub_snapshot_uri, snapshot_uri, "http")
+      end)
+      |> Changeset.validate_change(:third_snapshot_uri, fn :third_snapshot_uri, snapshot_uri ->
+        validate_uri(:third_snapshot_uri, snapshot_uri, "http")
       end)
     end
 
