@@ -308,7 +308,7 @@ defmodule ExNVRWeb.CoreComponents do
     doc: "a form field struct retrieved from the form, for example: @form[:email]"
 
   attr :errors, :list, default: []
-  attr :checked, :boolean, doc: "the checked flag for checkbox inputs"
+  attr :checked, :boolean, default: false, doc: "the checked flag for checkbox inputs"
   attr :prompt, :string, default: nil, doc: "the prompt for select inputs"
   attr :options, :list, doc: "the options to pass to Phoenix.HTML.Form.options_for_select/2"
   attr :multiple, :boolean, default: false, doc: "the multiple flag for select inputs"
@@ -408,7 +408,7 @@ defmodule ExNVRWeb.CoreComponents do
   def input(%{type: "radio"} = assigns) do
     ~H"""
     <div phx-feedback-for={@name}>
-      <ul class="border border-gray-200 flex rounded-lg dark:border-gray-600">
+      <ul class={["border border-gray-200 rounded-lg dark:border-gray-600", @l_class]}>
         <li
           :for={option <- @options}
           class="p-2 w-full border-b border-gray-200 rounded-t-lg dark:border-gray-600"
@@ -428,7 +428,7 @@ defmodule ExNVRWeb.CoreComponents do
                 checked={elem(option, 0) == @value}
                 {@rest}
               />
-              {elem(option, 0)}
+              {@label}
             </label>
             {render_slot(@inner_block, option)}
           </div>
@@ -448,7 +448,7 @@ defmodule ExNVRWeb.CoreComponents do
           id={@id}
           name={@name}
           class={[
-            "rounded text-zinc-900 border-gray-300 rounded bg-gray-50 focus:ring-3 focus:ring-blue-300",
+            "rounded text-zinc-900 border-gray-300 bg-gray-50 focus:ring-3 focus:ring-blue-300",
             "dark:bg-gray-700 dark:border-gray-600 dark:focus:ring-blue-600",
             "dark:ring-offset-gray-800 dark:focus:ring-offset-gray-80 w-60"
           ]}

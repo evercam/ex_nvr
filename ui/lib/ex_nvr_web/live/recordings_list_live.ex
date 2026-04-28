@@ -174,16 +174,21 @@ defmodule ExNVRWeb.RecordingListLive do
               <div :if={@step == 2} class="my-3">
                 <h2 class="mb-2 text-gray-300 text-sm">Export format</h2>
                 <.input
+                  :let={option}
                   id="duration"
                   type="radio"
                   name="type"
                   value=""
-                  label="Export format"
                   options={[
-                    {"Export as 1-Minute Segments", "one"},
-                    {"Export as a Single Merged Video", "full"}
+                    {"Export as 1-Minute Segments", {"one"}},
+                    {"Export as a Single Merged Video", {"full"}}
                   ]}
-                />
+                >
+                  <span class="text-black dark:text-white font-normal text-xs ml-2">
+                    {elem(option, 0)}
+                  </span>
+                </.input>
+
                 <label :if={@type == "Export as a single Merged Video"} class="text-green">
                   Note if the recording are greater than 1 hr, it will be export in chunks of 1 hr
                 </label>
@@ -191,7 +196,6 @@ defmodule ExNVRWeb.RecordingListLive do
                 <div>
                   <.input
                     :if={@custom == "custom"}
-                    class=""
                     id="custom"
                     type="text"
                     name="custom_duration"
@@ -210,12 +214,10 @@ defmodule ExNVRWeb.RecordingListLive do
                   id="export_to"
                   type="radio"
                   name="export_to"
-                  value=""
-                  label="Export format"
+                  value="External Drive"
+                  label="External Drive"
                   errors={@errors}
-                  options={[
-                    {"External Drive", "usb"}
-                  ]}
+                  options={}
                 />
 
                 <h2 :if={@export_to == "External Drive"} class="mb-2 text-gray-300 text-sm mt-5">
