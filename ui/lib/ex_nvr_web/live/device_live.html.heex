@@ -186,6 +186,35 @@
               id="config_sub_profile_token"
               type="hidden"
             />
+            <div
+              :if={@device_type == "ip"}
+              class="relative flex py-5 items-center"
+            >
+              <span class="flex-shrink mr-4 text-black dark:text-white">Third Stream</span>
+              <div class="flex-grow border-t border-gray-400"></div>
+            </div>
+            <.input
+              :if={@device_type == "ip"}
+              field={config[:third_stream_uri]}
+              id="config_third_stream_uri"
+              type="text"
+              label="RTSP Uri"
+              placeholder="rtsp://camera1:554/video/stream3"
+            />
+            <.input
+              :if={@device_type == "ip"}
+              field={config[:third_snapshot_uri]}
+              id="config_third_snapshot_uri"
+              type="text"
+              label="Snapshot Uri"
+              placeholder="http://camera1:80/snapshot"
+            />
+            <.input
+              :if={@device_type == "ip"}
+              field={config[:third_profile_token]}
+              id="config_third_profile_token"
+              type="hidden"
+            />
 
             <label
               :if={@device_type == "file" && is_nil(@device.id)}
@@ -330,6 +359,15 @@
                     type="select"
                     label=""
                     options={[{"never", "never"}, {"always", "always"}]}
+                  />
+
+                  <span :if={@device_type == "ip"} class="col-span-2">Storage stream:</span>
+                  <.input
+                    :if={@device_type == "ip"}
+                    field={storage_config[:storage_stream]}
+                    type="select"
+                    label=""
+                    options={[{"Main Stream", "main_stream"}, {"Third Stream", "third_stream"}]}
                   />
                 </div>
               </div>

@@ -149,6 +149,18 @@ defmodule ExNVRWeb.OnvifDiscoveryLiveTest do
                  bitrate_limit: 600
                }
              }
+           },
+           %Profile{
+             reference_token: "Profile_3",
+             name: "thirdStream",
+             video_encoder_configuration: %Profile.VideoEncoder{
+               encoding: :h265,
+               resolution: %VideoResolution{width: 1920, height: 1080},
+               rate_control: %Profile.VideoEncoder.RateControl{
+                 constant_bitrate: false,
+                 bitrate_limit: 1536
+               }
+             }
            }
          ]}
       end)
@@ -159,12 +171,18 @@ defmodule ExNVRWeb.OnvifDiscoveryLiveTest do
       |> expect(:get_stream_uri, fn _device, "Profile_2" ->
         {:ok, "rtsp://192.168.1.200:554/sub"}
       end)
+      |> expect(:get_stream_uri, fn _device, "Profile_3" ->
+        {:ok, "rtsp://192.168.1.200:554/third"}
+      end)
 
       expect(ExOnvif.Media2, :get_snapshot_uri, fn _device, "Profile_1" ->
         {:ok, "http://192.168.1.200:8101/snapshot"}
       end)
       |> expect(:get_snapshot_uri, fn _device, "Profile_2" ->
         {:ok, "http://192.168.1.200:8101/sub"}
+      end)
+      |> expect(:get_snapshot_uri, fn _device, "Profile_3" ->
+        {:ok, "http://192.168.1.200:8101/third"}
       end)
 
       expect(ExOnvif.Media2, :get_video_encoder_configuration_options, fn _device,
@@ -190,6 +208,19 @@ defmodule ExNVRWeb.OnvifDiscoveryLiveTest do
              encoding: :h264,
              gov_length_range: [1, 25],
              bitrate_range: %ExOnvif.Schemas.IntRange{min: 10, max: 100},
+             quality_range: %ExOnvif.Schemas.FloatRange{min: 1, max: 10}
+           }
+         ]}
+      end)
+      |> expect(:get_video_encoder_configuration_options, fn _device,
+                                                             profile_token: "Profile_3" ->
+        {:ok,
+         [
+           %VideoEncoderConfigurationOption{
+             resolutions_available: [],
+             encoding: :h265,
+             gov_length_range: [1, 25],
+             bitrate_range: %ExOnvif.Schemas.IntRange{min: 10, max: 500},
              quality_range: %ExOnvif.Schemas.FloatRange{min: 1, max: 10}
            }
          ]}
@@ -256,10 +287,13 @@ defmodule ExNVRWeb.OnvifDiscoveryLiveTest do
 
       assert html =~ "mainStream"
       assert html =~ "subStream"
+      assert html =~ "thirdStream"
       assert html =~ "3840x2160"
       assert html =~ "640x480"
+      assert html =~ "1920x1080"
       assert html =~ "rtsp://192.168.1.200:554/main"
       assert html =~ "rtsp://192.168.1.200:554/sub"
+      assert html =~ "rtsp://192.168.1.200:554/third"
       assert html =~ "http://192.168.1.200:8101/snapshot"
       assert html =~ "H.265"
       assert html =~ "H.264"
@@ -292,6 +326,9 @@ defmodule ExNVRWeb.OnvifDiscoveryLiveTest do
       assert device_params.stream_config.snapshot_uri == "http://192.168.1.200:8101/snapshot"
       assert device_params.stream_config.sub_stream_uri == "rtsp://192.168.1.200:554/sub"
       assert device_params.stream_config.sub_snapshot_uri == "http://192.168.1.200:8101/sub"
+      assert device_params.stream_config.third_stream_uri == "rtsp://192.168.1.200:554/third"
+      assert device_params.stream_config.third_snapshot_uri == "http://192.168.1.200:8101/third"
+      assert device_params.stream_config.third_profile_token == "Profile_3"
       assert device_params.vendor == "Evercam"
     end
   end
