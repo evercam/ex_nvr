@@ -360,6 +360,15 @@
                     label=""
                     options={[{"never", "never"}, {"always", "always"}]}
                   />
+
+                  <span :if={@device_type == "ip"} class="col-span-2">Storage stream:</span>
+                  <.input
+                    :if={@device_type == "ip"}
+                    field={storage_config[:storage_stream]}
+                    type="select"
+                    label=""
+                    options={[{"Main Stream", "main_stream"}, {"Third Stream", "third_stream"}]}
+                  />
                 </div>
               </div>
             </div>
