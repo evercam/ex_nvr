@@ -66,6 +66,14 @@ defmodule ExNVR.Recordings do
     |> Repo.all()
   end
 
+  @spec count_number_of_recordings(binary(), stream_type(), DateTime.t(), DateTime.t()) ::
+          Recording.t()
+  def count_number_of_recordings(device, stream_type \\ :high, start_date, end_date) do
+    Recording.with_type(stream_type)
+    |> Recording.count_recordings_between_dates(start_date, end_date)
+    |> Repo.one()
+  end
+
   @spec get(Device.t(), binary()) :: Recording.t() | nil
   @spec get(Device.t(), stream_type(), binary()) :: Recording.t() | nil
   def get(%Device{id: id}, stream_type \\ :high, filename) do
@@ -354,4 +362,6 @@ defmodule ExNVR.Recordings do
     |> Enum.map_reduce(bit_stream_filter, &BitStreamFilter.MP4ToAnnexb.filter(&2, &1))
     |> elem(0)
   end
+
+  # counts the number of recordings btwn dates
 end

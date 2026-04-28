@@ -1,19 +1,289 @@
 defmodule ExNVRWeb.RecordingListLive do
   @moduledoc false
-
-  require Logger
   use ExNVRWeb, :live_view
 
+  require Logger
+
+  import ExNVRWeb.DeviceLive, only: [get_disks_data: 0, humanize_capacity: 1]
   import ExNVRWeb.ViewUtils
 
-  alias ExNVR.{Devices, Recordings}
+  alias ExNVR.Devices
+  alias ExNVR.Recordings
+  alias ExNVR.Recordings.Export
   alias ExNVRWeb.Router.Helpers, as: Routes
 
   @impl true
   def render(assigns) do
     ~H"""
     <div class="grow e-m-8">
-      <.filter_form meta={@meta} devices={@devices} id="recording-filter-form" />
+      <div>
+        <!-- filters -->
+        <div class="flex gap-5 ">
+          <.filter_form meta={@meta} devices={@devices} id="recording-filter-form" />
+          <div :if={@disks_data != nil} class="relative min-w-40">
+            <button
+              phx-click={show_modal("copy-to-usb-modal")}
+              class="absolute bottom-0 py-2 px-3 flex gap-2 rounded-md bg-blue-500 text-white "
+            >
+              <p>Export</p>
+
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke-width="1.5"
+                stroke="currentColor"
+                class="size-5"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5"
+                />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="bg-blue-400">
+          <div
+            :if={@export_started}
+            class="w-full my-5 bg-gray-400 rounded-full"
+          >
+            <div
+              class="bg-blue-500 text-xs font-bold text-white text-center p-0.5 leading-none rounded-full h-4 flex items-center justify-center"
+              style={"width: #{@export_progress_percentage}%"}
+            >
+              {@export_progress_percentage}%
+            </div>
+          </div>
+        </div>
+
+        <.modal
+          id="copy-to-usb-modal"
+          class="bg-gray-900/70 p-3 flex items-center justify-center  w-full"
+        >
+          <div class="p-5 w-240">
+            
+    <!-- stepperr -->
+
+            <ol class="flex items-center w-full text-sm font-medium text-center text-body sm:text-base">
+              
+    <!-- destination -->
+              <li class="flex md:w-full items-center text-fg-brand sm:after:content-[''] after:w-full after:h-1 after:border-b  after:border-gray-500 after:border-px after:hidden sm:after:inline-block after:mx-6 xl:after:mx-10">
+                <span class=" text-white flex items-center after:content-['/'] sm:after:hidden after:mx-2 after:text-fg-disabled">
+                  <span
+                    :if={@step == 1}
+                    class="me-2 rounded-full h-6 w-6 text-white flex items-center justify-center bg-blue-500"
+                  >
+                    1
+                  </span>
+
+                  <svg
+                    :if={@step > 1}
+                    class="w-5 h-5 me-1.5 bg-blue-500 rounded-full"
+                    aria-hidden="true"
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="24"
+                    height="24"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke="currentColor"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M8.5 11.5 11 14l4-4m6 2a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+                    />
+                  </svg>
+                  <span class="font-bold"> Destination </span>
+                </span>
+              </li>
+              
+    <!-- Format -->
+
+              <li class="flex md:w-full items-center after:content-[''] after:w-full after:h-1 after:border-b after:border-gray-500 after:border-px after:hidden sm:after:inline-block after:mx-6 xl:after:mx-10">
+                <span class="flex items-center after:content-['/'] sm:after:hidden after:mx-2 after:text-fg-disabled">
+                  
+    <!-- Circle OR Check Mark -->
+                  <%= if @step > 2 do %>
+                    <!-- Completed step -->
+                    <svg
+                      class="w-6 h-6 me-2 bg-blue-500 text-white rounded-full p-1"
+                      aria-hidden="true"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke="currentColor"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M8.5 11.5 11 14l4-4m6 2a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+                      />
+                    </svg>
+                  <% else %>
+                    <!-- Normal numbered step -->
+                    <span class={[
+                      "me-2 h-6 w-6 rounded-full flex items-center justify-center text-white",
+                      (@step == 2 && "bg-blue-500") || "bg-gray-500"
+                    ]}>
+                      2
+                    </span>
+                  <% end %>
+                  
+    <!-- Label -->
+                  <span class={[
+                    "font-bold",
+                    (@step >= 2 && "text-white") || "text-gray-500"
+                  ]}>
+                    Format
+                  </span>
+                </span>
+              </li>
+              
+    <!-- confirmation -->
+              <li class="flex items-center">
+                <span class={
+                  "me-2 rounded-full h-6 w-6 text-white flex items-center justify-center " <>
+                    if @step == 3, do: "bg-blue-500", else: "bg-gray-500"
+                    }>
+                  3
+                </span>
+
+                <span class={[
+                  "font-bold",
+                  (@step == 3 && "text-white") || "text-gray-500"
+                ]}>
+                  Confirmation
+                </span>
+              </li>
+            </ol>
+            
+    <!-- export to usb form -->
+
+            <.form
+              for={}
+              phx-change="validate-export-to-usb-configs"
+              class="mt-5"
+              phx-submit="export-to-usb"
+            >
+              <!-- destination -->
+              <div :if={@step == 2} class="my-3">
+                <h2 class="mb-2 text-gray-300 text-sm">Export format</h2>
+                <.input
+                  :let={option}
+                  id="duration"
+                  type="radio"
+                  name="type"
+                  value=""
+                  options={[
+                    {"Export as 1-Minute Segments", {"one"}},
+                    {"Export as a Single Merged Video", {"full"}}
+                  ]}
+                >
+                  <span class="text-black dark:text-white font-normal text-xs ml-2">
+                    {elem(option, 0)}
+                  </span>
+                </.input>
+
+                <label :if={@type == "Export as a single Merged Video"} class="text-green">
+                  Note if the recording are greater than 1 hr, it will be export in chunks of 1 hr
+                </label>
+
+                <div>
+                  <.input
+                    :if={@custom == "custom"}
+                    id="custom"
+                    type="text"
+                    name="custom_duration"
+                    value=""
+                    placeholder="Time in days"
+                  />
+                </div>
+              </div>
+              <!-- format -->
+              <div :if={@step == 1} class="my-3">
+                <span :if={@total_rec_size != nil} class="block mb-5 text-green-500 font-bold">
+                  Footage Size: {@total_rec_size} MB
+                </span>
+                <label class="text-white"> Select Export Destination </label>
+                <.input
+                  id="export_to"
+                  type="radio"
+                  name="export_to"
+                  value="External Drive"
+                  label="External Drive"
+                  errors={@errors}
+                  options={}
+                />
+
+                <h2 :if={@export_to == "External Drive"} class="mb-2 text-gray-300 text-sm mt-5">
+                  Select Your External Drive
+                </h2>
+                <div :if={@disks_data != nil && @export_to == "External Drive"}>
+                  <.input
+                    :let={option}
+                    id="dest"
+                    value=""
+                    name="destination"
+                    type="radio"
+                    options={@disks_data}
+                  >
+                    <div class="w-full px-2 font-normal text-xs">
+                      <div class="flex justify-between mb-1">
+                        <span class="text-black dark:text-white">
+                          {elem(option, 0)}
+                        </span>
+                        <span class="text-black dark:text-white">
+                          {humanize_capacity(elem(option, 1))}
+                        </span>
+                      </div>
+                      <div class="w-full bg-gray-200 rounded-full dark:bg-gray-700">
+                        <div
+                          class="bg-blue-800 text-xs font-medium text-blue-100 text-center leading-none rounded-full"
+                          style={"width: #{elem(option, 1) |> elem(1)}%"}
+                        >
+                          {elem(option, 1) |> elem(1)}%
+                        </div>
+                      </div>
+                    </div>
+                  </.input>
+
+                  <%= if @errors[:usb_size] do %>
+                    <p class="text-red-500 text-sm">{@errors[:usb_size]}</p>
+                  <% end %>
+                </div>
+                <h2 :if={@disks_data == nil && @export_to == "External Drive"}>
+                  No usb detected
+                </h2>
+              </div>
+              
+    <!-- confirmation -->
+              <div :if={@step == 3} class="my-3 text-white">
+                <h4>Your footage will be save in this particular format</h4>
+                <p>
+                  Rec_<span class="font-bold">_start_date </span>_to_<span class="font-bold">end_date</span>
+                </p>
+              </div>
+
+              <div class="flex justify-end text-blue-500 gap-5 font-bold">
+                <button :if={@step > 1} type="button" phx-click="prev"> PREV</button>
+                <button
+                  :if={@step == 3}
+                  type="submit"
+                  class="px-4 py-2 bg-blue-600 text-sm rounded-lg hover:bg-blue-500 transition text-white"
+                >
+                  Export Footage
+                </button>
+                <button :if={@step < 3} type="button" phx-click="next"> NEXT</button>
+              </div>
+            </.form>
+          </div>
+        </.modal>
+      </div>
 
       <Flop.Phoenix.table
         id="recordings"
@@ -83,19 +353,19 @@ defmodule ExNVRWeb.RecordingListLive do
     <!-- Video Modal -->
     <div
       id="popup-container"
-      class="popup-container fixed inset-0 z-50 hidden flex items-center justify-center p-4"
+      class="popup-container fixed inset-0 z-50 hidden p-4"
     >
       <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" phx-click={close_popup()}></div>
       <div class="relative z-10 w-full max-w-5xl bg-gray-900 rounded-2xl shadow-2xl overflow-hidden ring-1 ring-white/10">
         <div class="flex items-center justify-between px-5 py-3 bg-gray-800 border-b border-gray-700">
           <div class="flex items-center gap-2 min-w-0">
-            <.icon name="hero-film-solid" class="w-5 h-5 text-blue-400 flex-shrink-0" />
+            <.icon name="hero-film-solid" class="w-5 h-5 text-blue-400 shrink-0" />
             <p id="recording-modal-title" class="text-sm font-medium text-white truncate">
               Recording Preview
             </p>
           </div>
           <button
-            class="ml-4 flex-shrink-0 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg p-1.5 transition-colors"
+            class="ml-4 shrink-0 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg p-1.5 transition-colors"
             phx-click={close_popup()}
             title="Close"
           >
@@ -211,6 +481,8 @@ defmodule ExNVRWeb.RecordingListLive do
 
   @impl true
   def mount(params, _session, socket) do
+    Phoenix.PubSub.subscribe(ExNVR.PubSub, "export_notifacation")
+    Phoenix.PubSub.subscribe(ExNVR.PubSub, "removable_device_detected")
     Recordings.subscribe_to_recording_events()
 
     {:ok,
@@ -219,7 +491,41 @@ defmodule ExNVRWeb.RecordingListLive do
        filter_params: params,
        pagination_params: %{},
        sort_params: %{},
-       files_details: %{}
+       files_details: %{},
+       custom: nil,
+       step: 1,
+       export_to: nil,
+       type: nil,
+       errors: %{},
+       total_rec_size: nil,
+       export_started: false,
+       export_progress_percentage: 0,
+       disks_data: get_disks_data()
+     )}
+  end
+
+  @impl true
+  def handle_info({:export_failed, reason}, socket) do
+    {:noreply, put_flash(socket, :error, "Export failed: #{reason}")}
+  end
+
+  @impl true
+  def handle_info({:progress, %{export_progress_percentage: percentage}}, socket) do
+    {:noreply,
+     socket
+     |> assign(
+       export_progress_percentage: percentage,
+       export_started: percentage != 100
+     )}
+  end
+
+  @impl true
+  def handle_info(:removable_devices_detected, socket) do
+    {:noreply,
+     put_flash(
+       socket,
+       :info,
+       "New removable device detected, you can now export your recordings to usb"
      )}
   end
 
@@ -279,6 +585,56 @@ defmodule ExNVRWeb.RecordingListLive do
     {:noreply, assign(socket, :files_details, files_details)}
   end
 
+  # export to usb
+  @impl true
+  def handle_event("validate-export-to-usb-configs", params, socket) do
+    {:noreply,
+     socket
+     |> update_assigns("type", params)
+     |> update_assigns("export_to", params)
+     |> update_assigns("destination", params)}
+  end
+
+  @impl true
+  def handle_event("export-to-usb", _params, socket) do
+    Phoenix.PubSub.subscribe(ExNVR.PubSub, "export_notifacation")
+
+    type =
+      case socket.assigns.type do
+        "Export as 1-Minute Segments" -> :one
+        "Export as a Single Merged Video" -> :full
+      end
+
+    {device_id, start_date, end_date} =
+      get_values(socket.assigns.filter_params["filters"])
+
+    device = Enum.find(socket.assigns.devices, &(&1.id == device_id))
+
+    Task.start(fn ->
+      Export.export_to_usb(
+        type,
+        device,
+        start_date,
+        end_date,
+        socket.assigns.destination
+      )
+    end)
+
+    socket = assign(socket, :export_started, true)
+
+    {:noreply, redirect(socket, to: ~p"/recordings")}
+  end
+
+  def handle_event("next", _params, socket) do
+    {:noreply,
+     socket
+     |> update(:step, &min(&1 + 1, 3))}
+  end
+
+  def handle_event("prev", _params, socket) do
+    {:noreply, update(socket, :step, &max(&1 - 1, 1))}
+  end
+
   defp load_recordings(params, socket) do
     sort_params = Map.take(params, ["order_by", "order_directions"])
 
@@ -313,4 +669,104 @@ defmodule ExNVRWeb.RecordingListLive do
     |> DateTime.shift_zone!(timezone)
     |> Calendar.strftime("%b %d, %Y %H:%M:%S %z")
   end
+
+  def get_values(filters) do
+    f = fn field ->
+      filters
+      |> Map.values()
+      |> Enum.find(&(&1["field"] == field))
+      |> Map.get("value")
+    end
+
+    {f.("device_id"), f.("start_date"), f.("end_date")}
+  end
+
+  def update_assigns(socket, param, params) when param in ["type", "export_to"] do
+    case params[param] do
+      nil ->
+        socket
+
+      par ->
+        socket
+        |> assign(String.to_atom(param), par)
+    end
+  end
+
+  def update_assigns(socket, "destination", params) do
+    device =
+      Enum.find(
+        socket.assigns.devices,
+        &(&1.id == socket.assigns.filter_params["filters"]["0"]["value"])
+      )
+
+    device_id = socket.assigns.filter_params["filters"]["0"]["value"]
+    start_date = socket.assigns.filter_params["filters"]["1"]["value"]
+
+    end_date = socket.assigns.filter_params["filters"]["2"]["value"]
+
+    total_rec_size =
+      get_total_recording_size(device, start_date, end_date, 0, false)
+
+    socket = assign(socket, :total_rec_size, (total_rec_size / 1_000_000) |> Float.floor(2))
+
+    case params["destination"] do
+      nil ->
+        socket
+
+      dest ->
+        disk_size =
+          ExNVRWeb.DeviceLive.get_disks_data()
+          |> Enum.find(fn {path, _sizes} ->
+            nil
+            path == params["destination"]
+          end)
+          |> then(fn {_path, {size, _used}} -> size end)
+
+        errors =
+          if total_rec_size > disk_size * 1024 do
+            Map.put(socket.assigns.errors, :usb_size, "No enough space in the removable disk")
+          else
+            socket.assigns.errors
+          end
+
+        socket
+        |> assign(:destination, dest)
+        |> assign(:errors, errors)
+    end
+  end
+
+  @spec get_recording_sizes(binary(), map()) :: non_neg_integer()
+  def get_recording_sizes(device_id, rec) do
+    {:ok, stats} =
+      Recordings.recording_path(device_id, rec.stream, rec)
+      |> File.stat()
+
+    stats.size
+  end
+
+  def get_total_recording_size(device, start_date, end_date, size, done) when done == false do
+    recordings =
+      Recordings.get_recordings_between(device.id, :high, start_date, end_date)
+
+    case recordings do
+      [] ->
+        get_total_recording_size(device, start_date, end_date, size, true)
+
+      rec ->
+        size =
+          size +
+            Enum.reduce(rec, 0, fn rec, acc ->
+              {:ok, details} = Recordings.details(device, rec)
+
+              acc + details.size
+            end)
+
+        start_date = List.last(rec).end_date
+
+        get_total_recording_size(device, start_date, end_date, size, false)
+    end
+  end
+
+  def get_total_recording_size(_device, _start_date, _end_date, size, done) when done == true,
+    do: size
 end
