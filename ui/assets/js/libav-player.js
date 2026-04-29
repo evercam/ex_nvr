@@ -7,17 +7,11 @@ import LibAV from "libav.js"
 const LIBAV_VARIANT = "hevc-aac"
 const LIBAV_IMPORT  = `/libav-${LibAV.VER}-${LIBAV_VARIANT}.wasm.mjs`
 
-window.onload = async function (_event) {
-  const player   = document.getElementById("webRtcPlayer")
-  const canvas   = document.getElementById("hevcCanvas")
-  const logsEl   = document.getElementById("webRtcLogs")
-  const deviceId = player.dataset.device
-  const stream   = player.dataset.stream
-
+export async function startLibavPlayer({ deviceId, stream, canvas, logEl, token }) {
   function log(msg) {
-    if (logsEl) {
-      logsEl.innerHTML += "\n\n" + msg
-      logsEl.scrollTop  = logsEl.scrollHeight
+    if (logEl) {
+      logEl.innerHTML += "\n\n" + msg
+      logEl.scrollTop  = logEl.scrollHeight
     }
     console.log("[libav-player]", msg)
   }
@@ -51,7 +45,7 @@ window.onload = async function (_event) {
   let displayStartTime = null
 
   // ── 4. Phoenix socket + channel ───────────────────────────────────────────
-  const socket = new Socket("/socket", { params: { token: window.token } })
+  const socket = new Socket("/socket", { params: { token } })
   socket.connect()
 
   const streamChannel = socket.channel(`stream:${deviceId}`, { stream })

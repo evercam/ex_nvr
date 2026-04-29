@@ -67,7 +67,7 @@ defmodule ExNVR.Pipelines.MainPipelineTest do
 
     # WebRTC
     assert {:ok, pc} = PeerConnection.start()
-    assert :ok = MainPipeline.add_webrtc_peer(device, :high)
+    assert {:ok, _codec} = MainPipeline.add_webrtc_peer(device, :high)
     assert {:error, :stream_unavailable} = MainPipeline.add_webrtc_peer(device, :low)
 
     assert_receive {:offer, offer}, 1_000

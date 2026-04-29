@@ -1,12 +1,24 @@
-<div>
+<div style="position: relative; width: 100%; height: 100vh; background: #000; overflow: hidden;">
   <pre
     :if={Application.get_env(:ex_nvr, :env) == :dev}
     class="text-xs text-white"
     id="webRtcLogs"
+    style="position: absolute; top: 0; left: 0; margin: 0; padding: 4px; color: #0f0; font-size: 0.65rem; background: rgba(0,0,0,0.6); max-height: 40%; overflow-y: auto; pointer-events: auto; z-index: 10; white-space: pre-wrap;"
   />
-  <video id="webRtcPlayer" data-device={@device.id} data-stream={@stream} controls muted autoplay />
+  <video
+    id="webRtcPlayer"
+    data-device={@device.id}
+    data-stream={@stream}
+    style="width: 100%; height: 100%; object-fit: contain;"
+    controls
+    muted
+    autoplay
+  />
+  <canvas
+    id="hevcCanvas"
+    style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain;"
+  />
   <script>
     window.token = "<%= @user_token %>"
   </script>
-  <script defer phx-track-static type="module" src={static_path(@conn, "/assets/webrtc.js")} />
 </div>

@@ -1,7 +1,7 @@
 defmodule ExNVRWeb.PageController do
   use ExNVRWeb, :controller
 
-  plug ExNVRWeb.Plug.Device when action in [:webrtc, :libav]
+  plug ExNVRWeb.Plug.Device when action in [:webrtc]
 
   def home(conn, _params) do
     redirect(conn, to: ~p"/dashboard")
@@ -14,20 +14,6 @@ defmodule ExNVRWeb.PageController do
     conn
     |> delete_resp_header("x-frame-options")
     |> render(:webrtc,
-      device: device,
-      user_token: token,
-      stream: parse_stream(params),
-      layout: false
-    )
-  end
-
-  def libav(conn, params) do
-    %{device: device, current_user: user} = conn.assigns
-    token = Phoenix.Token.sign(conn, "user socket", user.id)
-
-    conn
-    |> delete_resp_header("x-frame-options")
-    |> render(:libav,
       device: device,
       user_token: token,
       stream: parse_stream(params),
