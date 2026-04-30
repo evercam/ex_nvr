@@ -3,6 +3,9 @@ defmodule ExNVRWeb.DashboardLive do
 
   alias Ecto.Changeset
   alias ExNVR.Devices
+  alias ExNVR.Devices.Onvif
+  alias ExOnvif.PTZ
+
   alias ExNVR.Model.Device
   alias ExNVR.Recordings
   alias ExNVRWeb.Router.Helpers, as: Routes
@@ -16,6 +19,8 @@ defmodule ExNVRWeb.DashboardLive do
     {"2 Hours", "7200"},
     {"Custom", ""}
   ]
+
+  @ptz_move_step 0.05
 
   def render(assigns) do
     ~H"""
@@ -39,6 +44,7 @@ defmodule ExNVRWeb.DashboardLive do
           live-view-enabled={@live_view_enabled?}
           live-view-disabled-reason={@live_view_disabled_reason}
           start-date={@start_date}
+          enable-ptz={!is_nil(@onvif_device)}
           v-on:switch_stream={JS.push("switch_stream")}
           v-on:switch_device={JS.push("switch_device")}
           v-on:show-download-modal={show_modal("download-modal")}
@@ -124,6 +130,7 @@ defmodule ExNVRWeb.DashboardLive do
       custom_duration: false
     )
     |> assign(stream_url: "", poster_url: "")
+    |> assign(ptz_status: nil, onvif_device: nil)
     |> then(&{:ok, &1})
   end
 
@@ -135,9 +142,12 @@ defmodule ExNVRWeb.DashboardLive do
 
     stream = Map.get(params, "stream", socket.assigns[:stream]) || "sub_stream"
 
+    {ptz_status, onvif_device} = get_status(device)
+
     socket
     |> assign(current_device: device)
     |> assign(stream: stream, start_date: nil)
+    |> assign(ptz_status: ptz_status, onvif_device: onvif_device)
     |> assign_streams()
     |> assign_footage_form(%{"device_id" => device && device.id})
     |> live_view_enabled?()
@@ -214,6 +224,83 @@ defmodule ExNVRWeb.DashboardLive do
       {:error, changeset} ->
         {:noreply, assign_footage_form(socket, changeset)}
     end
+  end
+
+  def handle_event("up", _params, socket), do: handle_ptz_move("up", socket)
+  def handle_event("down", _params, socket), do: handle_ptz_move("down", socket)
+  def handle_event("left", _params, socket), do: handle_ptz_move("left", socket)
+  def handle_event("right", _params, socket), do: handle_ptz_move("right", socket)
+  def handle_event("zoom_in", _params, socket), do: handle_ptz_zoom("zoom_in", socket)
+  def handle_event("zoom_out", _params, socket), do: handle_ptz_zoom("zoom_out", socket)
+
+  def handle_event("home", _params, socket) do
+    case socket.assigns.onvif_device do
+      nil ->
+        {:noreply, socket}
+
+      onvif_device ->
+        PTZ.goto_home_position(onvif_device, "Profile_1")
+        {:noreply, socket}
+    end
+  end
+
+  defp handle_ptz_move(direction, socket) do
+    case socket.assigns.onvif_device do
+      nil ->
+        {:noreply, socket}
+
+      onvif_device ->
+        pos = socket.assigns.ptz_status
+
+        new_pos =
+          case direction do
+            "up" -> put_in(pos.pan_tilt.y, clamp(pos.pan_tilt.y - @ptz_move_step))
+            "down" -> put_in(pos.pan_tilt.y, clamp(pos.pan_tilt.y + @ptz_move_step))
+            "left" -> put_in(pos.pan_tilt.x, clamp(pos.pan_tilt.x - @ptz_move_step))
+            "right" -> put_in(pos.pan_tilt.x, clamp(pos.pan_tilt.x + @ptz_move_step))
+          end
+
+        move_ptz(socket, onvif_device, new_pos)
+        {:noreply, assign(socket, :ptz_status, new_pos)}
+    end
+  end
+
+  defp handle_ptz_zoom(zoom_direction, socket) do
+    case socket.assigns.onvif_device do
+      nil ->
+        {:noreply, socket}
+
+      onvif_device ->
+        pos = socket.assigns.ptz_status
+
+        new_zoom =
+          case zoom_direction do
+            "zoom_in" -> clamp(pos.zoom + @ptz_move_step)
+            "zoom_out" -> clamp(pos.zoom - @ptz_move_step)
+          end
+
+        new_pos = %{pos | zoom: new_zoom}
+        move_ptz(socket, onvif_device, new_pos)
+        {:noreply, assign(socket, :ptz_status, new_pos)}
+    end
+  end
+
+  @spec move_ptz(any(), ExOnvif.Device.t(), PTZ.Vector.t()) :: :ok
+  defp move_ptz(socket, onvif_device, ptz_vector) do
+    profile_token =
+      case socket.assigns.stream do
+        "main_stream" ->
+          socket.assigns.current_device.stream_config.profile_token
+
+        "sub_stream" ->
+          socket.assigns.current_device.stream_config.sub_profile_token
+
+        _ ->
+          "Profile_1"
+      end
+
+    abs_move = PTZ.AbsoluteMove.new(profile_token, ptz_vector)
+    PTZ.absolute_move(onvif_device, abs_move)
   end
 
   defp assign_devices(socket) do
@@ -416,6 +503,39 @@ defmodule ExNVRWeb.DashboardLive do
     case Recordings.get_recordings_between(device_id, start_date, start_date) do
       [] -> Changeset.add_error(changeset, :start_date, "No recordings found")
       _recordings -> changeset
+    end
+  end
+
+  @spec get_status(Ecto.Changeset.t()) :: {PTZ.Vector.t(), ExOnvif.Device.t()} | {nil, nil}
+  defp get_status(device) do
+    {}
+
+    with {:ok, onvif_device} <- Onvif.onvif_device(device),
+         ptz_available when not is_nil(ptz_available) <- onvif_device.ptz_ver20_service_path,
+         {:ok, status} <- ExOnvif.PTZ.get_status(onvif_device, "Profile_1") do
+      {
+        PTZ.Vector.new(
+          status.position.pan_tilt.x,
+          status.position.pan_tilt.y,
+          status.position.zoom
+        ),
+        onvif_device
+      }
+    else
+      _ -> {nil, nil}
+    end
+  end
+
+  defp clamp(val, min \\ -1.0, max \\ 1.0) do
+    val =
+      val
+      |> max(min)
+      |> min(max)
+
+    cond do
+      val == min -> max
+      val == max -> min
+      true -> val
     end
   end
 end
