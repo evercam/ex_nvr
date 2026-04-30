@@ -1,7 +1,7 @@
 defmodule ExNVRWeb.PageController do
   use ExNVRWeb, :controller
 
-  plug ExNVRWeb.Plug.Device when action == :webrtc
+  plug ExNVRWeb.Plug.Device when action in [:webrtc]
 
   def home(conn, _params) do
     redirect(conn, to: ~p"/dashboard")

@@ -44,6 +44,7 @@ export default defineConfig(({ command }) => {
         input: {
           app: path.resolve(__dirname, "./js/app.js"),
           webrtc: path.resolve(__dirname, "./js/webrtc.js"),
+          "libav-player": path.resolve(__dirname, "./js/libav-player.js"),
         },
         output: {
           // remove hashes to match phoenix way of handling assets

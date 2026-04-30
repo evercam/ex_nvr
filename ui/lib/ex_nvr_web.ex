@@ -18,7 +18,8 @@ defmodule ExNVRWeb do
   """
 
   def static_paths,
-    do: ~w(assets fonts images swagger favicon.ico robots.txt openapi.yaml swagger.html)
+    do:
+      ~w(assets fonts images swagger favicon.ico robots.txt openapi.yaml swagger.html libav-6.8.8.0-hevc-aac.wasm.mjs libav-6.8.8.0-hevc-aac.wasm.wasm)
 
   def router do
     quote do

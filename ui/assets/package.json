@@ -28,6 +28,7 @@
     "d3": "^7.8.5",
     "flowbite": "^3.1.1",
     "heroicons": "^2.2.0",
+    "libav.js": "^6.8.8",
     "live_vue": "file:../deps/live_vue",
     "moment-timezone": "^0.5.43",
     "phoenix": "file:../deps/phoenix",
