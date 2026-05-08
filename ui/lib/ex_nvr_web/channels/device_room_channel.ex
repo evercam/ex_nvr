@@ -13,8 +13,8 @@ defmodule ExNVRWeb.DeviceRoomChannel do
     stream = parse_stream(params["stream"])
 
     case MainPipeline.add_webrtc_peer(device, stream) do
-      :ok ->
-        {:ok, assign(socket, device: device, stream: stream)}
+      {:ok, codec} ->
+        {:ok, %{codec: codec}, assign(socket, device: device, stream: stream)}
 
       {:error, reason} ->
         {:error, reason}

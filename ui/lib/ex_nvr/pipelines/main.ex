@@ -44,6 +44,7 @@ defmodule ExNVR.Pipelines.Main do
   alias ExNVR.Elements.VideoStreamStatReporter
   alias ExNVR.Model.Device
   alias ExNVR.Pipeline.{Output, Source, StorageMonitor}
+  alias ExNVR.Pipeline.Output.BinaryStream
 
   @type encoding :: :H264 | :H265
 
@@ -74,9 +75,14 @@ defmodule ExNVR.Pipelines.Main do
     Pipeline.call(pipeline_pid(device), {:live_snapshot, image_format})
   end
 
-  @spec add_webrtc_peer(Device.t(), :low | :high) :: :ok | {:error, any()}
+  @spec add_webrtc_peer(Device.t(), :low | :high) :: {:ok, atom()} | {:error, any()}
   def add_webrtc_peer(device, stream_type) do
     Pipeline.call(pipeline_pid(device), {:add_peer, stream_type, self()})
+  end
+
+  @spec add_binary_peer(Device.t(), :low | :high) :: {:ok, atom()} | {:error, any()}
+  def add_binary_peer(device, stream_type) do
+    Pipeline.call(pipeline_pid(device), {:add_binary_peer, stream_type, self()})
   end
 
   @spec forward_peer_message(Device.t(), :low | :high, tuple()) :: :ok
@@ -210,6 +216,12 @@ defmodule ExNVR.Pipelines.Main do
   end
 
   @impl true
+  def handle_child_notification(:no_subscribers, {:binary_stream, _} = child, _ctx, state) do
+    Membrane.Logger.info("No binary stream subscribers, removing #{inspect(child)}")
+    {[remove_children: [child]], state}
+  end
+
+  @impl true
   def handle_child_notification(:new_segment, {:storage, :main_stream}, _ctx, state) do
     {[], maybe_update_device_and_report(state, :recording)}
   end
@@ -340,8 +352,11 @@ defmodule ExNVR.Pipelines.Main do
     track = state.main_stream_video_track
 
     case can_add_webrtc_peer(state.device, track) do
-      :ok -> {[reply: :ok, notify_child: {:webrtc, {:add_peer, peer}}], state}
-      error -> {[reply: error], state}
+      :ok ->
+        {[reply: {:ok, track.encoding}, notify_child: {:webrtc, {:add_peer, peer}}], state}
+
+      error ->
+        {[reply: error], state}
     end
   end
 
@@ -350,7 +365,27 @@ defmodule ExNVR.Pipelines.Main do
     track = state.sub_stream_video_track
 
     case can_add_webrtc_peer(state.device, track) do
-      :ok -> {[reply: :ok, notify_child: {{:webrtc, :sub_stream}, {:add_peer, peer}}], state}
+      :ok ->
+        {[
+           reply: {:ok, track.encoding},
+           notify_child: {{:webrtc, :sub_stream}, {:add_peer, peer}}
+         ], state}
+
+      error ->
+        {[reply: error], state}
+    end
+  end
+
+  @impl true
+  def handle_call({:add_binary_peer, stream_type, peer}, ctx, state) do
+    track =
+      case stream_type do
+        :high -> state.main_stream_video_track
+        :low -> state.sub_stream_video_track
+      end
+
+    case can_add_webrtc_peer(state.device, track) do
+      :ok -> {build_binary_peer_actions(track, stream_type, peer, ctx), state}
       error -> {[reply: error], state}
     end
   end
@@ -532,6 +567,20 @@ defmodule ExNVR.Pipelines.Main do
     })
 
     %{state | device: updated_device}
+  end
+
+  defp build_binary_peer_actions(track, stream_type, peer, ctx) do
+    child = {:binary_stream, stream_type}
+    notify = [notify_child: {child, {:add_subscriber, peer}}]
+    reply = {:ok, track.encoding}
+
+    if Map.has_key?(ctx.children, child) do
+      [reply: reply] ++ notify
+    else
+      source = if stream_type == :high, do: get_child(:tee), else: get_child({:tee, :sub_stream})
+      spec = [source |> via_out(:push_output) |> child(child, BinaryStream)]
+      [reply: reply, spec: spec] ++ notify
+    end
   end
 
   defp can_add_webrtc_peer(device, track) do
