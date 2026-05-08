@@ -45,7 +45,7 @@ defmodule ExNVRWeb.RecordingListLive do
           </div>
         </div>
 
-        <div class="bg-blue-400">
+        <div>
           <div
             :if={@export_started}
             class="w-full my-5 bg-gray-400 rounded-full"
@@ -216,7 +216,7 @@ defmodule ExNVRWeb.RecordingListLive do
                   name="export_to"
                   value="External Drive"
                   label="External Drive"
-                  errors={@errors}
+                  errors={[@errors[:export_config]]}
                   options={}
                 />
 
@@ -588,11 +588,27 @@ defmodule ExNVRWeb.RecordingListLive do
   # export to usb
   @impl true
   def handle_event("validate-export-to-usb-configs", params, socket) do
+    map_size(socket.assigns.filter_params)
+
     {:noreply,
-     socket
-     |> update_assigns("type", params)
-     |> update_assigns("export_to", params)
-     |> update_assigns("destination", params)}
+     if map_size(socket.assigns.filter_params) != 0 do
+       errors = Map.delete(socket.assigns.errors, :export_config)
+
+       socket
+       |> assign(:errors, errors)
+       |> update_assigns("type", params)
+       |> update_assigns("export_to", params)
+       |> update_assigns("destination", params)
+     else
+       error =
+         Map.put(
+           socket.assigns.errors,
+           :export_config,
+           "Please fill the filters to export your recordings"
+         )
+
+       assign(socket, :errors, error)
+     end}
   end
 
   @impl true
