@@ -311,7 +311,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
               for={@selected_device.streams_form}
               phx-change="update-selected-stream"
             >
-              <div class="grid grid-cols-2 gap-x-5">
+              <div class="grid grid-cols-3 gap-x-5">
                 <.input
                   field={@selected_device.streams_form[:main_stream]}
                   type="select"
@@ -328,13 +328,27 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
                   label="Sub Stream"
                   prompt=""
                 />
+
+                <.input
+                  field={@selected_device.streams_form[:third_stream]}
+                  type="select"
+                  name="third_stream"
+                  options={stream_options(@selected_device.stream_profiles)}
+                  label="Third Stream"
+                  prompt=""
+                />
               </div>
             </.simple_form>
           </div>
         </div>
         <div :if={@selected_device.tab == "streams"} class="grid grid-cols-2 gap-x-5">
           <ExNVRWeb.Onvif.StreamProfile.profile
-            :for={{profile, idx} <- Enum.with_index(@selected_device.selected_profiles)}
+            :for={
+              {profile, idx} <-
+                @selected_device.selected_profiles
+                |> Enum.reject(&is_nil/1)
+                |> Enum.with_index()
+            }
             id={"#{profile.id}-#{idx}"}
             profile={profile}
           />
@@ -459,43 +473,32 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
 
   def handle_event("update-selected-stream", params, socket) do
     selected_device = socket.assigns.selected_device
-    main_stream = Enum.find(selected_device.stream_profiles, &(&1.id == params["main_stream"]))
-    sub_stream = Enum.find(selected_device.stream_profiles, &(&1.id == params["sub_stream"]))
 
-    selected_device = %{
-      selected_device
-      | selected_profiles: Enum.reject([main_stream, sub_stream], &is_nil/1)
-    }
+    profiles = [
+      Enum.find(selected_device.stream_profiles, &(&1.id == params["main_stream"])),
+      Enum.find(selected_device.stream_profiles, &(&1.id == params["sub_stream"])),
+      Enum.find(selected_device.stream_profiles, &(&1.id == params["third_stream"]))
+    ]
 
-    {:noreply, assign(socket, selected_device: selected_device)}
+    {:noreply, assign(socket, selected_device: %{selected_device | selected_profiles: profiles})}
   end
 
   def handle_event("add-device", _params, socket) do
     selected_device = socket.assigns.selected_device
     %{username: username, password: password} = selected_device.device
 
+    [main_stream, sub_stream, third_stream] = selected_device.selected_profiles
+
     stream_config =
-      case selected_device.selected_profiles do
-        [main_stream, sub_stream] ->
-          %{
-            stream_uri: main_stream.stream_uri,
-            snapshot_uri: main_stream.snapshot_uri,
-            profile_token: main_stream.id,
-            sub_stream_uri: sub_stream.stream_uri,
-            sub_snapshot_uri: sub_stream.snapshot_uri,
-            sub_profile_token: sub_stream.id
-          }
-
-        [main_stream] ->
-          %{
-            stream_uri: main_stream.stream_uri,
-            snapshot_uri: main_stream.snapshot_uri,
-            profile_token: main_stream.id
-          }
-
-        _other ->
-          %{}
-      end
+      %{}
+      |> put_stream_config(main_stream, :stream_uri, :snapshot_uri, :profile_token)
+      |> put_stream_config(sub_stream, :sub_stream_uri, :sub_snapshot_uri, :sub_profile_token)
+      |> put_stream_config(
+        third_stream,
+        :third_stream_uri,
+        :third_snapshot_uri,
+        :third_profile_token
+      )
 
     socket
     |> put_flash(:device_params, %{
@@ -567,12 +570,9 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
       {:ok, profiles} ->
         profiles =
           profiles
-          |> Enum.map(&StreamProfile.from_onvif/1)
-          |> Enum.sort_by(& &1.name, fn name1, name2 ->
-            main? = name1 == "ex_nvr_main"
-            sub? = name1 == "ex_nvr_sub"
-            main? or (sub? and not main?) or name2 not in ["ex_nvr_main", "ex_nvr_sub"]
-          end)
+          |> Stream.reject(&is_nil(&1.video_encoder_configuration))
+          |> Stream.map(&StreamProfile.from_onvif/1)
+          |> Enum.sort_by(&profile_sort_key/1)
 
         %{camera_details | stream_profiles: profiles}
         |> get_stream_uris()
@@ -582,6 +582,11 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
         camera_details
     end
   end
+
+  defp profile_sort_key(%{name: "ex_nvr_main"}), do: {0, ""}
+  defp profile_sort_key(%{name: "ex_nvr_sub"}), do: {1, ""}
+  defp profile_sort_key(%{name: "ex_nvr_third"}), do: {2, ""}
+  defp profile_sort_key(%{name: name}), do: {3, name}
 
   defp get_stream_uris(%{device: device} = camera_details) do
     profiles =
@@ -601,16 +606,27 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
   defp set_streams_form(%{stream_profiles: profiles} = camera_details) do
     main_stream = Enum.at(profiles, 0)
     sub_stream = Enum.at(profiles, 1)
+    third_stream = Enum.at(profiles, 2)
 
     streams_form =
       to_form(%{
         "main_stream" => main_stream && main_stream.id,
-        "sub_stream" => sub_stream && sub_stream.id
+        "sub_stream" => sub_stream && sub_stream.id,
+        "third_stream" => third_stream && third_stream.id
       })
 
-    selected_profiles = Enum.reject([main_stream, sub_stream], &is_nil/1)
+    selected_profiles = [main_stream, sub_stream, third_stream]
 
     %{camera_details | streams_form: streams_form, selected_profiles: selected_profiles}
+  end
+
+  defp put_stream_config(map, nil, _stream_key, _snapshot_key, _token_key), do: map
+
+  defp put_stream_config(map, profile, stream_key, snapshot_key, token_key) do
+    map
+    |> Map.put(stream_key, profile.stream_uri)
+    |> Map.put(snapshot_key, profile.snapshot_uri)
+    |> Map.put(token_key, profile.id)
   end
 
   # view functions

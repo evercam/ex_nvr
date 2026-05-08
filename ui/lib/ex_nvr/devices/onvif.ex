@@ -85,21 +85,23 @@ defmodule ExNVR.Devices.Onvif do
 
   defp maybe_create_and_configure_profiles(auto_config, device) do
     case fetch_profiles(device) do
-      {:ok, {main_profile, sub_profile}} ->
-        Logger.info("[Onvif] Found main and sub profiles, start configuration")
+      {:ok, {main_profile, sub_profile, third_profile}} ->
+        Logger.info("[Onvif] Found main/sub/third profiles, start configuration")
 
         auto_config
         |> do_configure_profile(device, main_profile, :main_stream)
         |> do_configure_profile(device, sub_profile, :sub_stream)
+        |> do_configure_profile(device, third_profile, :third_stream)
 
       :ok ->
-        Logger.info("[Onvif] Create main and sub profiles")
+        Logger.info("[Onvif] Create main, sub and third profiles")
 
         case create_profiles(device) do
-          {:ok, {main_profile, sub_profile}} ->
+          {:ok, {main_profile, sub_profile, third_profile}} ->
             auto_config
             |> do_configure_profile(device, main_profile, :main_stream)
             |> do_configure_profile(device, sub_profile, :sub_stream)
+            |> do_configure_profile(device, third_profile, :third_stream)
 
           {:error, reason} ->
             Logger.error("[Onvif] error while trying to create profiles: #{inspect(reason)}")
@@ -116,19 +118,22 @@ defmodule ExNVR.Devices.Onvif do
     with {:ok, profiles} <- Media2.get_profiles(onvif_device) do
       main_profile = Enum.find(profiles, &(&1.name == "ex_nvr_main"))
       sub_profile = Enum.find(profiles, &(&1.name == "ex_nvr_sub"))
+      third_profile = Enum.find(profiles, &(&1.name == "ex_nvr_third"))
 
-      if main_profile, do: {:ok, {main_profile, sub_profile}}, else: :ok
+      if main_profile, do: {:ok, {main_profile, sub_profile, third_profile}}, else: :ok
     end
   end
 
   defp create_profiles(device) do
     with {:ok, sources} <- Media2.get_video_source_configurations(device),
          {:ok, configs} <- Media2.get_video_encoder_configurations(device),
-         configs <- Enum.filter(configs, &(&1.use_count == 0)) |> Enum.take(2),
+         configs <- Enum.filter(configs, &(&1.use_count == 0)) |> Enum.take(3),
          {:ok, main} <-
            do_create_profile(device, "ex_nvr_main", hd(sources), Enum.at(configs, 0)),
-         {:ok, sub} <- do_create_profile(device, "ex_nvr_sub", hd(sources), Enum.at(configs, 1)) do
-      {:ok, {main, sub}}
+         {:ok, sub} <- do_create_profile(device, "ex_nvr_sub", hd(sources), Enum.at(configs, 1)),
+         {:ok, third} <-
+           do_create_profile(device, "ex_nvr_third", hd(sources), Enum.at(configs, 2)) do
+      {:ok, {main, sub, third}}
     end
   end
 
@@ -157,6 +162,7 @@ defmodule ExNVR.Devices.Onvif do
         auto_config
         |> do_configure_profile(onvif_device, Enum.at(profiles, 0), :main_stream)
         |> do_configure_profile(onvif_device, Enum.at(profiles, 1), :sub_stream)
+        |> do_configure_profile(onvif_device, Enum.at(profiles, 2), :third_stream)
 
       _error ->
         auto_config
@@ -186,6 +192,7 @@ defmodule ExNVR.Devices.Onvif do
       case stream_type do
         :main_stream -> {:h265, 3072, 4}
         :sub_stream -> {:h264, 572, 2}
+        :third_stream -> {:h265, 1536, 2}
       end
 
     config =
@@ -273,8 +280,14 @@ defmodule ExNVR.Devices.Onvif do
 
     case stream do
       :main_stream -> find_best_resolution(resolutions)
+      :third_stream -> find_1080p_resolution(resolutions)
       _other -> Enum.drop_while(resolutions, &(&1.height > 1000 or &1.width > 1000)) |> hd()
     end
+  end
+
+  defp find_1080p_resolution(resolutions) do
+    Enum.find(resolutions, &(&1.width == 1920 and &1.height == 1080)) ||
+      Enum.min_by(resolutions, fn %{width: w, height: h} -> abs(h - 1080) + abs(w - 1920) end)
   end
 
   defp select_quality(%{manufacturer: "AXIS"}, _quality), do: 70

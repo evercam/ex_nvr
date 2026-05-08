@@ -18,6 +18,11 @@ defmodule ExNVR.Model.Device.StorageConfig do
     field :full_drive_action, Ecto.Enum, values: [:nothing, :overwrite], default: :overwrite
     # Sub stream
     field :record_sub_stream, Ecto.Enum, values: [:never, :always], default: :never
+    # Which stream to record as the high-quality source: main or third
+    field :storage_stream, Ecto.Enum,
+      values: [:main_stream, :third_stream],
+      default: :main_stream
+
     field :schedule, :map
   end
 
@@ -43,6 +48,7 @@ defmodule ExNVR.Model.Device.StorageConfig do
       :full_drive_threshold,
       :full_drive_action,
       :record_sub_stream,
+      :storage_stream,
       :schedule
     ])
     |> common_changeset()

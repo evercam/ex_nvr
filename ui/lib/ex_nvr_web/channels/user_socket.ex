@@ -2,6 +2,7 @@ defmodule ExNVRWeb.UserSocket do
   use Phoenix.Socket
 
   channel("device:*", ExNVRWeb.DeviceRoomChannel)
+  channel("stream:*", ExNVRWeb.DeviceStreamChannel)
 
   @impl true
   def connect(%{"token" => token}, socket, _connect_info) do

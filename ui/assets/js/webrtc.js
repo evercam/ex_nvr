@@ -2,11 +2,12 @@ import { Socket } from "phoenix"
 
 window.onload = function (_event) {
     const player = document.getElementById("webRtcPlayer")
+    const canvas = document.getElementById("hevcCanvas")
     const logsComponent = document.getElementById("webRtcLogs")
     const deviceId = player.dataset.device
     const stream = player.dataset.stream
     const pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
-    
+
     const socket = new Socket("/socket", {params: {token: window.token}})
     const channel = socket.channel(`device:${deviceId}`, {stream: stream})
 
@@ -20,8 +21,19 @@ window.onload = function (_event) {
     }
 
     channel.join()
-        .receive("ok", resp => {log("Joined channel successfully")})
-        .receive("error", reason => { 
+        .receive("ok", resp => {
+            const codec = resp && resp.codec
+            log("Joined channel successfully (codec=" + codec + ")")
+
+            if (is_hevc(codec) && !browser_supports_hevc()) {
+                log("HEVC not supported by browser, falling back to libav wasm decoder")
+                channel.leave()
+                pc.close()
+                socket.disconnect()
+                fallback_to_libav()
+            }
+        })
+        .receive("error", reason => {
             log("Unable to join channel: " + format_join_error(reason))
             alert("could not join channel: " + format_join_error(reason))
             channel.leave()
@@ -36,7 +48,7 @@ window.onload = function (_event) {
             channel.push("answer", JSON.stringify(answer))
         })
     })
-    
+
     channel.on("ice_candidate", ({ data }) => {
         log("received new ice candidate: " + data)
         pc.addIceCandidate(JSON.parse(data))
@@ -48,7 +60,7 @@ window.onload = function (_event) {
             channel.push("ice_candidate", JSON.stringify(event.candidate))
         }
     }
-    
+
     pc.ontrack = (track) => {
         log("received new track: " + JSON.stringify(track))
         player.srcObject = track.streams[0]
@@ -62,6 +74,44 @@ window.onload = function (_event) {
     }
 
     socket.connect()
+
+    async function fallback_to_libav() {
+        if (canvas) {
+            canvas.style.display = "block"
+        }
+        if (player) {
+            player.style.display = "none"
+            player.srcObject = null
+        }
+
+        try {
+            const { startLibavPlayer } = await import("./libav-player.js")
+            startLibavPlayer({
+                deviceId,
+                stream,
+                canvas,
+                logEl: logsComponent,
+                token: window.token,
+            })
+        } catch (err) {
+            log("Failed to load libav player: " + err)
+        }
+    }
+}
+
+function is_hevc(codec) {
+    if (!codec) return false
+    const c = String(codec).toLowerCase()
+    return c === "h265" || c === "hevc"
+}
+
+function browser_supports_hevc() {
+    if (typeof RTCRtpReceiver === "undefined" || !RTCRtpReceiver.getCapabilities) {
+        return false
+    }
+    const caps = RTCRtpReceiver.getCapabilities("video")
+    if (!caps || !caps.codecs) return false
+    return caps.codecs.some(c => /h265|hevc/i.test(c.mimeType || ""))
 }
 
 function format_join_error(error) {
