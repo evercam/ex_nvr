@@ -500,6 +500,8 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
         :third_profile_token
       )
 
+    storage_config = if third_stream, do: %{storage_stream: :third_stream}
+
     socket
     |> put_flash(:device_params, %{
       name: selected_device.name,
@@ -508,6 +510,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
       model: selected_device.device.model,
       mac: selected_device.network_interface && selected_device.network_interface.hw_address,
       url: selected_device.device.address,
+      storage_config: storage_config,
       stream_config: stream_config,
       credentials: %{username: username, password: password}
     })
