@@ -10,7 +10,8 @@ config :ex_nvr,
   hls_directory: System.get_env("EXNVR_HLS_DIRECTORY", "/tmp/hls"),
   admin_username: System.get_env("EXNVR_ADMIN_USERNAME", "admin@localhost"),
   admin_password: System.get_env("EXNVR_ADMIN_PASSWORD", "P@ssw0rd"),
-  download_dir: System.get_env("EXNVR_DOWNLOAD_DIR", "/data/ex_nvr/downloads")
+  download_dir: System.get_env("EXNVR_DOWNLOAD_DIR", "/data/ex_nvr/downloads"),
+  mobius_persistence_dir: System.get_env("EXNVR_MOBIUS_DIR", "/data/ex_nvr/mobius")
 
 config :ex_nvr, ice_servers: System.get_env("EXNVR_ICE_SERVERS", "[]")
 
