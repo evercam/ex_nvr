@@ -21,6 +21,7 @@ defmodule ExNVR.Elements.VideoStreamStatReporter do
 
   @info_event [:ex_nvr, :device, :stream, :info]
   @frame_event [:ex_nvr, :device, :stream, :frame]
+  @stats_event [:ex_nvr, :device, :stream, :stats]
 
   @impl true
   def handle_init(_ctx, opts) do
@@ -125,6 +126,18 @@ defmodule ExNVR.Elements.VideoStreamStatReporter do
         total_frames: state.total_frames,
         gop_size: state.gop_size
       }
+
+    :telemetry.execute(
+      @stats_event,
+      %{
+        avg_bitrate: state.avg_bitrate,
+        avg_fps: state.avg_fps,
+        recv_bytes: state.total_bytes,
+        total_frames: state.total_frames,
+        gop_size: state.gop_size
+      },
+      %{device_id: state.device_id, stream: state.stream}
+    )
 
     broadcast_stream_info(state)
 
