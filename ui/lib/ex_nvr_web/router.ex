@@ -151,6 +151,8 @@ defmodule ExNVRWeb.Router do
       ] do
       live "/devices/:id", DeviceLive, :edit
 
+      live "/health", HealthDashboardLive, :index
+
       live "/triggers", TriggerConfigListLive, :list
       live "/triggers/:id", TriggerConfigLive, :edit
 
