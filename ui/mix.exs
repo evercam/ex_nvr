@@ -73,7 +73,7 @@ defmodule ExNVR.MixProject do
       {:phoenix_html_helpers, "~> 1.0"},
       {:telemetry_metrics, "~> 1.0"},
       {:telemetry_poller, "~> 1.0"},
-      {:mobius, "~> 0.6.1"},
+      {:mobius, github: "mobius-home/mobius"},
       {:sizeable, "~> 1.0"},
       {:gettext, "~> 0.20"},
       {:jason, "~> 1.2"},

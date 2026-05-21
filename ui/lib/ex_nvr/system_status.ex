@@ -210,7 +210,7 @@ defmodule ExNVR.SystemStatus do
 
   defp emit_storage(%{name: name} = block) do
     size = Map.get(block, :size) || 0
-    used = Map.get(block, :used) || 0
+    used = block_used(block, size)
 
     :telemetry.execute(
       [:ex_nvr, :system, :storage],
@@ -220,6 +220,14 @@ defmodule ExNVR.SystemStatus do
   end
 
   defp emit_storage(_), do: :ok
+
+  defp block_used(block, size) do
+    case {Map.get(block, :fs), Map.get(block, :parts)} do
+      {%{avail: avail}, _} when is_integer(avail) -> max(size - avail, 0)
+      {_, [%{fs: %{avail: avail}}]} when is_integer(avail) -> max(size - avail, 0)
+      _ -> 0
+    end
+  end
 
   defp emit_telemetry(:solar_charger, %{} = solar) do
     measurements =
