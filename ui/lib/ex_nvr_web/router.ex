@@ -138,6 +138,11 @@ defmodule ExNVRWeb.Router do
       live "/users/confirm/:token", UserConfirmationLive, :edit
       live "/users/confirm", UserConfirmationInstructionsLive, :new
     end
+
+    live_session :installer,
+      on_mount: [{ExNVRWeb.UserAuth, :mount_current_user}] do
+      live "/installer", InstallerLive, :index
+    end
   end
 
   scope "/", ExNVRWeb do
