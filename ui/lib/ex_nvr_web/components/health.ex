@@ -141,8 +141,8 @@ defmodule ExNVRWeb.Components.Health do
     ~H"""
     <.table id="storage" rows={@blocks}>
       <:col :let={b} label="Name">{block_name(b)}</:col>
-      <:col :let={b} label="Mount">{block_field(b, :mountpoint) || "—"}</:col>
-      <:col :let={b} label="Type">{block_field(b, :fstype) || "—"}</:col>
+      <:col :let={b} label="Mount">{block_fs_field(b, :mountpoint) || "—"}</:col>
+      <:col :let={b} label="Type">{block_fs_field(b, :type) || "—"}</:col>
       <:col :let={b} label="Size">{format_bytes(block_size_bytes(b))}</:col>
       <:col :let={b} label="Used">{usage_cell(b)}</:col>
     </.table>
@@ -567,10 +567,9 @@ defmodule ExNVRWeb.Components.Health do
   end
 
   defp usage_cell(b) do
-    used = block_field(b, :used)
     size = block_size_bytes(b)
 
-    case {used, size} do
+    case {block_used_bytes(b, size), size} do
       {u, s} when is_integer(u) and is_integer(s) and s > 0 ->
         pct = u * 100 / s
         "#{format_bytes(u)} (#{:erlang.float_to_binary(pct, decimals: 1)}%)"
@@ -579,6 +578,30 @@ defmodule ExNVRWeb.Components.Health do
         "—"
     end
   end
+
+  defp block_used_bytes(b, size) do
+    case block_effective_fs(b) do
+      %{avail: avail} when is_integer(avail) -> max(size - avail, 0)
+      _ -> nil
+    end
+  end
+
+  defp block_fs_field(b, key) do
+    case block_effective_fs(b) do
+      %{} = fs -> Map.get(fs, key)
+      _ -> nil
+    end
+  end
+
+  defp block_effective_fs(b) when is_map(b) do
+    case {Map.get(b, :fs), Map.get(b, :parts)} do
+      {%{} = fs, _} -> fs
+      {_, [%{fs: %{} = fs}]} -> fs
+      _ -> nil
+    end
+  end
+
+  defp block_effective_fs(_), do: nil
 
   defp device_state_class(:recording), do: "bg-green-500"
   defp device_state_class(:streaming), do: "bg-green-500"
