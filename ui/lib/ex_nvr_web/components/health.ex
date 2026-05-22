@@ -179,13 +179,68 @@ defmodule ExNVRWeb.Components.Health do
 
   attr :netbird, :any, default: nil
 
+  # netbird status --json carries ~20 keys; many are nested lists of maps
+  # (dnsServers, events, peers, relayServers, routes) that are too noisy to
+  # render via inspect/2 inline. Show a curated set of scalar fields as KV
+  # rows, then summarise the list fields with their count.
+  @netbird_scalar_keys ~w(
+    fqdn ip managementURL signalURL daemonVersion CliVersion
+    lastConnected lastDisconnected status statusType networkAddress
+  )
+
+  @netbird_collection_keys %{
+    "peers" => "peers",
+    "dnsServers" => "DNS servers",
+    "relayServers" => "relays",
+    "events" => "events",
+    "routes" => "routes"
+  }
+
   def netbird_rows(%{netbird: netbird} = assigns) when is_map(netbird) do
-    assigns = assign(assigns, :rows, stable_rows(netbird, 6))
+    assigns =
+      assigns
+      |> assign(:scalar_rows, netbird_scalar_rows(netbird))
+      |> assign(:collection_rows, netbird_collection_rows(netbird))
 
     ~H"""
-    <.kv :for={{k, v} <- @rows} label={to_string(k)} value={inspect_short(v)} />
+    <.kv :for={{k, v} <- @scalar_rows} label={k} value={v} />
+    <.kv
+      :for={{label, count} <- @collection_rows}
+      label={label}
+      value={"#{count} #{if count == 1, do: "entry", else: "entries"}"}
+    />
     """
   end
+
+  defp netbird_scalar_rows(netbird) do
+    for key <- @netbird_scalar_keys,
+        value = Map.get(netbird, key),
+        scalar?(value),
+        do: {humanize_netbird_key(key), value}
+  end
+
+  defp netbird_collection_rows(netbird) do
+    for {key, label} <- @netbird_collection_keys,
+        value = Map.get(netbird, key),
+        is_list(value),
+        do: {label, length(value)}
+  end
+
+  defp scalar?(v) when is_binary(v) or is_number(v) or is_boolean(v) or is_atom(v), do: true
+  defp scalar?(_), do: false
+
+  defp humanize_netbird_key("managementURL"), do: "Management URL"
+  defp humanize_netbird_key("signalURL"), do: "Signal URL"
+  defp humanize_netbird_key("daemonVersion"), do: "Daemon version"
+  defp humanize_netbird_key("CliVersion"), do: "CLI version"
+  defp humanize_netbird_key("lastConnected"), do: "Last connected"
+  defp humanize_netbird_key("lastDisconnected"), do: "Last disconnected"
+  defp humanize_netbird_key("statusType"), do: "Status type"
+  defp humanize_netbird_key("networkAddress"), do: "Network address"
+  defp humanize_netbird_key("fqdn"), do: "FQDN"
+  defp humanize_netbird_key("ip"), do: "IP"
+  defp humanize_netbird_key("status"), do: "Status"
+  defp humanize_netbird_key(other), do: other
 
   ## Solar charger
 
