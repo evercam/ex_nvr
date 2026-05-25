@@ -29,6 +29,10 @@ defmodule ExNVR.Nerves.RecomputerR22.ATModem do
     GenServer.start_link(__MODULE__, opts, name: __MODULE__)
   end
 
+  def start(opts \\ []) do
+    GenServer.start(__MODULE__, opts, name: __MODULE__)
+  end
+
   @doc "Send a raw AT command and return `{:ok, response}` or `{:error, reason}`."
   def send_command(command, opts \\ []) do
     timeout = Keyword.get(opts, :timeout, @default_timeout)
@@ -93,7 +97,8 @@ defmodule ExNVR.Nerves.RecomputerR22.ATModem do
   def pdp_contexts, do: send_command("AT+CGDCONT?")
 
   @doc "AT+CGDCONT — define a PDP context."
-  def set_pdp_context(cid, type \\ "IP", apn), do: send_command("AT+CGDCONT=#{cid},\"#{type}\",\"#{apn}\"")
+  def set_pdp_context(cid, type \\ "IP", apn),
+    do: send_command("AT+CGDCONT=#{cid},\"#{type}\",\"#{apn}\"")
 
   @doc "AT+CGACT? — PDP context activation states."
   def context_states, do: send_command("AT+CGACT?")
@@ -210,7 +215,7 @@ defmodule ExNVR.Nerves.RecomputerR22.ATModem do
   end
 
   def handle_call(:close, _from, state) do
-    {:reply, UART.close(state.uart), flush_pending(state)}
+    {:stop, :normal, UART.close(state.uart), flush_pending(state)}
   end
 
   def handle_call(:reconnect, _from, state) do
@@ -255,8 +260,12 @@ defmodule ExNVR.Nerves.RecomputerR22.ATModem do
 
   defp flush_pending(state) do
     case state.pending do
-      nil -> :ok
-      {:cmd, from, timer, _} -> Process.cancel_timer(timer); GenServer.reply(from, {:error, :closed})
+      nil ->
+        :ok
+
+      {:cmd, from, timer, _} ->
+        Process.cancel_timer(timer)
+        GenServer.reply(from, {:error, :closed})
     end
 
     Enum.each(:queue.to_list(state.queue), fn
@@ -359,7 +368,12 @@ defmodule ExNVR.Nerves.RecomputerR22.ATModem do
   defp parse_line(<<"+COPS: ", rest::binary>>) do
     case split_csv(rest) do
       [mode, format, oper | tail] ->
-        %{mode: to_int(mode), format: to_int(format), operator: unquote_str(oper), act: act_from_list(tail)}
+        %{
+          mode: to_int(mode),
+          format: to_int(format),
+          operator: unquote_str(oper),
+          act: act_from_list(tail)
+        }
 
       [mode] ->
         %{mode: to_int(mode)}
@@ -387,7 +401,12 @@ defmodule ExNVR.Nerves.RecomputerR22.ATModem do
   defp parse_line(<<"+CMGL: ", rest::binary>>) do
     case split_csv(rest) do
       [index, status, alpha, length] ->
-        %{index: to_int(index), status: unquote_str(status), alpha: unquote_str(alpha), length: to_int(length)}
+        %{
+          index: to_int(index),
+          status: unquote_str(status),
+          alpha: unquote_str(alpha),
+          length: to_int(length)
+        }
 
       _ ->
         rest

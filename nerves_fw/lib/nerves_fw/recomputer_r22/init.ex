@@ -7,6 +7,7 @@ defmodule ExNVR.Nerves.RecomputerR22.Init do
 
   alias Circuits.GPIO
   alias ExNVR.Nerves
+  alias ExNVR.Nerves.RecomputerR22.ATModem
 
   @max_attempts 20
   @retry_interval 1_000
@@ -48,6 +49,8 @@ defmodule ExNVR.Nerves.RecomputerR22.Init do
         |> open_gpio(:m2b_power_off, {"gpiochip16", 0}, 0)
         |> open_gpio(:sim_mux_sel, {"gpiochip16", 4}, 0)
 
+      maybe_reset_modem()
+
       {:noreply, state}
     else
       Logger.warning(
@@ -88,5 +91,14 @@ defmodule ExNVR.Nerves.RecomputerR22.Init do
         Logger.error("Failed to open GPIO #{inspect(gpio)}: #{inspect(reason)}")
         state
     end
+  end
+
+  defp maybe_reset_modem() do
+    with {:ok, pid} <- ATModem.start() do
+      with {:error, _} <- ATModem.sim_status(), do: ATModem.reboot()
+      ATModem.close()
+    end
+  rescue
+    _ -> :ok
   end
 end
