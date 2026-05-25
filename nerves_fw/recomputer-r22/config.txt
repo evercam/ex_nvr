@@ -29,8 +29,7 @@ gpu_mem=192
 dtparam=audio=on
 
 # Automatically load overlays for detected cameras
-camera_auto_detect=0
-dtoverlay=imx219
+camera_auto_detect=1
 
 # Automatically load overlays for detected DSI displays
 display_auto_detect=1
