@@ -179,68 +179,105 @@ defmodule ExNVRWeb.Components.Health do
 
   attr :netbird, :any, default: nil
 
-  # netbird status --json carries ~20 keys; many are nested lists of maps
-  # (dnsServers, events, peers, relayServers, routes) that are too noisy to
-  # render via inspect/2 inline. Show a curated set of scalar fields as KV
-  # rows, then summarise the list fields with their count.
-  @netbird_scalar_keys ~w(
-    fqdn ip managementURL signalURL daemonVersion CliVersion
-    lastConnected lastDisconnected status statusType networkAddress
-  )
-
-  @netbird_collection_keys %{
-    "peers" => "peers",
-    "dnsServers" => "DNS servers",
-    "relayServers" => "relays",
-    "events" => "events",
-    "routes" => "routes"
-  }
-
+  # netbird status --json carries ~20 keys with arbitrary nesting (lists of
+  # maps for peers, events, DNS servers, etc.). Render the tree generically
+  # rather than curating an allow-list — anything new the daemon adds shows
+  # up without code changes.
   def netbird_rows(%{netbird: netbird} = assigns) when is_map(netbird) do
-    assigns =
-      assigns
-      |> assign(:scalar_rows, netbird_scalar_rows(netbird))
-      |> assign(:collection_rows, netbird_collection_rows(netbird))
+    assigns = assign(assigns, :entries, sorted_netbird_entries(netbird))
 
     ~H"""
-    <.kv :for={{k, v} <- @scalar_rows} label={k} value={v} />
-    <.kv
-      :for={{label, count} <- @collection_rows}
-      label={label}
-      value={"#{count} #{if count == 1, do: "entry", else: "entries"}"}
+    <.netbird_node
+      :for={{k, v} <- @entries}
+      label={humanize_netbird_key(k)}
+      value={v}
     />
     """
   end
 
-  defp netbird_scalar_rows(netbird) do
-    for key <- @netbird_scalar_keys,
-        value = Map.get(netbird, key),
-        scalar?(value),
-        do: {humanize_netbird_key(key), value}
+  attr :label, :string, required: true
+  attr :value, :any, required: true
+
+  def netbird_node(%{value: v} = assigns) when is_map(v) and map_size(v) > 0 do
+    assigns = assign(assigns, :rows, sorted_netbird_entries(v))
+
+    ~H"""
+    <div class="py-0.5">
+      <div class="text-sm font-medium">{@label}</div>
+      <div class="ml-2 pl-2 border-l border-gray-200 dark:border-gray-700">
+        <.netbird_node
+          :for={{k, val} <- @rows}
+          label={humanize_netbird_key(k)}
+          value={val}
+        />
+      </div>
+    </div>
+    """
   end
 
-  defp netbird_collection_rows(netbird) do
-    for {key, label} <- @netbird_collection_keys,
-        value = Map.get(netbird, key),
-        is_list(value),
-        do: {label, length(value)}
+  def netbird_node(%{value: list} = assigns) when is_list(list) and list != [] do
+    if Enum.all?(list, &is_map/1) do
+      assigns = assign(assigns, :entries, Enum.with_index(list, 1))
+
+      ~H"""
+      <div class="py-0.5">
+        <div class="text-sm font-medium">{@label} ({length(@value)})</div>
+        <div class="ml-2 pl-2 border-l border-gray-200 dark:border-gray-700 space-y-1">
+          <div :for={{entry, idx} <- @entries}>
+            <div class="text-xs text-gray-400 dark:text-gray-500">#{idx}</div>
+            <.netbird_node
+              :for={{k, val} <- sorted_netbird_entries(entry)}
+              label={humanize_netbird_key(k)}
+              value={val}
+            />
+          </div>
+        </div>
+      </div>
+      """
+    else
+      assigns = assign(assigns, :value, Enum.map_join(list, ", ", &netbird_scalar/1))
+
+      ~H"""
+      <.kv label={@label} value={@value} />
+      """
+    end
   end
 
-  defp scalar?(v) when is_binary(v) or is_number(v) or is_boolean(v) or is_atom(v), do: true
-  defp scalar?(_), do: false
+  def netbird_node(assigns) do
+    ~H"""
+    <.kv label={@label} value={netbird_scalar(@value)} />
+    """
+  end
 
-  defp humanize_netbird_key("managementURL"), do: "Management URL"
-  defp humanize_netbird_key("signalURL"), do: "Signal URL"
-  defp humanize_netbird_key("daemonVersion"), do: "Daemon version"
-  defp humanize_netbird_key("CliVersion"), do: "CLI version"
-  defp humanize_netbird_key("lastConnected"), do: "Last connected"
-  defp humanize_netbird_key("lastDisconnected"), do: "Last disconnected"
-  defp humanize_netbird_key("statusType"), do: "Status type"
-  defp humanize_netbird_key("networkAddress"), do: "Network address"
-  defp humanize_netbird_key("fqdn"), do: "FQDN"
-  defp humanize_netbird_key("ip"), do: "IP"
-  defp humanize_netbird_key("status"), do: "Status"
-  defp humanize_netbird_key(other), do: other
+  defp sorted_netbird_entries(map) when is_map(map),
+    do: Enum.sort_by(map, fn {k, _v} -> to_string(k) end)
+
+  defp netbird_scalar(nil), do: "—"
+  defp netbird_scalar(""), do: "—"
+  defp netbird_scalar(true), do: "yes"
+  defp netbird_scalar(false), do: "no"
+  defp netbird_scalar(v) when is_binary(v) or is_number(v), do: v
+  defp netbird_scalar(v) when is_atom(v), do: to_string(v)
+  defp netbird_scalar([]), do: "—"
+  defp netbird_scalar(%{} = m) when map_size(m) == 0, do: "—"
+  defp netbird_scalar(v), do: inspect(v)
+
+  # camelCase → "Camel Case", preserving all-caps runs like URL / IP / FQDN.
+  defp humanize_netbird_key(key) when is_binary(key) do
+    key
+    |> String.replace(~r/([a-z])([A-Z])/, "\\1 \\2")
+    |> String.replace(~r/([A-Z]+)([A-Z][a-z])/, "\\1 \\2")
+    |> String.split(" ", trim: true)
+    |> Enum.map_join(" ", &humanize_word/1)
+  end
+
+  defp humanize_netbird_key(key), do: to_string(key)
+
+  defp humanize_word(word) do
+    if String.length(word) > 1 and String.upcase(word) == word,
+      do: word,
+      else: String.capitalize(word)
+  end
 
   ## Recording-health badge
 
