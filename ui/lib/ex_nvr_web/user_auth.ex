@@ -291,6 +291,20 @@ defmodule ExNVRWeb.UserAuth do
   end
 
   @doc """
+  Used for routes that should be reachable EITHER by an authenticated user
+  or by an unauthenticated client when installer mode is on. Used for the
+  HLS manifest so the public `/installer` view can render camera previews
+  without holding a session.
+  """
+  def require_auth_or_installer_mode(conn, _opts) do
+    cond do
+      conn.assigns[:current_user] -> conn
+      ExNVR.InstallerMode.enabled?() -> conn
+      true -> unauthorized(conn)
+    end
+  end
+
+  @doc """
   Used for routes that require a webhook token.
   """
   def require_webhook_token(conn, _opts) do

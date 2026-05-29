@@ -111,10 +111,6 @@
           else: "s"}
       </span>
     </div>
-    <.camera_grid
-      devices={@status[:devices] || []}
-      history={@pipeline_history}
-      snapshots={@snapshots}
-    />
+    <.camera_grid devices={@status[:devices] || []} history={@pipeline_history} />
   </div>
 </div>

@@ -23,6 +23,10 @@ defmodule ExNVRWeb.Router do
     plug :require_authenticated_user, api: true
   end
 
+  pipeline :api_require_auth_or_installer_mode do
+    plug :require_auth_or_installer_mode
+  end
+
   scope "/api", ExNVRWeb do
     pipe_through [:api, :require_webhook_token, ExNVRWeb.Plug.Device]
 
@@ -53,8 +57,6 @@ defmodule ExNVRWeb.Router do
       get "/recordings", API.RecordingController, :index
       get "/recordings/:recording_id/blob", API.RecordingController, :blob
 
-      get "/hls/index.m3u8", API.DeviceStreamingController, :hls_stream
-
       get "/snapshot", API.DeviceStreamingController, :snapshot
       get "/footage", API.DeviceStreamingController, :footage
 
@@ -62,6 +64,20 @@ defmodule ExNVRWeb.Router do
     end
 
     get "/system/status", API.SystemStatusController, :status
+  end
+
+  # HLS manifest is reachable to authenticated users (dashboard/health) AND
+  # to unauthenticated clients when installer mode is on, so the /installer
+  # camera previews can play without holding a session. Segments below are
+  # already public.
+  scope "/api", ExNVRWeb do
+    pipe_through [:api, :api_require_auth_or_installer_mode]
+
+    scope "/devices/:device_id" do
+      pipe_through ExNVRWeb.Plug.Device
+
+      get "/hls/index.m3u8", API.DeviceStreamingController, :hls_stream
+    end
   end
 
   scope "/api", ExNVRWeb do

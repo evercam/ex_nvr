@@ -11,8 +11,8 @@ defmodule ExNVRWeb.HealthDashboardLive do
       sign-in page when installer mode is off.
 
   Both routes render the same panels — system info, storage, network,
-  per-camera stats with sparklines, and live JPEG snapshots refreshed
-  every few seconds — only the wrapping chrome changes.
+  per-camera stats with sparklines, and a per-camera HLS preview tile —
+  only the wrapping chrome changes.
 
   Reads from `ExNVR.SystemStatus` (initial fetch + PubSub subscription) and
   queries `Mobius.Exports.series/4` for sparkline history. Stateless visual
@@ -26,14 +26,12 @@ defmodule ExNVRWeb.HealthDashboardLive do
 
   require Logger
 
-  alias ExNVR.{Devices, InstallerMode, SystemStatus}
-  alias ExNVR.Model.Device
+  alias ExNVR.{InstallerMode, SystemStatus}
 
   # SystemStatus broadcasts on PubSub every 15s; this poll only exists to
   # refresh the device list (computed on-the-fly by SystemStatus.get_all/0)
   # and as a failover heartbeat if broadcasts ever go missing.
   @poll_interval to_timeout(minute: 1)
-  @snapshot_interval to_timeout(second: 5)
   @history_window {15, :minute}
 
   def mount(_params, _session, socket) do
@@ -53,7 +51,6 @@ defmodule ExNVRWeb.HealthDashboardLive do
     if connected?(socket) do
       SystemStatus.subscribe()
       Process.send_after(self(), :poll, @poll_interval)
-      send(self(), :refresh_snapshots)
     end
 
     socket =
@@ -61,8 +58,6 @@ defmodule ExNVRWeb.HealthDashboardLive do
       |> assign(
         status: safe_get_all(),
         last_update: DateTime.utc_now(),
-        last_snapshot_at: nil,
-        snapshots: %{},
         history_window: @history_window,
         installer?: installer?
       )
@@ -93,54 +88,12 @@ defmodule ExNVRWeb.HealthDashboardLive do
      |> assign_history()}
   end
 
-  def handle_info(:refresh_snapshots, socket) do
-    Process.send_after(self(), :refresh_snapshots, @snapshot_interval)
-
-    devices = Devices.ip_cameras()
-    snapshots = Map.merge(socket.assigns.snapshots, fetch_snapshots(devices))
-
-    {:noreply,
-     assign(socket,
-       snapshots: snapshots,
-       last_snapshot_at: DateTime.utc_now()
-     )}
-  end
-
   def handle_info(_msg, socket), do: {:noreply, socket}
 
   def terminate(_reason, _socket) do
     Phoenix.PubSub.unsubscribe(ExNVR.PubSub, SystemStatus.topic())
     :ok
   end
-
-  defp fetch_snapshots(devices) do
-    devices
-    |> Enum.filter(&snapshot_capable?/1)
-    |> Task.async_stream(
-      fn device ->
-        case Devices.fetch_snapshot(device) do
-          {:ok, binary} ->
-            {device.id, "data:image/jpeg;base64,#{Base.encode64(binary)}"}
-
-          {:error, _reason} ->
-            {device.id, nil}
-        end
-      end,
-      ordered: false,
-      timeout: 4_000,
-      on_timeout: :kill_task
-    )
-    |> Enum.reduce(%{}, fn
-      {:ok, {device_id, data}}, acc -> Map.put(acc, device_id, data)
-      _other, acc -> acc
-    end)
-  end
-
-  defp snapshot_capable?(%Device{state: state, stream_config: %{snapshot_uri: uri}})
-       when not is_nil(uri),
-       do: state in [:recording, :streaming]
-
-  defp snapshot_capable?(_), do: false
 
   defp safe_get_all do
     SystemStatus.get_all()
