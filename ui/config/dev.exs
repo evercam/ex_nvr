@@ -12,6 +12,30 @@ config :ex_nvr,
   installer_mode_file: Path.expand("../data/installer_mode_state", Path.dirname(__ENV__.file)),
   run_pipelines: true
 
+# TEMP: visual-testing sample data for the health/installer views — drop
+# this block to disable. Real values pushed via SystemStatus.set/3 take
+# precedence over anything declared here.
+config :ex_nvr,
+  sample_data: %{
+    netbird: %{
+      "cliVersion" => "0.71.3",
+      "daemonStatus" => "Connected",
+      "daemonVersion" => "0.71.3",
+      "dnsServers" => [
+        %{"domains" => nil, "enabled" => true, "error" => "", "servers" => []}
+      ],
+      "events" => [
+        %{
+          "category" => "SYSTEM",
+          "id" => "83873d59-63bf-49fa-a8ae-4aa001525fc3",
+          "message" => "Network map updated",
+          "metadata" => nil
+        }
+      ],
+      "forwardingRules" => 0
+    }
+  }
+
 # For development, we disable any cache and enable
 # debugging and code reloading.
 #
