@@ -9,6 +9,7 @@ config :ex_nvr, ExNVR.Repo,
 
 config :ex_nvr,
   hls_directory: Path.expand("../data/hls", Path.dirname(__ENV__.file)),
+  installer_mode_file: Path.expand("../data/installer_mode_state", Path.dirname(__ENV__.file)),
   run_pipelines: true
 
 # For development, we disable any cache and enable

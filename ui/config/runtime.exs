@@ -8,6 +8,9 @@ config :ex_nvr,
 if config_env() == :prod do
   config :ex_nvr, hls_directory: System.get_env("EXNVR_HLS_DIRECTORY", "./hls")
 
+  config :ex_nvr,
+    installer_mode_file: System.get_env("EXNVR_INSTALLER_MODE_FILE", "./installer_mode_state")
+
   database_path =
     System.get_env("DATABASE_PATH") ||
       raise """
