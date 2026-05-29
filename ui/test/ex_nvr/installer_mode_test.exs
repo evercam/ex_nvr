@@ -26,6 +26,6 @@ defmodule ExNVR.InstallerModeTest do
   end
 
   test "key/0 returns the KV key" do
-    assert InstallerMode.key() == "nerves_evercam_installer_mode"
+    assert InstallerMode.key() == "nvr_installer_mode"
   end
 end

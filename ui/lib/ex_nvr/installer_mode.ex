@@ -12,7 +12,7 @@ defmodule ExNVR.InstallerMode do
   not persisted across restarts.
   """
 
-  @key "nerves_evercam_installer_mode"
+  @key "nvr_installer_mode"
 
   @spec enabled?() :: boolean()
   def enabled?, do: read() == "true"
