@@ -334,6 +334,7 @@ defmodule ExNVRWeb.Components.Health do
 
   attr :devices, :list, default: []
   attr :history, :map, default: %{}
+  attr :snapshots, :map, default: %{}
 
   def camera_grid(%{devices: []} = assigns) do
     ~H"""
@@ -350,6 +351,7 @@ defmodule ExNVRWeb.Components.Health do
         :for={device <- @devices}
         device={device}
         history={Map.get(@history, device[:id] || device.id, %{})}
+        snapshot={Map.get(@snapshots, device[:id] || device.id)}
       />
     </div>
     """
@@ -357,6 +359,7 @@ defmodule ExNVRWeb.Components.Health do
 
   attr :device, :map, required: true
   attr :history, :map, default: %{}
+  attr :snapshot, :string, default: nil
 
   def camera_card(assigns) do
     streams =
@@ -380,11 +383,20 @@ defmodule ExNVRWeb.Components.Health do
             {@type}
           </div>
         </div>
-        <div class="flex items-center gap-2 shrink-0">
-          <span class={["h-2.5 w-2.5 rounded-full", device_state_class(@state)]}></span>
-          <span class="text-xs font-medium uppercase">{@state}</span>
-        </div>
+        <.recording_badge state={@state} />
       </header>
+
+      <div class="aspect-video bg-gray-100 dark:bg-gray-900 rounded mb-3 flex items-center justify-center overflow-hidden">
+        <img
+          :if={@snapshot}
+          src={@snapshot}
+          alt={"Snapshot of #{@name}"}
+          class="w-full h-full object-contain"
+        />
+        <p :if={is_nil(@snapshot)} class="text-xs text-gray-500 dark:text-gray-400">
+          {snapshot_placeholder(@state)}
+        </p>
+      </div>
 
       <%= if @streams == [] do %>
         <div class="text-sm text-gray-400 dark:text-gray-500 italic">
@@ -403,6 +415,12 @@ defmodule ExNVRWeb.Components.Health do
     </section>
     """
   end
+
+  defp snapshot_placeholder(:stopped), do: "Device stopped"
+  defp snapshot_placeholder(:failed), do: "Device failed"
+  defp snapshot_placeholder(:recording), do: "Waiting for first frame…"
+  defp snapshot_placeholder(:streaming), do: "Waiting for first frame…"
+  defp snapshot_placeholder(_), do: "No snapshot available"
 
   attr :name, :any, required: true
   attr :summary, :map, required: true

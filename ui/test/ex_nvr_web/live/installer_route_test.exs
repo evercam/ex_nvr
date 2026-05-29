@@ -1,4 +1,4 @@
-defmodule ExNVRWeb.InstallerLiveTest do
+defmodule ExNVRWeb.InstallerRouteTest do
   @moduledoc false
   use ExNVRWeb.ConnCase
 

@@ -141,7 +141,7 @@ defmodule ExNVRWeb.Router do
 
     live_session :installer,
       on_mount: [{ExNVRWeb.UserAuth, :mount_current_user}] do
-      live "/installer", InstallerLive, :index
+      live "/installer", HealthDashboardLive, :installer
     end
   end
 

@@ -1,12 +1,27 @@
 <div class="grow px-4 py-6 text-gray-900 dark:text-gray-100">
   <div class="flex items-center justify-between mb-6 gap-4 flex-wrap">
-    <h1 class="text-2xl font-semibold">System Health</h1>
+    <div class="flex items-center gap-3">
+      <span
+        :if={@installer?}
+        class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200"
+      >
+        Installer Mode
+      </span>
+      <h1 class="text-2xl font-semibold">System Health</h1>
+    </div>
     <div class="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-4">
       <span>
         Sparkline window: <span class="font-mono">{format_window(@history_window)}</span>
       </span>
       <span class="text-gray-300 dark:text-gray-600">·</span>
       <span>Last update: <span id="last-update">{format_time(@last_update)}</span></span>
+      <.link
+        :if={@installer?}
+        href={~p"/users/login"}
+        class="font-semibold hover:underline"
+      >
+        Sign in →
+      </.link>
     </div>
   </div>
 
@@ -96,6 +111,10 @@
           else: "s"}
       </span>
     </div>
-    <.camera_grid devices={@status[:devices] || []} history={@pipeline_history} />
+    <.camera_grid
+      devices={@status[:devices] || []}
+      history={@pipeline_history}
+      snapshots={@snapshots}
+    />
   </div>
 </div>
