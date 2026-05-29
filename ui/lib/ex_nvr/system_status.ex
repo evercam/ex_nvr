@@ -110,22 +110,11 @@ defmodule ExNVR.SystemStatus do
       usage: average_busy(per_core)
     }
 
-    data
-    |> Map.merge(%{
+    Map.merge(data, %{
       memory: Map.new(:memsup.get_system_memory_data()),
       cpu: cpu_stats,
       block_storage: list_block_storages()
     })
-    |> with_sample_data()
-  end
-
-  # Samples configured under `:ex_nvr, :sample_data` fill in keys that are
-  # otherwise empty. Real data (collected here or set via set/3) wins.
-  defp with_sample_data(data) do
-    case Application.get_env(:ex_nvr, :sample_data) do
-      %{} = samples -> Map.merge(samples, data)
-      _ -> data
-    end
   end
 
   defp average_busy([]), do: 0.0
