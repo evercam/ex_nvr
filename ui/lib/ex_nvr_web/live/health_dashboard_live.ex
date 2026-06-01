@@ -26,12 +26,13 @@ defmodule ExNVRWeb.HealthDashboardLive do
 
   require Logger
 
-  alias ExNVR.{InstallerMode, SystemStatus}
+  alias ExNVR.{HealthReport, InstallerMode, SystemStatus}
 
   # SystemStatus broadcasts on PubSub every 15s; this poll only exists to
   # refresh the device list (computed on-the-fly by SystemStatus.get_all/0)
   # and as a failover heartbeat if broadcasts ever go missing.
   @poll_interval to_timeout(minute: 1)
+  @health_interval to_timeout(second: 5)
   @history_window {15, :minute}
 
   def mount(_params, _session, socket) do
@@ -51,6 +52,7 @@ defmodule ExNVRWeb.HealthDashboardLive do
     if connected?(socket) do
       SystemStatus.subscribe()
       Process.send_after(self(), :poll, @poll_interval)
+      Process.send_after(self(), :refresh_health, @health_interval)
     end
 
     socket =
@@ -59,7 +61,8 @@ defmodule ExNVRWeb.HealthDashboardLive do
         status: safe_get_all(),
         last_update: DateTime.utc_now(),
         history_window: @history_window,
-        installer?: installer?
+        installer?: installer?,
+        health: HealthReport.report()
       )
       |> assign_history()
 
@@ -86,6 +89,11 @@ defmodule ExNVRWeb.HealthDashboardLive do
      socket
      |> assign(status: safe_get_all(), last_update: DateTime.utc_now())
      |> assign_history()}
+  end
+
+  def handle_info(:refresh_health, socket) do
+    Process.send_after(self(), :refresh_health, @health_interval)
+    {:noreply, assign(socket, health: HealthReport.report())}
   end
 
   def handle_info(_msg, socket), do: {:noreply, socket}

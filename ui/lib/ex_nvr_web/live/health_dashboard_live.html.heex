@@ -25,7 +25,9 @@
     </div>
   </div>
 
-  <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+  <.health_summary results={@health} />
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 mt-4">
     <.panel title="Device">
       <.kv label="Hostname" value={@status[:hostname]} />
       <.kv label="Version" value={@status[:version]} />

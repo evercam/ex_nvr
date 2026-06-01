@@ -17,6 +17,26 @@ config :ex_nvr,
   hls_directory: Path.expand("../../ui/data/hls", Path.dirname(__ENV__.file)),
   run_pipelines: true
 
+# Evercam-firmware-specific health checks layered on top of
+# ExNVR.HealthReport's builtins. Both fields are populated by
+# nerves_fw/lib/nerves_fw/system_status.ex via SystemStatus.set/3.
+config :ex_nvr, :extra_health_checks, [
+  %{
+    name: :netbird,
+    label: "Netbird connected",
+    kind: :state_field,
+    field: :netbird,
+    path: ["daemonStatus"],
+    expected: "Connected"
+  },
+  %{
+    name: :battery_monitor,
+    label: "Battery monitor reachable",
+    kind: :state_field_present,
+    field: :battery_monitor
+  }
+]
+
 # Enable the Nerves integration with Mix
 Application.start(:nerves_bootstrap)
 

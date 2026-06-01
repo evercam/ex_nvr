@@ -198,10 +198,11 @@ defmodule ExNVR.SystemStatus do
     total = mem[:total_memory] || mem[:system_total_memory] || 0
     available = mem[:available_memory] || mem[:free_memory] || 0
     used = max(total - available, 0)
+    used_pct = if total > 0, do: used * 100 / total, else: 0.0
 
     :telemetry.execute(
       [:ex_nvr, :system, :memory],
-      %{used: used, total: total, available: available},
+      %{used: used, total: total, available: available, used_pct: used_pct},
       %{}
     )
   end

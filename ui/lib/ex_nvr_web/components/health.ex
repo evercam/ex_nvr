@@ -279,6 +279,66 @@ defmodule ExNVRWeb.Components.Health do
       else: String.capitalize(word)
   end
 
+  ## Overall health summary
+
+  attr :results, :list, required: true
+
+  def health_summary(assigns) do
+    overall = ExNVR.HealthReport.overall(assigns.results)
+    assigns = assign(assigns, overall: overall, label: health_overall_label(overall))
+
+    ~H"""
+    <section class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-lg font-semibold">System status</h2>
+        <span class={[
+          "inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-semibold",
+          health_status_classes(@overall)
+        ]}>
+          <span class={["h-2 w-2 rounded-full", health_dot_class(@overall)]}></span>
+          {@label}
+        </span>
+      </div>
+      <ul class="space-y-1.5 text-sm">
+        <li :for={check <- @results} class="flex items-start gap-2">
+          <span
+            class={["mt-1 h-2 w-2 rounded-full shrink-0", health_dot_class(check.status)]}
+            title={Atom.to_string(check.status)}
+          >
+          </span>
+          <div class="flex-1 min-w-0">
+            <div class="font-medium">{check.label}</div>
+            <div
+              :if={check.detail}
+              class="text-xs text-gray-500 dark:text-gray-400 truncate"
+              title={check.detail}
+            >
+              {check.detail}
+            </div>
+          </div>
+        </li>
+      </ul>
+    </section>
+    """
+  end
+
+  defp health_overall_label(:ok), do: "Healthy"
+  defp health_overall_label(:failing), do: "Failing"
+  defp health_overall_label(:insufficient_data), do: "Unknown"
+
+  defp health_status_classes(:ok),
+    do: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+
+  defp health_status_classes(:failing),
+    do: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
+
+  defp health_status_classes(:insufficient_data),
+    do: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
+
+  defp health_dot_class(:ok), do: "bg-green-500"
+  defp health_dot_class(:failing), do: "bg-red-500"
+  defp health_dot_class(:insufficient_data), do: "bg-yellow-500"
+
   ## Recording-health badge
 
   attr :state, :atom, required: true

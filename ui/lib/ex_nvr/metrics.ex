@@ -61,6 +61,11 @@ defmodule ExNVR.Metrics do
         event_name: [:ex_nvr, :system, :memory],
         measurement: :available,
         unit: :byte
+      ),
+      last_value("ex_nvr.system.memory.used_pct",
+        event_name: [:ex_nvr, :system, :memory],
+        measurement: :used_pct,
+        description: "Memory used as a percentage of total (0–100)"
       )
     ]
   end
