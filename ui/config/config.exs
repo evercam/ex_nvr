@@ -58,6 +58,36 @@ config :bundlex, :disable_precompiled_os_deps, apps: [:ex_libsrtp]
 
 config :exqlite, force_build: true
 
+# Health checks evaluated by ExNVR.HealthReport for the dashboard panel.
+# This is the baseline for any deployment of ex_nvr (host, docker, both
+# nerves firmwares); each firmware can override it in its own config.exs
+# (e.g. nerves_fw appends netbird + battery monitor). With no entry under
+# this key, the report returns an empty list and the dashboard hides the
+# panel.
+config :ex_nvr, :health_checks, [
+  %{
+    name: :cameras,
+    label: "Cameras recording",
+    kind: :devices_recording
+  },
+  %{
+    name: :cpu_usage,
+    label: "CPU usage under 90% for 10 min",
+    kind: :mobius_range,
+    metric: "ex_nvr.system.cpu.usage",
+    range: 0..90,
+    window: {10, :minute}
+  },
+  %{
+    name: :memory,
+    label: "Memory under 90% for 10 min",
+    kind: :mobius_range,
+    metric: "ex_nvr.system.memory.used_pct",
+    range: 0..90,
+    window: {10, :minute}
+  }
+]
+
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
 import_config "#{config_env()}.exs"

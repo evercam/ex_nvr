@@ -12,9 +12,11 @@ defmodule ExNVR.HealthReport do
     * `:insufficient_data` — we can't tell yet (no samples in window, state
       not collected yet)
 
-  By default the list of checks is `builtin_checks/0` followed by anything
-  the firmware variant added under `Application.get_env(:ex_nvr,
-  :extra_health_checks, [])`. Pass `:checks` explicitly to override.
+  The list of checks is read from `Application.get_env(:ex_nvr,
+  :health_checks, [])` — each firmware/environment declares the checks
+  it wants in its own `config.exs`; with no config the report returns
+  `[]` and the dashboard hides the panel. Pass `:checks` explicitly to
+  override (used by tests).
 
   ## Kinds
 
@@ -62,30 +64,6 @@ defmodule ExNVR.HealthReport do
           detail: String.t() | nil
         }
 
-  @builtin_checks [
-    %{
-      name: :cameras,
-      label: "Cameras recording",
-      kind: :devices_recording
-    },
-    %{
-      name: :cpu_usage,
-      label: "CPU usage under 90% for 10 min",
-      kind: :mobius_range,
-      metric: "ex_nvr.system.cpu.usage",
-      range: 0..90,
-      window: {10, :minute}
-    },
-    %{
-      name: :memory,
-      label: "Memory under 90% for 10 min",
-      kind: :mobius_range,
-      metric: "ex_nvr.system.memory.used_pct",
-      range: 0..90,
-      window: {10, :minute}
-    }
-  ]
-
   @doc """
   Run every configured check and return a list of results in declaration
   order. See module docs for the opts.
@@ -99,7 +77,8 @@ defmodule ExNVR.HealthReport do
 
   @doc """
   Aggregate status across all checks: `:failing` if any check is failing,
-  `:insufficient_data` if any is unknown, otherwise `:ok`.
+  `:insufficient_data` if any is unknown, otherwise `:ok`. An empty list
+  returns `:ok` (nothing to fail).
   """
   @spec overall([result()]) :: status()
   def overall(results) do
@@ -111,13 +90,11 @@ defmodule ExNVR.HealthReport do
   end
 
   @doc """
-  Default list of checks: builtins followed by anything the firmware variant
-  appended under `:extra_health_checks`.
+  Checks declared in `Application.get_env(:ex_nvr, :health_checks, [])`.
+  Returns `[]` when no firmware/environment has configured any.
   """
   @spec checks() :: [check()]
-  def checks do
-    @builtin_checks ++ Application.get_env(:ex_nvr, :extra_health_checks, [])
-  end
+  def checks, do: Application.get_env(:ex_nvr, :health_checks, [])
 
   ## Context — explicit injections, no eager defaults so tests can ignore
   ## the sources irrelevant to the kinds they exercise.

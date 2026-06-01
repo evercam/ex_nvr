@@ -1,6 +1,7 @@
 defmodule ExNVR.HealthReportTest do
   @moduledoc false
-  use ExUnit.Case, async: true
+  # async: false because the checks/0 tests mutate Application env globally.
+  use ExUnit.Case, async: false
 
   alias ExNVR.HealthReport
 
@@ -199,28 +200,36 @@ defmodule ExNVR.HealthReportTest do
     end
   end
 
-  describe "checks/0 default list" do
-    test "ships the expected builtins" do
-      names = HealthReport.checks() |> Enum.map(& &1.name)
-      assert :cameras in names
-      assert :cpu_usage in names
-      assert :memory in names
-    end
-
-    test "appends entries from :extra_health_checks" do
-      previous = Application.get_env(:ex_nvr, :extra_health_checks, [])
-
-      Application.put_env(:ex_nvr, :extra_health_checks, [
-        %{name: :extra, label: "Extra", kind: :state_field_present, field: :ups}
-      ])
+  describe "checks/0" do
+    test "reflects what's configured under :ex_nvr, :health_checks" do
+      previous = Application.get_env(:ex_nvr, :health_checks)
 
       try do
-        names = HealthReport.checks() |> Enum.map(& &1.name)
-        assert :extra in names
-        # builtins still first
-        assert hd(HealthReport.checks()).name == :cameras
+        Application.delete_env(:ex_nvr, :health_checks)
+        assert HealthReport.checks() == []
+
+        Application.put_env(:ex_nvr, :health_checks, [
+          %{name: :only, label: "Only", kind: :state_field_present, field: :ups}
+        ])
+
+        assert [%{name: :only}] = HealthReport.checks()
       after
-        Application.put_env(:ex_nvr, :extra_health_checks, previous)
+        if previous,
+          do: Application.put_env(:ex_nvr, :health_checks, previous),
+          else: Application.delete_env(:ex_nvr, :health_checks)
+      end
+    end
+
+    test "report/0 returns [] when no checks are configured" do
+      previous = Application.get_env(:ex_nvr, :health_checks)
+
+      try do
+        Application.delete_env(:ex_nvr, :health_checks)
+        assert HealthReport.report() == []
+      after
+        if previous,
+          do: Application.put_env(:ex_nvr, :health_checks, previous),
+          else: Application.delete_env(:ex_nvr, :health_checks)
       end
     end
   end

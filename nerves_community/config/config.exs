@@ -12,6 +12,32 @@ config :ex_nvr,
   hls_directory: Path.expand("../../ui/data/hls", Path.dirname(__ENV__.file)),
   run_pipelines: true
 
+# Health checks for the community firmware: the shared baseline only —
+# no netbird / battery monitor since neither is expected here.
+config :ex_nvr, :health_checks, [
+  %{
+    name: :cameras,
+    label: "Cameras recording",
+    kind: :devices_recording
+  },
+  %{
+    name: :cpu_usage,
+    label: "CPU usage under 90% for 10 min",
+    kind: :mobius_range,
+    metric: "ex_nvr.system.cpu.usage",
+    range: 0..90,
+    window: {10, :minute}
+  },
+  %{
+    name: :memory,
+    label: "Memory under 90% for 10 min",
+    kind: :mobius_range,
+    metric: "ex_nvr.system.memory.used_pct",
+    range: 0..90,
+    window: {10, :minute}
+  }
+]
+
 # Enable the Nerves integration with Mix
 Application.start(:nerves_bootstrap)
 

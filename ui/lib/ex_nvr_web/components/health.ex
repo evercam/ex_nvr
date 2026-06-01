@@ -283,6 +283,10 @@ defmodule ExNVRWeb.Components.Health do
 
   attr :results, :list, required: true
 
+  def health_summary(%{results: []} = assigns) do
+    ~H""
+  end
+
   def health_summary(assigns) do
     overall = ExNVR.HealthReport.overall(assigns.results)
     assigns = assign(assigns, overall: overall, label: health_overall_label(overall))
