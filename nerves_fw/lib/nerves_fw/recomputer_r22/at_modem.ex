@@ -47,103 +47,70 @@ defmodule ExNVR.Nerves.RecomputerR22.ATModem do
 
   # Basic
 
-  @doc "AT — ping the modem."
   def ping, do: send_command("AT")
 
-  @doc "ATI — device identification."
   def identify, do: send_command("ATI")
 
-  @doc "AT+CGMI — manufacturer name."
   def manufacturer, do: send_command("AT+CGMI")
 
-  @doc "AT+CGMM — model name."
   def model, do: send_command("AT+CGMM")
 
-  @doc "AT+CGMR — firmware revision."
   def firmware_version, do: send_command("AT+CGMR")
 
-  @doc "AT+CGSN — IMEI."
   def imei, do: send_command("AT+CGSN")
 
-  @doc "AT+CIMI — IMSI."
   def imsi, do: send_command("AT+CIMI")
 
-  @doc "AT+ICCID — SIM ICCID."
   def iccid, do: send_command("AT+ICCID")
 
   # SIM / network status
-
-  @doc "AT+CPIN? — SIM PIN status."
   def sim_status, do: send_command("AT+CPIN?")
 
-  @doc "AT+CSQ — signal quality (RSSI + BER)."
   def signal_quality, do: send_command("AT+CSQ")
 
-  @doc "AT+CREG? — GSM/GPRS network registration."
   def network_registration, do: send_command("AT+CREG?")
 
-  @doc "AT+CEREG? — LTE network registration."
   def eps_registration, do: send_command("AT+CEREG?")
 
-  @doc "AT+COPS? — current operator."
   def operator, do: send_command("AT+COPS?")
 
-  @doc "AT+COPS=? — list available operators (long running)."
   def scan_operators, do: send_command("AT+COPS=?", timeout: 60_000)
 
   # PDP / data
 
-  @doc "AT+CGDCONT? — list PDP contexts."
   def pdp_contexts, do: send_command("AT+CGDCONT?")
 
-  @doc "AT+CGDCONT — define a PDP context."
   def set_pdp_context(cid, type \\ "IP", apn),
     do: send_command("AT+CGDCONT=#{cid},\"#{type}\",\"#{apn}\"")
 
-  @doc "AT+CGACT? — PDP context activation states."
   def context_states, do: send_command("AT+CGACT?")
 
-  @doc "AT+CGACT=1 — activate a PDP context."
   def activate_context(cid), do: send_command("AT+CGACT=1,#{cid}")
 
-  @doc "AT+CGACT=0 — deactivate a PDP context."
   def deactivate_context(cid), do: send_command("AT+CGACT=0,#{cid}")
 
   # SMS
-
-  @doc "AT+CMGF — set SMS message format (0=PDU, 1=text)."
   def set_sms_format(n \\ 1), do: send_command("AT+CMGF=#{n}")
 
-  @doc "AT+CMGL — list SMS messages."
   def list_sms(stat \\ "ALL"), do: send_command("AT+CMGL=\"#{stat}\"", timeout: 15_000)
 
-  @doc "AT+CMGR — read a single SMS by index."
   def read_sms(index), do: send_command("AT+CMGR=#{index}")
 
-  @doc "AT+CMGD — delete SMS by index."
   def delete_sms(index), do: send_command("AT+CMGD=#{index}")
 
   # Control
-
-  @doc "AT+CMEE — enable extended error reporting (2=verbose)."
   def set_error_format(n \\ 2), do: send_command("AT+CMEE=#{n}")
 
-  @doc "AT+CFUN — set phone functionality (0=min, 1=full, 4=airplane)."
   def set_functionality(fun \\ 1), do: send_command("AT+CFUN=#{fun}")
 
-  @doc "AT+CFUN? — get current phone functionality."
   def functionality, do: send_command("AT+CFUN?")
 
-  @doc "AT+CFUN=1,1 — reboot the modem. The modem may not send OK before resetting."
   def reboot, do: send_command("AT+CFUN=1,1")
 
-  @doc "AT&F — restore factory defaults."
   def factory_reset, do: send_command("AT&F")
 
-  @doc "ATZ — soft reset."
   def reset, do: send_command("ATZ")
 
-  @doc "AT+CGPADDR — IP address(es) assigned to PDP context(s)."
   def pdp_address(cid \\ 1), do: send_command("AT+CGPADDR=#{cid}")
 
   # Connectivity checks (bypass AT queue — direct TCP via Erlang socket API)
