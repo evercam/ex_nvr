@@ -17,7 +17,8 @@ defmodule ExNVR.Nerves.RemoteConfigurer do
 
   alias __MODULE__.{Router, Step}
   alias ExNVR.{Accounts, RemoteConnection}
-  alias ExNVR.Nerves.{DiskMounter, GrafanaAgent, Netbird, SystemSettings, Utils}
+  alias ExNVR.Nerves.{Application, DiskMounter, GrafanaAgent, Netbird, SystemSettings, Utils}
+  alias ExNVR.Nerves.RecomputerR22.{ATModem, SimConfigurer}
   alias Nerves.Runtime
 
   @netbird_mangement_url "https://vpn.evercam.io"
@@ -62,7 +63,7 @@ defmodule ExNVR.Nerves.RemoteConfigurer do
          {:ok, mac_addr} <- Utils.get_mac_address(gateway) do
       payload = %{
         kit_serial: state.kit_serial,
-        mac_address: VintageNet.get(["interface", "eth0", "mac_address"]),
+        mac_address: mac_address(),
         serial_number: Runtime.serial_number(),
         device_name: Runtime.KV.get("a.nerves_fw_platform"),
         version: @config_version,
@@ -103,10 +104,112 @@ defmodule ExNVR.Nerves.RemoteConfigurer do
       Task.async(fn -> format_hdd() end),
       Task.async(fn -> create_user(config) end),
       Task.async(fn -> configure_grafana_agent(config) end),
-      Task.async(fn -> Router.configure(config["gateway_config"]) end)
+      Task.async(fn -> configure_gateway(config) end)
     ]
 
     Task.await_many(tasks, :infinity)
+  end
+
+  # The recomputer_r22 has no Teltonika router; it uses a built-in cellular
+  # modem instead, so we configure the modem rather than the router.
+  defp configure_gateway(config) do
+    if Application.target() == :recomputer_r22 do
+      configure_modem()
+    else
+      Router.configure(config["gateway_config"])
+    end
+  end
+
+  defp configure_modem do
+    Logger.info("[RemoteConfigurer] configure 4G modem")
+
+    case ATModem.start() do
+      {:ok, _pid} ->
+        do_configure_modem()
+
+      {:error, reason} ->
+        %Step{name: :configure_modem, status: :error, reason: inspect(reason)}
+    end
+  end
+
+  defp do_configure_modem do
+    with :ok <- ensure_sim_detected(),
+         :ok <- ensure_ecm_mode(),
+         {:ok, apn} <- SimConfigurer.configure_apn() do
+      %Step{name: :configure_modem, status: :ok, reason: "APN set to #{apn}"}
+    else
+      {:error, reason} ->
+        Logger.error("[RemoteConfigurer] modem configuration failed: #{inspect(reason)}")
+        %Step{name: :configure_modem, status: :error, reason: inspect(reason)}
+    end
+  end
+
+  # The SIM must be detected before we can configure the modem. If it isn't,
+  # reboot the modem once and re-check; abort if it's still missing.
+  defp ensure_sim_detected do
+    if sim_detected?(), do: :ok, else: reboot_and_recheck_sim()
+  end
+
+  defp reboot_and_recheck_sim do
+    Logger.warning("[RemoteConfigurer] SIM not detected, rebooting modem")
+
+    case reboot_modem() do
+      :ok -> if sim_detected?(), do: :ok, else: {:error, :sim_not_detected}
+      {:error, reason} -> {:error, {:modem_reboot_failed, reason}}
+    end
+  end
+
+  defp reboot_modem do
+    case ATModem.reboot() do
+      {:error, :reboot_in_progress} -> wait_for_reboot()
+      result -> result
+    end
+  end
+
+  defp wait_for_reboot do
+    case ATModem.ping() do
+      {:error, :reboot_in_progress} ->
+        Process.sleep(:timer.seconds(2))
+        wait_for_reboot()
+
+      {:ok, _} ->
+        :ok
+
+      {:error, _reason} ->
+        Process.sleep(:timer.seconds(2))
+        wait_for_reboot()
+    end
+  end
+
+  defp sim_detected?, do: match?({:ok, _}, ATModem.sim_status())
+
+  # If the modem connects over QMI/wwan, switch it to usbnet (CDC ECM) so it shows
+  # up as usb0. The modem resets itself to apply the mode change.
+  defp ensure_ecm_mode do
+    case ATModem.usbnet_mode() do
+      {:ok, :ecm} ->
+        :ok
+
+      {:ok, mode} ->
+        Logger.info("[RemoteConfigurer] modem using #{mode}, switching to ECM (usb1)")
+        switch_to_ecm()
+
+      {:error, reason} ->
+        {:error, {:usbnet_mode_unavailable, reason}}
+    end
+  end
+
+  defp switch_to_ecm do
+    case ATModem.set_usbnet_mode(:ecm) do
+      {:ok, _} -> :ok
+      {:error, reason} -> {:error, {:set_usbnet_failed, reason}}
+    end
+  end
+
+  # For the recomputer_r22 we use eth1 as the mac address for authentication; eth0 is unused.
+  defp mac_address do
+    interface = if Application.target() == :recomputer_r22, do: "eth1", else: "eth0"
+    VintageNet.get(["interface", interface, "mac_address"])
   end
 
   defp connect_to_netbird(config) do

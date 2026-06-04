@@ -17,35 +17,40 @@ defmodule ExNVR.Nerves.RecomputerR22.ATModem do
   @default_device "/dev/ttyUSB2"
   @default_speed 115_200
   @default_timeout 5_000
-  @reconnect_interval 5_000
+
+  @reboot_timeout 90_000
+  @poll_interval 500
+  @ping_interval 1_000
 
   @final_codes ~w(OK ERROR CONNECT NO\ CARRIER BUSY NO\ ANSWER NO\ DIALTONE)
 
-  # ---------------------------------------------------------------------------
-  # Public API
-  # ---------------------------------------------------------------------------
+  @usbnet_modes %{0 => :qmi, 1 => :ecm, 2 => :mbim, 3 => :rndis}
+  @usbnet_values Map.new(@usbnet_modes, fn {value, mode} -> {mode, value} end)
 
   def start_link(opts \\ []) do
-    GenServer.start_link(__MODULE__, opts, name: __MODULE__)
+    case GenServer.start_link(__MODULE__, opts, name: __MODULE__) do
+      {:ok, pid} -> {:ok, pid}
+      {:error, {:already_started, pid}} -> {:ok, pid}
+      {:error, _reason} = error -> error
+    end
   end
 
   def start(opts \\ []) do
-    GenServer.start(__MODULE__, opts, name: __MODULE__)
+    case GenServer.start(__MODULE__, opts, name: __MODULE__) do
+      {:ok, pid} -> {:ok, pid}
+      {:error, {:already_started, pid}} -> {:ok, pid}
+      {:error, _reason} = error -> error
+    end
   end
 
-  @doc "Send a raw AT command and return `{:ok, response}` or `{:error, reason}`."
   def send_command(command, opts \\ []) do
     timeout = Keyword.get(opts, :timeout, @default_timeout)
     GenServer.call(__MODULE__, {:send_command, command}, timeout + 1_000)
   end
 
-  @doc "Close the UART connection."
   def close, do: GenServer.call(__MODULE__, :close)
 
-  @doc "Close and reopen the UART connection."
   def reconnect, do: GenServer.call(__MODULE__, :reconnect)
-
-  # Basic
 
   def ping, do: send_command("AT")
 
@@ -76,8 +81,6 @@ defmodule ExNVR.Nerves.RecomputerR22.ATModem do
 
   def scan_operators, do: send_command("AT+COPS=?", timeout: 60_000)
 
-  # PDP / data
-
   def pdp_contexts, do: send_command("AT+CGDCONT?")
 
   def set_pdp_context(cid, type \\ "IP", apn),
@@ -105,13 +108,40 @@ defmodule ExNVR.Nerves.RecomputerR22.ATModem do
 
   def functionality, do: send_command("AT+CFUN?")
 
-  def reboot, do: send_command("AT+CFUN=1,1")
+  @doc """
+  Reboot the modem and block until it has come back up.
+
+  Returns `:ok` once the modem is reachable again, or `{:error, reason}` if it
+  does not come back within `timeout` (default #{@reboot_timeout}ms).
+  """
+  def reboot(timeout \\ @reboot_timeout) do
+    GenServer.call(__MODULE__, {:reboot, timeout}, timeout + 5_000)
+  end
 
   def factory_reset, do: send_command("AT&F")
 
   def reset, do: send_command("ATZ")
 
   def pdp_address(cid \\ 1), do: send_command("AT+CGPADDR=#{cid}")
+
+  # USB network mode (Quectel `AT+QCFG="usbnet"`). Modes: :qmi | :ecm | :mbim | :rndis.
+  # The reComputer R22 expects a usbnet (CDC ECM) interface rather than a QMI
+  # device, so VintageNet can manage it as a regular ethernet interface.
+
+  @doc "Return the current USB network mode as `{:ok, mode}` or `{:error, reason}`."
+  def usbnet_mode do
+    case send_command(~s(AT+QCFG="usbnet")) do
+      {:ok, %{usbnet: mode}} -> {:ok, mode}
+      {:ok, other} -> {:error, {:unexpected_response, other}}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Set the USB network mode (atom or raw integer). A reboot is needed to apply it."
+  def set_usbnet_mode(mode) when is_atom(mode),
+    do: set_usbnet_mode(Map.fetch!(@usbnet_values, mode))
+
+  def set_usbnet_mode(mode) when is_integer(mode), do: send_command(~s(AT+QCFG="usbnet",#{mode}))
 
   # Connectivity checks (bypass AT queue — direct TCP via Erlang socket API)
 
@@ -149,33 +179,29 @@ defmodule ExNVR.Nerves.RecomputerR22.ATModem do
       uart: uart,
       device: device,
       speed: speed,
-      # {from, cancel_timer_ref, [accumulated_lines]}
       pending: nil,
-      queue: :queue.new()
+      queue: :queue.new(),
+      reboot: nil
     }
 
-    {:ok, state, {:continue, :connect}}
-  end
-
-  @impl true
-  def handle_continue(:connect, state) do
-    case UART.open(state.uart, state.device,
-           speed: state.speed,
-           active: true,
-           framing: {UART.Framing.Line, separator: "\r\n"}
-         ) do
+    case UART.open(uart, device, open_opts(state)) do
       :ok ->
-        Logger.info("ATModem: connected to #{state.device}")
-        {:noreply, state}
+        Logger.info("ATModem: connected to #{device}")
+        {:ok, state}
 
       {:error, reason} ->
-        Logger.error("ATModem: failed to open #{state.device}: #{inspect(reason)}")
-        Process.send_after(self(), :reconnect, @reconnect_interval)
-        {:noreply, state}
+        Logger.error("ATModem: failed to open #{device}: #{inspect(reason)}")
+        GenServer.stop(uart)
+        {:stop, reason}
     end
   end
 
   @impl true
+  def handle_call({:send_command, _command}, _from, %{reboot: reboot} = state)
+      when reboot != nil do
+    {:reply, {:error, :reboot_in_progress}, state}
+  end
+
   def handle_call({:send_command, command}, from, state) do
     queue = :queue.in({:cmd, command, from}, state.queue)
     {:noreply, maybe_dispatch(%{state | queue: queue})}
@@ -189,11 +215,7 @@ defmodule ExNVR.Nerves.RecomputerR22.ATModem do
     UART.close(state.uart)
     state = flush_pending(state)
 
-    case UART.open(state.uart, state.device,
-           speed: state.speed,
-           active: true,
-           framing: {UART.Framing.Line, separator: "\r\n"}
-         ) do
+    case UART.open(state.uart, state.device, open_opts(state)) do
       :ok ->
         Logger.info("ATModem: reconnected to #{state.device}")
         {:reply, :ok, state}
@@ -204,9 +226,44 @@ defmodule ExNVR.Nerves.RecomputerR22.ATModem do
     end
   end
 
+  def handle_call({:reboot, _timeout}, _from, %{reboot: reboot} = state) when reboot != nil do
+    {:reply, {:error, :reboot_in_progress}, state}
+  end
+
+  def handle_call({:reboot, timeout}, from, state) do
+    state = flush_pending(state)
+    UART.write(state.uart, "AT+CFUN=1,1\r\n")
+    UART.close(state.uart)
+
+    %{uart: uart, device: device, speed: speed} = state
+    parent = self()
+
+    {pid, ref} =
+      spawn_monitor(fn ->
+        send(parent, {:reboot_done, self(), do_reboot(uart, device, speed, timeout)})
+      end)
+
+    {:noreply, %{state | reboot: %{from: from, pid: pid, ref: ref}}}
+  end
+
   @impl true
   def handle_info({:circuits_uart, _port, data}, state) do
     {:noreply, process_line(state, String.trim(data))}
+  end
+
+  def handle_info(
+        {:reboot_done, pid, result},
+        %{reboot: %{pid: pid, ref: ref, from: from}} = state
+      ) do
+    Process.demonitor(ref, [:flush])
+    {:noreply, finish_reboot(state, from, result)}
+  end
+
+  def handle_info(
+        {:DOWN, ref, :process, pid, reason},
+        %{reboot: %{pid: pid, ref: ref, from: from}} = state
+      ) do
+    {:noreply, finish_reboot(state, from, {:error, {:reboot_task_crashed, reason}})}
   end
 
   def handle_info(:command_timeout, %{pending: {:cmd, from, _timer, _lines}} = state) do
@@ -217,13 +274,116 @@ defmodule ExNVR.Nerves.RecomputerR22.ATModem do
 
   def handle_info(:command_timeout, state), do: {:noreply, state}
 
-  def handle_info(:reconnect, state), do: handle_continue(:connect, state)
-
   def handle_info(_msg, state), do: {:noreply, state}
 
   # ---------------------------------------------------------------------------
   # Internal helpers
   # ---------------------------------------------------------------------------
+
+  defp open_opts(state) do
+    [speed: state.speed, active: true, framing: {UART.Framing.Line, separator: "\r\n"}]
+  end
+
+  # Reply to the reboot caller and clear the reboot state. On success the UART
+  # was closed by the task, so reopen it in active mode for normal operation.
+  defp finish_reboot(state, from, result) do
+    state =
+      case result do
+        :ok ->
+          Logger.info("ATModem: rebooted and reconnected to #{state.device}")
+          reopen(state)
+
+        {:error, reason} ->
+          Logger.error("ATModem: reboot failed: #{inspect(reason)}")
+          state
+      end
+
+    GenServer.reply(from, result)
+    %{state | reboot: nil}
+  end
+
+  defp reopen(state) do
+    case UART.open(state.uart, state.device, open_opts(state)) do
+      :ok ->
+        :ok
+
+      {:error, reason} ->
+        Logger.error("ATModem: failed to reopen #{state.device}: #{inspect(reason)}")
+    end
+
+    state
+  end
+
+  # Runs in the spawned reboot task. Waits for the serial node to disappear and
+  # re-appear, then reopens (passively) and polls AT until the modem answers OK.
+  # Closes the UART before returning so the GenServer can reopen it in active mode.
+  defp do_reboot(uart, device, speed, timeout) do
+    deadline = System.monotonic_time(:millisecond) + timeout
+    opts = [speed: speed, active: false, framing: {UART.Framing.Line, separator: "\r\n"}]
+
+    result =
+      with :ok <- wait_until(deadline, :reboot_not_detected, fn -> not File.exists?(device) end),
+           :ok <- wait_until(deadline, :device_not_back, fn -> File.exists?(device) end) do
+        open_and_ping(uart, device, opts, deadline)
+      end
+
+    UART.close(uart)
+    result
+  end
+
+  # Poll `fun` every @poll_interval until it returns true or the deadline passes.
+  defp wait_until(deadline, error_reason, fun) do
+    cond do
+      fun.() ->
+        :ok
+
+      past_deadline?(deadline) ->
+        {:error, error_reason}
+
+      true ->
+        Process.sleep(@poll_interval)
+        wait_until(deadline, error_reason, fun)
+    end
+  end
+
+  # Reopen the UART (retrying while the node settles) then ping until responsive.
+  defp open_and_ping(uart, device, opts, deadline) do
+    case UART.open(uart, device, opts) do
+      :ok ->
+        ping(uart, deadline)
+
+      {:error, reason} ->
+        if past_deadline?(deadline) do
+          {:error, reason}
+        else
+          Process.sleep(@poll_interval)
+          open_and_ping(uart, device, opts, deadline)
+        end
+    end
+  end
+
+  defp ping(uart, deadline) do
+    UART.write(uart, "AT\r\n")
+    read_response(uart, deadline)
+  end
+
+  # Read framed lines (passive mode) until we see "OK"; re-send AT on idle gaps.
+  defp read_response(uart, deadline) do
+    if past_deadline?(deadline) do
+      {:error, :unresponsive}
+    else
+      uart |> UART.read(@ping_interval) |> handle_read(uart, deadline)
+    end
+  end
+
+  defp handle_read({:ok, ""}, uart, deadline), do: ping(uart, deadline)
+  defp handle_read({:error, _reason}, uart, deadline), do: ping(uart, deadline)
+
+  defp handle_read({:ok, data}, uart, deadline) do
+    if String.contains?(data, "OK"), do: :ok, else: read_response(uart, deadline)
+  end
+
+  defp past_deadline?(deadline), do: System.monotonic_time(:millisecond) >= deadline
 
   defp flush_pending(state) do
     case state.pending do
@@ -381,6 +541,13 @@ defmodule ExNVR.Nerves.RecomputerR22.ATModem do
   end
 
   defp parse_line(<<"+ICCID: ", rest::binary>>), do: String.trim(rest)
+
+  defp parse_line(<<"+QCFG: ", rest::binary>>) do
+    case split_csv(rest) do
+      ["\"usbnet\"", mode | _] -> %{usbnet: Map.get(@usbnet_modes, to_int(mode), :unknown)}
+      _ -> rest
+    end
+  end
 
   defp parse_line(line), do: line
 

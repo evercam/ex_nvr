@@ -49,7 +49,7 @@ defmodule ExNVR.Nerves.RecomputerR22.Init do
         |> open_gpio(:m2b_power_off, {"gpiochip16", 0}, 0)
         |> open_gpio(:sim_mux_sel, {"gpiochip16", 4}, 0)
 
-      maybe_reset_modem()
+      maybe_reboot_modem()
 
       {:noreply, state}
     else
@@ -93,10 +93,9 @@ defmodule ExNVR.Nerves.RecomputerR22.Init do
     end
   end
 
-  defp maybe_reset_modem() do
-    with {:ok, pid} <- ATModem.start() do
+  defp maybe_reboot_modem do
+    with {:ok, _pid} <- ATModem.start() do
       with {:error, _} <- ATModem.sim_status(), do: ATModem.reboot()
-      ATModem.close()
     end
   rescue
     _ -> :ok
