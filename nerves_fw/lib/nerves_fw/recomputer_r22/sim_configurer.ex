@@ -13,14 +13,15 @@ defmodule ExNVR.Nerves.RecomputerR22.SimConfigurer do
   def auto_configure_apn(cid \\ 1) do
     with :ok <- start_modem() do
       try do
-        configure(cid)
+        configure_apn(cid)
       after
         stop_modem()
       end
     end
   end
 
-  defp configure(cid) do
+  @spec configure_apn(non_neg_integer()) :: {:ok, binary()} | {:error, term()}
+  def configure_apn(cid \\ 1) do
     with {:ok, imsi} <- fetch_imsi(),
          {:ok, mcc, mncs} <- parse_imsi(imsi),
          {:ok, entry} <- lookup_apn(mcc, mncs) do
