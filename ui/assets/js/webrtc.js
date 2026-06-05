@@ -39,19 +39,45 @@ window.onload = function (_event) {
             channel.leave()
         })
 
-    channel.on("offer", ({ data }) => {
+    // ICE candidates can arrive before we've finished applying the remote
+    // description; adding them too early throws. Buffer until the remote
+    // description is set, then flush.
+    let remoteDescriptionSet = false
+    const pendingCandidates = []
+
+    channel.on("offer", async ({ data }) => {
         log("Received offer: " + data)
 
-        pc.setRemoteDescription(JSON.parse(data))
-        pc.createAnswer().then(answer => {
-            pc.setLocalDescription(answer)
+        try {
+            await pc.setRemoteDescription(JSON.parse(data))
+            remoteDescriptionSet = true
+
+            for (const candidate of pendingCandidates.splice(0)) {
+                await pc.addIceCandidate(candidate)
+            }
+
+            const answer = await pc.createAnswer()
+            await pc.setLocalDescription(answer)
             channel.push("answer", JSON.stringify(answer))
-        })
+        } catch (err) {
+            log("Failed to handle offer: " + err)
+        }
     })
 
-    channel.on("ice_candidate", ({ data }) => {
+    channel.on("ice_candidate", async ({ data }) => {
         log("received new ice candidate: " + data)
-        pc.addIceCandidate(JSON.parse(data))
+        const candidate = JSON.parse(data)
+
+        if (!remoteDescriptionSet) {
+            pendingCandidates.push(candidate)
+            return
+        }
+
+        try {
+            await pc.addIceCandidate(candidate)
+        } catch (err) {
+            log("Failed to add ice candidate: " + err)
+        }
     })
 
     pc.onicecandidate = (event) => {
@@ -67,9 +93,13 @@ window.onload = function (_event) {
     }
 
     pc.onconnectionstatechange = (event) => {
-        if (pc.connectionState == "disconnected") {
-            alert("connection closed, refresh browser to retry")
+        log("connection state: " + pc.connectionState)
+
+        if (pc.connectionState == "failed" || pc.connectionState == "disconnected") {
+            alert("connection lost, refresh browser to retry")
+            channel.leave()
             pc.close()
+            socket.disconnect()
         }
     }
 

@@ -138,7 +138,15 @@ defmodule ExNVR.Pipeline.Output.WebRTC do
 
   @impl true
   def handle_info({:ex_webrtc, pc, {:ice_candidate, candidate}}, _ctx, state) do
-    send(state.peers[pc], {:ice_candidate, ExWebRTC.ICECandidate.to_json(candidate)})
+    # The peer connection keeps generating ICE candidates for a short while after
+    # it has been removed from `peers` (failed connection / channel process down).
+    # Looking the peer up defensively avoids `send(nil, _)` crashing the sink and,
+    # with it, the whole device pipeline.
+    case Map.get(state.peers, pc) do
+      nil -> :ok
+      peer_id -> send(peer_id, {:ice_candidate, ExWebRTC.ICECandidate.to_json(candidate)})
+    end
+
     {[], state}
   end
 
@@ -204,19 +212,39 @@ defmodule ExNVR.Pipeline.Output.WebRTC do
   end
 
   defp handle_peer_message({:answer, peer_id, answer}, state) do
-    pc = find_peer_pc(state.peers, peer_id)
-
-    answer
-    |> SessionDescription.from_json()
-    |> then(&PeerConnection.set_remote_description(pc, &1))
+    with_peer_pc(state, peer_id, fn pc ->
+      answer
+      |> SessionDescription.from_json()
+      |> then(&PeerConnection.set_remote_description(pc, &1))
+    end)
   end
 
   defp handle_peer_message({:ice_candidate, peer_id, ice_candidate}, state) do
-    pc = find_peer_pc(state.peers, peer_id)
+    with_peer_pc(state, peer_id, fn pc ->
+      ice_candidate
+      |> ExWebRTC.ICECandidate.from_json()
+      |> then(&PeerConnection.add_ice_candidate(pc, &1))
+    end)
+  end
 
-    ice_candidate
-    |> ExWebRTC.ICECandidate.from_json()
-    |> then(&PeerConnection.add_ice_candidate(pc, &1))
+  # Runs `fun` with the peer connection for `peer_id`, but only if the peer is
+  # still registered. The peer may already be gone (the channel disconnected
+  # between sending the offer and us receiving the answer), and the peer
+  # connection process can also have died on its own. Either way we must not let
+  # a stray signaling message crash the sink and tear down the pipeline.
+  defp with_peer_pc(state, peer_id, fun) do
+    case find_peer_pc(state.peers, peer_id) do
+      nil ->
+        Membrane.Logger.debug("Ignoring signaling message for unknown WebRTC peer")
+
+      pc ->
+        fun.(pc)
+    end
+  rescue
+    error -> Membrane.Logger.warning("Failed to handle WebRTC peer message: #{inspect(error)}")
+  catch
+    :exit, reason ->
+      Membrane.Logger.warning("WebRTC peer connection no longer alive: #{inspect(reason)}")
   end
 
   defp send_video_packet(state, packet) do
