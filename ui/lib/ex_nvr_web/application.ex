@@ -23,6 +23,7 @@ defmodule ExNVRWeb.Application do
         {ExNVR.SystemStatus, []},
         {DynamicSupervisor, [name: ExNVR.PipelineSupervisor, strategy: :one_for_one]},
         ExNVRWeb.Telemetry,
+        {Mobius, metrics: ExNVR.Metrics.list(), persistence_dir: mobius_persistence_dir()},
         ExNVRWeb.Endpoint,
         ExNVRWeb.PromEx,
         {ExNVRWeb.HlsStreamingMonitor, []},
@@ -47,6 +48,12 @@ defmodule ExNVRWeb.Application do
     else
       []
     end
+  end
+
+  defp mobius_persistence_dir do
+    dir = Application.get_env(:ex_nvr, :mobius_persistence_dir, "/tmp/ex_nvr/mobius")
+    File.mkdir_p!(dir)
+    dir
   end
 
   defp remote_connector do

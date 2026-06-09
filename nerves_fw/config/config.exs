@@ -17,6 +17,47 @@ config :ex_nvr,
   hls_directory: Path.expand("../../ui/data/hls", Path.dirname(__ENV__.file)),
   run_pipelines: true
 
+# Health checks for Evercam firmware: the shared baseline (cameras, CPU,
+# memory) plus netbird and battery_monitor presence, both populated by
+# nerves_fw/lib/nerves_fw/system_status.ex via SystemStatus.set/3.
+config :ex_nvr, :health_checks, [
+  %{
+    name: :cameras,
+    label: "Cameras recording",
+    kind: :devices_recording
+  },
+  %{
+    name: :cpu_usage,
+    label: "CPU usage under 90% for 10 min",
+    kind: :mobius_range,
+    metric: "ex_nvr.system.cpu.usage",
+    range: 0..90,
+    window: {10, :minute}
+  },
+  %{
+    name: :memory,
+    label: "Memory under 90% for 10 min",
+    kind: :mobius_range,
+    metric: "ex_nvr.system.memory.used_pct",
+    range: 0..90,
+    window: {10, :minute}
+  },
+  %{
+    name: :netbird,
+    label: "Netbird connected",
+    kind: :state_field,
+    field: :netbird,
+    path: ["daemonStatus"],
+    expected: "Connected"
+  },
+  %{
+    name: :battery_monitor,
+    label: "Battery monitor reachable",
+    kind: :state_field_present,
+    field: :battery_monitor
+  }
+]
+
 # Enable the Nerves integration with Mix
 Application.start(:nerves_bootstrap)
 

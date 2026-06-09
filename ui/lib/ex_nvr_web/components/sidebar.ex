@@ -171,6 +171,7 @@ defmodule ExNVRWeb.Components.Sidebar do
           }
         ],
         [
+          %{label: "Health", icon: "hero-heart-solid", href: ~p"/health", role: :admin},
           %{
             label: "Live Dashboard",
             icon: "hero-chart-bar-solid",
@@ -227,6 +228,7 @@ defmodule ExNVRWeb.Components.Sidebar do
           }
         ],
         [
+          %{label: "Health", icon: "hero-heart-solid", href: ~p"/health", role: :admin},
           %{
             label: "Live Dashboard",
             icon: "hero-chart-bar-solid",

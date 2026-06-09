@@ -1,6 +1,8 @@
 defmodule ExNVRWeb.UserLoginLive do
   use ExNVRWeb, :live_view
 
+  alias ExNVR.InstallerMode
+
   def render(assigns) do
     ~H"""
     <.flash_group flash={@flash} />
@@ -31,6 +33,18 @@ defmodule ExNVRWeb.UserLoginLive do
             </.button>
           </:actions>
         </.simple_form>
+
+        <div
+          :if={@installer_mode}
+          class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 text-center"
+        >
+          <.link
+            href={~p"/installer"}
+            class="text-sm font-semibold text-amber-700 dark:text-amber-300 hover:underline"
+          >
+            Open Installer view →
+          </.link>
+        </div>
       </div>
     </div>
     """
@@ -39,6 +53,8 @@ defmodule ExNVRWeb.UserLoginLive do
   def mount(_params, _session, socket) do
     email = Phoenix.Flash.get(socket.assigns.flash, :email)
     form = to_form(%{"email" => email}, as: "user")
-    {:ok, assign(socket, form: form), temporary_assigns: [form: form], layout: false}
+
+    {:ok, assign(socket, form: form, installer_mode: InstallerMode.enabled?()),
+     temporary_assigns: [form: form], layout: false}
   end
 end

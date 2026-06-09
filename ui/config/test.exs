@@ -39,6 +39,11 @@ config :phoenix, :plug_init_mode, :runtime
 
 config :ex_nvr, ExNVRWeb.PromEx, disabled: true
 
+config :ex_nvr,
+  mobius_persistence_dir: Path.expand("../_build/test/mobius", Path.dirname(__ENV__.file)),
+  installer_mode_file:
+    Path.expand("../_build/test/installer_mode_state", Path.dirname(__ENV__.file))
+
 config :live_vue,
   ssr_module: LiveVue.SSR.ViteJS,
   ssr: false

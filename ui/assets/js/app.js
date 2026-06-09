@@ -77,6 +77,37 @@ let Hooks = {
 
         }
     },
+    CameraPreview: {
+        mounted() {
+            this.attach()
+        },
+        updated() {
+            const url = this.el.dataset.streamUrl
+            if (url && url !== this._lastUrl) this.attach()
+        },
+        destroyed() {
+            if (this._hls) {
+                this._hls.destroy()
+                this._hls = null
+            }
+        },
+        attach() {
+            const url = this.el.dataset.streamUrl
+            if (!url) return
+            this._lastUrl = url
+            if (this._hls) this._hls.destroy()
+            if (Hls.isSupported()) {
+                this._hls = new Hls({ manifestLoadingTimeOut: 30_000, maxBufferLength: 6 })
+                this._hls.loadSource(url)
+                this._hls.attachMedia(this.el)
+                this._hls.on(Hls.Events.ERROR, (_event, data) => {
+                    if (data.fatal) console.warn("CameraPreview HLS error", data)
+                })
+            } else if (this.el.canPlayType("application/vnd.apple.mpegurl")) {
+                this.el.src = url
+            }
+        }
+    },
     ...getHooks(liveVueApp)
 }
 
