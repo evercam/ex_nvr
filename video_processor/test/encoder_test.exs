@@ -78,6 +78,28 @@ defmodule ExNVR.AV.EncoderTest do
       assert Enum.all?(packets, & &1.keyframe?)
     end
 
+    test "accepts data of exactly the required size and rejects one byte short", %{
+      frame: frame
+    } do
+      encoder =
+        Encoder.new(:h264,
+          width: 360,
+          height: 240,
+          format: :yuv420p,
+          time_base: {1, 25}
+        )
+
+      # The fixture is a complete 360x240 yuv420p frame, i.e. exactly the
+      # required size: it encodes, but one byte short must be rejected.
+      assert is_list(Encoder.encode(encoder, frame))
+
+      one_byte_short = %{frame | data: binary_part(frame.data, 0, byte_size(frame.data) - 1)}
+
+      assert_raise ErlangError, ~r/invalid_input_size/, fn ->
+        Encoder.encode(encoder, one_byte_short)
+      end
+    end
+
     test "no bframes inserted", %{frame: frame} do
       encoder =
         Encoder.new(:h264,

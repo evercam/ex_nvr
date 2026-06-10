@@ -44,6 +44,23 @@ defmodule ExNVR.AV.VideoProcessorTest do
       assert byte_size(converted_data) == 180 * 120 * 3
     end
 
+    test "accepts input of exactly the required size and rejects one byte short", %{
+      data: data,
+      options: options
+    } do
+      converter = VideoProcessor.new_converter(options)
+
+      # The fixture is a complete 360x240 yuv420p frame, i.e. exactly the
+      # required input size: it converts, but one byte short must be rejected.
+      assert is_binary(VideoProcessor.convert(converter, data))
+
+      one_byte_short = binary_part(data, 0, byte_size(data) - 1)
+
+      assert_raise ErlangError, ~r/invalid_input_size/, fn ->
+        VideoProcessor.convert(converter, one_byte_short)
+      end
+    end
+
     test "convert and pad a frame", %{data: data, options: options} do
       converter =
         VideoProcessor.new_converter(Keyword.merge(options, pad?: true, out_height: 180))

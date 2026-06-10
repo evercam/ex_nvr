@@ -326,6 +326,19 @@ ERL_NIF_TERM encode(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   frame->format = nvr_encoder->encoder->c->pix_fmt;
   frame->pts = pts;
 
+  // The input binary must hold a full frame for these dimensions and pixel
+  // format. av_image_fill_arrays below points the frame planes into input.data,
+  // so a too-short binary makes libx264 read past its end (heap overread / VM
+  // crash). Reject undersized input before filling.
+  int required_size =
+      av_image_get_buffer_size(frame->format, frame->width, frame->height, 1);
+  if (required_size < 0) {
+    return nif_raise(env, "failed_to_fill_arrays");
+  }
+  if (input.size < (size_t)required_size) {
+    return nif_raise(env, "invalid_input_size");
+  }
+
   ret = av_image_fill_arrays(frame->data, frame->linesize, input.data,
                              frame->format, frame->width, frame->height, 1);
   if (ret < 0) {
@@ -403,6 +416,19 @@ ERL_NIF_TERM convert(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   }
 
   AVFrame *frame = nvr_converter->frame;
+
+  // The input binary must hold a full frame for these dimensions and pixel
+  // format. av_image_fill_arrays below points the frame planes into input.data,
+  // so a too-short binary makes libswscale read past its end (heap overread / VM
+  // crash). Reject undersized input before filling.
+  int required_size =
+      av_image_get_buffer_size(frame->format, frame->width, frame->height, 1);
+  if (required_size < 0) {
+    return nif_raise(env, "failed_to_fill_arrays");
+  }
+  if (input.size < (size_t)required_size) {
+    return nif_raise(env, "invalid_input_size");
+  }
 
   ret = av_image_fill_arrays(frame->data, frame->linesize, input.data,
                              frame->format, frame->width, frame->height, 1);
