@@ -6,7 +6,7 @@ defmodule ExNVR.Devices.SnapshotUploader do
   require Logger
 
   alias ExNVR.{Devices, RemoteStorages}
-  alias ExNVR.Model.Device
+  alias ExNVR.Model.{Device, Schedule}
   alias ExNVR.RemoteStorage
   alias ExNVR.RemoteStorages.Store
 
@@ -58,31 +58,27 @@ defmodule ExNVR.Devices.SnapshotUploader do
     utc_now = DateTime.utc_now()
     Process.send_after(self(), :upload_snapshot, :timer.seconds(snapshot_config.upload_interval))
 
-    with true <- scheduled?(device, snapshot_config.schedule) do
+    with true <- scheduled?(device, snapshot_config.schedule, utc_now) do
       fetch_and_upload_snapshot(remote_storage, device, utc_now, opts)
     end
 
     {:noreply, state}
   end
 
-  defp scheduled?(%{timezone: timezone}, schedule) do
-    now = DateTime.now!(timezone)
-    day_of_week = DateTime.to_date(now) |> Date.day_of_week() |> Integer.to_string()
+  @doc false
+  @spec scheduled?(Device.t(), map(), DateTime.t()) :: boolean()
+  def scheduled?(%{timezone: timezone}, schedule, utc_now \\ DateTime.utc_now()) do
+    case DateTime.shift_zone(utc_now, timezone) do
+      {:ok, now} ->
+        Schedule.scheduled?(schedule, now)
 
-    case Map.get(schedule, day_of_week) do
-      [] ->
-        false
+      {:error, reason} ->
+        Logger.warning(
+          "Cannot convert time to device timezone #{timezone} (#{inspect(reason)}), falling back to UTC"
+        )
 
-      time_intervals ->
-        scheduled_today?(time_intervals, DateTime.to_time(now))
+        Schedule.scheduled?(schedule, utc_now)
     end
-  end
-
-  defp scheduled_today?(time_intervals, current_time) do
-    Enum.any?(time_intervals, fn time_interval ->
-      Time.compare(time_interval.start_time, current_time) in [:lt, :eq] &&
-        Time.compare(current_time, time_interval.end_time) in [:lt, :eq]
-    end)
   end
 
   defp fetch_and_upload_snapshot(remote_storage, device, utc_now, opts) do
