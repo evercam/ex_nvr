@@ -187,12 +187,12 @@ defmodule ExNVR.HealthReport do
     end
   end
 
+  defp evaluate(%{kind: kind} = check, _ctx),
+    do: result(check, :insufficient_data, "Unknown check kind #{inspect(kind)}")
+
   defp sample_value(n) when is_number(n), do: n
   defp sample_value(%{value: v}) when is_number(v), do: v
   defp sample_value(_), do: nil
-
-  defp evaluate(%{kind: kind} = check, _ctx),
-    do: result(check, :insufficient_data, "Unknown check kind #{inspect(kind)}")
 
   ## Helpers
 
