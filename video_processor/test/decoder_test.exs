@@ -2,6 +2,7 @@ defmodule ExNVR.AV.DecoderTest do
   use ExUnit.Case, async: true
 
   alias ExNVR.AV.{Decoder, Frame}
+  alias ExNVR.AV.VideoProcessor.NIF
 
   @h264_frame File.read!("test/fixtures/decoder/sample.h264")
   @h265_frame File.read!("test/fixtures/decoder/sample.h265")
@@ -14,6 +15,14 @@ defmodule ExNVR.AV.DecoderTest do
     assert is_reference(decoder)
 
     assert_raise(FunctionClauseError, fn -> Decoder.new(:vp8) end)
+  end
+
+  test "repeated failed constructions with an unknown codec raise a controlled error" do
+    for _i <- 1..1000 do
+      assert_raise ErlangError, ~r/unknown_codec/, fn ->
+        NIF.new_decoder(:vp9, -1, -1, nil, 0)
+      end
+    end
   end
 
   describe "decode/2" do

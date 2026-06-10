@@ -19,6 +19,31 @@ defmodule ExNVR.AV.EncoderTest do
     test "raises on invalid encoder" do
       assert_raise FunctionClauseError, fn -> Encoder.new(:hevc, []) end
     end
+
+    test "raises on unknown option" do
+      assert_raise ErlangError, ~r/unknown_config_key/, fn ->
+        Encoder.new(:h264,
+          width: 360,
+          height: 240,
+          format: :yuv420p,
+          time_base: {1, 25},
+          unknown_option: 1
+        )
+      end
+    end
+
+    test "repeated failed constructions with an invalid config raise a controlled error" do
+      for _i <- 1..1000 do
+        assert_raise ErlangError, ~r/failed_to_init_encoder/, fn ->
+          Encoder.new(:h264,
+            width: 0,
+            height: 0,
+            format: :yuv420p,
+            time_base: {1, 90_000}
+          )
+        end
+      end
+    end
   end
 
   describe "encode/1" do
