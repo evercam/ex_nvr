@@ -7,7 +7,7 @@ defmodule ExNVR.Nerves.RecomputerR22.Init do
 
   alias Circuits.GPIO
   alias ExNVR.Nerves
-  alias ExNVR.Nerves.RecomputerR22.ATModem
+  alias ExNVR.Nerves.RecomputerR22.{ATModem, SimConfigurer}
 
   @max_attempts 20
   @retry_interval 1_000
@@ -49,7 +49,14 @@ defmodule ExNVR.Nerves.RecomputerR22.Init do
         |> open_gpio(:m2b_power_off, {"gpiochip16", 0}, 0)
         |> open_gpio(:sim_mux_sel, {"gpiochip16", 4}, 0)
 
-      maybe_reboot_modem()
+      with {:ok, _} <- ATModem.start() do
+        if not sim_detected?(), do: ATModem.reboot()
+
+        if sim_detected?() do
+          SimConfigurer.configure_apn()
+          ensure_ecm_mode()
+        end
+      end
 
       {:noreply, state}
     else
@@ -93,11 +100,26 @@ defmodule ExNVR.Nerves.RecomputerR22.Init do
     end
   end
 
-  defp maybe_reboot_modem do
-    with {:ok, _pid} <- ATModem.start() do
-      with {:error, _} <- ATModem.sim_status(), do: ATModem.reboot()
+  def sim_detected?, do: match?({:ok, _}, ATModem.sim_status())
+
+  def ensure_ecm_mode do
+    case ATModem.usbnet_mode() do
+      {:ok, :ecm} ->
+        :ok
+
+      {:ok, mode} ->
+        Logger.info("[RemoteConfigurer] modem using #{mode}, switching to ECM (usb1)")
+        switch_to_ecm()
+
+      {:error, reason} ->
+        {:error, {:usbnet_mode_unavailable, reason}}
     end
-  rescue
-    _ -> :ok
+  end
+
+  def switch_to_ecm do
+    case ATModem.set_usbnet_mode(:ecm) do
+      {:ok, _} -> :ok
+      {:error, reason} -> {:error, {:set_usbnet_failed, reason}}
+    end
   end
 end
