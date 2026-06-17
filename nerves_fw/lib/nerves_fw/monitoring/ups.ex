@@ -86,13 +86,15 @@ defmodule ExNVR.Nerves.Monitoring.UPS do
 
   @impl true
   def handle_info({:trigger_action, :ac_ok?}, %{config: config} = state) do
-    do_trigger_action(:ac_ok?, config.ac_failure_action, GPIO.value(state.ac_pid))
+    pin_state = if GPIO.value(state.ac_pid) != state.ac_pin_default, do: :down, else: :up
+    do_trigger_action(:ac_ok?, config.ac_failure_action, pin_state)
     {:noreply, %{state | action_timer: nil}}
   end
 
   @impl true
   def handle_info({:trigger_action, :low_battery?}, %{config: config} = state) do
-    do_trigger_action(:low_battery?, config.low_battery_action, GPIO.value(state.bat_pid))
+    pin_state = if GPIO.value(state.bat_pid) != state.battery_pin_default, do: :down, else: :up
+    do_trigger_action(:low_battery?, config.low_battery_action, pin_state)
     {:noreply, %{state | action_timer: nil}}
   end
 
@@ -164,12 +166,12 @@ defmodule ExNVR.Nerves.Monitoring.UPS do
     :ok
   end
 
-  defp do_trigger_action(:ac_ok?, :power_off, 0), do: power_off()
-  defp do_trigger_action(:low_battery?, :power_off, 1), do: power_off()
-  defp do_trigger_action(:ac_ok?, :stop_recording, 0), do: stop_recording()
-  defp do_trigger_action(:low_battery?, :stop_recording, 1), do: stop_recording()
-  defp do_trigger_action(:ac_ok?, :stop_recording, 1), do: start_recording()
-  defp do_trigger_action(:low_battery?, :stop_recording, 0), do: start_recording()
+  defp do_trigger_action(:ac_ok?, :power_off, :down), do: power_off()
+  defp do_trigger_action(:low_battery?, :power_off, :up), do: power_off()
+  defp do_trigger_action(:ac_ok?, :stop_recording, :down), do: stop_recording()
+  defp do_trigger_action(:low_battery?, :stop_recording, :up), do: stop_recording()
+  defp do_trigger_action(:ac_ok?, :stop_recording, :up), do: start_recording()
+  defp do_trigger_action(:low_battery?, :stop_recording, :down), do: start_recording()
   defp do_trigger_action(_key, _action, _value), do: :ok
 
   defp power_off do

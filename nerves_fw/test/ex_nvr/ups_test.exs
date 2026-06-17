@@ -23,7 +23,7 @@ defmodule ExNVR.Nerves.Monitoring.UPSTest do
     # in the config above
     Process.exit(Process.whereis(SystemSettings), :kill)
 
-    expect(ExNVR.Nerves.DiskMounter, :mount, 3, fn -> :ok end)
+    expect(ExNVR.Nerves.DiskMounter, :mount, 1, fn -> :ok end)
 
     :ok
   end

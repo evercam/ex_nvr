@@ -46,6 +46,8 @@ defmodule ExNVR.Nerves.SystemSettings do
         field :enabled, :boolean, default: false
         field :ac_pin, :string, default: "GPIO27"
         field :battery_pin, :string, default: "GPIO22"
+        field :ac_pin_default, :integer, default: 1
+        field :battery_pin_default, :integer, default: 0
 
         field :ac_failure_action, Ecto.Enum,
           values: ~w(power_off stop_recording nothing)a,
