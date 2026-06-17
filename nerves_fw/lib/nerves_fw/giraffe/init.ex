@@ -20,15 +20,19 @@ defmodule ExNVR.Nerves.Giraffe.Init do
 
   @impl true
   def init(_options) do
-    res = SystemSettings.update(%{
-      ups: %{
-        enabled: true,
-        ac_pin: "GPIO4",
-        battery_pin: "GPIO8",
-        ac_pin_default: 1,
-        battery_pin_default: 1
-      }
-    })
+    res =
+      SystemSettings.update(%{
+        ups: %{
+          enabled: true,
+          ac_pin: "GPIO4",
+          battery_pin: "GPIO8",
+          ac_pin_default: 1,
+          battery_pin_default: 1,
+          trigger_after: 0,
+          low_battery_action: :power_off,
+          ac_failure_action: :nothing
+        }
+      })
 
     with {:error, _} <- res do
       Logger.error("[Init] failed to update ups settings")

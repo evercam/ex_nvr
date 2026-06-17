@@ -48,7 +48,12 @@ defmodule ExNVR.Nerves.Monitoring.UPS do
   @impl true
   def handle_call(:state, _from, %{config: %{enabled: true}} = state) do
     {ac_ok?, low_battery?} = pin_state(state)
-    {:reply, %{ac_ok: ac_ok? == 1, low_battery: low_battery? == 1}, state}
+
+    {:reply,
+     %{
+       ac_ok: ac_ok? == state.config.ac_pin_default,
+       low_battery: low_battery? != state.config.battery_pin_default
+     }, state}
   end
 
   @impl true
@@ -93,7 +98,9 @@ defmodule ExNVR.Nerves.Monitoring.UPS do
 
   @impl true
   def handle_info({:trigger_action, :low_battery?}, %{config: config} = state) do
-    pin_state = if GPIO.value(state.bat_pid) != state.config.battery_pin_default, do: :down, else: :up
+    pin_state =
+      if GPIO.value(state.bat_pid) != state.config.battery_pin_default, do: :down, else: :up
+
     do_trigger_action(:low_battery?, config.low_battery_action, pin_state)
     {:noreply, %{state | action_timer: nil}}
   end

@@ -83,7 +83,9 @@ defmodule ExNVR.Nerves.SystemSettings do
         :battery_pin,
         :ac_failure_action,
         :low_battery_action,
-        :trigger_after
+        :trigger_after,
+        :ac_pin_default,
+        :battery_pin_default
       ])
       |> validate_number(:trigger_after, greater_than_or_equal_to: 0, less_than_or_equal_to: 300)
       |> validate_pins_not_equal()
