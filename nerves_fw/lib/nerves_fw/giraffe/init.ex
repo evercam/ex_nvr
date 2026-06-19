@@ -9,7 +9,10 @@ defmodule ExNVR.Nerves.Giraffe.Init do
 
   use GenServer, restart: :transient
 
+  require Logger
+
   alias Circuits.GPIO
+  alias ExNVR.Nerves.SystemSettings
 
   def start_link(_opts) do
     GenServer.start_link(__MODULE__, nil)
@@ -17,6 +20,24 @@ defmodule ExNVR.Nerves.Giraffe.Init do
 
   @impl true
   def init(_options) do
+    res =
+      SystemSettings.update(%{
+        ups: %{
+          enabled: true,
+          ac_pin: "GPIO4",
+          battery_pin: "GPIO8",
+          ac_pin_default: 1,
+          battery_pin_default: 1,
+          trigger_after: 0,
+          low_battery_action: :power_off,
+          ac_failure_action: :nothing
+        }
+      })
+
+    with {:error, _} <- res do
+      Logger.error("[Init] failed to update ups settings")
+    end
+
     {:ok, nil, {:continue, :init}}
   end
 

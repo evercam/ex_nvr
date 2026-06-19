@@ -46,6 +46,8 @@ defmodule ExNVR.Nerves.SystemSettings do
         field :enabled, :boolean, default: false
         field :ac_pin, :string, default: "GPIO27"
         field :battery_pin, :string, default: "GPIO22"
+        field :ac_pin_default, :integer, default: 1
+        field :battery_pin_default, :integer, default: 0
 
         field :ac_failure_action, Ecto.Enum,
           values: ~w(power_off stop_recording nothing)a,
@@ -81,7 +83,9 @@ defmodule ExNVR.Nerves.SystemSettings do
         :battery_pin,
         :ac_failure_action,
         :low_battery_action,
-        :trigger_after
+        :trigger_after,
+        :ac_pin_default,
+        :battery_pin_default
       ])
       |> validate_number(:trigger_after, greater_than_or_equal_to: 0, less_than_or_equal_to: 300)
       |> validate_pins_not_equal()
