@@ -157,6 +157,28 @@ defmodule ExNVR.Pipelines.MainPipelineTest do
     end
   end
 
+  describe "crash recovery" do
+    test "a crashed WebRTC output is re-spawned", %{device: device} do
+      pid = start_streaming_pipeline(device)
+      webrtc_pid = await_child(pid, :webrtc)
+
+      Process.exit(webrtc_pid, :kill)
+
+      new_pid = await_respawn(pid, :webrtc, webrtc_pid)
+      assert Process.alive?(new_pid)
+    end
+
+    test "a crashed HLS output is re-spawned", %{device: device} do
+      pid = start_streaming_pipeline(device)
+      hls_pid = await_child(pid, :hls_sink)
+
+      Process.exit(hls_pid, :kill)
+
+      new_pid = await_respawn(pid, :hls_sink, hls_pid)
+      assert Process.alive?(new_pid)
+    end
+  end
+
   defp prepare_pipeline(device) do
     options = [
       module: ExNVR.Pipelines.Main,
@@ -194,6 +216,15 @@ defmodule ExNVR.Pipelines.MainPipelineTest do
       case Testing.Pipeline.get_child_pid(pid, child) do
         {:ok, child_pid} -> {:ok, child_pid}
         {:error, _reason} -> :retry
+      end
+    end)
+  end
+
+  defp await_respawn(pid, child, old_pid, timeout \\ 3_000) do
+    await(timeout, "child #{inspect(child)} was not re-spawned", fn ->
+      case Testing.Pipeline.get_child_pid(pid, child) do
+        {:ok, new_pid} when new_pid != old_pid -> {:ok, new_pid}
+        _ -> :retry
       end
     end)
   end
