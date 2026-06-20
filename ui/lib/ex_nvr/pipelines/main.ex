@@ -261,6 +261,28 @@ defmodule ExNVR.Pipelines.Main do
   end
 
   @impl true
+  def handle_crash_group_down({:isolated, child_name} = group, ctx, state) do
+    # A child isolated by isolated_child/3 crashed; its crash group contained the
+    # failure. Re-derive its spec from the stream definition and restore it. On-demand
+    # children (binary stream, unix socket) aren't in the standing spec, so they stay
+    # down until a subscriber/socket reconnects and recreates them.
+    # NOTE: re-spawn is immediate with no backoff; a child that crashes deterministically
+    # on startup would restart-loop (a backoff/limit is a sensible follow-up).
+    with spec when not is_nil(spec) <- find_isolated_spec(group, state),
+         true <- Map.has_key?(ctx.children, source_tee(child_name)) do
+      Membrane.Logger.warning("Output #{inspect(child_name)} crashed, re-spawning it")
+      {[spec: spec], state}
+    else
+      _ -> {[], state}
+    end
+  end
+
+  @impl true
+  def handle_crash_group_down(_group, _ctx, state) do
+    {[], state}
+  end
+
+  @impl true
   def handle_info({:pipeline_supervisor, pid}, _ctx, state) do
     {[], %{state | supervisor_pid: pid}}
   end
@@ -477,11 +499,26 @@ defmodule ExNVR.Pipelines.Main do
   # Drop-in for child/3 that runs the child in its own :temporary crash group, so a
   # crash in it is contained instead of taking down the whole pipeline (notably the
   # source -> tee -> storage recording path). The group id is {:isolated, child_name}
-  # (group ids and child names share a namespace, so they must differ).
+  # (group ids and child names share a namespace, so they must differ);
+  # handle_crash_group_down/3 re-derives the child from the stream spec to restore it.
   defp isolated_child(builder, child_name, child_definition) do
     {child(builder, child_name, child_definition),
      group: {:isolated, child_name}, crash_group_mode: :temporary}
   end
+
+  # Re-derive a single isolated child's spec from the stream definition by matching its
+  # crash group id. Returns nil for on-demand children (binary stream, unix socket),
+  # which are not part of the standing spec and are recreated on reconnect.
+  defp find_isolated_spec(group, state) do
+    (build_main_stream_spec(state) ++ build_sub_stream_spec(state))
+    |> Enum.find(fn
+      {_builder, opts} when is_list(opts) -> opts[:group] == group
+      _ -> false
+    end)
+  end
+
+  defp source_tee({_name, :sub_stream}), do: {:tee, :sub_stream}
+  defp source_tee(_main_stream_child), do: :tee
 
   defp build_sub_stream_spec(%{device: device} = state) do
     [
