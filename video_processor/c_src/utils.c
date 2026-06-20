@@ -49,8 +49,22 @@ int nif_get_string(ErlNifEnv *env, ERL_NIF_TERM term, char **value) {
 ERL_NIF_TERM nif_frame_to_term(ErlNifEnv *env, AVFrame *frame) {
   ERL_NIF_TERM data_term;
 
+  const char *format_name = av_get_pix_fmt_name(frame->format);
   int payload_size =
       av_image_get_buffer_size(frame->format, frame->width, frame->height, 1);
+
+  // Invalid/empty frame (format -1): negative size and NULL format name would
+  // abort the VM via enif_make_new_binary/enif_make_atom. Return an empty frame.
+  if (payload_size < 0 || format_name == NULL) {
+    enif_make_new_binary(env, 0, &data_term);
+    ERL_NIF_TERM format_term = enif_make_atom(env, "none");
+    ERL_NIF_TERM height_term = enif_make_int(env, frame->height);
+    ERL_NIF_TERM width_term = enif_make_int(env, frame->width);
+    ERL_NIF_TERM pts_term = enif_make_int64(env, frame->pts);
+    return enif_make_tuple(env, 5, data_term, format_term, width_term,
+                           height_term, pts_term);
+  }
+
   unsigned char *ptr = enif_make_new_binary(env, payload_size, &data_term);
 
   av_image_copy_to_buffer(ptr, payload_size,
@@ -58,8 +72,7 @@ ERL_NIF_TERM nif_frame_to_term(ErlNifEnv *env, AVFrame *frame) {
                           (const int *)frame->linesize, frame->format,
                           frame->width, frame->height, 1);
 
-  ERL_NIF_TERM format_term =
-      enif_make_atom(env, av_get_pix_fmt_name(frame->format));
+  ERL_NIF_TERM format_term = enif_make_atom(env, format_name);
   ERL_NIF_TERM height_term = enif_make_int(env, frame->height);
   ERL_NIF_TERM width_term = enif_make_int(env, frame->width);
   ERL_NIF_TERM pts_term = enif_make_int64(env, frame->pts);
