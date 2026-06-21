@@ -193,10 +193,27 @@ defmodule ExNVR.Devices do
     if run_pipeline?() do
       list()
       |> Enum.filter(&Device.recording?/1)
-      |> Enum.each(&Supervisor.start/1)
+      |> Enum.each(&start_recording_pipeline/1)
     end
 
     :ok
+  end
+
+  # A single device failing to start must not abort the whole batch; log it so a
+  # "started but not recording" device is observable instead of a silent boot.
+  defp start_recording_pipeline(%Device{} = device) do
+    case Supervisor.start(device) do
+      {:error, {:already_started, _pid}} ->
+        :ok
+
+      {:error, reason} ->
+        Logger.error(
+          "Could not start recording pipeline for device #{device.id}: #{inspect(reason)}"
+        )
+
+      _started ->
+        :ok
+    end
   end
 
   defp start_or_stop_supervisor(%Device{} = device, nil) do
