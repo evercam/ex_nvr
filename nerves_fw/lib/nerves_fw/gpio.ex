@@ -24,9 +24,14 @@ defmodule ExNVR.Nerves.GPIO do
   def init(options) do
     Process.set_label({:gpio, options[:pin]})
 
-    {:ok, gpio} = GPIO.open(options[:pin], :input, pull_mode: :pulldown)
-    :ok = GPIO.set_interrupts(gpio, :both)
-    {:ok, %{value: GPIO.read(gpio), gpio: gpio, timer: nil, receiver: options[:receiver]}}
+    pull_mode = Keyword.get(options, :pull_mode, :pulldown)
+
+    with {:ok, gpio} <- GPIO.open(options[:pin], :input, pull_mode: pull_mode),
+         :ok <- GPIO.set_interrupts(gpio, :both) do
+      {:ok, %{value: GPIO.read(gpio), gpio: gpio, timer: nil, receiver: options[:receiver]}}
+    else
+      {:error, reason} -> {:stop, reason}
+    end
   end
 
   @impl true
