@@ -42,6 +42,7 @@ defmodule NervesFw.MixProject do
       {:nerves_hub_link, "~> 2.10.0"},
       {:nerves_hub_cli, "~> 2.0"},
       {:ex_nvr, path: "../ui", env: env},
+      {:nvr_support, path: "../nvr_support"},
       {:circuits_gpio, "~> 2.1"},
       {:circuits_i2c, "~> 2.0"},
 

@@ -41,6 +41,11 @@
 ## Enable heartbeat monitoring of the Erlang runtime system
 -heart -env HEART_BEAT_TIMEOUT 30
 
+## Require NvrSupport.Watchdog.Heart's init handshake within 10 minutes of boot.
+## Generous so slow boots and firmware updates don't trip the watchdog; if the
+## app-health callback never registers, the device reboots and tries again.
+-env HEART_INIT_TIMEOUT 600
+
 ## Start the Elixir shell
 
 -noshell

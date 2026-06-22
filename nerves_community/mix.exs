@@ -36,6 +36,7 @@ defmodule ExNVR.Nerves.MixProject do
       {:nerves_runtime, "~> 0.13.0"},
       {:nerves_pack, "~> 0.7.1", targets: @all_targets},
       {:ex_nvr, path: "../ui", env: env},
+      {:nvr_support, path: "../nvr_support"},
       {:circuits_gpio, "~> 2.1"},
       {:circuits_i2c, "~> 2.0"},
       {:ex_nvr_system_rpi4,
