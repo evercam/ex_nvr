@@ -88,13 +88,13 @@ defmodule ExNVR.Nerves.Monitoring.UPS do
   @impl true
   def handle_info({:trigger_action, :ac_ok?}, %{config: config} = state) do
     do_trigger_action(config.ac_failure_action, pin_state(state, :ac_ok?))
-    {:noreply, %{state | action_timer: nil}}
+    {:noreply, put_action_timer(state, :ac_ok?, nil)}
   end
 
   @impl true
   def handle_info({:trigger_action, :low_battery?}, %{config: config} = state) do
     do_trigger_action(config.low_battery_action, pin_state(state, :low_battery?))
-    {:noreply, %{state | action_timer: nil}}
+    {:noreply, put_action_timer(state, :low_battery?, nil)}
   end
 
   @impl true
@@ -107,17 +107,65 @@ defmodule ExNVR.Nerves.Monitoring.UPS do
     ac_pin = Keyword.get(opts, :ac_pin, ups_config.ac_pin)
     bat_pin = Keyword.get(opts, :battery_pin, ups_config.battery_pin)
 
-    {:ok, ac_pid} = GPIO.start_link(pin: ac_pin)
-    {:ok, bat_pid} = GPIO.start_link(pin: bat_pin)
-
-    %{
+    base = %{
       config: ups_config,
       ac_pin: ac_pin,
       bat_pin: bat_pin,
-      ac_pid: ac_pid,
-      bat_pid: bat_pid,
-      action_timer: nil
+      ac_pid: nil,
+      bat_pid: nil,
+      action_timers: %{}
     }
+
+    case open_pins(ac_pin, bat_pin) do
+      {:ok, ac_pid, bat_pid} ->
+        %{base | ac_pid: ac_pid, bat_pid: bat_pid}
+
+      {:error, reason} ->
+        # A GPIO open can fail on hardware quirks (chip/pin unavailable, already
+        # in use). Degrade to disabled monitoring instead of letting the
+        # MatchError crash init and crash-loop the whole firmware supervisor.
+        Logger.error(
+          "[UPS] could not open GPIO pins (ac: #{inspect(ac_pin)}, battery: " <>
+            "#{inspect(bat_pin)}), monitoring disabled: #{inspect(reason)}"
+        )
+
+        base
+    end
+  end
+
+  # Open both GPIO pins, stopping the first if the second fails so we don't leak
+  # a live GPIO process when degrading to disabled monitoring.
+  defp open_pins(ac_pin, bat_pin) do
+    case start_gpio(ac_pin) do
+      {:ok, ac_pid} ->
+        case start_gpio(bat_pin) do
+          {:ok, bat_pid} ->
+            {:ok, ac_pid, bat_pid}
+
+          {:error, _reason} = error ->
+            stop_gpio(ac_pid)
+            error
+        end
+
+      {:error, _reason} = error ->
+        error
+    end
+  end
+
+  defp start_gpio(pin) do
+    case GPIO.start_link(pin: pin) do
+      {:ok, pid} -> {:ok, pid}
+      {:error, _reason} = error -> error
+    end
+  end
+
+  defp stop_gpio(nil), do: :ok
+
+  defp stop_gpio(pid) do
+    GenServer.stop(pid)
+  catch
+    # already dead / never started — nothing to clean up
+    :exit, _reason -> :ok
   end
 
   defp do_handle_pin_state_change(key, value, state) do
@@ -130,9 +178,13 @@ defmodule ExNVR.Nerves.Monitoring.UPS do
       Logger.error("Failed to save event: #{inspect(changeset)}")
     end
 
+    # Cancel only this alarm's own pending action — AC and battery keep separate
+    # timers, so a change on one alarm never drops a shutdown already scheduled
+    # for the other (e.g. a battery blip must not cancel a pending AC poweroff).
+    cancel_action_timer(state, key)
+
     ref =
-      if (key == :ac_ok? and state.config.ac_failure_action != :nothing) or
-           (key == :low_battery? and state.config.low_battery_action != :nothing) do
+      if action_configured?(state.config, key) do
         Process.send_after(
           self(),
           {:trigger_action, key},
@@ -140,10 +192,24 @@ defmodule ExNVR.Nerves.Monitoring.UPS do
         )
       end
 
-    if state.action_timer, do: Process.cancel_timer(state.action_timer)
-
-    {:noreply, %{state | action_timer: ref}}
+    {:noreply, put_action_timer(state, key, ref)}
   end
+
+  defp action_configured?(config, :ac_ok?), do: config.ac_failure_action != :nothing
+  defp action_configured?(config, :low_battery?), do: config.low_battery_action != :nothing
+
+  defp cancel_action_timer(state, key) do
+    case Map.get(state.action_timers, key) do
+      nil -> :ok
+      ref -> Process.cancel_timer(ref)
+    end
+  end
+
+  defp put_action_timer(state, key, ref) do
+    %{state | action_timers: Map.put(state.action_timers, key, ref)}
+  end
+
+  defp maybe_enable_ups(%{ac_pid: nil} = state), do: state
 
   defp maybe_enable_ups(state) do
     cond do
@@ -161,9 +227,13 @@ defmodule ExNVR.Nerves.Monitoring.UPS do
   end
 
   defp clean_state(state) do
-    if state[:action_timer], do: Process.cancel_timer(state.action_timer)
-    :ok = GenServer.stop(state.ac_pid)
-    :ok = GenServer.stop(state.bat_pid)
+    state
+    |> Map.get(:action_timers, %{})
+    |> Map.values()
+    |> Enum.each(fn ref -> if ref, do: Process.cancel_timer(ref) end)
+
+    stop_gpio(state.ac_pid)
+    stop_gpio(state.bat_pid)
     :ok
   end
 
@@ -204,13 +274,16 @@ defmodule ExNVR.Nerves.Monitoring.UPS do
   defp event_name(:low_battery?), do: "low-battery"
 
   # :down means the gpio triggered / :up normal state
-  defp pin_state(state, key) do
-    case key do
-      :ac_ok? ->
-        if GPIO.value(state.ac_pid) != state.config.ac_pin_default, do: :down, else: :up
+  defp pin_state(state, :ac_ok?), do: pin_value(state.ac_pid, state.config.ac_pin_default)
 
-      :low_battery? ->
-        if GPIO.value(state.bat_pid) != state.config.battery_pin_default, do: :down, else: :up
-    end
+  defp pin_state(state, :low_battery?),
+    do: pin_value(state.bat_pid, state.config.battery_pin_default)
+
+  # With monitoring disabled (no GPIO opened) default to :up (normal) so a
+  # degraded UPS never triggers a spurious power-off / stop-recording.
+  defp pin_value(nil, _default), do: :up
+
+  defp pin_value(pid, default) do
+    if GPIO.value(pid) != default, do: :down, else: :up
   end
 end

@@ -19,9 +19,12 @@ defmodule ExNVR.Nerves.Monitoring.UPSTest do
 
   setup %{tmp_dir: tmp_dir} do
     Application.put_env(:ex_nvr_fw, :system_settings_path, Path.join(tmp_dir, "settings.json"))
-    # make system settings process pick the path
-    # in the config above
-    Process.exit(Process.whereis(SystemSettings), :kill)
+    # make system settings process pick the path in the config above, then wait
+    # for the supervisor to restart it before using it — otherwise a call can
+    # race the restart and hit :noproc (flaky under load from other test modules)
+    old = Process.whereis(SystemSettings)
+    Process.exit(old, :kill)
+    wait_for_restart(old)
 
     expect(ExNVR.Nerves.DiskMounter, :mount, 3, fn -> :ok end)
 
@@ -87,5 +90,13 @@ defmodule ExNVR.Nerves.Monitoring.UPSTest do
 
     assert {:ok, _settings} = SystemSettings.update_ups_settings(%{enabled: false})
     refute UPS.state(pid)
+  end
+
+  defp wait_for_restart(old, retries \\ 50) do
+    case Process.whereis(SystemSettings) do
+      pid when is_pid(pid) and pid != old -> :ok
+      _ when retries == 0 -> raise "SystemSettings did not restart"
+      _ -> Process.sleep(10) && wait_for_restart(old, retries - 1)
+    end
   end
 end
