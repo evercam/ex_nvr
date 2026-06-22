@@ -46,11 +46,14 @@
 ## app-health callback never registers, the device reboots and tries again.
 -env HEART_INIT_TIMEOUT 600
 
-## Start the Elixir shell
-
+## Start the Elixir shell. On the qemu_aarch64 test target the device boots as a
+## peer node instead (peer_bridge, via erlinit alternate_exec, supplies
+## `-user peer`), so omit the interactive shell flags there.
+<%= if Mix.target() != :qemu_aarch64 do %>
 -noshell
 -user elixir
 -run elixir start_cli
+<% end %>
 
 
 ## Enable colors in the shell
