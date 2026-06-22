@@ -9,7 +9,7 @@ defmodule ExNVR.Nerves.Monitoring.UPS do
 
   alias ExNVR.{Devices, Model, Pipelines}
   alias ExNVR.Nerves.{DiskMounter, SystemSettings}
-  alias ExNVR.Nerves.GPIO
+  alias ExNVR.Nerves.{GPIO, SystemStatus}
 
   def start_link(options) do
     GenServer.start_link(__MODULE__, options, name: __MODULE__)
@@ -63,6 +63,7 @@ defmodule ExNVR.Nerves.Monitoring.UPS do
 
     :ok = clean_state(state)
     new_state = do_start_monitor(ups_settings, [])
+    set_system_status(state)
 
     {:noreply, new_state, {:continue, :trigger_action}}
   end
@@ -125,6 +126,8 @@ defmodule ExNVR.Nerves.Monitoring.UPS do
     event = %{type: event_name(key), metadata: %{state: value}}
 
     Logger.info("[UPS] store event for #{key}")
+
+    set_system_status(state)
 
     with {:error, changeset} <- ExNVR.Events.create_event(event) do
       Logger.error("Failed to save event: #{inspect(changeset)}")
@@ -212,5 +215,18 @@ defmodule ExNVR.Nerves.Monitoring.UPS do
       :low_battery? ->
         if GPIO.value(state.bat_pid) != state.config.battery_pin_default, do: :down, else: :up
     end
+  end
+
+  defp set_system_status(%{config: %{enabled: false}}) do
+    :ok = SystemStatus.set(:ups, nil)
+  end
+
+  defp set_system_status(state) do
+    ups = %{
+      ac_ok: pin_state(state, :ac_ok?) == :up,
+      low_battery: pin_state(state, :low_battery?) == :down
+    }
+
+    :ok = SystemStatus.set(:ups, ups)
   end
 end
