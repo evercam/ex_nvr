@@ -5,12 +5,14 @@ defmodule ExNVR.Nerves.Monitoring.UPSResilienceTest do
     * a GPIO open failure must degrade to disabled monitoring instead of raising
       in `init/1` and crash-looping the firmware supervisor (UPS is a direct child
       of the top-level one_for_one supervisor, so its crash-loop can take the whole
-      firmware app down), and
+      firmware app down),
 
-    * the configured alarm action (power-off) must fire on a sustained fault,
-      debounce a transient one, and — crucially — AC and battery must keep
-      independent action timers so one alarm can't cancel the other's pending
-      shutdown.
+    * a degraded UPS must re-open the pins on a calm retry once they are available,
+      and
+
+    * the configured alarm action (power-off) must fire on a sustained fault and
+      debounce a transient one, and AC and battery must keep independent action
+      timers so one alarm can't cancel the other's pending shutdown.
   """
   use ExNVR.DataCase, async: false
 
@@ -160,6 +162,69 @@ defmodule ExNVR.Nerves.Monitoring.UPSResilienceTest do
     end
   end
 
+  describe "retry after GPIO failure" do
+    setup do
+      test_pid = self()
+      stub(Nerves.Runtime, :poweroff, fn -> send(test_pid, :poweroff) end)
+      stub(DiskMounter, :mount, fn -> :ok end)
+      stub(DiskMounter, :umount, fn -> :ok end)
+
+      ac_pid = spawn_fake_pin()
+      bat_pid = spawn_fake_pin()
+
+      {:ok, values} = Agent.start_link(fn -> %{ac_pid => 1, bat_pid => 0} end)
+      on_exit(fn -> if Process.alive?(values), do: Agent.stop(values) end)
+
+      # GPIO starts unavailable; flip this to let a retry succeed.
+      {:ok, available} = Agent.start_link(fn -> false end)
+      on_exit(fn -> if Process.alive?(available), do: Agent.stop(available) end)
+
+      stub(GPIO, :start_link, fn opts ->
+        if Agent.get(available, & &1) do
+          case opts[:pin] do
+            "pair_0_1" -> {:ok, ac_pid}
+            "pair_2_1" -> {:ok, bat_pid}
+          end
+        else
+          {:error, :gpio_unavailable}
+        end
+      end)
+
+      stub(GPIO, :value, fn pin -> Agent.get(values, &Map.get(&1, pin, 0)) end)
+
+      # short, deterministic retry interval for the test
+      prev = Application.get_env(:ex_nvr_fw, :ups_open_retry_interval)
+      Application.put_env(:ex_nvr_fw, :ups_open_retry_interval, 50)
+      on_exit(fn -> restore_env(:ups_open_retry_interval, prev) end)
+
+      {:ok, _settings} = enable_ups(ac_failure_action: "power_off", trigger_after: 1)
+
+      %{ac_pid: ac_pid, values: values, available: available}
+    end
+
+    test "re-establishes monitoring once the GPIO pins become available",
+         %{ac_pid: ac_pid, values: values, available: available} do
+      {_ups, logs} =
+        with_log(fn ->
+          ups = start_link_supervised!({UPS, []})
+
+          # boots degraded, then the GPIO subsystem comes back
+          Agent.update(available, fn _ -> true end)
+          # let the calm retry re-open the pins
+          Process.sleep(250)
+
+          # monitoring is live again: a real AC failure now drives the poweroff,
+          # which only happens if the pins were actually re-opened
+          change_pin(values, ups, ac_pid, 0)
+          assert_receive :poweroff, 2_000
+          ups
+        end)
+
+      assert logs =~ "monitoring disabled"
+      assert logs =~ "re-established"
+    end
+  end
+
   defp enable_ups(opts) do
     SystemSettings.update_ups_settings(%{
       enabled: true,
@@ -183,6 +248,9 @@ defmodule ExNVR.Nerves.Monitoring.UPSResilienceTest do
     on_exit(fn -> Process.exit(pid, :kill) end)
     pid
   end
+
+  defp restore_env(key, nil), do: Application.delete_env(:ex_nvr_fw, key)
+  defp restore_env(key, value), do: Application.put_env(:ex_nvr_fw, key, value)
 
   defp restart_system_settings do
     old = Process.whereis(SystemSettings)

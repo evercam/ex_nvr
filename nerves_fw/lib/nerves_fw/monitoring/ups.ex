@@ -26,6 +26,7 @@ defmodule ExNVR.Nerves.Monitoring.UPS do
       |> Map.fetch!(:ups)
       |> do_start_monitor(options)
       |> maybe_enable_ups()
+      |> arm_open_retry()
 
     SystemSettings.subscribe()
 
@@ -62,9 +63,23 @@ defmodule ExNVR.Nerves.Monitoring.UPS do
     ups_settings = SystemSettings.get_settings().ups
 
     :ok = clean_state(state)
-    new_state = do_start_monitor(ups_settings, [])
+    new_state = ups_settings |> do_start_monitor([]) |> arm_open_retry()
 
     {:noreply, new_state, {:continue, :trigger_action}}
+  end
+
+  @impl true
+  def handle_info(:retry_open, state) do
+    new_state = state.config |> do_start_monitor(log_errors: false) |> arm_open_retry()
+    reopened? = monitoring?(new_state)
+
+    if reopened?, do: Logger.info("[UPS] GPIO pins re-opened, monitoring re-established")
+
+    if reopened? and new_state.config.enabled do
+      {:noreply, new_state, {:continue, :trigger_action}}
+    else
+      {:noreply, new_state}
+    end
   end
 
   @impl true
@@ -113,7 +128,8 @@ defmodule ExNVR.Nerves.Monitoring.UPS do
       bat_pin: bat_pin,
       ac_pid: nil,
       bat_pid: nil,
-      action_timers: %{}
+      action_timers: %{},
+      retry_timer: nil
     }
 
     case open_pins(ac_pin, bat_pin) do
@@ -123,14 +139,34 @@ defmodule ExNVR.Nerves.Monitoring.UPS do
       {:error, reason} ->
         # A GPIO open can fail on hardware quirks (chip/pin unavailable, already
         # in use). Degrade to disabled monitoring instead of letting the
-        # MatchError crash init and crash-loop the whole firmware supervisor.
-        Logger.error(
-          "[UPS] could not open GPIO pins (ac: #{inspect(ac_pin)}, battery: " <>
-            "#{inspect(bat_pin)}), monitoring disabled: #{inspect(reason)}"
-        )
+        # MatchError crash init and crash-loop the whole firmware supervisor;
+        # arm_open_retry/1 then schedules a calm re-open so a transient fault
+        # recovers on its own. Stay quiet on the repeated retries (log_errors).
+        if Keyword.get(opts, :log_errors, true) do
+          Logger.error(
+            "[UPS] could not open GPIO pins (ac: #{inspect(ac_pin)}, battery: " <>
+              "#{inspect(bat_pin)}), monitoring disabled, retrying every " <>
+              "#{div(open_retry_interval(), 1000)}s: #{inspect(reason)}"
+          )
+        end
 
         base
     end
+  end
+
+  # Re-open the pins on a calm fixed interval while monitoring is degraded, so a
+  # transient GPIO fault heals without a settings change or reboot. No-op once
+  # the pins are open.
+  defp arm_open_retry(%{ac_pid: pid} = state) when not is_nil(pid), do: state
+
+  defp arm_open_retry(state) do
+    %{state | retry_timer: Process.send_after(self(), :retry_open, open_retry_interval())}
+  end
+
+  defp monitoring?(state), do: not is_nil(state.ac_pid)
+
+  defp open_retry_interval do
+    Application.get_env(:ex_nvr_fw, :ups_open_retry_interval, to_timeout(second: 60))
   end
 
   # Open both GPIO pins, stopping the first if the second fails so we don't leak
@@ -231,6 +267,8 @@ defmodule ExNVR.Nerves.Monitoring.UPS do
     |> Map.get(:action_timers, %{})
     |> Map.values()
     |> Enum.each(fn ref -> if ref, do: Process.cancel_timer(ref) end)
+
+    if state[:retry_timer], do: Process.cancel_timer(state.retry_timer)
 
     stop_gpio(state.ac_pid)
     stop_gpio(state.bat_pid)
