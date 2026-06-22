@@ -18,6 +18,22 @@ defmodule ExNVR.AV.VideoProcessorTest do
 
       assert is_reference(converter)
     end
+
+    test "repeated failed constructions with an invalid config raise a controlled error" do
+      for _i <- 1..1000 do
+        assert_raise ErlangError, ~r/failed_to_init_converter/, fn ->
+          VideoProcessor.new_converter(
+            in_width: 0,
+            in_height: 0,
+            in_format: :yuv420p,
+            out_width: -1,
+            out_height: -1,
+            out_format: :rgb24,
+            pad?: false
+          )
+        end
+      end
+    end
   end
 
   describe "convert/2" do
