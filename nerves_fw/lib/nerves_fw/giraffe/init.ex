@@ -5,14 +5,15 @@ defmodule ExNVR.Nerves.Giraffe.Init do
   The following actions will be run at startup:
     * Power on HDD (GPIO16)
     * Power on PoE (GPIO26)
+    * Monitor status of GPIO10 (Generator)
   """
 
   use GenServer, restart: :transient
 
   require Logger
 
-  alias Circuits.GPIO
-  alias ExNVR.Nerves.SystemSettings
+  alias ExNVR.Nerves.GPIO
+  alias ExNVR.Nerves.{SystemSettings, SystemStatus}
 
   def start_link(_opts) do
     GenServer.start_link(__MODULE__, nil)
@@ -42,10 +43,27 @@ defmodule ExNVR.Nerves.Giraffe.Init do
   end
 
   @impl true
-  def handle_continue(:init, state) do
-    :ok = GPIO.write_one("GPIO16", 1)
-    :ok = GPIO.write_one("GPIO26", 1)
+  def handle_continue(:init, _state) do
+    :ok = Circuits.GPIO.write_one("GPIO16", 1)
+    :ok = Circuits.GPIO.write_one("GPIO26", 1)
 
-    {:stop, :normal, state}
+    {:ok, generator_pid} = GPIO.start_link(pin: "GPIO10")
+    state = %{generator: generator_pid}
+    :ok = SystemStatus.set(:generator, generator_state(GPIO.value(generator_pid)))
+
+    {:noreply, state}
   end
+
+  @impl true
+  def handle_info({gen_pid, value}, %{generator: gen_pid} = state) do
+    :ok = SystemStatus.set(:generator, generator_state(value))
+    {:noreply, state}
+  end
+
+  def handle_info(_msg, state) do
+    {:noreply, state}
+  end
+
+  defp generator_state(0), do: :on
+  defp generator_state(_), do: :off
 end
