@@ -48,20 +48,15 @@ defmodule ExNVR.Nerves.Giraffe.Init do
     :ok = Circuits.GPIO.write_one("GPIO26", 1)
 
     {:ok, generator_pid} = GPIO.start_link(pin: "GPIO10")
-    state = %{generator: %{pid: generator_pid, state: generator_state(GPIO.value(generator_pid))}}
+    state = %{generator: generator_pid}
+    :ok = SystemStatus.set(:generator, generator_state(GPIO.value(generator_pid)))
 
     {:noreply, state}
   end
 
   @impl true
-  def handle_info({gen_pid, value}, %{generator: %{pid: gen_pid}} = state) do
-    status =
-      case value do
-        0 -> :on
-        1 -> :off
-      end
-
-    :ok = SystemStatus.set(:generator, status)
+  def handle_info({gen_pid, value}, %{generator: gen_pid} = state) do
+    :ok = SystemStatus.set(:generator, generator_state(value))
     {:noreply, state}
   end
 
