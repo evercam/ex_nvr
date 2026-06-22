@@ -12,7 +12,7 @@ config :ex_nvr,
   hls_directory: Path.expand("../../ui/data/hls", Path.dirname(__ENV__.file)),
   run_pipelines: true
 
-# Health checks for the community firmware: the shared baseline only —
+# Health checks for the community firmware: the shared baseline only -
 # no netbird / battery monitor since neither is expected here.
 config :ex_nvr, :health_checks, [
   %{
@@ -37,6 +37,20 @@ config :ex_nvr, :health_checks, [
     window: {10, :minute}
   }
 ]
+
+# Watchdog (nvr_support): drive Erlang's heart callback from Alarmist alarms so
+# the device reboots when it stops doing its job. Windows are read at runtime, so
+# they can also be overridden in runtime.exs or live (e.g. short for VM tests).
+config :nvr_support,
+  enabled: true,
+  poll_interval_ms: :timer.seconds(30),
+  storage_debounce_ms: :timer.minutes(15),
+  internal_debounce_ms: :timer.minutes(5),
+  recording_debounce_ms: :timer.minutes(30),
+  recordings_path: "/data"
+
+# Severity metadata for logging/filtering only (does not affect reboot logic).
+config :alarmist, alarm_levels: %{NvrSupport.Watchdog.HealthCheck => :critical}
 
 # Enable the Nerves integration with Mix
 Application.start(:nerves_bootstrap)

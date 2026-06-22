@@ -58,6 +58,20 @@ config :ex_nvr, :health_checks, [
   }
 ]
 
+# Watchdog (nvr_support): drive Erlang's heart callback from Alarmist alarms so
+# the device reboots when it stops doing its job. Windows are read at runtime, so
+# they can also be overridden in runtime.exs or live (e.g. short for VM tests).
+config :nvr_support,
+  enabled: true,
+  poll_interval_ms: :timer.seconds(30),
+  storage_debounce_ms: :timer.minutes(15),
+  internal_debounce_ms: :timer.minutes(5),
+  recording_debounce_ms: :timer.minutes(30),
+  recordings_path: "/data"
+
+# Severity metadata for logging/filtering only (does not affect reboot logic).
+config :alarmist, alarm_levels: %{NvrSupport.Watchdog.HealthCheck => :critical}
+
 # Enable the Nerves integration with Mix
 Application.start(:nerves_bootstrap)
 

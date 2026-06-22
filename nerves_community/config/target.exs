@@ -78,3 +78,8 @@ config :mdns_lite,
   ]
 
 config :tzdata, data_dir: "/data/elixir_tzdata"
+
+# QEMU-only: peer-mode boot + short watchdog windows for VM resilience testing.
+if Mix.target() == :qemu_aarch64 do
+  import_config "qemu_aarch64.exs"
+end

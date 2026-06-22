@@ -55,7 +55,8 @@ defmodule ExNVR.Nerves.Application do
       {ExNVR.Nerves.RemoteConfigurer, []},
       {ExNVR.Nerves.Monitoring.PowerSchedule, []},
       {ExNVR.Nerves.RUT.Auth, []},
-      {ExNVR.Nerves.SystemStatus, []}
+      {ExNVR.Nerves.SystemStatus, []},
+      {NvrSupport, []}
     ]
   end
 end
