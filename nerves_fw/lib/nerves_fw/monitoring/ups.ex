@@ -63,7 +63,7 @@ defmodule ExNVR.Nerves.Monitoring.UPS do
 
     :ok = clean_state(state)
     new_state = do_start_monitor(ups_settings, [])
-    set_system_status(state)
+    set_system_status(new_state)
 
     {:noreply, new_state, {:continue, :trigger_action}}
   end
