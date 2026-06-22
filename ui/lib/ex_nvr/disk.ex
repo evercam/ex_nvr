@@ -3,6 +3,8 @@ defmodule ExNVR.Disk do
   Get disk information
   """
 
+  require Logger
+
   @manufacturers [
     {~r/WESTERN.*/, "Western Digital"},
     {~r/^WDC.*/, "Western Digital"},
@@ -198,7 +200,8 @@ defmodule ExNVR.Disk do
   end
 
   # get disk info using smartctl if available
-  defp smartctl_get_disk_info(drive) do
+  @doc false
+  def smartctl_get_disk_info(drive) do
     if path = System.find_executable("smartctl") do
       opts = [stderr_to_stdout: true]
       args = ["-ji", drive]
@@ -210,8 +213,18 @@ defmodule ExNVR.Disk do
 
       result =
         case Task.yield(task, 2000) do
-          nil -> %{}
-          {:ok, result} -> result
+          {:ok, result} ->
+            result
+
+          {:exit, reason} ->
+            # async_nolink: if the probe task crashes (e.g. System.cmd raises),
+            # it surfaces here instead of taking the caller down. Degrade to
+            # "no smart info" rather than crash.
+            Logger.warning("smartctl probe for #{drive} exited: #{inspect(reason)}")
+            %{}
+
+          nil ->
+            %{}
         end
 
       Task.shutdown(task, :brutal_kill)
@@ -228,7 +241,10 @@ defmodule ExNVR.Disk do
       %{}
     else
       {output, 0} ->
-        JSON.decode!(output)
+        case JSON.decode(output) do
+          {:ok, info} -> info
+          _ -> %{}
+        end
     end
   end
 
