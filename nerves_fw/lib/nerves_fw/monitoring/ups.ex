@@ -37,6 +37,7 @@ defmodule ExNVR.Nerves.Monitoring.UPS do
 
   @impl true
   def handle_continue(:trigger_action, state) do
+    set_system_status(state)
     do_trigger_action(state.config.ac_failure_action, pin_state(state, :ac_ok?))
     do_trigger_action(state.config.low_battery_action, pin_state(state, :low_battery?))
     {:noreply, state}
