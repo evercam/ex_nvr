@@ -7,7 +7,8 @@ defmodule ExNVR.Triggers.TriggerTargets do
 
   @targets [
     {Targets.LogMessage, :log_message},
-    {Targets.DeviceControl, :device_control}
+    {Targets.DeviceControl, :device_control},
+    {Targets.TriggerRecording, :trigger_recording}
   ]
 
   @spec list() :: [{module(), atom()}]
