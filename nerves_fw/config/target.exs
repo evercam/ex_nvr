@@ -159,7 +159,7 @@ config :mdns_lite,
   ]
 
 config :nerves_hub_link,
-  connect: true,
+  connect: false,
   host: URI.parse(System.fetch_env!("NERVES_HUB_DEVICES_URI")).host,
   remote_iex: true,
   shared_secret: [
