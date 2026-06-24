@@ -8,8 +8,7 @@ defmodule ExNVR.Nerves.Monitoring.UPS do
   require Logger
 
   alias ExNVR.{Devices, Model, Pipelines}
-  alias ExNVR.Nerves.{DiskMounter, SystemSettings}
-  alias ExNVR.Nerves.{GPIO, SystemStatus}
+  alias ExNVR.Nerves.{Application, DiskMounter, GPIO, SystemSettings, SystemStatus}
 
   def start_link(options) do
     GenServer.start_link(__MODULE__, options, name: __MODULE__)
@@ -38,6 +37,7 @@ defmodule ExNVR.Nerves.Monitoring.UPS do
 
   @impl true
   def handle_continue(:trigger_action, state) do
+    set_system_status(state)
     do_trigger_action(state.config.ac_failure_action, pin_state(state, :ac_ok?))
     do_trigger_action(state.config.low_battery_action, pin_state(state, :low_battery?))
     {:noreply, state}
@@ -170,15 +170,20 @@ defmodule ExNVR.Nerves.Monitoring.UPS do
     :ok
   end
 
-  defp do_trigger_action(:power_off, :down), do: power_off()
+  defp do_trigger_action(:power_off, :down) do
+    spawn(fn -> ExNVR.RemoteConnection.send_system_status() end)
+    spawn(fn -> stop_recording() end)
+    power_off()
+  end
+
   defp do_trigger_action(:stop_recording, :down), do: stop_recording()
   defp do_trigger_action(:stop_recording, :up), do: start_recording()
   defp do_trigger_action(_action, _value), do: :ok
 
   defp power_off do
-    Logger.info("[UPS] shutdown system")
-    stop_recording()
-    Nerves.Runtime.poweroff()
+    Logger.info("[UPS] shutdown system in 5 seconds")
+    Process.sleep(5000)
+    if Application.target() != :host, do: Nerves.Runtime.poweroff()
   end
 
   defp stop_recording do

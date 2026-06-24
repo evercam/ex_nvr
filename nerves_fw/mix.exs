@@ -35,14 +35,14 @@ defmodule NervesFw.MixProject do
 
     [
       # Dependencies for all targets
-      {:nerves, "~> 1.10", runtime: false},
+      {:nerves, "~> 1.14", runtime: false},
       {:shoehorn, "~> 0.9.1"},
       {:ring_logger, "~> 0.11.0"},
       {:toolshed, "~> 0.4.0"},
       {:nerves_hub_link, "~> 2.10.0"},
       {:nerves_hub_cli, "~> 2.0"},
       {:ex_nvr, path: "../ui", env: env},
-      {:circuits_gpio, "~> 2.1"},
+      {:circuits_gpio, "~> 2.2"},
       {:circuits_i2c, "~> 2.0"},
 
       # Allow Nerves.Runtime on host to support development, testing and CI.

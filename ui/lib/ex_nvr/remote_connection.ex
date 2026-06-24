@@ -25,6 +25,14 @@ defmodule ExNVR.RemoteConnection do
     send(__MODULE__, {:push_event, event, payload})
   end
 
+  @spec send_system_status :: :ok
+  def send_system_status do
+    case Process.whereis(__MODULE__) do
+      nil -> :ok
+      pid -> GenServer.call(pid, :send_system_status)
+    end
+  end
+
   @impl Slipstream
   def init(options) do
     opts = [uri: options[:uri]]
@@ -56,6 +64,13 @@ defmodule ExNVR.RemoteConnection do
       {:ok, ref} -> {:reply, await_reply(ref, timeout), socket}
       error -> {:reply, error, socket}
     end
+  end
+
+  @impl Slipstream
+  def handle_call(:send_system_status, _from, socket) do
+    Logger.info("[SystemStatus] send early health check")
+    push(socket, @topic, "health", ExNVR.SystemStatus.get_all(), @send_timeout)
+    {:reply, :ok, socket}
   end
 
   @impl Slipstream
