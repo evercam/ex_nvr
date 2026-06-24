@@ -239,11 +239,16 @@ defmodule ExNVR.Recordings do
   @spec delete_oldest_recordings(Device.t(), integer()) ::
           :ok | {:error, Ecto.Changeset.t()}
   def delete_oldest_recordings(device, limit) do
-    high_res_recordings =
-      Recording.with_type(:high)
-      |> Recording.oldest_recordings(device.id, limit)
-      |> Repo.all()
+    Recording.with_type(:high)
+    |> Recording.oldest_recordings(device.id, limit)
+    |> Repo.all()
+    |> case do
+      [] -> :ok
+      high_res_recordings -> do_delete_oldest_recordings(device, high_res_recordings)
+    end
+  end
 
+  defp do_delete_oldest_recordings(device, high_res_recordings) do
     low_res_recordings =
       Recording.with_type(:low)
       |> Recording.before_date(List.last(high_res_recordings).end_date)
@@ -306,8 +311,10 @@ defmodule ExNVR.Recordings do
     end)
     |> Multi.one(:"oldest_run_#{stream_type}", oldest_run_query)
     |> Multi.run(:"run_#{stream_type}", fn _repo, changes ->
-      if run = changes[:"oldest_run_#{stream_type}"] do
-        recording = changes[:"oldest_recording_#{stream_type}"]
+      run = changes[:"oldest_run_#{stream_type}"]
+      recording = changes[:"oldest_recording_#{stream_type}"]
+
+      if run && recording do
         Repo.update(Run.changeset(run, %{start_date: recording.start_date}))
       else
         {:ok, nil}
