@@ -517,10 +517,6 @@ static int convert_frames(struct NvrDecoder *nvr_decoder) {
         return ret;
       }
 
-      // Copy the converted pixels into the decoder's frame instead of
-      // referencing the converter's persistent buffer: a single decode/flush
-      // may yield several frames and each conversion overwrites that buffer,
-      // which would make all frames of the batch alias the last one.
       AVFrame *converted = nvr_decoder->video_converter->frame;
 
       av_frame_unref(decoder->frames[i]);
