@@ -68,6 +68,7 @@ defmodule ExNVR.RemoteConnection do
 
   @impl Slipstream
   def handle_call(:send_system_status, _from, socket) do
+    Logger.info("[SystemStatus] send early health check")
     push(socket, @topic, "health", ExNVR.SystemStatus.get_all(), @send_timeout)
     {:reply, :ok, socket}
   end
