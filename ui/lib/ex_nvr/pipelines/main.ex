@@ -558,15 +558,34 @@ defmodule ExNVR.Pipelines.Main do
     do: state
 
   defp maybe_update_device_and_report(%{device: device} = state, new_state) do
-    {:ok, updated_device} = Devices.update_state(device, new_state)
+    # Persisting the device state is bookkeeping; a failed write must not take
+    # down the recording pipeline. A changeset/constraint failure comes back as
+    # an error tuple; a real DB error (SQLITE_BUSY, a dropped connection) raises.
+    # Handle both, keep the old state and retry on the next change.
+    case Devices.update_state(device, new_state) do
+      {:ok, updated_device} ->
+        :telemetry.execute(@event_prefix ++ [:state], %{}, %{
+          device_id: device.id,
+          old_state: device.state,
+          new_state: updated_device.state
+        })
 
-    :telemetry.execute(@event_prefix ++ [:state], %{}, %{
-      device_id: device.id,
-      old_state: device.state,
-      new_state: updated_device.state
-    })
+        %{state | device: updated_device}
 
-    %{state | device: updated_device}
+      {:error, reason} ->
+        Membrane.Logger.error(
+          "Failed to update device state to #{inspect(new_state)}, keep recording: #{inspect(reason)}"
+        )
+
+        state
+    end
+  rescue
+    error ->
+      Membrane.Logger.error(
+        "Failed to update device state to #{inspect(new_state)}, keep recording: #{inspect(error)}"
+      )
+
+      state
   end
 
   defp build_binary_peer_actions(track, stream_type, peer, ctx) do
