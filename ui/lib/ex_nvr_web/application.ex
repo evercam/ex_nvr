@@ -29,7 +29,7 @@ defmodule ExNVRWeb.Application do
         {ExNVRWeb.HlsStreamingMonitor, []},
         {DynamicSupervisor, [name: ExNVR.Hardware.Supervisor, strategy: :one_for_one]},
         {ExNVR.Hardware.SerialPortChecker, []},
-        Task.child_spec(fn -> ExNVR.start() end)
+        {ExNVR.PipelineStarter, []}
       ] ++ trigger_listener() ++ remote_connector()
 
     opts = [strategy: :one_for_one, name: ExNVRWeb.Supervisor]
