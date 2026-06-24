@@ -313,7 +313,7 @@ defmodule ExNVR.Pipelines.Main do
     main_stream_spec = build_main_stream_storage_spec(state)
 
     sub_stream_spec =
-      build_sub_stream_storage_spec(state.device) ++ build_sub_stream_bif_spec(state)
+      build_sub_stream_storage_spec(state) ++ build_sub_stream_bif_spec(state)
 
     case {state.main_stream_video_track, state.sub_stream_video_track} do
       {nil, nil} ->
@@ -490,7 +490,7 @@ defmodule ExNVR.Pipelines.Main do
         stream: :low
       })
     ] ++
-      build_sub_stream_storage_spec(device) ++
+      build_sub_stream_storage_spec(state) ++
       build_sub_stream_webrtc_spec(state) ++
       build_sub_stream_bif_spec(state)
   end
@@ -511,7 +511,7 @@ defmodule ExNVR.Pipelines.Main do
 
   defp build_sub_stream_storage_spec(%{record_main_stream?: false}), do: []
 
-  defp build_sub_stream_storage_spec(device) do
+  defp build_sub_stream_storage_spec(%{device: device}) do
     case device.storage_config.record_sub_stream do
       :always ->
         [

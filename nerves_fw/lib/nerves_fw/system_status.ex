@@ -8,7 +8,6 @@ defmodule ExNVR.Nerves.SystemStatus do
 
   require Logger
 
-  alias ExNVR.Nerves.Monitoring.UPS
   alias ExNVR.Nerves.{Netbird, RUT, SystemSettings}
   alias Nerves.Runtime
 
@@ -19,11 +18,21 @@ defmodule ExNVR.Nerves.SystemStatus do
     GenServer.start_link(__MODULE__, %{}, name: __MODULE__)
   end
 
+  def set(key, value) do
+    GenServer.cast(__MODULE__, {:set, key, value})
+  end
+
   @impl true
   def init(_options) do
     Process.send_after(self(), :collect_system_metrics, to_timeout(second: 2))
     {:ok, ref} = :timer.send_interval(@runs_summary_interval, :runs_summary)
     {:ok, %{timer_ref: ref}}
+  end
+
+  @impl true
+  def handle_cast({:set, key, value}, state) do
+    :ok = ExNVR.SystemStatus.set(key, value)
+    {:noreply, state}
   end
 
   @impl true
@@ -33,7 +42,6 @@ defmodule ExNVR.Nerves.SystemStatus do
     :ok = ExNVR.SystemStatus.set(:netbird, netbird())
     :ok = ExNVR.SystemStatus.set(:nerves, true)
     :ok = ExNVR.SystemStatus.set(:device_model, Runtime.KV.get("a.nerves_fw_platform"))
-    :ok = ExNVR.SystemStatus.set(:ups, ups_data())
 
     Process.send_after(self(), :collect_system_metrics, to_timeout(second: 30))
     {:noreply, state}
@@ -68,6 +76,10 @@ defmodule ExNVR.Nerves.SystemStatus do
       {:ok, data} -> data
       _error -> false
     end
+  catch
+    :exit, _error ->
+      Logger.warning("[SystemStatus] cannot get status of netbird")
+      false
   end
 
   defp rut_data do
@@ -75,12 +87,9 @@ defmodule ExNVR.Nerves.SystemStatus do
       {:ok, data} -> data
       _error -> nil
     end
-  end
-
-  defp ups_data do
-    case Process.whereis(UPS) do
-      pid when is_pid(pid) -> UPS.state(pid)
-      _other -> nil
-    end
+  catch
+    :exit, _error ->
+      Logger.warning("[SystemStatus] cannot get router information")
+      nil
   end
 end

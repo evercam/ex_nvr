@@ -133,7 +133,7 @@ A webrtc player can be embedded in web page by using `iframe`
 
 H265 is a an efficient video encoding that promises 50% bitrate gain with the same quality as in H264. This makes it ideal for video storage. Many modern IP cameras support H265 by default. However due to licensing and patents, adoption by browsers is still minimal or not available at all.
 
-When using `ex_nvr` to record H265, no transcoding is done, so streaming from `ex_nvr` (e.g. `hls` or `webrtc`) will give h265 stream, so viewing it depends on the browser support (browser support for `hevc` in `hls` is lacking and it's more in the case of `webrtc`).
+When using `ex_nvr` to record H265, no transcoding is done, so streaming from `ex_nvr` (e.g. `hls` or `webrtc`) will give h265 stream, so viewing it depends on the browser support (browser support for `hevc` with `hls` is lacking and even worse in the case of `webrtc`).
 
 ## Features
 

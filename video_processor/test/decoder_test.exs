@@ -16,6 +16,14 @@ defmodule ExNVR.AV.DecoderTest do
     assert_raise(FunctionClauseError, fn -> Decoder.new(:vp8) end)
   end
 
+  test "repeated failed constructions with an unknown codec raise a controlled error" do
+    for _i <- 1..1000 do
+      assert_raise ErlangError, ~r/unknown_codec/, fn ->
+        NIF.new_decoder(:vp9, -1, -1, nil, 0)
+      end
+    end
+  end
+
   describe "decode/2" do
     test "h264 video" do
       decoder = Decoder.new(:h264)

@@ -22,6 +22,7 @@ ERL_NIF_TERM new_encoder(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   encoder_config.profile = FF_PROFILE_UNKNOWN;
 
   char *codec_name = NULL, *format = NULL, *profile = NULL;
+  struct NvrEncoder *nvr_encoder = NULL;
 
   ErlNifMapIterator iter;
   ERL_NIF_TERM key, value;
@@ -74,6 +75,9 @@ ERL_NIF_TERM new_encoder(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
       goto clean;
     }
 
+    enif_free(config_name);
+    config_name = NULL;
+
     enif_map_iterator_next(env, &iter);
   }
 
@@ -110,7 +114,7 @@ ERL_NIF_TERM new_encoder(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
     }
   }
 
-  struct NvrEncoder *nvr_encoder =
+  nvr_encoder =
       enif_alloc_resource(encoder_resource_type, sizeof(struct NvrEncoder));
 
   nvr_encoder->encoder = encoder_alloc();
@@ -122,10 +126,11 @@ ERL_NIF_TERM new_encoder(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   }
 
   ret = enif_make_resource(env, nvr_encoder);
-  enif_release_resource(nvr_encoder);
 
 clean:
   // clean encoder
+  if (nvr_encoder)
+    enif_release_resource(nvr_encoder);
   if (codec_name)
     enif_free(codec_name);
   if (format)
@@ -152,6 +157,7 @@ ERL_NIF_TERM new_decoder(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   ERL_NIF_TERM ret;
   char *codec_name = NULL, *out_format = NULL;
   const AVCodec *codec = NULL;
+  struct NvrDecoder *nvr_decoder = NULL;
   int out_width, out_height, pad;
 
   if (!nif_get_atom(env, argv[0], &codec_name)) {
@@ -191,7 +197,7 @@ ERL_NIF_TERM new_decoder(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
 
   enum AVPixelFormat out_pix_fmt = av_get_pix_fmt(out_format);
 
-  struct NvrDecoder *nvr_decoder =
+  nvr_decoder =
       enif_alloc_resource(decoder_resource_type, sizeof(struct NvrDecoder));
 
   nvr_decoder->decoder = decoder_alloc();
@@ -208,9 +214,11 @@ ERL_NIF_TERM new_decoder(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   }
 
   ret = enif_make_resource(env, nvr_decoder);
-  enif_release_resource(nvr_decoder);
 
 clean:
+  if (nvr_decoder)
+    enif_release_resource(nvr_decoder);
+
   if (codec_name)
     enif_free(codec_name);
 
@@ -227,6 +235,7 @@ ERL_NIF_TERM new_converter(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) 
 
   ERL_NIF_TERM ret;
   char *in_format = NULL, *out_format = NULL;
+  struct NvrConverter *nvr_converter = NULL;
   int in_width, in_height, out_width, out_height, pad;
 
   if (!enif_get_int(env, argv[0], &in_width)) {
@@ -267,7 +276,7 @@ ERL_NIF_TERM new_converter(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) 
   enum AVPixelFormat in_pix_fmt = av_get_pix_fmt(in_format);
   enum AVPixelFormat out_pix_fmt = av_get_pix_fmt(out_format);
 
-  struct NvrConverter *nvr_converter =
+  nvr_converter =
       enif_alloc_resource(converter_resource_type, sizeof(struct NvrConverter));
 
 
@@ -285,9 +294,11 @@ ERL_NIF_TERM new_converter(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) 
   }
 
   ret = enif_make_resource(env, nvr_converter);
-  enif_release_resource(nvr_converter);
 
 clean:
+  if (nvr_converter)
+    enif_release_resource(nvr_converter);
+
   if (in_format)
     enif_free(in_format);
 
