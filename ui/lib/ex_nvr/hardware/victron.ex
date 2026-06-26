@@ -195,6 +195,7 @@ defmodule ExNVR.Hardware.Victron do
       serial_port: serial_port,
       pid: pid,
       data: %__MODULE__{},
+      connected: false,
       timer: nil,
       restart_timer: nil,
       datetime: DateTime.utc_now(),
@@ -208,6 +209,7 @@ defmodule ExNVR.Hardware.Victron do
   @impl true
   def handle_continue(:probe, state) do
     with :ok <- Circuits.UART.open(state.pid, state.serial_port, uart_options()),
+         state <- %{state | connected: true},
          true <- victron_device?(state) do
       Circuits.UART.configure(state.pid, active: true)
       {:ok, timer_ref} = :timer.send_interval(@reporting_interval, :report)
@@ -218,6 +220,8 @@ defmodule ExNVR.Hardware.Victron do
         Logger.info("#{inspect(state.serial_port)} is not a victron serial port")
         {:stop, :normal, state}
     end
+  catch
+    :exit, _error -> {:stop, :normal, state}
   end
 
   @impl true
@@ -298,7 +302,10 @@ defmodule ExNVR.Hardware.Victron do
         else: ExNVR.SystemStatus.set(:solar_charger, nil)
     end
 
-    Circuits.UART.close(state.pid)
+    if state.connected do
+      Circuits.UART.close(state.pid)
+    end
+
     Circuits.UART.stop(state.pid)
     :timer.cancel(state.timer)
   end
