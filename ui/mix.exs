@@ -47,7 +47,7 @@ defmodule ExNVR.MixProject do
       {:ecto_sqlite3_extras, "~> 1.2.0"},
       {:swoosh, "~> 1.15"},
       {:finch, "~> 0.19"},
-      {:httpoison, "~> 2.2.1"},
+      {:httpoison, "~> 2.3.0"},
       {:membrane_h264_format, "~> 0.6"},
       {:membrane_h265_format, "~> 0.2"},
       {:membrane_raw_video_format, "~> 0.4.0", override: true},
