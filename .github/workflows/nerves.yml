@@ -30,7 +30,7 @@ jobs:
       - id: targets
         run: |
           if [ "${{ inputs.target }}" = "" ]; then
-            echo 'targets=["ex_nvr_rpi4", "ex_nvr_rpi5", "giraffe"]' >> $GITHUB_OUTPUT
+            echo 'targets=["ex_nvr_rpi5", "giraffe"]' >> $GITHUB_OUTPUT
           else
             echo 'targets=["${{ inputs.target }}"]' >> $GITHUB_OUTPUT
           fi

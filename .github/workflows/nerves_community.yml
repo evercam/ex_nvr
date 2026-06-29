@@ -13,7 +13,8 @@ jobs:
         working-directory: ./nerves_community
     strategy:
       matrix:
-        target: [rpi4, rpi5]
+        # target: [rpi4, rpi5]
+        target: [rpi5]
     env:
       MIX_ENV: prod
       MIX_TARGET: ${{ matrix.target }}
