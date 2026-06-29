@@ -103,8 +103,7 @@ defmodule ExNVRWeb.RecordingListLive do
           </button>
         </div>
         <div class="bg-black">
-          <video id="recording-player" controls autoplay class="w-full max-h-[75vh] outline-none">
-          </video>
+          <video id="recording-player" controls autoplay class="w-full max-h-[75vh] outline-none"></video>
         </div>
       </div>
     </div>

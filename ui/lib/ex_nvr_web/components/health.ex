@@ -308,8 +308,7 @@ defmodule ExNVRWeb.Components.Health do
           <span
             class={["mt-1 h-2 w-2 rounded-full shrink-0", health_dot_class(check.status)]}
             title={Atom.to_string(check.status)}
-          >
-          </span>
+          ></span>
           <div class="flex-1 min-w-0">
             <div class="font-medium">{check.label}</div>
             <div
