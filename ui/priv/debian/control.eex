@@ -1,0 +1,6 @@
+Package: ex-nvr
+Version: <%= @version %>
+Architecture: <%= @arch %>
+Maintainer: Evercam <support@evercam.io>
+Description: NVR (Network Video Recorder) software for Elixir.
+Homepage: https://github.com/evercam/ex_nvr
