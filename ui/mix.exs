@@ -60,7 +60,7 @@ defmodule ExNVR.MixProject do
       {:ex_aws, "~> 2.5"},
       {:ex_aws_s3, "~> 2.5"},
       {:flop, "~> 0.26.0"},
-      {:req, "~> 0.5.0"},
+      {:req, "~> 0.6.2"},
       {:multipart, "~> 0.4.0"},
       {:ex_mp4, "~> 0.14.0"},
       {:hlx, "~> 0.5.0"},
