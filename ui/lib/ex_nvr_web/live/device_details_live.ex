@@ -26,8 +26,8 @@ defmodule ExNVRWeb.DeviceDetailsLive do
         <:tab id="settings" label="Settings" />
         <:tab id="events" label="Events" />
         <:tab id="triggers" label="Triggers" />
-        
-    <!-- device details tab -->
+
+        <!-- device details tab -->
         <:tab_content for="details">
           <div class="flex flex-col xl:flex-row gap-5 items-start">
             <!-- Left: info cards -->
@@ -73,8 +73,7 @@ defmodule ExNVRWeb.DeviceDetailsLive do
                             :failed -> "bg-red-500"
                             :stopped -> "bg-yellow-500"
                           end
-                        ]}>
-                        </span>
+                        ]}></span>
                         {String.upcase(to_string(@device.state))}
                       </span>
                       <button
@@ -113,8 +112,8 @@ defmodule ExNVRWeb.DeviceDetailsLive do
                   </div>
                 </dl>
               </div>
-              
-    <!-- Hardware card (only when at least one field is present) -->
+
+              <!-- Hardware card (only when at least one field is present) -->
               <div
                 :if={@device.vendor || @device.model || @device.mac || @device.url}
                 class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden"
@@ -148,8 +147,8 @@ defmodule ExNVRWeb.DeviceDetailsLive do
                 </dl>
               </div>
             </div>
-            
-    <!-- Right: snapshot player -->
+
+            <!-- Right: snapshot player -->
             <div class="w-full xl:w-[480px] shrink-0">
               <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
                 <div class="px-5 py-3.5 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
@@ -181,8 +180,8 @@ defmodule ExNVRWeb.DeviceDetailsLive do
                     Unavailable
                   </span>
                 </div>
-                
-    <!-- Active player -->
+
+                <!-- Active player -->
                 <div :if={@snapshot_enabled}>
                   <div
                     :if={is_nil(@snapshot_data)}
@@ -204,8 +203,8 @@ defmodule ExNVRWeb.DeviceDetailsLive do
                     Refreshes every 10 seconds
                   </p>
                 </div>
-                
-    <!-- Disabled placeholder -->
+
+                <!-- Disabled placeholder -->
                 <div
                   :if={not @snapshot_enabled}
                   class="aspect-video flex flex-col items-center justify-center bg-gray-100 dark:bg-gray-900 text-gray-400 dark:text-gray-600"
@@ -284,8 +283,8 @@ defmodule ExNVRWeb.DeviceDetailsLive do
             </div>
           </div>
         </:tab_content>
-        
-    <!-- recordings tab -->
+
+        <!-- recordings tab -->
         <:tab_content for="recordings">
           <.live_component
             module={RecordingsListTab}
@@ -294,8 +293,8 @@ defmodule ExNVRWeb.DeviceDetailsLive do
             params={@params}
           />
         </:tab_content>
-        
-    <!-- stats tab-->
+
+        <!-- stats tab-->
         <:tab_content for="stats">
           <.live_component
             id="stats_tab"
@@ -314,8 +313,8 @@ defmodule ExNVRWeb.DeviceDetailsLive do
             current_user={@current_user}
           />
         </:tab_content>
-        
-    <!-- events tab-->
+
+        <!-- events tab-->
         <:tab_content for="events">
           <.live_component
             id="events_list_tab"
