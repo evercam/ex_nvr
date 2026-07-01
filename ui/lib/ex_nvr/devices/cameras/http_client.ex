@@ -45,7 +45,7 @@ defmodule ExNVR.Devices.Cameras.HttpClient do
       @impl true
       def set_stream_profile(_url, _profile, _opts), do: {:error, :not_implemented}
 
-      defoverridable fetch_lpr_event: 2, device_info: 2, stream_profiles: 2
+      defoverridable fetch_lpr_event: 2, device_info: 2, stream_profiles: 2, set_stream_profile: 3
     end
   end
 end
