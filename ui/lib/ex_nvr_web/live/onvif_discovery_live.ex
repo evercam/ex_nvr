@@ -6,7 +6,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
   require Logger
 
   alias ExNVR.Devices
-  alias ExNVR.Devices.Cameras.{NetworkInterface, NTP, StreamProfile}
+  alias ExNVR.Devices.Cameras.{HttpClient.Milesight, NetworkInterface, NTP, StreamProfile}
 
   defmodule DiscoverSettings do
     @moduledoc false
@@ -562,6 +562,29 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
   end
 
   defp get_ntp(camera_details), do: camera_details
+
+  defp get_stream_profiles(
+         %{device: %{manufacturer: "Milesight Technology Co.,Ltd."}} = camera_details
+       ) do
+    device = camera_details.device
+    opts = [username: device.username, password: device.password]
+
+    case Milesight.stream_profiles(device.address, opts) do
+      {:ok, profiles} ->
+        profiles = Enum.take(profiles, 3)
+
+        # Enable all profiles
+        profiles
+        |> Enum.reject(& &1.enabled)
+        |> Enum.each(&Milesight.set_stream_profile(device.address, %{&1 | enabled: true}, opts))
+
+        get_stream_uris(%{camera_details | stream_profiles: profiles})
+
+      {:error, reason} ->
+        Logger.error("Failed to get stream profiles for camera #{inspect(reason)}")
+        camera_details
+    end
+  end
 
   defp get_stream_profiles(%{device: %{media_ver20_service_path: nil}} = camera_details) do
     Logger.warning("[OnvifDiscovery] camera does not support onvif media version 2")
