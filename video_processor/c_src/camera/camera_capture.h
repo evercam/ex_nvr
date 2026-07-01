@@ -19,6 +19,7 @@ typedef struct {
     Decoder *decoder;
     VideoConverter *video_converter;
     AVPacket *packet;
+    int video_stream_index;
 } CameraCapture;
 
 ERL_NIF_TERM open_camera(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]);

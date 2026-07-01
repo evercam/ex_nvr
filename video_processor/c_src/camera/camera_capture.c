@@ -1,6 +1,11 @@
 #include "camera_capture.h"
 #include <libavcodec/avcodec.h>
+#include <libavutil/time.h>
 #include <stdio.h>
+
+// avfoundation returns EAGAIN until capture starts; sleep to avoid busy-spinning
+// the dirty scheduler. Never time out — an error here is fatal to the Webcam source.
+#define CAMERA_READ_EAGAIN_SLEEP_US 5000     // 5 ms
 
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
 const char *driver = "dshow";
@@ -38,6 +43,7 @@ ERL_NIF_TERM open_camera(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
     state->decoder = NULL;
     state->video_converter = NULL;
     state->packet = NULL;
+    state->video_stream_index = -1;
 
     avdevice_register_all();
 
@@ -73,8 +79,18 @@ ERL_NIF_TERM open_camera(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
         goto clean;
     }
 
+    // streams[0] isn't always video — devices may expose audio/metadata too.
+    int video_stream_index =
+        av_find_best_stream(state->input_ctx, AVMEDIA_TYPE_VIDEO, -1, -1, NULL, 0);
+    if (video_stream_index < 0) {
+        ret = nif_error(env, "no_video_stream_found");
+        goto clean;
+    }
+    state->video_stream_index = video_stream_index;
+
     // Init video converter if the pixel format is not yuv420p
-    AVCodecParameters *codec_params = state->input_ctx->streams[0]->codecpar;
+    AVCodecParameters *codec_params =
+        state->input_ctx->streams[video_stream_index]->codecpar;
     if (!codec_params) {
         ret = nif_error(env, "codec_params_not_found");
         goto clean;
@@ -119,6 +135,30 @@ clean:
     return ret;
 }
 
+// Next packet on the video stream. Sleeps over EAGAIN, skips other streams.
+// Returns 0, or a negative AVERROR on a real read failure.
+static int next_video_packet(CameraCapture *state) {
+    while (1) {
+        int res = av_read_frame(state->input_ctx, state->packet);
+
+        if (res == AVERROR(EAGAIN)) {
+            av_usleep(CAMERA_READ_EAGAIN_SLEEP_US);
+            continue;
+        }
+
+        if (res < 0) {
+            return res;
+        }
+
+        if (state->packet->stream_index != state->video_stream_index) {
+            av_packet_unref(state->packet);
+            continue;
+        }
+
+        return 0;
+    }
+}
+
 ERL_NIF_TERM read_camera_frame(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
     ERL_NIF_TERM ret;
     CameraCapture *state;
@@ -129,21 +169,28 @@ ERL_NIF_TERM read_camera_frame(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv
         return enif_make_badarg(env);
     }
 
-    int res;
-    while ((res = av_read_frame(state->input_ctx, state->packet)) == AVERROR(EAGAIN));
+    // Loop until the decoder emits a frame: while priming (codec delay/B-frames)
+    // it returns success with count_frames == 0, and frames[0] would be empty.
+    while (1) {
+        int res = next_video_packet(state);
+        if (res < 0) {
+            char error_buf[AV_ERROR_MAX_STRING_SIZE];
+            av_strerror(res, error_buf, sizeof(error_buf));
+            return nif_error(env, error_buf);
+        }
 
-    if (res < 0) {
-        char error_buf[AV_ERROR_MAX_STRING_SIZE];
-        av_strerror(res, error_buf, sizeof(error_buf));
-        return nif_error(env, error_buf);
+        int decoded = decoder_decode(state->decoder, state->packet);
+        av_packet_unref(state->packet);
+
+        if (decoded < 0) {
+            return nif_error(env, "decode_failed");
+        }
+
+        if (state->decoder->count_frames > 0) {
+            frame = state->decoder->frames[0];
+            break;
+        }
     }
-
-    if (decoder_decode(state->decoder, state->packet) < 0) {
-        ret = nif_error(env, "decode_failed");
-        goto clean;
-    }
-
-    frame = state->decoder->frames[0];
 
     if (state->video_converter != NULL) {
         if (video_converter_convert(state->video_converter, frame) < 0) {
@@ -159,7 +206,6 @@ ERL_NIF_TERM read_camera_frame(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv
     }
 
 clean:
-    av_packet_unref(state->packet);
     if (frame != NULL) av_frame_unref(frame);
 
     return ret;
@@ -172,16 +218,17 @@ ERL_NIF_TERM get_stream_properties(ErlNifEnv *env, int argc, const ERL_NIF_TERM 
         return enif_make_badarg(env);
     }
 
-    AVCodecParameters *codec_params = state->input_ctx->streams[0]->codecpar;
+    int idx = state->video_stream_index;
+    AVCodecParameters *codec_params = state->input_ctx->streams[idx]->codecpar;
     if (!codec_params) {
         return nif_error(env, "codec_params_not_found");
     }
 
     ERL_NIF_TERM width = enif_make_int(env, codec_params->width);
     ERL_NIF_TERM height = enif_make_int(env, codec_params->height);
-    ERL_NIF_TERM time_base = enif_make_tuple2(env, 
-        enif_make_int(env, state->input_ctx->streams[0]->time_base.num),
-        enif_make_int(env, state->input_ctx->streams[0]->time_base.den)
+    ERL_NIF_TERM time_base = enif_make_tuple2(env,
+        enif_make_int(env, state->input_ctx->streams[idx]->time_base.num),
+        enif_make_int(env, state->input_ctx->streams[idx]->time_base.den)
     );
 
     return nif_ok(env, enif_make_tuple3(env, width, height, time_base));
@@ -208,7 +255,7 @@ void camera_capture_destructor(ErlNifEnv *env, void *obj) {
 
 static ErlNifFunc funcs[] = {
     {"open_camera", 3, open_camera, ERL_DIRTY_JOB_CPU_BOUND},
-    {"read_camera_frame", 1, read_camera_frame, ERL_DIRTY_JOB_CPU_BOUND},
+    {"read_camera_frame", 1, read_camera_frame, ERL_DIRTY_JOB_IO_BOUND},
     {"get_stream_properties", 1, get_stream_properties}
 };
 
