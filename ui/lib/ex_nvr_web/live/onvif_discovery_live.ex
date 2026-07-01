@@ -563,7 +563,9 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
 
   defp get_ntp(camera_details), do: camera_details
 
-  defp get_stream_profiles(%{device: %{manufacturer: "Milesight Technology Co.,Ltd."}} = camera_details) do
+  defp get_stream_profiles(
+         %{device: %{manufacturer: "Milesight Technology Co.,Ltd."}} = camera_details
+       ) do
     device = camera_details.device
     opts = [username: device.username, password: device.password]
 
