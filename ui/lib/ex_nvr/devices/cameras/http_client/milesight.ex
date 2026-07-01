@@ -48,6 +48,20 @@ defmodule ExNVR.Devices.Cameras.HttpClient.Milesight do
     |> handle_http_response(&parse_stream_profiles_response/1)
   end
 
+  def set_stream_profile(url, %StreamProfile{} = profile, opts) do
+    url = url <> @operator_path <> "?action=set.video.general&format=json"
+    body = %{"streamList" => %{profile.name => map_stream_profile(profile)}}
+
+    url
+    |> HTTP.post(body, opts)
+    |> handle_http_response(fn body ->
+      case Jason.decode(body) do
+        {:ok, parsed} -> parsed
+        {:error, _reason} -> body
+      end
+    end)
+  end
+
   defp parse_system_response(body) do
     response = Jason.decode!(body)
 
@@ -88,6 +102,21 @@ defmodule ExNVR.Devices.Cameras.HttpClient.Milesight do
       mapper.("subStream", get_in(response, ["streamList", "subStream"])),
       mapper.("thirdStream", get_in(response, ["streamList", "thirdStream"]))
     ]
+  end
+
+  defp map_stream_profile(%StreamProfile{} = profile) do
+    %{
+      enable: if(profile.enabled, do: 1, else: 0),
+      profileCodec: profile_codec_to_integer(profile.video_config.codec),
+      profile: profile_profile_to_integer(profile.video_config.codec_profile),
+      width: profile.video_config.width,
+      height: profile.video_config.height,
+      framerate: profile.video_config.frame_rate,
+      bitrate: profile.video_config.bitrate,
+      rateMode: bitrate_mode_to_integer(profile.video_config.bitrate_mode),
+      profileGop: profile.video_config.gop,
+      smartStreamEnable: if(profile.video_config.smart_codec, do: 1, else: 0)
+    }
   end
 
   defp parse_response(body, opts) do
@@ -184,14 +213,29 @@ defmodule ExNVR.Devices.Cameras.HttpClient.Milesight do
   defp profile_codec(3), do: :h265
   defp profile_codec(_other), do: :unknown
 
+  defp profile_codec_to_integer(:h264), do: 0
+  defp profile_codec_to_integer(:mpeg4), do: 1
+  defp profile_codec_to_integer(:mjpeg), do: 2
+  defp profile_codec_to_integer(:h265), do: 3
+  defp profile_codec_to_integer(_other), do: 0
+
   defp profile(0, 0), do: "base"
   defp profile(0, 1), do: "main"
   defp profile(0, 2), do: "high"
   defp profile(_codec, _other), do: nil
 
+  defp profile_profile_to_integer("base"), do: 0
+  defp profile_profile_to_integer("main"), do: 1
+  defp profile_profile_to_integer("high"), do: 2
+  defp profile_profile_to_integer(_other), do: 0
+
   defp bitrate_mode(0), do: :cbr
   defp bitrate_mode(1), do: :vbr
   defp bitrate_mode(_other), do: nil
+
+  defp bitrate_mode_to_integer(:cbr), do: 0
+  defp bitrate_mode_to_integer(:vbr), do: 1
+  defp bitrate_mode_to_integer(_other), do: 0
 
   defp handle_http_response({:ok, %{status: status, body: body}}, parser_fn)
        when status >= 200 and status < 300 do
