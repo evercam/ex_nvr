@@ -23,24 +23,31 @@ defmodule ExNVRWeb.DeviceRoomChannel do
 
   @impl true
   def handle_in("answer", answer, socket) do
-    MainPipeline.forward_peer_message(
-      socket.assigns.device,
-      socket.assigns.stream,
-      {:answer, Jason.decode!(answer)}
-    )
-
+    forward_decoded(socket, :answer, answer)
     {:noreply, socket}
   end
 
   @impl true
   def handle_in("ice_candidate", candidate, socket) do
-    MainPipeline.forward_peer_message(
-      socket.assigns.device,
-      socket.assigns.stream,
-      {:ice_candidate, Jason.decode!(candidate)}
-    )
-
+    forward_decoded(socket, :ice_candidate, candidate)
     {:noreply, socket}
+  end
+
+  # A misbehaving or malicious client could send a payload that is not valid
+  # JSON. Decoding defensively keeps that from crashing the channel (and forcing
+  # the whole session to re-join) over a single bad frame.
+  defp forward_decoded(socket, type, payload) do
+    case Jason.decode(payload) do
+      {:ok, data} ->
+        MainPipeline.forward_peer_message(
+          socket.assigns.device,
+          socket.assigns.stream,
+          {type, data}
+        )
+
+      {:error, _reason} ->
+        Logger.warning("Discarding malformed #{type} payload on device channel")
+    end
   end
 
   @impl true
