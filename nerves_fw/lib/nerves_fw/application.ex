@@ -26,7 +26,12 @@ defmodule ExNVR.Nerves.Application do
   end
 
   def children(:giraffe) do
-    common_config() ++ [{ExNVR.Nerves.Giraffe.Init, []}, {ExNVR.Nerves.Monitoring.UPS, []}]
+    common_config() ++
+      [
+        {ExNVR.Nerves.Giraffe.Init, []},
+        {ExNVR.Nerves.Giraffe.FanController, []},
+        {ExNVR.Nerves.Monitoring.UPS, []}
+      ]
   end
 
   def children(_target) do
