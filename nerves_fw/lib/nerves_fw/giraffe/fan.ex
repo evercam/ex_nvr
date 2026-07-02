@@ -142,7 +142,8 @@ defmodule ExNVR.Nerves.Giraffe.Fan do
     end)
   end
 
-  defp set_prog_bit(bus, enabled?), do: set_reg_bit(bus, @reg_fan_config, @fan_config_prog, enabled?)
+  defp set_prog_bit(bus, enabled?),
+    do: set_reg_bit(bus, @reg_fan_config, @fan_config_prog, enabled?)
 
   defp set_reg_bit(bus, reg, bit, enabled?) do
     with {:ok, <<value::8>>} <- I2C.write_read(bus, @address, <<reg>>, 1) do
