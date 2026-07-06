@@ -8,8 +8,8 @@ defmodule ExNVR.Nerves.SystemStatus do
 
   require Logger
 
-  alias ExNVR.Nerves.Giraffe.FanController
   alias ExNVR.Nerves.{Application, Netbird, RUT, SystemSettings}
+  alias ExNVR.Nerves.Giraffe.FanController
   alias Nerves.Runtime
 
   @runs_summary_interval to_timeout(hour: 1)
