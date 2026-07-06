@@ -11,7 +11,11 @@ defmodule ExNVR.Nerves.Giraffe.FanController do
 
   @sync_interval to_timeout(second: 30)
 
-  @type stats :: %{internal_temp: number(), external_temp: number() | nil, speed: non_neg_integer()}
+  @type stats :: %{
+          internal_temp: number(),
+          external_temp: number() | nil,
+          speed: non_neg_integer()
+        }
 
   def start_link(options) do
     GenServer.start_link(__MODULE__, options, name: __MODULE__)
