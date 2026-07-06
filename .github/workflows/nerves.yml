@@ -4,6 +4,16 @@ on:
   push:
     tags:
       - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Custom version string to use instead of the tag-based version"
+        required: false
+        type: string
+      target:
+        description: "Specific target to build (ex_nvr_rpi4, ex_nvr_rpi5, or giraffe). If not specified, all targets will be built."
+        required: false
+        type: string
 
   workflow_call:
     inputs:
