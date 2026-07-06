@@ -13,6 +13,9 @@ config :elixir, :time_zone_database, Tzdata.TimeZoneDatabase
 
 config :ex_nvr, env: :dev
 
+# Feature flags
+config :ex_nvr, victron_probing: false
+
 # Configure Mix tasks and generators
 config :ex_nvr,
   namespace: ExNVR,

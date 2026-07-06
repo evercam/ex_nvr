@@ -1,8 +1,12 @@
 defmodule ExNVR.Hardware.Victron do
   @moduledoc """
-  Module responsible for getting data from Victron Energy products.
+  Data structure and pure parsing logic for Victron Energy products.
 
-  The data are retrieved via a serial port.
+  The data are retrieved via a serial port using the VE.Direct protocol. This
+  module holds no state: it only defines the `t:t/0` struct and the pure
+  functions used to parse the text/hex frames exchanged with the device. The
+  stateful part (opening the serial port, buffering incoming bytes, replying to
+  in-flight requests) lives in `ExNVR.Hardware.Victron.Server`.
 
   For now we support getting data for MPPT and SmartShunt, however the module
   can be extended to get information from other products such as:
@@ -13,9 +17,8 @@ defmodule ExNVR.Hardware.Victron do
     * Phoenix Charger
     * Smart BuckBoost
   """
-  require Logger
 
-  use GenServer, restart: :transient
+  import Bitwise
 
   @type operation_state ::
           :off
@@ -139,10 +142,7 @@ defmodule ExNVR.Hardware.Victron do
     h23: 0
   ]
 
-  @speed 19_200
-  @reporting_interval :timer.seconds(15)
-  @restart_interval :timer.hours(1)
-  @last_data_update_in_seconds 30
+  @battery_monitor_pids ["0xA389", "0xA38A", "0xA38B"]
 
   @alarm_reasons [
     :low_voltage,
@@ -166,168 +166,81 @@ defmodule ExNVR.Hardware.Victron do
     aes: 7
   }
 
-  @spec start_link(keyword()) :: GenServer.on_start()
-  def start_link(options) do
-    GenServer.start_link(__MODULE__, options[:port], name: options[:name])
-  end
+  @doc """
+  Whether the given product id belongs to a battery monitor (SmartShunt).
 
-  @spec write(GenServer.name(), binary()) :: :ok
-  def write(pid, data) do
-    GenServer.call(pid, {:write, data})
-  end
+  Any other product id is treated as a solar charger (MPPT).
+  """
+  @spec battery_monitor?(binary() | nil) :: boolean()
+  def battery_monitor?(pid), do: pid in @battery_monitor_pids
 
-  @spec load_output_state(GenServer.name()) :: {:ok, load_output_state()} | {:error, term()}
-  def load_output_state(pid) do
-    GenServer.call(pid, :load_output_state)
-  end
+  @doc """
+  The hex command used to query the current load output state.
+  """
+  @spec load_output_state_query() :: binary()
+  def load_output_state_query, do: ":7ABED00B6\n"
 
-  @spec set_load_output_state(GenServer.name(), load_output_state()) ::
-          {:ok, load_output_state()} | {:error, term()}
-  def set_load_output_state(pid, new_state) do
-    GenServer.call(pid, {:load_output_state, new_state})
-  end
-
-  @impl true
-  def init(serial_port) do
-    {:ok, pid} = Circuits.UART.start_link()
-
-    state = %{
-      serial_port: serial_port,
-      pid: pid,
-      data: %__MODULE__{},
-      connected: false,
-      timer: nil,
-      restart_timer: nil,
-      datetime: DateTime.utc_now(),
-      unprocessed_data: <<>>,
-      inflight_requests: []
-    }
-
-    {:ok, state, {:continue, :probe}}
-  end
-
-  @impl true
-  def handle_continue(:probe, state) do
-    with :ok <- Circuits.UART.open(state.pid, state.serial_port, uart_options()),
-         state <- %{state | connected: true},
-         true <- victron_device?(state) do
-      Circuits.UART.configure(state.pid, active: true)
-      {:ok, timer_ref} = :timer.send_interval(@reporting_interval, :report)
-      {:ok, restart_timer} = :timer.send_interval(@restart_interval, :restart)
-      {:noreply, %{state | timer: timer_ref, restart_timer: restart_timer}}
-    else
-      _other ->
-        Logger.info("#{inspect(state.serial_port)} is not a victron serial port")
-        {:stop, :normal, state}
-    end
-  catch
-    :exit, _error -> {:stop, :normal, state}
-  end
-
-  @impl true
-  def handle_call({:write, data}, _from, state) do
-    :ok = Circuits.UART.write(state.pid, data)
-    {:reply, :ok, state}
-  end
-
-  @impl true
-  def handle_call(:load_output_state, from, state) do
-    :ok = Circuits.UART.write(state.pid, ":7ABED00B6\n")
-
-    {:noreply,
-     %{state | inflight_requests: state.inflight_requests ++ [{:load_output_state, from}]}}
-  end
-
-  @impl true
-  def handle_call({:load_output_state, new_state}, from, state) do
+  @doc """
+  Build the hex command that sets the load output to `new_state`.
+  """
+  @spec set_load_output_state_command(load_output_state()) :: binary()
+  def set_load_output_state_command(new_state) do
     value = @load_output_state[new_state]
     checksum = 0xB5 - value
 
-    value = Integer.to_string(value, 16) |> String.pad_leading(2, "0") |> String.upcase()
-    checksum = Integer.to_string(checksum, 16) |> String.pad_leading(2, "0") |> String.upcase()
-    command = ":8ABED00#{value}#{checksum}\n" |> String.upcase()
+    value = value |> Integer.to_string(16) |> String.pad_leading(2, "0") |> String.upcase()
+    checksum = checksum |> Integer.to_string(16) |> String.pad_leading(2, "0") |> String.upcase()
 
-    :ok = Circuits.UART.write(state.pid, command)
-
-    {:noreply,
-     %{state | inflight_requests: state.inflight_requests ++ [{:load_output_state, from}]}}
+    String.upcase(":8ABED00#{value}#{checksum}\n")
   end
 
-  @impl true
-  def handle_info({:circuits_uart, _port, message}, state) do
-    state = do_handle_message(state, :text, state.unprocessed_data <> message)
-    state = %{state | datetime: DateTime.utc_now()}
-    {:noreply, state}
-  end
+  @doc """
+  Parse a hex response to a (get/set) load output state request.
 
-  @impl true
-  def handle_info(:report, state) do
-    time_diff = DateTime.diff(DateTime.utc_now(), state.datetime)
+  Returns:
 
-    data =
-      if is_nil(state.data.v) or time_diff >= @last_data_update_in_seconds,
-        do: nil,
-        else: state.data
+    * `:ignore` - the message is an asynchronous message and should be discarded.
+    * `{:ok, state}` - the load output `state` reported by the device.
+    * `{:error, reason}` - the response was invalid or unexpected.
+  """
+  @spec parse_load_output_response(binary()) ::
+          :ignore | {:ok, load_output_state()} | {:error, term()}
+  def parse_load_output_response(<<"A", _rest::binary>>), do: :ignore
 
-    # check if it's a smart shunt
-    if state.data.pid in ["0xA389", "0xA38A", "0xA38B"],
-      do: ExNVR.SystemStatus.set(:battery_monitor, data),
-      else: ExNVR.SystemStatus.set(:solar_charger, data)
+  def parse_load_output_response(
+        <<_::8, "ABED", flags::binary-size(2), value::binary-size(2), _checksum::binary-size(2)>>
+      ) do
+    if String.to_integer(flags, 16) == 0 do
+      look = String.to_integer(value, 16)
 
-    {:noreply, state}
-  end
-
-  @impl true
-  def handle_info(:restart, state) do
-    # Sometimes the Victron stuck and send the same
-    # we restart the connection to avoid such issues
-    :ok = Circuits.UART.close(state.pid)
-    :ok = Circuits.UART.open(state.pid, state.serial_port, uart_options(true))
-
-    {:noreply, state}
-  end
-
-  @impl true
-  def handle_info(_msg, state) do
-    {:noreply, state}
-  end
-
-  @impl true
-  def terminate(reason, state) do
-    if pid = state.data.pid do
-      Logger.warning("Victron process terminating due to #{inspect(reason)}")
-
-      if pid in ["0xA389", "0xA38A", "0xA38B"],
-        do: ExNVR.SystemStatus.set(:battery_monitor, nil),
-        else: ExNVR.SystemStatus.set(:solar_charger, nil)
-    end
-
-    if state.connected do
-      Circuits.UART.close(state.pid)
-    end
-
-    Circuits.UART.stop(state.pid)
-    :timer.cancel(state.timer)
-  end
-
-  defp uart_options(active \\ false), do: [active: active, speed: @speed]
-
-  defp victron_device?(state, max_attemots \\ 3)
-
-  defp victron_device?(_state, 0), do: false
-
-  # for now we do a simple test to check if the device is a victron device
-  # data should be in the format of "key\tvalue"
-  defp victron_device?(state, max_attempts) do
-    with {:ok, data} when is_binary(data) <- Circuits.UART.read(state.pid, 1000),
-         [_key, _value] <- String.split(data, "\t") do
-      true
+      {:ok, Enum.find_value(@load_output_state, fn {key, value} -> if value == look, do: key end)}
     else
-      _other -> victron_device?(state, max_attempts - 1)
+      {:error, :invalid_response}
     end
   end
 
-  defp do_handle_message(state, :hex, message) do
+  def parse_load_output_response(_message), do: {:error, :unexpected_response}
+
+  @doc """
+  Parse the `buffer` received from the device, updating `data` accordingly.
+
+  Text frames (`key\\tvalue`) update the `data` struct while hex frames are
+  collected and returned so the caller can match them to in-flight requests.
+
+  Returns `{updated_data, hex_messages, remaining_buffer}` where:
+
+    * `updated_data` - the `data` struct updated with every complete text frame.
+    * `hex_messages` - the complete hex frames encountered, in order.
+    * `remaining_buffer` - the trailing incomplete frame, to be prepended to the
+      next chunk of data.
+  """
+  @spec parse(t(), binary()) :: {t(), [binary()], binary()}
+  def parse(%__MODULE__{} = data, buffer) do
+    {data, hex, rest} = do_parse(data, [], :text, buffer)
+    {data, Enum.reverse(hex), rest}
+  end
+
+  defp do_parse(data, hex, :hex, message) do
     case String.split(message, "\n", parts: 2) do
       [message, rest] ->
         {mode, rest} =
@@ -335,22 +248,20 @@ defmodule ExNVR.Hardware.Victron do
             do: {:hex, binary_part(rest, 1, byte_size(rest) - 1)},
             else: {:text, rest}
 
-        state
-        |> parse_hex_message(message)
-        |> do_handle_message(mode, rest)
+        do_parse(data, [message | hex], mode, rest)
 
       [incomplete] ->
-        %{state | unprocessed_data: incomplete}
+        {data, hex, incomplete}
     end
   end
 
-  defp do_handle_message(%{data: %__MODULE__{} = data} = state, :text, message) do
+  defp do_parse(data, hex, :text, message) do
     case String.split(message, "\r\n", parts: 2) do
       [line, rest] ->
-        # check if there'a any hex message
-        {line, hex} =
+        # check if there's any hex message
+        {line, hex_frame} =
           case String.split(line, ":", parts: 2) do
-            [line, hex] -> {line, hex}
+            [line, hex_frame] -> {line, hex_frame}
             _ -> {line, nil}
           end
 
@@ -360,49 +271,13 @@ defmodule ExNVR.Hardware.Victron do
             _other -> data
           end
 
-        state = %{state | data: data}
-
-        if hex,
-          do: do_handle_message(state, :hex, hex <> rest),
-          else: do_handle_message(state, :text, rest)
+        if hex_frame,
+          do: do_parse(data, hex, :hex, hex_frame <> rest),
+          else: do_parse(data, hex, :text, rest)
 
       [incomplete] ->
-        %{state | unprocessed_data: incomplete}
+        {data, hex, incomplete}
     end
-  end
-
-  defp parse_hex_message(state, <<"A", _rest::binary>>) do
-    Logger.debug("[Victron] hex: ignore asynchronous message")
-    state
-  end
-
-  defp parse_hex_message(%{inflight_requests: []} = state, message) do
-    Logger.debug("Victron hex message received: #{inspect(message, limit: :infinity)}")
-    state
-  end
-
-  defp parse_hex_message(%{inflight_requests: [{_op, requester} | rest]} = state, message) do
-    Logger.debug("Received hex response: #{inspect(message, limit: :infinity)}")
-
-    case message do
-      <<_::8, "ABED", flags::binary-size(2), value::binary-size(2), _checksum::binary-size(2)>> ->
-        reply =
-          if String.to_integer(flags, 16) == 0 do
-            look = String.to_integer(value, 16)
-
-            {:ok,
-             Enum.find_value(@load_output_state, fn {key, value} -> if value == look, do: key end)}
-          else
-            {:error, :invalid_response}
-          end
-
-        GenServer.reply(requester, reply)
-
-      _ ->
-        GenServer.reply(requester, {:error, :unexpected_response})
-    end
-
-    %{state | inflight_requests: rest}
   end
 
   defp do_handle_value(data, "pid", value), do: %{data | pid: value}
@@ -436,7 +311,11 @@ defmodule ExNVR.Hardware.Victron do
   defp do_handle_value(data, "cs", value),
     do: %{data | cs: String.to_integer(value) |> operation_state()}
 
-  defp do_handle_value(data, key, value) when key in ["relay", "alarm", "load"] do
+  defp do_handle_value(data, "relay", value) do
+    %{data | relay_state: value |> String.downcase() |> String.to_existing_atom()}
+  end
+
+  defp do_handle_value(data, key, value) when key in ["alarm", "load"] do
     Map.put(data, String.to_atom(key), String.downcase(value) |> String.to_existing_atom())
   end
 
@@ -463,9 +342,9 @@ defmodule ExNVR.Hardware.Victron do
 
     @alarm_reasons
     |> Enum.reduce({[], value}, fn alarm, {alarms, value} ->
-      case Bitwise.band(value, 1) do
-        0 -> {alarms, Bitwise.bsr(value, 1)}
-        1 -> {[alarm | alarms], Bitwise.bsr(value, 1)}
+      case band(value, 1) do
+        0 -> {alarms, bsr(value, 1)}
+        1 -> {[alarm | alarms], bsr(value, 1)}
       end
     end)
     |> elem(0)
