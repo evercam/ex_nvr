@@ -8,7 +8,8 @@ defmodule ExNVR.Nerves.SystemStatus do
 
   require Logger
 
-  alias ExNVR.Nerves.{Netbird, RUT, SystemSettings}
+  alias ExNVR.Nerves.{Application, Netbird, RUT, SystemSettings}
+  alias ExNVR.Nerves.Giraffe.FanController
   alias Nerves.Runtime
 
   @runs_summary_interval to_timeout(hour: 1)
@@ -42,6 +43,7 @@ defmodule ExNVR.Nerves.SystemStatus do
     :ok = ExNVR.SystemStatus.set(:netbird, netbird())
     :ok = ExNVR.SystemStatus.set(:nerves, true)
     :ok = ExNVR.SystemStatus.set(:device_model, Runtime.KV.get("a.nerves_fw_platform"))
+    :ok = ExNVR.SystemStatus.set(:fan, fan(Application.target()))
 
     Process.send_after(self(), :collect_system_metrics, to_timeout(second: 30))
     {:noreply, state}
@@ -81,6 +83,19 @@ defmodule ExNVR.Nerves.SystemStatus do
       Logger.warning("[SystemStatus] cannot get status of netbird")
       false
   end
+
+  defp fan(:giraffe) do
+    case FanController.stats() do
+      {:ok, data} -> data
+      _error -> nil
+    end
+  catch
+    :exit, _error ->
+      Logger.warning("[SystemStatus] cannot get fan stats")
+      nil
+  end
+
+  defp fan(_target), do: nil
 
   defp rut_data do
     case RUT.system_information() do

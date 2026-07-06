@@ -179,105 +179,97 @@ defmodule ExNVRWeb.Components.Health do
 
   attr :netbird, :any, default: nil
 
-  # netbird status --json carries ~20 keys with arbitrary nesting (lists of
-  # maps for peers, events, DNS servers, etc.). Render the tree generically
-  # rather than curating an allow-list — anything new the daemon adds shows
-  # up without code changes.
+  # `netbird status --json` returns a large tree (all events, per-peer public
+  # keys, ICE candidates, DNS servers, …). For the health page we surface only
+  # a curated connection summary plus a compact per-peer list.
   def netbird_rows(%{netbird: netbird} = assigns) when is_map(netbird) do
-    assigns = assign(assigns, :entries, sorted_netbird_entries(netbird))
+    assigns =
+      assigns
+      |> assign(:summary, netbird_summary(netbird))
+      |> assign(:peers, netbird_peers(netbird))
 
     ~H"""
-    <.netbird_node
-      :for={{k, v} <- @entries}
-      label={humanize_netbird_key(k)}
-      value={v}
-    />
-    """
-  end
+    <.kv :for={{label, value} <- @summary} label={label} value={value} />
 
-  attr :label, :string, required: true
-  attr :value, :any, required: true
-
-  def netbird_node(%{value: v} = assigns) when is_map(v) and map_size(v) > 0 do
-    assigns = assign(assigns, :rows, sorted_netbird_entries(v))
-
-    ~H"""
-    <div class="py-0.5">
-      <div class="text-sm font-medium">{@label}</div>
-      <div class="ml-2 pl-2 border-l border-gray-200 dark:border-gray-700">
-        <.netbird_node
-          :for={{k, val} <- @rows}
-          label={humanize_netbird_key(k)}
-          value={val}
-        />
+    <div :if={@peers != []} class="mt-3">
+      <h4 class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">
+        Peers
+      </h4>
+      <div class="space-y-0.5">
+        <div
+          :for={peer <- @peers}
+          class="flex items-center justify-between gap-2 py-0.5 text-sm"
+          title={peer.status}
+        >
+          <span class="flex items-center gap-1.5 min-w-0">
+            <span class={["h-2 w-2 rounded-full shrink-0", netbird_peer_dot(peer.status)]}></span>
+            <span class="truncate">{peer.name}</span>
+          </span>
+          <span class="flex items-center gap-2 shrink-0 font-mono text-xs text-gray-500 dark:text-gray-400">
+            <span>{peer.type}</span>
+            <span>{peer.latency}</span>
+          </span>
+        </div>
       </div>
     </div>
     """
   end
 
-  def netbird_node(%{value: list} = assigns) when is_list(list) and list != [] do
-    if Enum.all?(list, &is_map/1) do
-      assigns = assign(assigns, :entries, Enum.with_index(list, 1))
-
-      ~H"""
-      <div class="py-0.5">
-        <div class="text-sm font-medium">{@label} ({length(@value)})</div>
-        <div class="ml-2 pl-2 border-l border-gray-200 dark:border-gray-700 space-y-1">
-          <div :for={{entry, idx} <- @entries}>
-            <div class="text-xs text-gray-400 dark:text-gray-500">#{idx}</div>
-            <.netbird_node
-              :for={{k, val} <- sorted_netbird_entries(entry)}
-              label={humanize_netbird_key(k)}
-              value={val}
-            />
-          </div>
-        </div>
-      </div>
-      """
-    else
-      assigns = assign(assigns, :value, Enum.map_join(list, ", ", &netbird_scalar/1))
-
-      ~H"""
-      <.kv label={@label} value={@value} />
-      """
-    end
-  end
-
-  def netbird_node(assigns) do
+  def netbird_rows(assigns) do
     ~H"""
-    <.kv label={@label} value={netbird_scalar(@value)} />
+    <.empty />
     """
   end
 
-  defp sorted_netbird_entries(map) when is_map(map),
-    do: Enum.sort_by(map, fn {k, _v} -> to_string(k) end)
-
-  defp netbird_scalar(nil), do: "—"
-  defp netbird_scalar(""), do: "—"
-  defp netbird_scalar(true), do: "yes"
-  defp netbird_scalar(false), do: "no"
-  defp netbird_scalar(v) when is_binary(v) or is_number(v), do: v
-  defp netbird_scalar(v) when is_atom(v), do: to_string(v)
-  defp netbird_scalar([]), do: "—"
-  defp netbird_scalar(%{} = m) when map_size(m) == 0, do: "—"
-  defp netbird_scalar(v), do: inspect(v)
-
-  # camelCase → "Camel Case", preserving all-caps runs like URL / IP / FQDN.
-  defp humanize_netbird_key(key) when is_binary(key) do
-    key
-    |> String.replace(~r/([a-z])([A-Z])/, "\\1 \\2")
-    |> String.replace(~r/([A-Z]+)([A-Z][a-z])/, "\\1 \\2")
-    |> String.split(" ", trim: true)
-    |> Enum.map_join(" ", &humanize_word/1)
+  defp netbird_summary(netbird) do
+    [
+      {"Status", netbird["daemonStatus"]},
+      {"Version", netbird["daemonVersion"]},
+      {"FQDN", netbird["fqdn"]},
+      {"NetBird IP", netbird["netbirdIp"]},
+      {"Management", netbird_connection(netbird["management"])},
+      {"Signal", netbird_connection(netbird["signal"])},
+      {"Peers", netbird_ratio(netbird["peers"])},
+      {"Relays", netbird_ratio(netbird["relays"])}
+    ]
+    |> Enum.reject(fn {_label, value} -> value in [nil, ""] end)
   end
 
-  defp humanize_netbird_key(key), do: to_string(key)
+  defp netbird_connection(%{"connected" => true}), do: "Connected"
+  defp netbird_connection(%{"connected" => false}), do: "Disconnected"
+  defp netbird_connection(_), do: nil
 
-  defp humanize_word(word) do
-    if String.length(word) > 1 and String.upcase(word) == word,
-      do: word,
-      else: String.capitalize(word)
+  defp netbird_ratio(%{"connected" => n, "total" => total}), do: "#{n}/#{total}"
+  defp netbird_ratio(%{"available" => n, "total" => total}), do: "#{n}/#{total}"
+  defp netbird_ratio(_), do: nil
+
+  defp netbird_peers(%{"peers" => %{"details" => details}}) when is_list(details) do
+    details
+    |> Enum.map(fn peer ->
+      %{
+        name: netbird_peer_name(peer["fqdn"]),
+        status: peer["status"],
+        type: peer["connectionType"],
+        latency: netbird_latency(peer["latency"])
+      }
+    end)
+    |> Enum.sort_by(& &1.name)
   end
+
+  defp netbird_peers(_), do: []
+
+  defp netbird_peer_name(fqdn) when is_binary(fqdn), do: fqdn |> String.split(".") |> hd()
+  defp netbird_peer_name(_), do: "—"
+
+  # netbird reports latency in nanoseconds; 0 means "not measured".
+  defp netbird_latency(ns) when is_number(ns) and ns > 0,
+    do: "#{:erlang.float_to_binary(ns / 1_000_000, decimals: 1)} ms"
+
+  defp netbird_latency(_), do: "—"
+
+  defp netbird_peer_dot("Connected"), do: "bg-green-500"
+  defp netbird_peer_dot("Connecting"), do: "bg-yellow-500"
+  defp netbird_peer_dot(_), do: "bg-gray-400"
 
   ## Overall health summary
 
@@ -390,6 +382,62 @@ defmodule ExNVRWeb.Components.Health do
     <.kv label="Panel V" value={mv_to_v(Map.get(@solar, :vpv))} />
     <.kv label="Panel W" value={solar_panel_power(@solar)} />
     <.kv :if={Map.get(@solar, :soc)} label="SoC" value={"#{Map.get(@solar, :soc)}%"} />
+    """
+  end
+
+  ## UPS
+
+  attr :ups, :any, required: true
+
+  def ups_section(assigns) do
+    ~H"""
+    <.ups_row label="AC power" ok={@ups[:ac_ok]} good="Online" bad="On battery" tone={:warn} />
+    <.ups_row label="Battery" ok={!@ups[:low_battery]} good="OK" bad="Low" tone={:danger} />
+    """
+  end
+
+  attr :label, :string, required: true
+  attr :ok, :boolean, required: true
+  attr :good, :string, required: true
+  attr :bad, :string, required: true
+  attr :tone, :atom, default: :danger
+
+  def ups_row(assigns) do
+    ~H"""
+    <div class="flex items-center justify-between gap-2 text-sm py-0.5">
+      <span class="text-gray-500 dark:text-gray-400">{@label}</span>
+      <span class={[
+        "inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-semibold",
+        ups_badge_class(@ok, @tone)
+      ]}>
+        <span class={["h-2 w-2 rounded-full", ups_dot_class(@ok, @tone)]}></span>
+        {if @ok, do: @good, else: @bad}
+      </span>
+    </div>
+    """
+  end
+
+  defp ups_badge_class(true, _),
+    do: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+
+  defp ups_badge_class(_, :warn),
+    do: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
+
+  defp ups_badge_class(_, _), do: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
+
+  defp ups_dot_class(true, _), do: "bg-green-500"
+  defp ups_dot_class(_, :warn), do: "bg-yellow-500"
+  defp ups_dot_class(_, _), do: "bg-red-500"
+
+  ## Fan
+
+  attr :fan, :any, required: true
+
+  def fan_section(assigns) do
+    ~H"""
+    <.kv label="Internal temp" value={format_temp(Map.get(@fan, :internal_temp))} />
+    <.kv label="External temp" value={format_temp(Map.get(@fan, :external_temp))} />
+    <.kv label="Speed" value={format_rpm(Map.get(@fan, :speed))} />
     """
   end
 
@@ -830,6 +878,12 @@ defmodule ExNVRWeb.Components.Health do
   defp ma_to_a(nil), do: "—"
   defp ma_to_a(ma) when is_number(ma), do: "#{:erlang.float_to_binary(ma / 1000, decimals: 2)} A"
   defp ma_to_a(_), do: "—"
+
+  defp format_temp(t) when is_number(t), do: "#{:erlang.float_to_binary(t / 1, decimals: 1)} °C"
+  defp format_temp(_), do: "—"
+
+  defp format_rpm(rpm) when is_number(rpm), do: "#{format_int(round(rpm))} RPM"
+  defp format_rpm(_), do: "—"
 
   defp solar_panel_power(solar) do
     case Map.get(solar, :ppv) do

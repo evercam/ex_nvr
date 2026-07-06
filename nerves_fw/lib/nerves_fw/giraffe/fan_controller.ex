@@ -11,6 +11,12 @@ defmodule ExNVR.Nerves.Giraffe.FanController do
 
   @sync_interval to_timeout(second: 30)
 
+  @type stats :: %{
+          internal_temp: number(),
+          external_temp: number() | nil,
+          speed: non_neg_integer()
+        }
+
   def start_link(options) do
     GenServer.start_link(__MODULE__, options, name: __MODULE__)
   end
@@ -24,6 +30,11 @@ defmodule ExNVR.Nerves.Giraffe.FanController do
   @spec speed() :: {:ok, non_neg_integer()} | {:error, term()}
   def speed do
     GenServer.call(__MODULE__, :speed)
+  end
+
+  @spec stats() :: {:ok, stats()} | {:error, term()}
+  def stats do
+    GenServer.call(__MODULE__, :stats)
   end
 
   @spec set_speed(0..100) :: :ok | {:error, term()}
@@ -106,6 +117,18 @@ defmodule ExNVR.Nerves.Giraffe.FanController do
   @impl true
   def handle_call(:speed, _from, state) do
     {:reply, Fan.speed(state.bus), state}
+  end
+
+  @impl true
+  def handle_call(:stats, _from, state) do
+    reply =
+      with {:ok, temperatures} <- Fan.temperatures(state.bus),
+           {:ok, speed} <- Fan.speed(state.bus) do
+        external = if state.external_sensor?, do: temperatures.external
+        {:ok, %{internal_temp: temperatures.internal, external_temp: external, speed: speed}}
+      end
+
+    {:reply, reply, state}
   end
 
   @impl true
