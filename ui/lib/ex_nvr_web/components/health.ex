@@ -385,6 +385,50 @@ defmodule ExNVRWeb.Components.Health do
     """
   end
 
+  ## UPS
+
+  attr :ups, :any, required: true
+
+  def ups_section(assigns) do
+    ~H"""
+    <.ups_row label="AC power" ok={@ups[:ac_ok]} good="Online" bad="On battery" tone={:warn} />
+    <.ups_row label="Battery" ok={!@ups[:low_battery]} good="OK" bad="Low" tone={:danger} />
+    """
+  end
+
+  attr :label, :string, required: true
+  attr :ok, :boolean, required: true
+  attr :good, :string, required: true
+  attr :bad, :string, required: true
+  attr :tone, :atom, default: :danger
+
+  def ups_row(assigns) do
+    ~H"""
+    <div class="flex items-center justify-between gap-2 text-sm py-0.5">
+      <span class="text-gray-500 dark:text-gray-400">{@label}</span>
+      <span class={[
+        "inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-semibold",
+        ups_badge_class(@ok, @tone)
+      ]}>
+        <span class={["h-2 w-2 rounded-full", ups_dot_class(@ok, @tone)]}></span>
+        {if @ok, do: @good, else: @bad}
+      </span>
+    </div>
+    """
+  end
+
+  defp ups_badge_class(true, _),
+    do: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+
+  defp ups_badge_class(_, :warn),
+    do: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
+
+  defp ups_badge_class(_, _), do: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
+
+  defp ups_dot_class(true, _), do: "bg-green-500"
+  defp ups_dot_class(_, :warn), do: "bg-yellow-500"
+  defp ups_dot_class(_, _), do: "bg-red-500"
+
   ## Fan
 
   attr :fan, :any, required: true

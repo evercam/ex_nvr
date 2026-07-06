@@ -96,11 +96,7 @@
     </.panel>
 
     <.panel :if={@status[:ups]} title="UPS">
-      <.kv
-        :for={{k, v} <- stable_rows(@status[:ups], 8)}
-        label={to_string(k)}
-        value={inspect_short(v)}
-      />
+      <.ups_section ups={@status[:ups]} />
     </.panel>
 
     <.panel :if={@status[:fan]} title="Fan">
