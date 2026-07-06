@@ -5,6 +5,10 @@ config :ex_nvr,
   admin_password: System.get_env("EXNVR_ADMIN_PASSWORD", "P@ssw0rd"),
   download_dir: System.get_env("EXNVR_DOWNLOAD_DIR")
 
+if victron_probing = System.get_env("EXNVR_VICTRON_PROBING") do
+  config :ex_nvr, victron_probing: victron_probing == "true"
+end
+
 if config_env() == :prod do
   config :ex_nvr, hls_directory: System.get_env("EXNVR_HLS_DIRECTORY", "./hls")
 

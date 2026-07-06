@@ -33,9 +33,6 @@ defmodule ExNVRWeb.DeviceRoomChannel do
     {:noreply, socket}
   end
 
-  # A misbehaving or malicious client could send a payload that is not valid
-  # JSON. Decoding defensively keeps that from crashing the channel (and forcing
-  # the whole session to re-join) over a single bad frame.
   defp forward_decoded(socket, type, payload) do
     case Jason.decode(payload) do
       {:ok, data} ->
