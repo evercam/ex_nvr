@@ -102,6 +102,10 @@
         value={inspect_short(v)}
       />
     </.panel>
+
+    <.panel :if={@status[:fan]} title="Fan">
+      <.fan_section fan={@status[:fan]} />
+    </.panel>
   </div>
 
   <div class="mt-8">
