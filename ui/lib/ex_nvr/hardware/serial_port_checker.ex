@@ -81,7 +81,7 @@ defmodule ExNVR.Hardware.SerialPortChecker do
       |> Enum.reduce(state.started, fn args, acc ->
         case DynamicSupervisor.start_child(
                ExNVR.Hardware.Supervisor,
-               {ExNVR.Hardware.Victron, args}
+               {ExNVR.Hardware.Victron.Server, args}
              ) do
           {:ok, _pid} -> MapSet.put(acc, args[:name])
           _error -> acc
