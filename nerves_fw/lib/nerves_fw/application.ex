@@ -14,7 +14,7 @@ defmodule ExNVR.Nerves.Application do
     children = [{Phoenix.PubSub, name: ExNVR.Nerves.PubSub}]
 
     children =
-      if Mix.env() != :test do
+      if Application.get_env(:ex_nvr, :env) != :test do
         children ++ [{ExNVR.Nerves.SystemSettings, []}]
       else
         children
