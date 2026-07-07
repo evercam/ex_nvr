@@ -19,11 +19,14 @@ defmodule ExNVR.Nerves.SystemSettings do
 
     import Ecto.Changeset
 
+    @power_values ~w(mains solar generator other)a
+
     @primary_key false
     @derive JSON.Encoder
     embedded_schema do
       field :kit_serial, :string
       field :configured, :boolean, default: false
+      field :power_type, Ecto.Enum, values: @power_values, default: :other
 
       embeds_one :power_schedule, PowerSchedule, primary_key: false, on_replace: :update do
         @derive JSON.Encoder
@@ -69,7 +72,7 @@ defmodule ExNVR.Nerves.SystemSettings do
 
     def changeset(settings \\ %__MODULE__{}, params) do
       settings
-      |> cast(params, [:kit_serial, :configured])
+      |> cast(params, [:kit_serial, :configured, :power_type])
       |> cast_embed(:power_schedule, with: &power_schedule_changeset/2)
       |> cast_embed(:router, with: &router_changeset/2)
       |> cast_embed(:ups, with: &ups_changeset/2)
