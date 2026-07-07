@@ -19,7 +19,7 @@ defmodule ExNVR.Nerves.RemoteConfigHandler do
     params = %{
       router: config["router"] || %{},
       power_schedule: config["power_schedule"] || %{},
-      power_type: config["power_type"] || "",
+      power_type: config["power_type"] || ""
     }
 
     case SystemSettings.update(params) do
