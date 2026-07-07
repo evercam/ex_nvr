@@ -19,11 +19,14 @@ defmodule ExNVR.Nerves.SystemSettings do
 
     import Ecto.Changeset
 
+    @power_values ~w(mains solar generator other)a
+
     @primary_key false
     @derive JSON.Encoder
     embedded_schema do
       field :kit_serial, :string
       field :configured, :boolean, default: false
+      field :power_type, Ecto.Enum, values: @power_values, default: :other
 
       embeds_one :power_schedule, PowerSchedule, primary_key: false, on_replace: :update do
         @derive JSON.Encoder
@@ -69,7 +72,7 @@ defmodule ExNVR.Nerves.SystemSettings do
 
     def changeset(settings \\ %__MODULE__{}, params) do
       settings
-      |> cast(params, [:kit_serial, :configured])
+      |> cast(params, [:kit_serial, :configured, :power_type])
       |> cast_embed(:power_schedule, with: &power_schedule_changeset/2)
       |> cast_embed(:router, with: &router_changeset/2)
       |> cast_embed(:ups, with: &ups_changeset/2)
@@ -163,8 +166,8 @@ defmodule ExNVR.Nerves.SystemSettings do
   end
 
   @impl true
-  def init(_opts) do
-    path = settings_path()
+  def init(opts) do
+    path = settings_path(opts[:path])
 
     settings =
       with {:ok, json_data} <- File.read(path),
@@ -231,8 +234,8 @@ defmodule ExNVR.Nerves.SystemSettings do
     end
   end
 
-  defp settings_path do
-    Application.get_env(:ex_nvr_fw, :system_settings_path, @default_path)
+  defp settings_path(path) do
+    Application.get_env(:ex_nvr_fw, :system_settings_path, path || @default_path)
   end
 
   defp put_default_values(settings) do

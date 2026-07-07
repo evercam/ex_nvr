@@ -15,29 +15,33 @@ defmodule ExNVR.Nerves.Giraffe.Init do
   alias ExNVR.Nerves.GPIO
   alias ExNVR.Nerves.{SystemSettings, SystemStatus}
 
+  @ups_config %{
+    enabled: true,
+    ac_pin: "GPIO4",
+    battery_pin: "GPIO8",
+    ac_pin_default: 1,
+    battery_pin_default: 1,
+    trigger_after: 0,
+    low_battery_action: :power_off,
+    ac_failure_action: :nothing
+  }
+
   def start_link(_opts) do
     GenServer.start_link(__MODULE__, nil)
   end
 
+  @doc """
+  Enable UPS monitoring when the power type is `:mains`, disable it otherwise.
+  """
+  @spec set_ups(atom()) :: :ok | :error
+  def set_ups(:mains), do: update_ups(@ups_config)
+  def set_ups(_power_type), do: update_ups(%{enabled: false})
+
   @impl true
   def init(_options) do
-    res =
-      SystemSettings.update(%{
-        ups: %{
-          enabled: true,
-          ac_pin: "GPIO4",
-          battery_pin: "GPIO8",
-          ac_pin_default: 1,
-          battery_pin_default: 1,
-          trigger_after: 0,
-          low_battery_action: :power_off,
-          ac_failure_action: :nothing
-        }
-      })
-
-    with {:error, _} <- res do
-      Logger.error("[Init] failed to update ups settings")
-    end
+    SystemSettings.get_settings()
+    |> Map.fetch!(:power_type)
+    |> set_ups()
 
     {:ok, nil, {:continue, :init}}
   end
@@ -66,4 +70,15 @@ defmodule ExNVR.Nerves.Giraffe.Init do
 
   defp generator_state(0), do: :on
   defp generator_state(_), do: :off
+
+  defp update_ups(params) do
+    case SystemSettings.update(%{ups: params}) do
+      {:ok, _settings} ->
+        :ok
+
+      {:error, _reason} ->
+        Logger.error("[Init] failed to update ups settings")
+        :error
+    end
+  end
 end

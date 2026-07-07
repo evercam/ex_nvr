@@ -3,30 +3,40 @@ defmodule ExNVR.Nerves.RemoteConfigHandler do
 
   require Logger
 
-  alias ExNVR.Model
-  alias ExNVR.Nerves.{RUT, SystemSettings}
+  alias ExNVR.{Hardware, Model}
+  alias ExNVR.Nerves.{Application, RUT, SystemSettings}
+  alias ExNVR.Nerves.Giraffe.Init
 
   def handle_message("config", config) do
     Logger.info("[RemoteConfigHandler] handle new incoming config event")
-
     settings = SystemSettings.get_settings()
+    do_handle_message(settings.configured, settings, config)
+  end
 
-    # ignore if the kit is not yet configured
-    if settings.configured do
-      with {:ok, _new_settings} <- SystemSettings.update_router_settings(config["router"] || %{}),
-           {:ok, new_settings} <-
-             SystemSettings.update_power_schedule_settings(config["power_schedule"] || %{}) do
-        # credo:disable-for-next-line Credo.Check.Refactor.Nesting
+  defp do_handle_message(false, _settings, _config), do: :ok
+
+  defp do_handle_message(_configured, settings, config) do
+    params = %{
+      router: config["router"] || %{},
+      power_schedule: config["power_schedule"] || %{},
+      power_type: config["power_type"]
+    }
+
+    case SystemSettings.update(params) do
+      {:ok, new_settings} ->
         if power_schedule_updated?(settings.power_schedule, new_settings.power_schedule) do
           Logger.info("[RemoteConfigHandler] Updating router schedule")
           update_router_schedule(new_settings.power_schedule.schedule)
         end
-      else
-        {:error, reason} ->
-          Logger.error(
-            "[RemoteConfigHandler] Failed to update router or power schedule settings: #{inspect(reason)}"
-          )
-      end
+
+        if settings.power_type != new_settings.power_type do
+          handle_power_type_update(new_settings.power_type)
+        end
+
+      {:error, reason} ->
+        Logger.error(
+          "[RemoteConfigHandler] Failed to update router or power schedule settings: #{inspect(reason)}"
+        )
     end
   end
 
@@ -58,5 +68,17 @@ defmodule ExNVR.Nerves.RemoteConfigHandler do
 
       {day, intervals}
     end)
+  end
+
+  defp handle_power_type_update(power_type) do
+    # Enable/disable victron data gathering
+    if power_type in [:solar, :generator],
+      do: Hardware.SerialPortChecker.enable(),
+      else: Hardware.SerialPortChecker.disable()
+
+    # Enable/disable ups for giraffe
+    if Application.target() == :giraffe do
+      Init.set_ups(power_type)
+    end
   end
 end
