@@ -26,16 +26,15 @@ defmodule ExNVR.SystemSettingsTest do
   }
 
   setup %{tmp_dir: tmp_dir} do
-    Application.put_env(:ex_nvr_fw, :system_settings_path, Path.join(tmp_dir, "settings.json"))
+    start_supervised!({SystemSettings, [path: Path.join(tmp_dir, "settings.json")]})
+    :ok
   end
 
   test "system settings" do
-    assert pid = start_link_supervised!({SystemSettings, [name: SystemSettingsTest]})
-
-    assert SystemSettings.get_settings(pid) == @default_settings
+    assert SystemSettings.get_settings == @default_settings
 
     assert {:ok, settings} =
-             SystemSettings.update_router_settings(pid, %{
+             SystemSettings.update_router_settings(%{
                "username" => "user",
                "password" => "pass"
              })
@@ -46,7 +45,7 @@ defmodule ExNVR.SystemSettingsTest do
            }
 
     assert {:ok, settings} =
-             SystemSettings.update_power_schedule_settings(pid, %{
+             SystemSettings.update_power_schedule_settings(%{
                schedule: %{"1" => ["10:00-15:00"]},
                action: "nothing"
              })
@@ -62,7 +61,7 @@ defmodule ExNVR.SystemSettingsTest do
            }
 
     assert {:ok, settings} =
-             SystemSettings.update_power_schedule_settings(pid, %{timezone: "Africa/Algiers"})
+             SystemSettings.update_power_schedule_settings(%{timezone: "Africa/Algiers"})
 
     assert settings.power_schedule ==
              %SystemSettings.State.PowerSchedule{
@@ -72,24 +71,22 @@ defmodule ExNVR.SystemSettingsTest do
              }
 
     assert {:ok, settings} =
-             SystemSettings.update(pid, %{"kit_serial" => "my_kit", "configured" => "true"})
+             SystemSettings.update(%{"kit_serial" => "my_kit", "configured" => "true"})
 
     assert settings.kit_serial == "my_kit"
     assert settings.configured
   end
 
   test "ignore wrong settings" do
-    assert pid = start_link_supervised!({SystemSettings, [name: SystemStatusTest]})
-
-    assert SystemSettings.get_settings(pid) == @default_settings
+    assert SystemSettings.get_settings == @default_settings
 
     assert {:error, _changeset} =
-             SystemSettings.update_router_settings(pid, %{
+             SystemSettings.update_router_settings(%{
                "username" => 15,
                "passwor" => "pass"
              })
 
-    assert SystemSettings.get_settings(pid).router == %SystemSettings.State.Router{
+    assert SystemSettings.get_settings().router == %SystemSettings.State.Router{
              username: nil,
              password: nil
            }

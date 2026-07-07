@@ -18,13 +18,8 @@ defmodule ExNVR.Nerves.Monitoring.UPSTest do
   end
 
   setup %{tmp_dir: tmp_dir} do
-    Application.put_env(:ex_nvr_fw, :system_settings_path, Path.join(tmp_dir, "settings.json"))
-    # make system settings process pick the path
-    # in the config above
-    Process.exit(Process.whereis(SystemSettings), :kill)
-
+    start_supervised!({SystemSettings, [path: Path.join(tmp_dir, "settings.json")]})
     expect(ExNVR.Nerves.DiskMounter, :mount, 3, fn -> :ok end)
-
     :ok
   end
 

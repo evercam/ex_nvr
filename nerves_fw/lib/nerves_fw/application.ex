@@ -11,12 +11,18 @@ defmodule ExNVR.Nerves.Application do
   def start(_type, _args) do
     opts = [strategy: :one_for_one, name: ExNVR.Nerves.Supervisor]
 
+    children = [{Phoenix.PubSub, name: ExNVR.Nerves.PubSub}]
+
     children =
-      [{Phoenix.PubSub, name: ExNVR.Nerves.PubSub}, {ExNVR.Nerves.SystemSettings, []}] ++
-        children(target())
+      if Mix.env() != :test do
+        children ++ [{ExNVR.Nerves.SystemSettings, []}]
+      else
+        children
+      end
+
+    children = children ++ children(target())
 
     ExNVR.Release.migrate()
-
     Supervisor.start_link(children, opts)
   end
 
