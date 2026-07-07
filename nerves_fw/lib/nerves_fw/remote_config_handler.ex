@@ -4,8 +4,8 @@ defmodule ExNVR.Nerves.RemoteConfigHandler do
   require Logger
 
   alias ExNVR.{Hardware, Model}
-  alias ExNVR.Nerves.Giraffe.Init
   alias ExNVR.Nerves.{Application, RUT, SystemSettings}
+  alias ExNVR.Nerves.Giraffe.Init
 
   def handle_message("config", config) do
     Logger.info("[RemoteConfigHandler] handle new incoming config event")

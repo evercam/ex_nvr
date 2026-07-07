@@ -31,7 +31,7 @@ defmodule ExNVR.SystemSettingsTest do
   end
 
   test "system settings" do
-    assert SystemSettings.get_settings == @default_settings
+    assert SystemSettings.get_settings() == @default_settings
 
     assert {:ok, settings} =
              SystemSettings.update_router_settings(%{
@@ -78,7 +78,7 @@ defmodule ExNVR.SystemSettingsTest do
   end
 
   test "ignore wrong settings" do
-    assert SystemSettings.get_settings == @default_settings
+    assert SystemSettings.get_settings() == @default_settings
 
     assert {:error, _changeset} =
              SystemSettings.update_router_settings(%{
