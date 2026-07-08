@@ -34,7 +34,7 @@ defmodule ExNVRWeb.Components.Sidebar do
 
         <ul class="pt-4 mt-4 space-y-2 font-medium border-t border-gray-700 dark:border-gray-700">
           <li class="font-medium text-center text-white dark:text-white">
-            Version {Application.spec(:ex_nvr, :vsn)}
+            <.version />
           </li>
         </ul>
       </div>
@@ -193,6 +193,12 @@ defmodule ExNVRWeb.Components.Sidebar do
         ]
       ]
     end
+
+    defp version(assigns) do
+      ~H"""
+      Nerves {Application.spec(:ex_nvr_fw, :vsn)}
+      """
+    end
   else
     defp groups do
       [
@@ -249,6 +255,12 @@ defmodule ExNVRWeb.Components.Sidebar do
           }
         ]
       ]
+    end
+
+    defp version(assigns) do
+      ~H"""
+      Version {Application.spec(:ex_nvr, :vsn)}
+      """
     end
   end
 
