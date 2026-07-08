@@ -150,6 +150,9 @@ defmodule ExNVR.Nerves.Monitoring.UPS do
 
   defp maybe_enable_ups(state) do
     cond do
+      Application.target() == :giraffe ->
+        state
+
       state.config.enabled ->
         state
 
