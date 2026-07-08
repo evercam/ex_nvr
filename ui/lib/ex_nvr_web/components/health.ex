@@ -898,6 +898,12 @@ defmodule ExNVRWeb.Components.Health do
   Sort the keys so the renderer is deterministic — atom map iteration order
   is unspecified, and we don't want panel content shuffling on every update.
   """
+  def stable_rows(map, limit) when is_struct(map) do
+    map
+    |> Map.from_struct()
+    |> stable_rows(limit)
+  end
+
   def stable_rows(map, limit) when is_map(map) do
     map
     |> Enum.sort_by(fn {k, _v} -> to_string(k) end)
