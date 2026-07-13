@@ -8,6 +8,7 @@ defmodule ExNVR.Nerves.Giraffe.FanController do
   require Logger
 
   alias ExNVR.Nerves.Giraffe.Fan
+  alias ExNVR.Nerves.RUT
 
   @sync_interval to_timeout(second: 30)
 
@@ -93,7 +94,13 @@ defmodule ExNVR.Nerves.Giraffe.FanController do
   @impl true
   def handle_continue(:sync_forced_temp, state) do
     with {:ok, temp} <- Fan.internal_temperature(state.bus),
-         :ok <- Fan.set_forced_external_temp(state.bus, temp) do
+         router_temp <- get_router_temp(),
+         final_temp <- if(router_temp > 0, do: trunc((temp + router_temp) / 2), else: temp),
+         :ok <- Fan.set_forced_external_temp(state.bus, final_temp) do
+      Logger.info(
+        "[FanController] syncing forced temperature: internal=#{temp}, router=#{router_temp}, final=#{final_temp}"
+      )
+
       :ok
     else
       {:error, reason} ->
@@ -139,5 +146,14 @@ defmodule ExNVR.Nerves.Giraffe.FanController do
   @impl true
   def handle_call({:set_lookup_table, table}, _from, state) do
     {:reply, Fan.set_lookup_table(state.bus, table), state}
+  end
+
+  defp get_router_temp do
+    case RUT.modems_status() do
+      {:ok, [%{temperature: temp} | _]} when is_number(temp) -> temp
+      _ -> 0
+    end
+  catch
+    _error, _reason -> 0
   end
 end
