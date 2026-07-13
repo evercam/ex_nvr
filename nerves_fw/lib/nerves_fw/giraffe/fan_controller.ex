@@ -148,7 +148,7 @@ defmodule ExNVR.Nerves.Giraffe.FanController do
     {:reply, Fan.set_lookup_table(state.bus, table), state}
   end
 
-  defp get_router_temp() do
+  defp get_router_temp do
     case RUT.modems_status() do
       {:ok, [%{temperature: temp} | _]} when is_number(temp) -> temp
       _ -> 0
