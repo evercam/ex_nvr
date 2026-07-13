@@ -3,7 +3,7 @@ defmodule ExNVR.Nerves.RUT do
   Teltonika router API client.
   """
 
-  alias __MODULE__.{Auth, Scheduler, SystemInformation}
+  alias __MODULE__.{Auth, ModemStatus, Scheduler, SystemInformation}
 
   def system_information do
     do_request(nil, "/system/device/status", fn data ->
@@ -14,6 +14,12 @@ defmodule ExNVR.Nerves.RUT do
         model: data["static"]["model"],
         fw_version: data["static"]["fw_version"]
       }
+    end)
+  end
+
+  def modems_status do
+    do_request(nil, "/modems/status", fn entries ->
+      Enum.map(entries, &ModemStatus.from_response/1)
     end)
   end
 

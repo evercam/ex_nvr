@@ -36,10 +36,10 @@ defmodule ExNVR.Nerves.Giraffe.Fan do
   @default_lookup_table [
     {30, 20},
     {40, 30},
-    {50, 45},
-    {60, 65},
-    {70, 85},
-    {80, 100}
+    {45, 45},
+    {50, 65},
+    {60, 85},
+    {70, 100}
   ]
 
   @type bus :: I2C.bus()
