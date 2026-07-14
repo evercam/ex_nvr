@@ -10,7 +10,7 @@ defmodule ExNVR.Model.Device do
   alias ExNVR.Model.Schedule
 
   @states [:stopped, :streaming, :recording, :failed]
-  @camera_vendors ["HIKVISION", "Milesight Technology Co.,Ltd.", "AXIS"]
+  @camera_vendors ["HIKVISION", "Milesight Technology Co.,Ltd.", "EVERCAM LTD", "AXIS"]
 
   @type state :: :stopped | :recording | :streaming | :failed
   @type id :: binary()
@@ -201,6 +201,7 @@ defmodule ExNVR.Model.Device do
     case vendor do
       "HIKVISION" -> :hik
       "Milesight Technology Co.,Ltd." -> :milesight
+      "Evercam LTD" -> :milesight
       "AXIS" -> :axis
       _other -> :unknown
     end
