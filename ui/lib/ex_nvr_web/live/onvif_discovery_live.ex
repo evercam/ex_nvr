@@ -563,35 +563,15 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
 
   defp get_ntp(camera_details), do: camera_details
 
-  defp get_stream_profiles(
-         %{device: %{manufacturer: "Milesight Technology Co.,Ltd."}} = camera_details
-       ) do
-    device = camera_details.device
-    opts = [username: device.username, password: device.password]
-
-    case Milesight.stream_profiles(device.address, opts) do
-      {:ok, profiles} ->
-        profiles = Enum.take(profiles, 3)
-
-        # Enable all profiles
-        profiles
-        |> Enum.reject(& &1.enabled)
-        |> Enum.each(&Milesight.set_stream_profile(device.address, %{&1 | enabled: true}, opts))
-
-        get_stream_uris(%{camera_details | stream_profiles: profiles})
-
-      {:error, reason} ->
-        Logger.error("Failed to get stream profiles for camera #{inspect(reason)}")
-        camera_details
-    end
-  end
-
   defp get_stream_profiles(%{device: %{media_ver20_service_path: nil}} = camera_details) do
     Logger.warning("[OnvifDiscovery] camera does not support onvif media version 2")
     camera_details
   end
 
   defp get_stream_profiles(camera_details) do
+    if milesight?(camera_details.device.manufacturer),
+      do: enable_milesight_profiles(camera_details.device)
+
     case ExOnvif.Media2.get_profiles(camera_details.device) do
       {:ok, profiles} ->
         profiles =
@@ -606,6 +586,26 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
       {:error, reason} ->
         Logger.error("Failed to get stream profiles for camera #{inspect(reason)}")
         camera_details
+    end
+  end
+
+  @spec milesight?(String.t()) :: boolean()
+  defp milesight?(manufacturer) do
+    manufacturer == "Milesight Technology Co.,Ltd." or manufacturer == "EVERCAM LTD"
+  end
+
+  defp enable_milesight_profiles(device) do
+    opts = [username: device.username, password: device.password]
+
+    case Milesight.stream_profiles(device.address, opts) do
+      {:ok, profiles} ->
+        profiles
+        |> Enum.take(3)
+        |> Enum.reject(& &1.enabled)
+        |> Enum.each(&Milesight.set_stream_profile(device.address, %{&1 | enabled: true}, opts))
+
+      {:error, reason} ->
+        Logger.error("Failed to get stream profiles for camera #{inspect(reason)}")
     end
   end
 
