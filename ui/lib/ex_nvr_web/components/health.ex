@@ -44,8 +44,7 @@ defmodule ExNVRWeb.Components.Health do
   def not_connected(assigns) do
     ~H"""
     <div class="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-      <span class="h-2 w-2 rounded-full bg-gray-400 dark:bg-gray-500 shrink-0"></span>
-      Not connected
+      <span class="h-2 w-2 rounded-full bg-gray-400 dark:bg-gray-500 shrink-0"></span> Not connected
     </div>
     """
   end
