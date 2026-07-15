@@ -25,9 +25,9 @@
     </div>
   </div>
 
-  <.health_summary results={@health} />
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+    <.health_summary results={@health} />
 
-  <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 mt-4">
     <.panel title="Device">
       <.kv label="Hostname" value={@status[:hostname]} />
       <.kv label="Version" value={@status[:version]} />
@@ -35,7 +35,21 @@
       <.kv label="Serial" value={@status[:serial_number]} />
       <.kv :if={@status[:nerves]} label="Platform" value="Nerves" />
     </.panel>
+  </div>
 
+  <div class="mt-8">
+    <div class="flex items-center justify-between mb-3">
+      <h2 class="text-xl font-semibold">Cameras</h2>
+      <span class="text-xs text-gray-500 dark:text-gray-400">
+        {length(@status[:devices] || [])} device{if length(@status[:devices] || []) == 1,
+          do: "",
+          else: "s"}
+      </span>
+    </div>
+    <.camera_grid devices={@status[:devices] || []} history={@pipeline_history} />
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 mt-4">
     <.panel title="CPU">
       <h3 class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2">
         Per-core usage
@@ -63,7 +77,7 @@
       </div>
     </.panel>
 
-    <.panel :if={@status[:solar_charger]} title="Solar Charger">
+    <.panel title="Solar Charger">
       <.solar_section solar={@status[:solar_charger]} />
       <div class="mt-3 space-y-1.5">
         <.sparkline
@@ -95,24 +109,12 @@
       <.network_section router={@status[:router]} netbird={@status[:netbird]} />
     </.panel>
 
-    <.panel :if={@status[:ups]} title="UPS">
+    <.panel title="UPS">
       <.ups_section ups={@status[:ups]} />
     </.panel>
 
-    <.panel :if={@status[:fan]} title="Fan">
+    <.panel title="Fan">
       <.fan_section fan={@status[:fan]} />
     </.panel>
-  </div>
-
-  <div class="mt-8">
-    <div class="flex items-center justify-between mb-3">
-      <h2 class="text-xl font-semibold">Cameras</h2>
-      <span class="text-xs text-gray-500 dark:text-gray-400">
-        {length(@status[:devices] || [])} device{if length(@status[:devices] || []) == 1,
-          do: "",
-          else: "s"}
-      </span>
-    </div>
-    <.camera_grid devices={@status[:devices] || []} history={@pipeline_history} />
   </div>
 </div>
