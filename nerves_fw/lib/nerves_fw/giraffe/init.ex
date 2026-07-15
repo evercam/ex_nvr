@@ -36,7 +36,7 @@ defmodule ExNVR.Nerves.Giraffe.Init do
   """
   @spec set_ups(atom()) :: :ok | :error
   def set_ups(:mains), do: update_ups(@ups_config)
-  def set_ups(_power_type), do: update_ups(%{enabled: false})
+  def set_ups(_power_type), do: update_ups(%{@ups_config | enabled: false})
 
   @impl true
   def init(_options) do
