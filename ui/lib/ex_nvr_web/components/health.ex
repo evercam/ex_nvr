@@ -41,6 +41,14 @@ defmodule ExNVRWeb.Components.Health do
     """
   end
 
+  def not_connected(assigns) do
+    ~H"""
+    <div class="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+      <span class="h-2 w-2 rounded-full bg-gray-400 dark:bg-gray-500 shrink-0"></span> Not connected
+    </div>
+    """
+  end
+
   ## CPU
 
   attr :usage, :list, default: []
@@ -372,6 +380,12 @@ defmodule ExNVRWeb.Components.Health do
 
   attr :solar, :any, required: true
 
+  def solar_section(%{solar: nil} = assigns) do
+    ~H"""
+    <.not_connected />
+    """
+  end
+
   def solar_section(assigns) do
     ~H"""
     <.kv label="Vendor" value={Map.get(@solar, :pid) || "—"} />
@@ -388,6 +402,12 @@ defmodule ExNVRWeb.Components.Health do
   ## UPS
 
   attr :ups, :any, required: true
+
+  def ups_section(%{ups: nil} = assigns) do
+    ~H"""
+    <.not_connected />
+    """
+  end
 
   def ups_section(assigns) do
     ~H"""
@@ -433,6 +453,12 @@ defmodule ExNVRWeb.Components.Health do
 
   attr :fan, :any, required: true
 
+  def fan_section(%{fan: nil} = assigns) do
+    ~H"""
+    <.not_connected />
+    """
+  end
+
   def fan_section(assigns) do
     ~H"""
     <.kv label="Internal temp" value={format_temp(Map.get(@fan, :internal_temp))} />
@@ -456,7 +482,7 @@ defmodule ExNVRWeb.Components.Health do
 
   def camera_grid(assigns) do
     ~H"""
-    <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+    <div class="flex flex-wrap justify-center gap-4">
       <.camera_card
         :for={device <- @devices}
         device={device}
@@ -486,11 +512,11 @@ defmodule ExNVRWeb.Components.Health do
       |> assign(:name, assigns.device[:name])
       |> assign(:type, assigns.device[:type])
       |> assign(:streaming?, streaming?)
-      |> assign(:stream_url, "/api/devices/#{device_id}/hls/index.m3u8?stream=high")
+      |> assign(:stream_url, "/api/devices/#{device_id}/hls/index.m3u8?stream=low")
       |> assign(:dom_id, "camera-preview-#{device_id}")
 
     ~H"""
-    <section class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+    <section class="grow basis-[30rem] max-w-4xl bg-white dark:bg-gray-800 shadow-sm rounded-lg p-4 border border-gray-200 dark:border-gray-700">
       <header class="flex items-start justify-between mb-3">
         <div>
           <h3 class="text-lg font-medium truncate">{@name}</h3>
@@ -501,7 +527,7 @@ defmodule ExNVRWeb.Components.Health do
         <.recording_badge state={@state} />
       </header>
 
-      <div class="aspect-video bg-gray-100 dark:bg-gray-900 rounded mb-3 overflow-hidden flex items-center justify-center">
+      <div class="group relative aspect-video bg-gray-100 dark:bg-gray-900 rounded mb-3 overflow-hidden flex items-center justify-center">
         <video
           :if={@streaming?}
           id={@dom_id}
@@ -513,6 +539,29 @@ defmodule ExNVRWeb.Components.Health do
           playsinline
           class="w-full h-full object-contain"
         />
+        <button
+          :if={@streaming?}
+          type="button"
+          data-fullscreen-btn
+          aria-label="Toggle fullscreen"
+          title="Fullscreen"
+          class="absolute bottom-2 right-2 z-10 p-1.5 rounded-md bg-black/50 text-white opacity-100"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="w-4 h-4"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M4 8V4h4M16 4h4v4M20 16v4h-4M8 20H4v-4"
+            />
+          </svg>
+        </button>
         <p :if={not @streaming?} class="text-xs text-gray-500 dark:text-gray-400">
           {preview_placeholder(@state)}
         </p>

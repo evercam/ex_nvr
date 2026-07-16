@@ -80,6 +80,7 @@ let Hooks = {
     CameraPreview: {
         mounted() {
             this.attach()
+            this.setupFullscreen()
         },
         updated() {
             const url = this.el.dataset.streamUrl
@@ -90,6 +91,27 @@ let Hooks = {
                 this._hls.destroy()
                 this._hls = null
             }
+            if (this._fsBtn && this._fsHandler) {
+                this._fsBtn.removeEventListener("click", this._fsHandler)
+                this._fsBtn = null
+                this._fsHandler = null
+            }
+        },
+        setupFullscreen() {
+            const container = this.el.parentElement
+            if (!container) return
+            const btn = container.querySelector("[data-fullscreen-btn]")
+            if (!btn) return
+            this._fsHandler = (event) => {
+                event.preventDefault()
+                if (document.fullscreenElement) {
+                    document.exitFullscreen()
+                } else if (container.requestFullscreen) {
+                    container.requestFullscreen()
+                }
+            }
+            btn.addEventListener("click", this._fsHandler)
+            this._fsBtn = btn
         },
         attach() {
             const url = this.el.dataset.streamUrl
