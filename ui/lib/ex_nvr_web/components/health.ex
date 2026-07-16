@@ -512,7 +512,7 @@ defmodule ExNVRWeb.Components.Health do
       |> assign(:name, assigns.device[:name])
       |> assign(:type, assigns.device[:type])
       |> assign(:streaming?, streaming?)
-      |> assign(:stream_url, "/api/devices/#{device_id}/hls/index.m3u8?stream=high")
+      |> assign(:stream_url, "/api/devices/#{device_id}/hls/index.m3u8?stream=low")
       |> assign(:dom_id, "camera-preview-#{device_id}")
 
     ~H"""
