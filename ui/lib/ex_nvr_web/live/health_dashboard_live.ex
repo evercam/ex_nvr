@@ -161,6 +161,10 @@ defmodule ExNVRWeb.HealthDashboardLive do
     }
   end
 
+  # Show the Solar Charger panel only when its health check is active
+  # (HealthReport drops it when Victron probing is off).
+  def solar_enabled?(health), do: Enum.any?(health, &(&1.name == :solar_charger))
+
   defp series(metric_name, tags \\ %{}) do
     Mobius.Exports.series(metric_name, :last_value, tags, last: @history_window)
   rescue

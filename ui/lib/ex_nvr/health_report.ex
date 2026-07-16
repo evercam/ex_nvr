@@ -18,6 +18,10 @@ defmodule ExNVR.HealthReport do
   `[]` and the dashboard hides the panel. Pass `:checks` explicitly to
   override (used by tests).
 
+  An optional `:available?` guard (zero-arity fun or `{module, function,
+  args}`) drops the check from the report when it returns falsy — e.g. the
+  solar charger check when Victron probing is off.
+
   ## Kinds
 
     * `:devices_recording` — every configured device is in `:recording`
@@ -70,9 +74,12 @@ defmodule ExNVR.HealthReport do
   """
   @spec report(keyword()) :: [result()]
   def report(opts \\ []) do
-    checks = Keyword.get(opts, :checks, checks())
     ctx = build_context(opts)
-    Enum.map(checks, &evaluate(&1, ctx))
+
+    opts
+    |> Keyword.get(:checks, checks())
+    |> Enum.filter(&available?/1)
+    |> Enum.map(&evaluate(&1, ctx))
   end
 
   @doc """
@@ -95,6 +102,16 @@ defmodule ExNVR.HealthReport do
   """
   @spec checks() :: [check()]
   def checks, do: Application.get_env(:ex_nvr, :health_checks, [])
+
+  ## Optional `:available?` guard (0-arity fun or `{m, f, a}`) — check is
+  ## dropped when it returns falsy, kept when absent or raising.
+  defp available?(check) do
+    case Map.get(check, :available?) do
+      nil -> true
+      {mod, fun, args} -> safe(fn -> !!apply(mod, fun, args) end, true)
+      fun when is_function(fun, 0) -> safe(fn -> !!fun.() end, true)
+    end
+  end
 
   ## Context — explicit injections, no eager defaults so tests can ignore
   ## the sources irrelevant to the kinds they exercise.

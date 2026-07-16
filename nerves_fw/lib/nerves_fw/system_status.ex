@@ -8,7 +8,8 @@ defmodule ExNVR.Nerves.SystemStatus do
 
   require Logger
 
-  alias ExNVR.Nerves.{Application, Netbird, RUT, SystemSettings}
+  alias ExNVR.Nerves
+  alias ExNVR.Nerves.{Netbird, RUT, SystemSettings}
   alias ExNVR.Nerves.Giraffe.FanController
   alias Nerves.Runtime
 
@@ -38,12 +39,14 @@ defmodule ExNVR.Nerves.SystemStatus do
 
   @impl true
   def handle_info(:collect_system_metrics, state) do
+    :ok = ExNVR.SystemStatus.set(:version, Application.spec(:ex_nvr_fw, :vsn) |> to_string())
     :ok = ExNVR.SystemStatus.set(:hostname, hostname())
     :ok = ExNVR.SystemStatus.set(:router, rut_data())
     :ok = ExNVR.SystemStatus.set(:netbird, netbird())
     :ok = ExNVR.SystemStatus.set(:nerves, true)
     :ok = ExNVR.SystemStatus.set(:device_model, Runtime.KV.get("a.nerves_fw_platform"))
-    :ok = ExNVR.SystemStatus.set(:fan, fan(Application.target()))
+    :ok = ExNVR.SystemStatus.set(:power_type, SystemSettings.get_settings().power_type)
+    :ok = ExNVR.SystemStatus.set(:fan, fan(Nerves.Application.target()))
 
     Process.send_after(self(), :collect_system_metrics, to_timeout(second: 30))
     {:noreply, state}
