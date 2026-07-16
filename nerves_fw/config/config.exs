@@ -17,9 +17,9 @@ config :ex_nvr,
   hls_directory: Path.expand("../../ui/data/hls", Path.dirname(__ENV__.file)),
   run_pipelines: true
 
-# Health checks for Evercam firmware: the shared baseline (cameras, CPU,
-# memory) plus netbird and battery_monitor presence, both populated by
-# nerves_fw/lib/nerves_fw/system_status.ex via SystemStatus.set/3.
+# Health checks for Evercam firmware: shared baseline plus netbird and
+# solar_charger. The solar_charger `:available?` guard hides it (and the
+# dashboard panel) when SerialPortChecker probing is off.
 config :ex_nvr, :health_checks, [
   %{
     name: :cameras,
@@ -51,10 +51,11 @@ config :ex_nvr, :health_checks, [
     expected: "Connected"
   },
   %{
-    name: :battery_monitor,
-    label: "Battery monitor reachable",
+    name: :solar_charger,
+    label: "MPPT data available",
     kind: :state_field_present,
-    field: :battery_monitor
+    field: :solar_charger,
+    available?: {ExNVR.Hardware.SerialPortChecker, :enabled?, []}
   }
 ]
 

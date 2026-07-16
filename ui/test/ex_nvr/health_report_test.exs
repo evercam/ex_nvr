@@ -68,6 +68,45 @@ defmodule ExNVR.HealthReportTest do
     end
   end
 
+  describe ":available? guard" do
+    @check %{
+      name: :solar_charger,
+      label: "MPPT data available",
+      kind: :state_field_present,
+      field: :solar_charger
+    }
+
+    test "kept when the guard fun returns true" do
+      check = Map.put(@check, :available?, fn -> true end)
+
+      assert [%{name: :solar_charger, status: :ok}] =
+               HealthReport.report(checks: [check], state: %{solar_charger: %{v: 25_000}})
+    end
+
+    test "dropped when the guard fun returns false" do
+      check = Map.put(@check, :available?, fn -> false end)
+
+      assert HealthReport.report(checks: [check], state: %{solar_charger: %{v: 25_000}}) == []
+    end
+
+    test "supports an {module, function, args} guard" do
+      dropped = Map.put(@check, :available?, {Function, :identity, [false]})
+      kept = Map.put(@check, :available?, {Function, :identity, [true]})
+
+      assert HealthReport.report(checks: [dropped], state: %{solar_charger: %{}}) == []
+
+      assert [%{name: :solar_charger}] =
+               HealthReport.report(checks: [kept], state: %{solar_charger: %{}})
+    end
+
+    test "kept when the guard raises" do
+      check = Map.put(@check, :available?, fn -> raise "boom" end)
+
+      assert [%{name: :solar_charger}] =
+               HealthReport.report(checks: [check], state: %{solar_charger: %{}})
+    end
+  end
+
   describe ":state_field with a path" do
     @check %{
       name: :netbird,
