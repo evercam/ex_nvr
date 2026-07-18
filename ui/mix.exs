@@ -52,7 +52,7 @@ defmodule ExNVR.MixProject do
       {:membrane_h265_format, "~> 0.2"},
       {:membrane_raw_video_format, "~> 0.4.0", override: true},
       {:membrane_file_plugin, "~> 0.17.0"},
-      {:membrane_realtimer_plugin, "~> 0.10.0"},
+      {:membrane_realtimer_plugin, "~> 0.11.1"},
       {:ex_webrtc, "~> 0.14.0"},
       {:ex_m3u8, "~> 0.15.0"},
       {:connection, "~> 1.1.0"},
