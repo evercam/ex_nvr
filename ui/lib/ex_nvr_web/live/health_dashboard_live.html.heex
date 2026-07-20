@@ -34,7 +34,11 @@
       <.kv label="Model" value={@status[:device_model]} />
       <.kv label="Serial" value={@status[:serial_number]} />
       <.kv :if={@status[:nerves]} label="Platform" value="Nerves" />
-      <.kv :if={@status[:power_type]} label="Power" value={@status[:power_type]} />
+      <.kv
+        :if={@status[:power_type]}
+        label="Power"
+        value={power_type_label(@status[:power_type])}
+      />
     </.panel>
   </div>
 
@@ -82,22 +86,28 @@
       <.solar_section solar={@status[:solar_charger]} />
       <div class="mt-3 space-y-1.5">
         <.sparkline
-          :if={@history.solar_panel_power != []}
-          samples={@history.solar_panel_power}
-          label="Panel W"
-          format={:watt}
-        />
-        <.sparkline
-          :if={@history.solar_voltage != []}
-          samples={@history.solar_voltage}
-          label="Battery"
+          :if={@history.solar_battery_voltage != []}
+          samples={@history.solar_battery_voltage}
+          label="Battery voltage"
           format={:millivolt}
         />
         <.sparkline
-          :if={@history.solar_soc != []}
-          samples={@history.solar_soc}
-          label="SoC"
-          format={:percent}
+          :if={@history.solar_battery_current != []}
+          samples={@history.solar_battery_current}
+          label="Battery current"
+          format={:milliamp}
+        />
+        <.sparkline
+          :if={@history.solar_panel_voltage != []}
+          samples={@history.solar_panel_voltage}
+          label="Panel voltage"
+          format={:millivolt}
+        />
+        <.sparkline
+          :if={@history.solar_panel_power != []}
+          samples={@history.solar_panel_power}
+          label="Panel power"
+          format={:watt}
         />
       </div>
     </.panel>

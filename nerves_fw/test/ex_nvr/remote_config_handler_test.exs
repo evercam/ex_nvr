@@ -4,7 +4,7 @@ defmodule ExNVR.Nerves.RemoteConfigHandlerTest do
 
   import Mimic
 
-  alias ExNVR.Hardware
+  alias ExNVR.{Hardware, InstallerMode}
   alias ExNVR.Nerves.Giraffe.Init
   alias ExNVR.Nerves.{RemoteConfigHandler, RUT, SystemSettings}
 
@@ -18,6 +18,7 @@ defmodule ExNVR.Nerves.RemoteConfigHandlerTest do
     Mimic.copy(RUT)
     Mimic.copy(Init)
     Mimic.copy(Hardware.SerialPortChecker)
+    Mimic.copy(InstallerMode)
     :ok
   end
 
@@ -90,6 +91,29 @@ defmodule ExNVR.Nerves.RemoteConfigHandlerTest do
       RemoteConfigHandler.handle_message("config", %{"power_type" => "generator"})
 
       assert SystemSettings.get_settings().power_type == :generator
+    end
+
+    test "enables installer mode when the config enables it" do
+      mark_configured()
+      expect(InstallerMode, :enable, fn -> :ok end)
+
+      RemoteConfigHandler.handle_message("config", %{"installer_mode" => true})
+    end
+
+    test "disables installer mode when the config disables it" do
+      mark_configured()
+      expect(InstallerMode, :disable, fn -> :ok end)
+
+      RemoteConfigHandler.handle_message("config", %{"installer_mode" => false})
+    end
+
+    test "does not touch installer mode when the config omits it" do
+      mark_configured()
+
+      reject(&InstallerMode.enable/0)
+      reject(&InstallerMode.disable/0)
+
+      RemoteConfigHandler.handle_message("config", %{"router" => %{"username" => "user"}})
     end
 
     test "does not run power type handlers when the power type is unchanged" do
