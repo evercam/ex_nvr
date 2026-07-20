@@ -3,7 +3,7 @@ defmodule ExNVR.Nerves.RemoteConfigHandler do
 
   require Logger
 
-  alias ExNVR.{Hardware, Model}
+  alias ExNVR.{Hardware, InstallerMode, Model}
   alias ExNVR.Nerves.{Application, RUT, SystemSettings}
   alias ExNVR.Nerves.Giraffe.Init
 
@@ -21,6 +21,8 @@ defmodule ExNVR.Nerves.RemoteConfigHandler do
       power_schedule: config["power_schedule"] || %{},
       power_type: config["power_type"] || ""
     }
+
+    handle_installer_mode(config["installer_mode"])
 
     case SystemSettings.update(params) do
       {:ok, new_settings} ->
@@ -69,6 +71,10 @@ defmodule ExNVR.Nerves.RemoteConfigHandler do
       {day, intervals}
     end)
   end
+
+  defp handle_installer_mode(true), do: InstallerMode.enable()
+  defp handle_installer_mode(false), do: InstallerMode.disable()
+  defp handle_installer_mode(_missing), do: :ok
 
   defp handle_power_type_update(power_type) do
     # Enable/disable victron data gathering
