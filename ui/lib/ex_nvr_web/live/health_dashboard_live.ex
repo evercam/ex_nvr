@@ -122,9 +122,10 @@ defmodule ExNVRWeb.HealthDashboardLive do
       cpu_5m: series("ex_nvr.system.cpu.load_5m"),
       cpu_15m: series("ex_nvr.system.cpu.load_15m"),
       memory_used: series("ex_nvr.system.memory.used"),
-      solar_voltage: series("ex_nvr.system.solar.voltage_mv"),
-      solar_panel_power: series("ex_nvr.system.solar.panel_power_w"),
-      solar_soc: series("ex_nvr.system.solar.soc")
+      solar_battery_voltage: series("ex_nvr.system.solar.voltage_mv"),
+      solar_battery_current: series("ex_nvr.system.solar.current_ma"),
+      solar_panel_voltage: series("ex_nvr.system.solar.panel_voltage_mv"),
+      solar_panel_power: series("ex_nvr.system.solar.panel_power_w")
     }
 
     pipeline_history = pipeline_history(socket.assigns.status[:devices])

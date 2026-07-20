@@ -386,16 +386,14 @@ defmodule ExNVRWeb.Components.Health do
     """
   end
 
+  # Live values (v, i, il, vpv, ppv) are graphed as sparklines in the template;
+  # here we only surface the static/informational fields.
   def solar_section(assigns) do
     ~H"""
-    <.kv label="Vendor" value={Map.get(@solar, :pid) || "—"} />
+    <.kv label="Product ID" value={Map.get(@solar, :pid)} />
     <.kv label="Serial" value={Map.get(@solar, :serial_number)} />
     <.kv label="Firmware" value={Map.get(@solar, :fw)} />
-    <.kv label="Battery" value={mv_to_v(Map.get(@solar, :v))} />
-    <.kv label="Current" value={ma_to_a(Map.get(@solar, :i))} />
-    <.kv label="Panel V" value={mv_to_v(Map.get(@solar, :vpv))} />
-    <.kv label="Panel W" value={solar_panel_power(@solar)} />
-    <.kv :if={Map.get(@solar, :soc)} label="SoC" value={"#{Map.get(@solar, :soc)}%"} />
+    <.kv label="State" value={Map.get(@solar, :cs)} />
     """
   end
 
@@ -646,7 +644,7 @@ defmodule ExNVRWeb.Components.Health do
 
   attr :format, :atom,
     default: :number,
-    values: [:number, :bytes, :percent, :watt, :bitrate, :millivolt]
+    values: [:number, :bytes, :percent, :watt, :bitrate, :millivolt, :milliamp]
 
   def sparkline(%{samples: samples} = assigns) when length(samples) < 2 do
     ~H"""
@@ -758,6 +756,9 @@ defmodule ExNVRWeb.Components.Health do
     Calendar.strftime(dt, "%Y-%m-%d %H:%M:%S UTC")
   end
 
+  def power_type_label(nil), do: "—"
+  def power_type_label(type), do: type |> to_string() |> String.capitalize()
+
   def format_window({n, :second}), do: "#{n}s"
   def format_window({n, :minute}), do: "#{n} min"
   def format_window({n, :hour}), do: "#{n}h"
@@ -835,6 +836,9 @@ defmodule ExNVRWeb.Components.Health do
 
   defp format_sparkline_value(mv, :millivolt) when is_number(mv),
     do: "#{:erlang.float_to_binary(mv / 1000, decimals: 2)} V"
+
+  defp format_sparkline_value(ma, :milliamp) when is_number(ma),
+    do: "#{:erlang.float_to_binary(ma / 1000, decimals: 2)} A"
 
   defp format_sparkline_value(v, :number) when is_number(v) do
     cond do
@@ -920,26 +924,11 @@ defmodule ExNVRWeb.Components.Health do
   defp device_state_class(:stopped), do: "bg-yellow-500"
   defp device_state_class(_), do: "bg-gray-400"
 
-  defp mv_to_v(nil), do: "—"
-  defp mv_to_v(mv) when is_number(mv), do: "#{:erlang.float_to_binary(mv / 1000, decimals: 2)} V"
-  defp mv_to_v(_), do: "—"
-
-  defp ma_to_a(nil), do: "—"
-  defp ma_to_a(ma) when is_number(ma), do: "#{:erlang.float_to_binary(ma / 1000, decimals: 2)} A"
-  defp ma_to_a(_), do: "—"
-
   defp format_temp(t) when is_number(t), do: "#{:erlang.float_to_binary(t / 1, decimals: 1)} °C"
   defp format_temp(_), do: "—"
 
   defp format_rpm(rpm) when is_number(rpm), do: "#{format_int(round(rpm))} RPM"
   defp format_rpm(_), do: "—"
-
-  defp solar_panel_power(solar) do
-    case Map.get(solar, :ppv) do
-      ppv when is_number(ppv) -> "#{ppv} W"
-      _ -> "—"
-    end
-  end
 
   defp router_rows(router), do: stable_rows(router, 8)
 
