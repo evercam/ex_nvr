@@ -511,6 +511,7 @@ defmodule ExNVRWeb.Components.Health do
       |> assign(:type, assigns.device[:type])
       |> assign(:streaming?, streaming?)
       |> assign(:stream_url, "/api/devices/#{device_id}/hls/index.m3u8?stream=low")
+      |> assign(:snapshot_url, "/api/devices/#{device_id}/snapshot?stream=high")
       |> assign(:dom_id, "camera-preview-#{device_id}")
 
     ~H"""
@@ -537,32 +538,56 @@ defmodule ExNVRWeb.Components.Health do
           playsinline
           class="w-full h-full object-contain"
         />
-        <button
-          :if={@streaming?}
-          type="button"
-          data-fullscreen-btn
-          aria-label="Toggle fullscreen"
-          title="Fullscreen"
-          class="absolute bottom-2 right-2 z-10 p-1.5 rounded-md bg-black/50 text-white opacity-100"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            class="w-4 h-4"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            stroke-width="2"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              d="M4 8V4h4M16 4h4v4M20 16v4h-4M8 20H4v-4"
-            />
-          </svg>
-        </button>
         <p :if={not @streaming?} class="text-xs text-gray-500 dark:text-gray-400">
           {preview_placeholder(@state)}
         </p>
+        <div :if={@streaming?} class="absolute bottom-2 right-2 z-10 flex items-center gap-2">
+          <a
+            href={@snapshot_url}
+            download={"#{@name}.jpg"}
+            aria-label="Download snapshot"
+            title="Download snapshot"
+            class="inline-flex p-1.5 rounded-md bg-black/50 text-white hover:bg-black/70"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="w-4 h-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3"
+              />
+            </svg>
+          </a>
+          <button
+            :if={@streaming?}
+            type="button"
+            data-fullscreen-btn
+            aria-label="Toggle fullscreen"
+            title="Fullscreen"
+            class="p-1.5 rounded-md bg-black/50 text-white hover:bg-black/70"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="w-4 h-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M4 8V4h4M16 4h4v4M20 16v4h-4M8 20H4v-4"
+              />
+            </svg>
+          </button>
+        </div>
       </div>
 
       <%= if @streams == [] do %>
