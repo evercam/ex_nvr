@@ -38,7 +38,7 @@ defmodule NervesFw.MixProject do
       {:nerves, "~> 1.14", runtime: false},
       {:shoehorn, "~> 0.9.1"},
       {:ring_logger, "~> 0.11.0"},
-      {:toolshed, "~> 0.4.0"},
+      {:toolshed, "~> 0.5.0"},
       {:nerves_hub_link, "~> 2.10.0"},
       {:nerves_hub_cli, "~> 2.0"},
       {:ex_nvr, path: "../ui", env: env},
