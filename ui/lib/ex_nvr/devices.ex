@@ -138,12 +138,27 @@ defmodule ExNVR.Devices do
   @spec create_device_directories(ExNVR.Model.Device.t()) :: :ok
   def create_device_directories(device) do
     if Device.base_dir(device) do
-      File.mkdir_p!(Device.base_dir(device))
-      File.mkdir_p!(Device.recording_dir(device))
-      File.mkdir_p!(Device.recording_dir(device, :low))
-      File.mkdir_p!(Device.bif_dir(device))
-      File.mkdir_p!(Device.bif_thumbnails_dir(device))
-      File.mkdir_p!(Device.lpr_thumbnails_dir(device))
+      [
+        Device.base_dir(device),
+        Device.recording_dir(device),
+        Device.recording_dir(device, :low),
+        Device.bif_dir(device),
+        Device.bif_thumbnails_dir(device),
+        Device.lpr_thumbnails_dir(device)
+      ]
+      |> Enum.reduce_while(:ok, fn path, _acc ->
+        case File.mkdir_p(path) do
+          :ok ->
+            {:cont, :ok}
+
+          {:error, reason} ->
+            Logger.warning(
+              "[Device #{device.id}] could not create directory #{path}: #{:file.format_error(reason)}"
+            )
+
+            {:halt, {:error, reason}}
+        end
+      end)
     end
 
     :ok
