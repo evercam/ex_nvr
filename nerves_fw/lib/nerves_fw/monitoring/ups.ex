@@ -65,7 +65,11 @@ defmodule ExNVR.Nerves.Monitoring.UPS do
     new_state = do_start_monitor(ups_settings, [])
     set_system_status(new_state)
 
-    {:noreply, new_state, {:continue, :trigger_action}}
+    if new_state.config.enabled do
+      {:noreply, new_state, {:continue, :trigger_action}}
+    else
+      {:noreply, new_state}
+    end
   end
 
   @impl true
