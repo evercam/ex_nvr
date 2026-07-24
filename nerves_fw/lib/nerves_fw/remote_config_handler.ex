@@ -3,9 +3,10 @@ defmodule ExNVR.Nerves.RemoteConfigHandler do
 
   require Logger
 
-  alias ExNVR.{Hardware, InstallerMode, Model}
+  alias ExNVR.{InstallerMode, Model}
   alias ExNVR.Nerves.{Application, RUT, SystemSettings}
   alias ExNVR.Nerves.Giraffe.Init
+  alias ExNVR.Nerves.Monitoring.Victron
 
   def handle_message("config", config) do
     Logger.info("[RemoteConfigHandler] handle new incoming config event")
@@ -78,9 +79,7 @@ defmodule ExNVR.Nerves.RemoteConfigHandler do
 
   defp handle_power_type_update(power_type) do
     # Enable/disable victron data gathering
-    if power_type in [:solar, :generator],
-      do: Hardware.SerialPortChecker.enable(),
-      else: Hardware.SerialPortChecker.disable()
+    Victron.set(power_type)
 
     # Enable/disable ups for giraffe
     if Application.target() == :giraffe do

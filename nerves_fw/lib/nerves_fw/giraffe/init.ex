@@ -12,7 +12,6 @@ defmodule ExNVR.Nerves.Giraffe.Init do
 
   require Logger
 
-  alias ExNVR.Hardware.SerialPortChecker
   alias ExNVR.Nerves.GPIO
   alias ExNVR.Nerves.{SystemSettings, SystemStatus}
 
@@ -43,7 +42,6 @@ defmodule ExNVR.Nerves.Giraffe.Init do
     power_type = SystemSettings.get_settings() |> Map.fetch!(:power_type)
 
     set_ups(power_type)
-    enable_victron_monitoring(power_type)
 
     {:ok, nil, {:continue, :init}}
   end
@@ -69,12 +67,6 @@ defmodule ExNVR.Nerves.Giraffe.Init do
   def handle_info(_msg, state) do
     {:noreply, state}
   end
-
-  defp enable_victron_monitoring(power_type) when power_type in [:solar, :generator] do
-    SerialPortChecker.enable()
-  end
-
-  defp enable_victron_monitoring(_power_type), do: SerialPortChecker.disable()
 
   defp generator_state(0), do: :on
   defp generator_state(_), do: :off
