@@ -84,6 +84,7 @@ defmodule ExNVRWeb.DeviceTabs.SettingsTab do
           <.inputs_for :let={config} field={@device_form[:stream_config]}>
             <.input field={config[:profile_token]} type="hidden" />
             <.input field={config[:sub_profile_token]} type="hidden" />
+            <.input field={config[:third_profile_token]} type="hidden" />
 
             <div class="px-5 pb-1 pt-3">
               <p class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3">
@@ -125,6 +126,29 @@ defmodule ExNVRWeb.DeviceTabs.SettingsTab do
                 field={config[:sub_snapshot_uri]}
                 type="text"
                 placeholder="http://camera1:80/snapshot2"
+              />
+            </.settings_row>
+
+            <div class="px-5 pb-1 pt-4 border-t border-gray-100 dark:border-gray-700">
+              <p class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3">
+                Third Stream
+              </p>
+            </div>
+            <.settings_row label="RTSP URI" description="Third stream RTSP endpoint (optional)">
+              <.input
+                field={config[:third_stream_uri]}
+                type="text"
+                placeholder="rtsp://camera1:554/video/stream3"
+              />
+            </.settings_row>
+            <.settings_row
+              label="Snapshot URI"
+              description="Third stream HTTP snapshot endpoint (optional)"
+            >
+              <.input
+                field={config[:third_snapshot_uri]}
+                type="text"
+                placeholder="http://camera1:80/snapshot3"
               />
             </.settings_row>
           </.inputs_for>
@@ -219,6 +243,17 @@ defmodule ExNVRWeb.DeviceTabs.SettingsTab do
                     field={storage_config[:record_sub_stream]}
                     type="select"
                     options={[{"Never", "never"}, {"Always", "always"}]}
+                  />
+                </.settings_row>
+                <.settings_row
+                  :if={@device.type == :ip}
+                  label="Storage Stream"
+                  description="Which stream to record as the high-quality source. The third stream RTSP URI must be set to use it."
+                >
+                  <.input
+                    field={storage_config[:storage_stream]}
+                    type="select"
+                    options={[{"Main Stream", "main_stream"}, {"Third Stream", "third_stream"}]}
                   />
                 </.settings_row>
               </div>
