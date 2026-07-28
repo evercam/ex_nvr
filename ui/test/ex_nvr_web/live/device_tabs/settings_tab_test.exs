@@ -78,6 +78,8 @@ defmodule ExNVRWeb.DeviceTabs.SettingsTabTest do
       assert has_element?(lv, "input[name='device[stream_config][snapshot_uri]']")
       assert has_element?(lv, "input[name='device[stream_config][sub_stream_uri]']")
       assert has_element?(lv, "input[name='device[stream_config][sub_snapshot_uri]']")
+      assert has_element?(lv, "input[name='device[stream_config][third_stream_uri]']")
+      assert has_element?(lv, "input[name='device[stream_config][third_snapshot_uri]']")
     end
 
     test "renders Storage section for all devices with recording mode selector", %{
@@ -99,6 +101,7 @@ defmodule ExNVRWeb.DeviceTabs.SettingsTabTest do
       assert has_element?(lv, "input[name='device[storage_config][full_drive_threshold]']")
       assert has_element?(lv, "select[name='device[storage_config][full_drive_action]']")
       assert has_element?(lv, "select[name='device[storage_config][record_sub_stream]']")
+      assert has_element?(lv, "select[name='device[storage_config][storage_stream]']")
     end
 
     test "renders Advanced section for IP cameras when recording", %{conn: conn, device: device} do
@@ -246,6 +249,44 @@ defmodule ExNVRWeb.DeviceTabs.SettingsTabTest do
 
       assert html =~ "Saved"
       assert Devices.get(device.id).storage_config.full_drive_threshold == 80.0
+    end
+
+    test "saves storage_stream once the third stream uri is set", %{conn: conn, device: device} do
+      lv = open_settings_tab(conn, device)
+
+      lv
+      |> form(form_id(device, "stream_config"), %{
+        "device" => %{"stream_config" => %{"third_stream_uri" => "rtsp://camera1:554/stream3"}}
+      })
+      |> render_submit()
+
+      html =
+        lv
+        |> form(form_id(device, "storage"), %{
+          "device" => %{"storage_config" => %{"storage_stream" => "third_stream"}}
+        })
+        |> render_submit()
+
+      assert html =~ "Saved"
+      assert Devices.get(device.id).storage_config.storage_stream == :third_stream
+    end
+
+    test "shows validation error when selecting third stream without its uri", %{
+      conn: conn,
+      device: device
+    } do
+      lv = open_settings_tab(conn, device)
+
+      html =
+        lv
+        |> form(form_id(device, "storage"), %{
+          "device" => %{"storage_config" => %{"storage_stream" => "third_stream"}}
+        })
+        |> render_submit()
+
+      refute html =~ "Saved"
+      assert html =~ "third stream uri is not set"
+      assert Devices.get(device.id).storage_config.storage_stream == :main_stream
     end
 
     test "saves Advanced section and shows Saved indicator", %{conn: conn, device: device} do
