@@ -8,7 +8,6 @@ defmodule ExNVR.Nerves.SystemStatus do
 
   require Logger
 
-  alias ExNVR.Nerves.Application, as: NervesApp
   alias ExNVR.Nerves.Giraffe.FanController
   alias ExNVR.Nerves.{Netbird, RUT, SystemSettings}
   alias Nerves.Runtime

@@ -19,7 +19,7 @@ defmodule ExNVR.Nerves.Monitoring.UPSTest do
 
   setup %{tmp_dir: tmp_dir} do
     start_supervised!({SystemSettings, [path: Path.join(tmp_dir, "settings.json")]})
-    expect(ExNVR.Nerves.DiskMounter, :mount, 3, fn -> :ok end)
+    expect(ExNVR.Nerves.DiskMounter, :mount, 2, fn -> :ok end)
     :ok
   end
 
