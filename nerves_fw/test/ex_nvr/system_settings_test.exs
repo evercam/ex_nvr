@@ -22,6 +22,11 @@ defmodule ExNVR.SystemSettingsTest do
       battery_pin: "GPIO22",
       ac_failure_action: :stop_recording,
       low_battery_action: :nothing
+    },
+    auto_reboot: %SystemSettings.State.AutoReboot{
+      interval: nil,
+      reboot_at: nil,
+      timezone: "UTC"
     }
   }
 
@@ -98,6 +103,86 @@ defmodule ExNVR.SystemSettingsTest do
 
     assert %{ups: %{battery_pin: ["AC Pin and Battery Pin should not be the same"]}} =
              errors_on(changeset)
+  end
+
+  describe "auto reboot settings" do
+    test "are stored and reloaded from disk", %{tmp_dir: tmp_dir} do
+      assert {:ok, settings} =
+               SystemSettings.update_auto_reboot_settings(%{
+                 "interval" => 12,
+                 "reboot_at" => "2026-07-30T03:00:00",
+                 "timezone" => "Africa/Algiers"
+               })
+
+      assert settings.auto_reboot == %SystemSettings.State.AutoReboot{
+               interval: 12,
+               reboot_at: ~N[2026-07-30 03:00:00],
+               timezone: "Africa/Algiers"
+             }
+
+      # The json round trip must be lossless, `do_update_settings/2` relies on
+      # struct equality to decide whether to broadcast an update.
+      stop_supervised!(SystemSettings)
+      start_supervised!({SystemSettings, [path: Path.join(tmp_dir, "settings.json")]})
+
+      assert SystemSettings.get_settings().auto_reboot == settings.auto_reboot
+    end
+
+    test "ignore the offset of the anchor" do
+      assert {:ok, settings} =
+               SystemSettings.update_auto_reboot_settings(%{
+                 "interval" => 24,
+                 "reboot_at" => "2026-07-30T03:00:00Z"
+               })
+
+      assert settings.auto_reboot.reboot_at == ~N[2026-07-30 03:00:00]
+    end
+
+    test "are disabled by a nil interval" do
+      assert {:ok, _settings} =
+               SystemSettings.update_auto_reboot_settings(%{
+                 interval: 24,
+                 reboot_at: ~N[2026-07-30 03:00:00]
+               })
+
+      assert {:ok, settings} = SystemSettings.update_auto_reboot_settings(%{interval: nil})
+      assert settings.auto_reboot.interval == nil
+      assert settings.auto_reboot.reboot_at == ~N[2026-07-30 03:00:00]
+    end
+
+    test "are left untouched by an empty update" do
+      assert {:ok, settings} =
+               SystemSettings.update_auto_reboot_settings(%{
+                 interval: 6,
+                 reboot_at: ~N[2026-07-30 03:00:00]
+               })
+
+      assert {:ok, ^settings} = SystemSettings.update_auto_reboot_settings(%{})
+    end
+
+    test "reject an interval outside the predefined list" do
+      assert {:error, changeset} = SystemSettings.update_auto_reboot_settings(%{interval: 8})
+      assert %{auto_reboot: %{interval: ["is invalid"]}} = errors_on(changeset)
+    end
+
+    test "reject a missing anchor when an interval is set" do
+      assert {:error, changeset} = SystemSettings.update_auto_reboot_settings(%{interval: 24})
+      assert %{auto_reboot: %{reboot_at: ["can't be blank"]}} = errors_on(changeset)
+    end
+
+    test "reject an unknown timezone" do
+      assert {:error, changeset} =
+               SystemSettings.update_auto_reboot_settings(%{timezone: "Mars/Olympus"})
+
+      assert %{auto_reboot: %{timezone: ["is invalid"]}} = errors_on(changeset)
+    end
+
+    test "reject a nil timezone" do
+      assert {:error, changeset} =
+               SystemSettings.update_auto_reboot_settings(%{timezone: nil})
+
+      assert %{auto_reboot: %{timezone: ["can't be blank"]}} = errors_on(changeset)
+    end
   end
 
   test "ups: ac and battery actions should not be both 'stop_recording'" do

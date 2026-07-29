@@ -20,7 +20,8 @@ defmodule ExNVR.Nerves.RemoteConfigHandler do
     params = %{
       router: config["router"] || %{},
       power_schedule: config["power_schedule"] || %{},
-      power_type: config["power_type"] || ""
+      power_type: config["power_type"] || "",
+      auto_reboot: config["auto_reboot"] || %{}
     }
 
     handle_installer_mode(config["installer_mode"])
