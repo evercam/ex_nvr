@@ -112,4 +112,21 @@ defmodule ExNVR.EventsTest do
       assert event.metadata == %{}
     end
   end
+
+  describe "last_event_time/1" do
+    test "returns nil when no event of that type exists" do
+      {:ok, _event} = Events.create_event(%{"type" => "shutdown"})
+
+      assert Events.last_event_time("reboot") == nil
+    end
+
+    test "returns the time of the most recent event of that type" do
+      old = DateTime.add(DateTime.utc_now(), -2, :hour)
+      {:ok, _event} = Events.create_event(%{"type" => "reboot", "time" => old})
+      {:ok, recent} = Events.create_event(%{"type" => "reboot"})
+      {:ok, _event} = Events.create_event(%{"type" => "shutdown"})
+
+      assert Events.last_event_time("reboot") == recent.time
+    end
+  end
 end

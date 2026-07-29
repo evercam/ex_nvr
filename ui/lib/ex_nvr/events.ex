@@ -74,6 +74,16 @@ defmodule ExNVR.Events do
     |> Repo.preload(:device)
   end
 
+  @spec last_event_time(String.t()) :: DateTime.t() | nil
+  def last_event_time(type) do
+    Event
+    |> select([e], e.time)
+    |> where([e], e.type == ^type)
+    |> order_by(desc: :time)
+    |> limit(1)
+    |> Repo.one()
+  end
+
   @spec last_lpr_event_timestamp(Device.t()) :: DateTime.t() | nil
   def last_lpr_event_timestamp(device) do
     LPR

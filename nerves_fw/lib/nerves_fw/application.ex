@@ -66,6 +66,7 @@ defmodule ExNVR.Nerves.Application do
       {MuonTrap.Daemon, ["nginx", [], [stderr_to_stdout: true, log_output: :info]]},
       {ExNVR.Nerves.RemoteConfigurer, []},
       {ExNVR.Nerves.Monitoring.PowerSchedule, []},
+      {ExNVR.Nerves.Monitoring.AutoReboot, []},
       {ExNVR.Nerves.Monitoring.Victron, []},
       {ExNVR.Nerves.RUT.Auth, []}
     ]

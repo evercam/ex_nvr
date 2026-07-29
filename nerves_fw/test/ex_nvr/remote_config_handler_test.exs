@@ -116,6 +116,51 @@ defmodule ExNVR.Nerves.RemoteConfigHandlerTest do
       RemoteConfigHandler.handle_message("config", %{"router" => %{"username" => "user"}})
     end
 
+    test "applies the auto reboot config" do
+      mark_configured()
+
+      config = %{
+        "auto_reboot" => %{
+          "interval" => 12,
+          "reboot_at" => "2026-07-30T03:00:00",
+          "timezone" => "Europe/Dublin"
+        }
+      }
+
+      RemoteConfigHandler.handle_message("config", config)
+
+      assert SystemSettings.get_settings().auto_reboot == %SystemSettings.State.AutoReboot{
+               interval: 12,
+               reboot_at: ~N[2026-07-30 03:00:00],
+               timezone: "Europe/Dublin"
+             }
+    end
+
+    test "does not touch the auto reboot config when the config omits it" do
+      mark_configured()
+
+      RemoteConfigHandler.handle_message("config", %{
+        "auto_reboot" => %{"interval" => 6, "reboot_at" => "2026-07-30T03:00:00"}
+      })
+
+      RemoteConfigHandler.handle_message("config", %{"router" => %{"username" => "user"}})
+
+      assert %SystemSettings.State.AutoReboot{interval: 6, reboot_at: ~N[2026-07-30 03:00:00]} =
+               SystemSettings.get_settings().auto_reboot
+    end
+
+    test "disables the auto reboot when the config sends a nil interval" do
+      mark_configured()
+
+      RemoteConfigHandler.handle_message("config", %{
+        "auto_reboot" => %{"interval" => 6, "reboot_at" => "2026-07-30T03:00:00"}
+      })
+
+      RemoteConfigHandler.handle_message("config", %{"auto_reboot" => %{"interval" => nil}})
+
+      assert SystemSettings.get_settings().auto_reboot.interval == nil
+    end
+
     test "does not run power type handlers when the power type is unchanged" do
       mark_configured()
 

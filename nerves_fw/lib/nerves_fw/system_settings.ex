@@ -20,6 +20,7 @@ defmodule ExNVR.Nerves.SystemSettings do
     import Ecto.Changeset
 
     @power_values ~w(mains solar generator other)a
+    @reboot_intervals [6, 12, 24]
 
     @primary_key false
     @derive JSON.Encoder
@@ -62,6 +63,14 @@ defmodule ExNVR.Nerves.SystemSettings do
 
         field :trigger_after, :integer, default: 30
       end
+
+      embeds_one :auto_reboot, AutoReboot, primary_key: false, on_replace: :update do
+        @derive JSON.Encoder
+        # `nil` interval means no automatic reboot.
+        field :interval, :integer
+        field :reboot_at, :naive_datetime
+        field :timezone, :string, default: "UTC"
+      end
     end
 
     def to_struct(settings \\ %__MODULE__{}, params) do
@@ -76,6 +85,7 @@ defmodule ExNVR.Nerves.SystemSettings do
       |> cast_embed(:power_schedule, with: &power_schedule_changeset/2)
       |> cast_embed(:router, with: &router_changeset/2)
       |> cast_embed(:ups, with: &ups_changeset/2)
+      |> cast_embed(:auto_reboot, with: &auto_reboot_changeset/2)
     end
 
     def ups_changeset(changeset, params \\ %{}) do
@@ -95,12 +105,37 @@ defmodule ExNVR.Nerves.SystemSettings do
       |> validate_ups_actions()
     end
 
+    @doc """
+    Allowed auto reboot intervals in hours, `nil` (no reboot) is always allowed.
+    """
+    @spec reboot_intervals() :: [pos_integer()]
+    def reboot_intervals, do: @reboot_intervals
+
+    def auto_reboot_changeset(changeset, params \\ %{}) do
+      changeset
+      |> cast(params, [:interval, :reboot_at, :timezone])
+      |> validate_inclusion(:interval, @reboot_intervals)
+      |> validate_required(:timezone)
+      |> validate_inclusion(:timezone, Tzdata.zone_list())
+      |> validate_reboot_at()
+    end
+
     defp power_schedule_changeset(changeset, params) do
       cast(changeset, params, [:schedule, :timezone, :action])
     end
 
     defp router_changeset(changeset, params) do
       cast(changeset, params, [:username, :password])
+    end
+
+    # `reboot_at` is only meaningful when an interval is set.
+    defp validate_reboot_at(%{valid?: false} = changeset), do: changeset
+
+    defp validate_reboot_at(changeset) do
+      case fetch_field!(changeset, :interval) do
+        nil -> changeset
+        _interval -> validate_required(changeset, :reboot_at)
+      end
     end
 
     defp validate_pins_not_equal(%{valid?: false} = changeset), do: changeset
@@ -161,6 +196,10 @@ defmodule ExNVR.Nerves.SystemSettings do
     GenServer.call(pid, {:update_ups_settings, params})
   end
 
+  def update_auto_reboot_settings(pid \\ __MODULE__, params) do
+    GenServer.call(pid, {:update_auto_reboot_settings, params})
+  end
+
   def subscribe do
     Phoenix.PubSub.subscribe(ExNVR.Nerves.PubSub, @system_settings_topic)
   end
@@ -219,6 +258,14 @@ defmodule ExNVR.Nerves.SystemSettings do
     end
   end
 
+  @impl true
+  def handle_call({:update_auto_reboot_settings, params}, _from, state) do
+    case do_update_settings(state, %{auto_reboot: params}) do
+      {:ok, state} -> {:reply, {:ok, state.settings}, state}
+      error -> {:reply, error, state}
+    end
+  end
+
   defp do_update_settings(state, params) do
     with {:ok, new_settings} <- State.to_struct(state.settings, params),
          :ok <- File.write(state.path, JSON.encode!(new_settings)) do
@@ -243,7 +290,8 @@ defmodule ExNVR.Nerves.SystemSettings do
       settings
       | power_schedule: settings.power_schedule || %State.PowerSchedule{},
         router: settings.router || %State.Router{},
-        ups: settings.ups || %State.UPS{}
+        ups: settings.ups || %State.UPS{},
+        auto_reboot: settings.auto_reboot || %State.AutoReboot{}
     }
   end
 end
