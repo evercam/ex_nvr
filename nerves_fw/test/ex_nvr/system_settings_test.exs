@@ -177,6 +177,66 @@ defmodule ExNVR.SystemSettingsTest do
       assert %{auto_reboot: %{timezone: ["is invalid"]}} = errors_on(changeset)
     end
 
+    # The settings form sends the values below verbatim, these tests are the
+    # contract the auto reboot card relies on.
+    test "are disabled by the empty interval sent by a select input" do
+      assert {:ok, _settings} =
+               SystemSettings.update_auto_reboot_settings(%{
+                 "interval" => "24",
+                 "reboot_at" => "2026-07-30T03:00",
+                 "timezone" => "UTC"
+               })
+
+      assert {:ok, settings} =
+               SystemSettings.update_auto_reboot_settings(%{
+                 "interval" => "",
+                 "reboot_at" => "2026-07-30T03:00",
+                 "timezone" => "UTC"
+               })
+
+      assert settings.auto_reboot.interval == nil
+      assert settings.auto_reboot.reboot_at == ~N[2026-07-30 03:00:00]
+    end
+
+    test "accept the minute precision anchor sent by a datetime-local input" do
+      assert {:ok, settings} =
+               SystemSettings.update_auto_reboot_settings(%{
+                 "interval" => "6",
+                 "reboot_at" => "2026-07-30T03:00"
+               })
+
+      assert settings.auto_reboot.reboot_at == ~N[2026-07-30 03:00:00]
+    end
+
+    test "reject a cleared anchor when an interval is set" do
+      assert {:error, changeset} =
+               SystemSettings.update_auto_reboot_settings(%{
+                 "interval" => "12",
+                 "reboot_at" => ""
+               })
+
+      assert %{auto_reboot: %{reboot_at: ["can't be blank"]}} = errors_on(changeset)
+    end
+
+    test "accept a cleared anchor when no interval is set" do
+      assert {:ok, settings} =
+               SystemSettings.update_auto_reboot_settings(%{
+                 "interval" => "",
+                 "reboot_at" => ""
+               })
+
+      assert settings.auto_reboot.interval == nil
+      assert settings.auto_reboot.reboot_at == nil
+    end
+
+    test "fall back to the default timezone when it's empty" do
+      assert {:ok, _settings} =
+               SystemSettings.update_auto_reboot_settings(%{timezone: "Africa/Algiers"})
+
+      assert {:ok, settings} = SystemSettings.update_auto_reboot_settings(%{"timezone" => ""})
+      assert settings.auto_reboot.timezone == "UTC"
+    end
+
     test "reject a nil timezone" do
       assert {:error, changeset} =
                SystemSettings.update_auto_reboot_settings(%{timezone: nil})

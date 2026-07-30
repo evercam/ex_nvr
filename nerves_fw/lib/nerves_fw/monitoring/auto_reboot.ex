@@ -69,6 +69,26 @@ defmodule ExNVR.Nerves.Monitoring.AutoReboot do
     end
   end
 
+  @doc """
+  Returns the next `count` occurrences, strictly after `now`.
+  """
+  @spec next_occurrences(map(), NaiveDateTime.t(), non_neg_integer()) :: [NaiveDateTime.t()]
+  def next_occurrences(%{interval: nil}, _now, _count), do: []
+  def next_occurrences(%{reboot_at: nil}, _now, _count), do: []
+
+  def next_occurrences(%{interval: hours, reboot_at: anchor}, now, count)
+      when is_integer(hours) and hours > 0 do
+    interval = hours * 60 * 60
+
+    anchor
+    |> first_occurrence_after(now, interval)
+    |> Stream.iterate(&NaiveDateTime.add(&1, interval))
+    |> Enum.take(count)
+  end
+
+  # An interval that never passed the changeset validation has no schedule.
+  def next_occurrences(_config, _now, _count), do: []
+
   @impl true
   def init(opts) do
     Logger.info("Starting auto reboot monitoring")
@@ -120,6 +140,15 @@ defmodule ExNVR.Nerves.Monitoring.AutoReboot do
   def handle_info(message, state) do
     Logger.warning("[AutoReboot] received unexpected message: #{inspect(message)}")
     {:noreply, state}
+  end
+
+  # The anchor is the first occurrence while it's still in the future, the
+  # series never extends backwards. Same arithmetic as `due_occurrence/3`.
+  defp first_occurrence_after(anchor, now, interval) do
+    case NaiveDateTime.diff(now, anchor) do
+      elapsed when elapsed < 0 -> anchor
+      elapsed -> NaiveDateTime.add(anchor, (div(elapsed, interval) + 1) * interval)
+    end
   end
 
   defp check_due(state) do

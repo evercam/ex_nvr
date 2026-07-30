@@ -1,7 +1,10 @@
 defmodule ExNVR.NervesWeb.SystemSettingsLive do
   use ExNVRWeb, :live_view
 
+  alias ExNVR.Nerves.Monitoring.AutoReboot
   alias ExNVR.Nerves.SystemSettings
+
+  @preview_count 3
 
   def render(assigns) do
     ~H"""
@@ -13,6 +16,100 @@ defmodule ExNVR.NervesWeb.SystemSettingsLive do
         </div>
 
         <div class="space-y-6">
+          <.card class="space-y-6">
+            <div>
+              <div class="flex items-center gap-2 text-xl">
+                <.icon name="hero-arrow-path" class="h-6 w-6" /> Auto Reboot
+              </div>
+              <div class="text-sm dark:text-gray-400">
+                Reboot the device automatically on a recurring schedule
+              </div>
+            </div>
+
+            <.simple_form
+              id="auto-reboot-form"
+              for={@auto_reboot_form}
+              phx-change="validate-auto-reboot"
+              phx-submit="submit-auto-reboot"
+            >
+              <div class="flex flex-col gap-4">
+                <div class="w-full font-medium">
+                  <.icon name="hero-clock" class="h-5 w-5 mr-1" />Reboot Schedule
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                  <.input
+                    field={@auto_reboot_form[:interval]}
+                    value={@auto_reboot_form[:interval].value || ""}
+                    label="Reboot Interval"
+                    type="select"
+                    options={reboot_intervals()}
+                  />
+                </div>
+                <p class="text-sm dark:text-gray-400">
+                  How often the device reboots itself
+                </p>
+              </div>
+              <.separator />
+              <div class={
+                ["flex flex-col gap-4"] ++ disabled_class(reboot_enabled?(@auto_reboot_form))
+              }>
+                <div class="w-full font-medium">
+                  <.icon name="hero-calendar-days" class="h-5 w-5 mr-1" />First Reboot
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                  <.input
+                    field={@auto_reboot_form[:reboot_at]}
+                    label="First Reboot At"
+                    type="datetime-local"
+                    phx-debounce="500"
+                  />
+                  <.input
+                    field={@auto_reboot_form[:timezone]}
+                    label="Timezone"
+                    type="select"
+                    options={@timezones}
+                  />
+                </div>
+                <p class="text-sm dark:text-gray-400">
+                  Local wall clock of the first reboot, the next ones follow every interval after it.
+                  A time in the future delays the first reboot, a past one only anchors the series.
+                </p>
+              </div>
+              <.separator />
+              <div class="flex flex-col gap-4">
+                <div class="w-full font-medium">
+                  <.icon name="hero-queue-list" class="h-5 w-5 mr-1" />Next Reboots
+                </div>
+                <p :if={@next_reboots == []} class="text-sm dark:text-gray-400">
+                  No reboot is scheduled
+                </p>
+                <div
+                  :if={@next_reboots != []}
+                  class="flex flex-col gap-1 text-sm dark:text-gray-400"
+                >
+                  <div :for={occurrence <- @next_reboots} class="flex items-center gap-2">
+                    <.icon name="hero-chevron-double-right" class="h-4 w-4" />
+                    {format_occurrence(occurrence)}
+                  </div>
+                  <p class="mt-1 text-xs dark:text-gray-500">
+                    Times are shown in {@auto_reboot_form[:timezone].value}
+                  </p>
+                </div>
+              </div>
+              <.separator />
+              <div class="flex justify-end">
+                <button
+                  id="auto-reboot-submit-button"
+                  type="submit"
+                  phx-disable-with="Updating..."
+                  class="phx-submit-loading:opacity-75 focus:outline-none text-white bg-green-700 hover:bg-green-800 focus:ring-4 focus:ring-green-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800"
+                >
+                  <.icon name="hero-document-check-solid" class="w-4 h-4 mr-1" />Update
+                </button>
+              </div>
+            </.simple_form>
+          </.card>
+
           <.card class="space-y-6">
             <div>
               <div class="flex items-center gap-2 text-xl">
@@ -114,8 +211,11 @@ defmodule ExNVR.NervesWeb.SystemSettingsLive do
   def mount(_params, _session, socket) do
     socket =
       socket
+      |> assign(timezones: Tzdata.zone_list())
       |> assign_ups_settings()
       |> assign_ups_form()
+      |> assign_auto_reboot_settings()
+      |> assign_auto_reboot_form()
 
     {:ok, socket}
   end
@@ -142,6 +242,37 @@ defmodule ExNVR.NervesWeb.SystemSettingsLive do
     end
   end
 
+  def handle_event("validate-auto-reboot", %{"auto_reboot" => params}, socket) do
+    changeset =
+      SystemSettings.State.auto_reboot_changeset(socket.assigns.auto_reboot_settings, params)
+
+    socket
+    |> assign(auto_reboot_form: to_form(changeset), next_reboots: next_reboots(changeset))
+    |> then(&{:noreply, &1})
+  end
+
+  def handle_event("submit-auto-reboot", %{"auto_reboot" => params}, socket) do
+    case SystemSettings.update_auto_reboot_settings(params) do
+      {:ok, %{auto_reboot: auto_reboot_settings}} ->
+        socket
+        |> assign_auto_reboot_settings(auto_reboot_settings)
+        |> assign_auto_reboot_form()
+        |> put_flash(:info, "Successfully updated auto reboot settings")
+        |> then(&{:noreply, &1})
+
+      {:error, %Ecto.Changeset{} = changeset} ->
+        {:noreply, assign_auto_reboot_form(socket, changeset.changes[:auto_reboot])}
+
+      {:error, reason} ->
+        {:noreply,
+         put_flash(
+           socket,
+           :error,
+           "could not save auto reboot settings, due to: #{inspect(reason)}"
+         )}
+    end
+  end
+
   def handle_event(event, _params, socket) do
     {:noreply, put_flash(socket, :error, "unexpected event: #{inspect(event)}")}
   end
@@ -156,9 +287,57 @@ defmodule ExNVR.NervesWeb.SystemSettingsLive do
     assign(socket, ups_form: to_form(changeset))
   end
 
+  defp assign_auto_reboot_settings(socket, settings \\ nil) do
+    settings = settings || SystemSettings.get_settings().auto_reboot
+    assign(socket, auto_reboot_settings: settings, next_reboots: next_reboots(settings))
+  end
+
+  defp assign_auto_reboot_form(socket, changeset \\ nil) do
+    changeset =
+      changeset ||
+        SystemSettings.State.auto_reboot_changeset(socket.assigns.auto_reboot_settings)
+
+    assign(socket, auto_reboot_form: to_form(changeset))
+  end
+
   # View functions
   defp disabled_class(false), do: ["pointer-events-none opacity-50"]
   defp disabled_class(true), do: []
+
+  # "No reboot" carries an empty string rather than nil so that
+  # `options_for_select/2` marks it selected, `List.wrap(nil)` matches nothing.
+  defp reboot_intervals do
+    intervals = Enum.map(SystemSettings.State.reboot_intervals(), &{"Every #{&1} hours", &1})
+    [{"No reboot", ""} | intervals]
+  end
+
+  defp reboot_enabled?(form), do: form[:interval].value not in [nil, ""]
+
+  # The preview follows the form, an invalid draft has no meaningful schedule.
+  defp next_reboots(%Ecto.Changeset{valid?: false}), do: []
+
+  defp next_reboots(%Ecto.Changeset{} = changeset) do
+    next_reboots(Ecto.Changeset.apply_changes(changeset))
+  end
+
+  defp next_reboots(%{interval: nil}), do: []
+
+  defp next_reboots(config) do
+    case DateTime.now(config.timezone) do
+      {:ok, now} ->
+        now
+        |> DateTime.to_naive()
+        |> NaiveDateTime.truncate(:second)
+        |> then(&AutoReboot.next_occurrences(config, &1, @preview_count))
+
+      {:error, _reason} ->
+        []
+    end
+  end
+
+  defp format_occurrence(occurrence) do
+    Calendar.strftime(occurrence, "%a %b %d, %Y at %H:%M")
+  end
 
   defp ups_actions do
     [{"Power Off", :power_off}, {"Stop Recording", :stop_recording}, {"Nothing", :nothing}]
