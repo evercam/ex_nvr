@@ -99,6 +99,77 @@ defmodule ExNVR.Nerves.Monitoring.AutoRebootTest do
     end
   end
 
+  describe "next_occurrences/3" do
+    test "has no schedule when the feature is disabled" do
+      now = ~N[2026-07-30 03:00:00]
+
+      assert AutoReboot.next_occurrences(%{interval: nil, reboot_at: now}, now, 3) == []
+      assert AutoReboot.next_occurrences(%{interval: 24, reboot_at: nil}, now, 3) == []
+    end
+
+    test "starts at the anchor when it's still in the future" do
+      config = %{interval: 24, reboot_at: ~N[2026-08-01 03:00:00]}
+
+      assert AutoReboot.next_occurrences(config, ~N[2026-07-30 12:00:00], 3) == [
+               ~N[2026-08-01 03:00:00],
+               ~N[2026-08-02 03:00:00],
+               ~N[2026-08-03 03:00:00]
+             ]
+    end
+
+    test "skips the occurrences that already passed" do
+      config = %{interval: 6, reboot_at: ~N[2026-07-30 03:00:00]}
+
+      assert AutoReboot.next_occurrences(config, ~N[2026-07-30 10:00:00], 3) == [
+               ~N[2026-07-30 15:00:00],
+               ~N[2026-07-30 21:00:00],
+               ~N[2026-07-31 03:00:00]
+             ]
+    end
+
+    test "returns the following occurrence when one is due right now" do
+      config = %{interval: 6, reboot_at: ~N[2026-07-30 03:00:00]}
+
+      assert [~N[2026-07-30 09:00:00] | _rest] =
+               AutoReboot.next_occurrences(config, ~N[2026-07-30 03:00:00], 3)
+
+      assert [~N[2026-07-30 15:00:00] | _rest] =
+               AutoReboot.next_occurrences(config, ~N[2026-07-30 09:00:00], 3)
+    end
+
+    test "only returns occurrences the worker agrees are due" do
+      config = %{interval: 6, reboot_at: ~N[2026-07-30 03:00:00]}
+
+      for occurrence <- AutoReboot.next_occurrences(config, ~N[2026-07-30 10:00:00], 5) do
+        assert {:ok, ^occurrence} = AutoReboot.due_occurrence(config, occurrence, 120)
+      end
+    end
+
+    test "returns at most count occurrences" do
+      config = %{interval: 24, reboot_at: ~N[2026-07-30 03:00:00]}
+
+      assert [~N[2026-07-31 03:00:00]] =
+               AutoReboot.next_occurrences(config, ~N[2026-07-30 10:00:00], 1)
+
+      assert AutoReboot.next_occurrences(config, ~N[2026-07-30 10:00:00], 0) == []
+    end
+
+    test "keeps the local time of day across DST transitions" do
+      config = %{interval: 24, reboot_at: ~N[2026-03-28 03:00:00]}
+
+      assert AutoReboot.next_occurrences(config, ~N[2026-03-28 10:00:00], 2) == [
+               ~N[2026-03-29 03:00:00],
+               ~N[2026-03-30 03:00:00]
+             ]
+    end
+
+    test "has no schedule for an interval that never passed validation" do
+      config = %{interval: 0, reboot_at: ~N[2026-07-30 03:00:00]}
+
+      assert AutoReboot.next_occurrences(config, ~N[2026-07-30 10:00:00], 3) == []
+    end
+  end
+
   describe "the worker" do
     test "reboots once and only once when an occurrence is due" do
       set_config(%{interval: 24, reboot_at: naive_now()})
