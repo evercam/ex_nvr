@@ -1,6 +1,7 @@
 defmodule ExNVR.NervesWeb.SystemSettingsLive do
   use ExNVRWeb, :live_view
 
+  alias ExNVR.Devices
   alias ExNVR.Nerves.Monitoring.AutoReboot
   alias ExNVR.Nerves.SystemSettings
 
@@ -15,7 +16,11 @@ defmodule ExNVR.NervesWeb.SystemSettingsLive do
           <p class="mt-2 dark:text-gray-400">Configure your system components and preferences</p>
         </div>
 
-        <div class="space-y-6">
+        <.tabs id="system-settings-tabs">
+          <:tab id="auto_reboot" label="Auto Reboot" />
+          <:tab id="ups" label="UPS" />
+
+          <:tab_content for="auto_reboot">
           <.card class="space-y-6">
             <div>
               <div class="flex items-center gap-2 text-xl">
@@ -109,7 +114,9 @@ defmodule ExNVR.NervesWeb.SystemSettingsLive do
               </div>
             </.simple_form>
           </.card>
+          </:tab_content>
 
+          <:tab_content for="ups">
           <.card class="space-y-6">
             <div>
               <div class="flex items-center gap-2 text-xl">
@@ -202,7 +209,8 @@ defmodule ExNVR.NervesWeb.SystemSettingsLive do
               </div>
             </.simple_form>
           </.card>
-        </div>
+          </:tab_content>
+        </.tabs>
       </div>
     </div>
     """
@@ -287,9 +295,40 @@ defmodule ExNVR.NervesWeb.SystemSettingsLive do
     assign(socket, ups_form: to_form(changeset))
   end
 
-  defp assign_auto_reboot_settings(socket, settings \\ nil) do
-    settings = settings || SystemSettings.get_settings().auto_reboot
+  # `settings` is only nil on the initial mount; the post-submit path passes the
+  # saved settings explicitly, so prefill defaults never clobber a saved config.
+  defp assign_auto_reboot_settings(socket, settings \\ nil)
+
+  defp assign_auto_reboot_settings(socket, nil) do
+    settings = prefill_auto_reboot(SystemSettings.get_settings().auto_reboot)
     assign(socket, auto_reboot_settings: settings, next_reboots: next_reboots(settings))
+  end
+
+  defp assign_auto_reboot_settings(socket, settings) do
+    assign(socket, auto_reboot_settings: settings, next_reboots: next_reboots(settings))
+  end
+
+  # Prefill a never-configured schedule (no `reboot_at` yet): default the first
+  # reboot to today at midnight and adopt a device's timezone when one exists.
+  defp prefill_auto_reboot(%{reboot_at: nil} = settings) do
+    timezone = device_timezone() || settings.timezone
+    %{settings | reboot_at: NaiveDateTime.new!(today_in(timezone), ~T[00:00:00]), timezone: timezone}
+  end
+
+  defp prefill_auto_reboot(settings), do: settings
+
+  defp device_timezone do
+    case Devices.list() do
+      [device | _] -> device.timezone
+      [] -> nil
+    end
+  end
+
+  defp today_in(timezone) do
+    case DateTime.now(timezone) do
+      {:ok, now} -> DateTime.to_date(now)
+      {:error, _reason} -> Date.utc_today()
+    end
   end
 
   defp assign_auto_reboot_form(socket, changeset \\ nil) do
