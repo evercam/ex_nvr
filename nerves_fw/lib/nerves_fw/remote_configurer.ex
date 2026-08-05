@@ -119,6 +119,14 @@ defmodule ExNVR.Nerves.RemoteConfigurer do
   end
 
   def format_hdd do
+    do_format_hdd()
+  catch
+    kind, reason ->
+      Logger.error("[RemoteConfigurer] format_hdd failed: #{inspect(kind)} #{inspect(reason)}")
+      %Step{name: :format_hdd, status: :error, reason: inspect(reason)}
+  end
+
+  defp do_format_hdd do
     ExNVR.Disk.list_drives!()
     |> Enum.reject(&ExNVR.Disk.has_filesystem?/1)
     |> case do
