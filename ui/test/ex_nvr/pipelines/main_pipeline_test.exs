@@ -2,6 +2,7 @@ defmodule ExNVR.Pipelines.MainPipelineTest do
   @moduledoc false
 
   use ExNVR.DataCase
+  use Mimic
 
   import ExNVR.DevicesFixtures
   import Membrane.Testing.Assertions
@@ -16,6 +17,13 @@ defmodule ExNVR.Pipelines.MainPipelineTest do
 
   setup do
     %{device: file_device_fixture(%{state: :failed})}
+  end
+
+  # Stubs on ExNVR.Devices have to be visible from the pipeline process (a
+  # separate process), so opt the tagged tests into Mimic's global mode.
+  setup context do
+    if context[:set_mimic_global], do: Mimic.set_mimic_global(context)
+    :ok
   end
 
   test "main pipeline", %{device: device} do
@@ -107,6 +115,63 @@ defmodule ExNVR.Pipelines.MainPipelineTest do
 
     assert File.exists?(hls_dir)
     assert Path.join([hls_dir, "video", "*.mp4"]) |> Path.wildcard() |> length() == 1
+
+    assert :ok = Testing.Pipeline.terminate(pid)
+  end
+
+  # A failed device-state bookkeeping update must not take down the recording
+  # pipeline. handle_setup/2 transitions a :file device from :failed to
+  # :streaming, so update_state/2 is called inside the pipeline process during
+  # startup; these drive that path while the update fails and assert the
+  # pipeline stays alive.
+
+  @tag :set_mimic_global
+  test "survives an error tuple from Devices.update_state", %{device: device} do
+    # prepare_pipeline/1 links the pipeline to us; trap exits so a crash is an
+    # observable message instead of taking the test process down with it.
+    Process.flag(:trap_exit, true)
+    test_pid = self()
+
+    errored_changeset =
+      device
+      |> Ecto.Changeset.change(%{})
+      |> Ecto.Changeset.add_error(:state, "transient failure")
+
+    stub(Devices, :update_state, fn _device, state ->
+      send(test_pid, {:update_state_called, state})
+      {:error, errored_changeset}
+    end)
+
+    pid = prepare_pipeline(device)
+    ref = Process.monitor(pid)
+
+    assert_receive {:update_state_called, :streaming}, 5_000
+
+    refute_receive {:DOWN, ^ref, :process, ^pid, _reason}, 1_000
+    assert Process.alive?(pid)
+
+    assert :ok = Testing.Pipeline.terminate(pid)
+  end
+
+  @tag :set_mimic_global
+  test "survives a raised DB error from Devices.update_state", %{device: device} do
+    Process.flag(:trap_exit, true)
+    test_pid = self()
+
+    # SQLITE_BUSY surviving the busy_timeout, or a dropped DB connection, raise
+    # rather than return an error tuple.
+    stub(Devices, :update_state, fn _device, state ->
+      send(test_pid, {:update_state_called, state})
+      raise "database is locked"
+    end)
+
+    pid = prepare_pipeline(device)
+    ref = Process.monitor(pid)
+
+    assert_receive {:update_state_called, :streaming}, 5_000
+
+    refute_receive {:DOWN, ^ref, :process, ^pid, _reason}, 1_000
+    assert Process.alive?(pid)
 
     assert :ok = Testing.Pipeline.terminate(pid)
   end
