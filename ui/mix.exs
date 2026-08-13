@@ -75,7 +75,7 @@ defmodule ExNVR.MixProject do
       {:telemetry_poller, "~> 1.0"},
       {:mobius, "~> 0.7.0"},
       {:sizeable, "~> 1.0"},
-      {:gettext, "~> 0.20"},
+      {:gettext, "~> 1.0"},
       {:jason, "~> 1.2"},
       {:plug_cowboy, "~> 2.5"},
       {:corsica, "~> 2.1"},
