@@ -114,6 +114,68 @@ defmodule ExNVR.RecordingTest do
     assert_files_deleted(device, :high, low_res_recordings_2, 4)
   end
 
+  describe "delete oldest recordings edge cases" do
+    test "device with no recordings", %{device: device} do
+      assert :ok = Recordings.delete_oldest_recordings(device, 30)
+
+      assert ExNVR.Repo.aggregate(Recording, :count) == 0
+      assert ExNVR.Repo.aggregate(Run, :count) == 0
+    end
+
+    test "device with only low resolution recordings", %{device: device} do
+      start_date = ~U(2023-12-12 10:00:00Z)
+
+      run =
+        run_fixture(device,
+          start_date: start_date,
+          end_date: DateTime.add(start_date, 10 * 60),
+          stream: :low
+        )
+
+      Enum.each(
+        1..10,
+        &recording_fixture(device,
+          start_date: DateTime.add(start_date, &1 - 1, :minute),
+          end_date: DateTime.add(start_date, &1, :minute),
+          run: run,
+          stream: :low
+        )
+      )
+
+      assert :ok = Recordings.delete_oldest_recordings(device, 30)
+
+      # without high resolution recordings as a reference point,
+      # low resolution recordings are kept
+      assert ExNVR.Repo.aggregate(Recording, :count) == 10
+      assert ExNVR.Repo.aggregate(Run, :count) == 1
+    end
+
+    test "limit is greater than the total number of recordings", %{device: device} do
+      start_date = ~U(2023-12-12 10:00:00Z)
+
+      run =
+        run_fixture(device,
+          start_date: start_date,
+          end_date: DateTime.add(start_date, 5 * 60)
+        )
+
+      recordings =
+        Enum.map(
+          1..5,
+          &recording_fixture(device,
+            start_date: DateTime.add(start_date, &1 - 1, :minute),
+            end_date: DateTime.add(start_date, &1, :minute),
+            run: run
+          )
+        )
+
+      assert :ok = Recordings.delete_oldest_recordings(device, 30)
+
+      assert ExNVR.Repo.aggregate(Recording, :count) == 0
+      assert_files_deleted(device, :high, recordings, 5)
+    end
+  end
+
   describe "get recordings details" do
     test "get recording details", %{device: device} do
       recording = recording_fixture(device)

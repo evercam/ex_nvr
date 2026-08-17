@@ -28,12 +28,17 @@ defmodule ExNVR.DiskMonitor do
       send(self(), :tick)
     end
 
-    {:ok, %{device: options[:device], full_space_ticks: 0}}
+    {:ok,
+     %{
+       device: options[:device],
+       full_space_ticks: 0,
+       disk_usage_fun: options[:disk_usage_fun] || (&get_device_disk_usage/1)
+     }}
   end
 
   @impl true
   def handle_info(:tick, %{device: device, full_space_ticks: full_space_ticks} = state) do
-    used_space = get_device_disk_usage(device)
+    used_space = state.disk_usage_fun.(device)
     threshold = device.storage_config.full_drive_threshold
 
     Logger.debug("Disk usage percentage: #{used_space}%")
@@ -42,7 +47,7 @@ defmodule ExNVR.DiskMonitor do
       cond do
         used_space >= threshold and full_space_ticks >= @ticks_until_delete ->
           Logger.info("Deleting old recordings because of hard drive nearly full")
-          Recordings.delete_oldest_recordings(device, @max_recordings_to_delete)
+          delete_oldest_recordings(device)
           %{state | full_space_ticks: 0}
 
         used_space >= threshold ->
@@ -54,6 +59,22 @@ defmodule ExNVR.DiskMonitor do
 
     Process.send_after(self(), :tick, @interval_timer)
     {:noreply, state}
+  end
+
+  defp delete_oldest_recordings(device) do
+    case Recordings.delete_oldest_recordings(device, @max_recordings_to_delete) do
+      :ok ->
+        :ok
+
+      {:error, reason} ->
+        Logger.error("Failed to delete oldest recordings: #{inspect(reason)}")
+    end
+  rescue
+    exception ->
+      Logger.error(
+        "Unexpected error while deleting oldest recordings: " <>
+          Exception.format(:error, exception, __STACKTRACE__)
+      )
   end
 
   defp get_device_disk_usage(device) do
