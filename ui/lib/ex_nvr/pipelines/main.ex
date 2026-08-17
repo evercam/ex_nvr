@@ -526,7 +526,6 @@ defmodule ExNVR.Pipelines.Main do
       |> isolated_child({:webrtc, :sub_stream}, %Output.WebRTC{ice_servers: state.ice_servers})
     ] ++
       build_sub_stream_storage_spec(state) ++
-      build_sub_stream_webrtc_spec(state) ++
       build_sub_stream_bif_spec(state)
   end
 
