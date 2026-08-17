@@ -261,6 +261,22 @@ defmodule ExNVR.Pipelines.Main do
   end
 
   @impl true
+  def handle_crash_group_down({:isolated, child_name} = group, ctx, state) do
+    with spec when not is_nil(spec) <- find_isolated_spec(group, state),
+         true <- Map.has_key?(ctx.children, source_tee(child_name)) do
+      Membrane.Logger.warning("Output #{inspect(child_name)} crashed, re-spawning it")
+      {[spec: spec], state}
+    else
+      _ -> {[], state}
+    end
+  end
+
+  @impl true
+  def handle_crash_group_down(_group, _ctx, state) do
+    {[], state}
+  end
+
+  @impl true
   def handle_info({:pipeline_supervisor, pid}, _ctx, state) do
     {[], %{state | supervisor_pid: pid}}
   end
@@ -278,7 +294,7 @@ defmodule ExNVR.Pipelines.Main do
       spec = [
         source
         |> via_out(:push_output)
-        |> child(:unix_socket, ExNVR.Pipeline.Output.Socket)
+        |> isolated_child(:unix_socket, ExNVR.Pipeline.Output.Socket)
       ]
 
       {[spec: spec] ++ notify_action, state}
@@ -456,42 +472,60 @@ defmodule ExNVR.Pipelines.Main do
         get_child(:tee)
         |> via_out(:push_output)
         |> via_in(:video)
-        |> child(:hls_sink, %Output.HLS{
+        |> isolated_child(:hls_sink, %Output.HLS{
           location: Path.join(Utils.hls_dir(state.device.id), "live")
         }),
-        # |> get_child(:hls_sink),
         get_child(:tee)
         |> via_out(:push_output)
-        |> child({:snapshooter, :main_stream}, ExNVR.Elements.CVSBufferer),
+        |> isolated_child({:snapshooter, :main_stream}, ExNVR.Elements.CVSBufferer),
         get_child(:tee)
         |> via_out(:push_output)
-        |> child({:stats_reporter, :main_stream}, %VideoStreamStatReporter{
+        |> isolated_child({:stats_reporter, :main_stream}, %VideoStreamStatReporter{
           device_id: state.device.id
         }),
         get_child(:tee)
         |> via_out(:push_output)
         |> via_in(:video)
-        |> child(:webrtc, %Output.WebRTC{ice_servers: state.ice_servers})
+        |> isolated_child(:webrtc, %Output.WebRTC{ice_servers: state.ice_servers})
       ]
   end
+
+  defp isolated_child(builder, child_name, child_definition) do
+    {child(builder, child_name, child_definition),
+     group: {:isolated, child_name}, crash_group_mode: :temporary}
+  end
+
+  defp find_isolated_spec(group, state) do
+    (build_main_stream_spec(state) ++ build_sub_stream_spec(state))
+    |> Enum.find(fn
+      {_builder, opts} when is_list(opts) -> opts[:group] == group
+      _ -> false
+    end)
+  end
+
+  defp source_tee({_name, :sub_stream}), do: {:tee, :sub_stream}
+  defp source_tee(_main_stream_child), do: :tee
 
   defp build_sub_stream_spec(%{device: device} = state) do
     [
       get_child({:tee, :sub_stream})
       |> via_out(:push_output)
       |> via_in(:video)
-      |> child({:hls_sink, :sub_stream}, %Output.HLS{
+      |> isolated_child({:hls_sink, :sub_stream}, %Output.HLS{
         location: Path.join(Utils.hls_dir(device.id, :low), "live")
       }),
       get_child({:tee, :sub_stream})
       |> via_out(:push_output)
-      |> child({:stats_reporter, :sub_stream}, %VideoStreamStatReporter{
+      |> isolated_child({:stats_reporter, :sub_stream}, %VideoStreamStatReporter{
         device_id: device.id,
         stream: :low
-      })
+      }),
+      get_child({:tee, :sub_stream})
+      |> via_out(:push_output)
+      |> via_in(:video)
+      |> isolated_child({:webrtc, :sub_stream}, %Output.WebRTC{ice_servers: state.ice_servers})
     ] ++
       build_sub_stream_storage_spec(state) ++
-      build_sub_stream_webrtc_spec(state) ++
       build_sub_stream_bif_spec(state)
   end
 
@@ -529,15 +563,6 @@ defmodule ExNVR.Pipelines.Main do
     end
   end
 
-  defp build_sub_stream_webrtc_spec(state) do
-    [
-      get_child({:tee, :sub_stream})
-      |> via_out(:push_output)
-      |> via_in(:video)
-      |> child({:webrtc, :sub_stream}, %Output.WebRTC{ice_servers: state.ice_servers})
-    ]
-  end
-
   defp build_sub_stream_bif_spec(state) do
     has_address = not is_nil(state.device.storage_config.address)
 
@@ -545,7 +570,7 @@ defmodule ExNVR.Pipelines.Main do
       [
         get_child({:tee, :sub_stream})
         |> via_out(:push_output)
-        |> child({:thumbnailer, :sub_stream}, %Output.Thumbnailer{
+        |> isolated_child({:thumbnailer, :sub_stream}, %Output.Thumbnailer{
           dest: Device.bif_thumbnails_dir(state.device)
         })
       ]
@@ -578,7 +603,7 @@ defmodule ExNVR.Pipelines.Main do
       [reply: reply] ++ notify
     else
       source = if stream_type == :high, do: get_child(:tee), else: get_child({:tee, :sub_stream})
-      spec = [source |> via_out(:push_output) |> child(child, BinaryStream)]
+      spec = [source |> via_out(:push_output) |> isolated_child(child, BinaryStream)]
       [reply: reply, spec: spec] ++ notify
     end
   end
