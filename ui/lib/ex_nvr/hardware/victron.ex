@@ -210,12 +210,16 @@ defmodule ExNVR.Hardware.Victron do
   def parse_load_output_response(
         <<_::8, "ABED", flags::binary-size(2), value::binary-size(2), _checksum::binary-size(2)>>
       ) do
-    if String.to_integer(flags, 16) == 0 do
-      look = String.to_integer(value, 16)
-
-      {:ok, Enum.find_value(@load_output_state, fn {key, value} -> if value == look, do: key end)}
+    with {flags_int, ""} <- Integer.parse(flags, 16),
+         {value_int, ""} <- Integer.parse(value, 16) do
+      if flags_int == 0 do
+        {:ok,
+         Enum.find_value(@load_output_state, fn {key, value} -> if value == value_int, do: key end)}
+      else
+        {:error, :invalid_response}
+      end
     else
-      {:error, :invalid_response}
+      _error -> {:error, :invalid_response}
     end
   end
 
@@ -283,48 +287,49 @@ defmodule ExNVR.Hardware.Victron do
   defp do_handle_value(data, "pid", value), do: %{data | pid: value}
   defp do_handle_value(data, "fw", value), do: %{data | fw: value}
   defp do_handle_value(data, "ser#", value), do: %{data | serial_number: value}
-  defp do_handle_value(data, "v", value), do: %{data | v: String.to_integer(value)}
-  defp do_handle_value(data, "i", value), do: %{data | i: String.to_integer(value)}
-  defp do_handle_value(data, "vpv", value), do: %{data | vpv: String.to_integer(value)}
-  defp do_handle_value(data, "ppv", value), do: %{data | ppv: String.to_integer(value)}
-  defp do_handle_value(data, "il", value), do: %{data | il: String.to_integer(value)}
-  defp do_handle_value(data, "t", value), do: %{data | battery_temp: String.to_integer(value)}
-  defp do_handle_value(data, "p", value), do: %{data | p: String.to_integer(value)}
-  defp do_handle_value(data, "ce", value), do: %{data | consumed_amps: String.to_integer(value)}
-  defp do_handle_value(data, "soc", value), do: %{data | soc: String.to_integer(value)}
-  defp do_handle_value(data, "ttg", value), do: %{data | ttg: String.to_integer(value)}
-  defp do_handle_value(data, "h1", value), do: %{data | h1: String.to_integer(value)}
-  defp do_handle_value(data, "h2", value), do: %{data | h2: String.to_integer(value)}
-  defp do_handle_value(data, "h3", value), do: %{data | h3: String.to_integer(value)}
-  defp do_handle_value(data, "h4", value), do: %{data | h4: String.to_integer(value)}
-  defp do_handle_value(data, "h5", value), do: %{data | h5: String.to_integer(value)}
-  defp do_handle_value(data, "h6", value), do: %{data | h6: String.to_integer(value)}
-  defp do_handle_value(data, "h9", value), do: %{data | h9: String.to_integer(value)}
-  defp do_handle_value(data, "h19", value), do: %{data | h19: String.to_integer(value)}
-  defp do_handle_value(data, "h20", value), do: %{data | h20: String.to_integer(value)}
-  defp do_handle_value(data, "h21", value), do: %{data | h21: String.to_integer(value)}
-  defp do_handle_value(data, "h22", value), do: %{data | h22: String.to_integer(value)}
-  defp do_handle_value(data, "h23", value), do: %{data | h23: String.to_integer(value)}
+  defp do_handle_value(data, "v", value), do: %{data | v: to_integer(value)}
+  defp do_handle_value(data, "i", value), do: %{data | i: to_integer(value)}
+  defp do_handle_value(data, "vpv", value), do: %{data | vpv: to_integer(value)}
+  defp do_handle_value(data, "ppv", value), do: %{data | ppv: to_integer(value)}
+  defp do_handle_value(data, "il", value), do: %{data | il: to_integer(value)}
+  defp do_handle_value(data, "t", value), do: %{data | battery_temp: to_integer(value)}
+  defp do_handle_value(data, "p", value), do: %{data | p: to_integer(value)}
+  defp do_handle_value(data, "ce", value), do: %{data | consumed_amps: to_integer(value)}
+  defp do_handle_value(data, "soc", value), do: %{data | soc: to_integer(value)}
+  defp do_handle_value(data, "ttg", value), do: %{data | ttg: to_integer(value)}
+  defp do_handle_value(data, "h1", value), do: %{data | h1: to_integer(value, nil)}
+  defp do_handle_value(data, "h2", value), do: %{data | h2: to_integer(value)}
+  defp do_handle_value(data, "h3", value), do: %{data | h3: to_integer(value)}
+  defp do_handle_value(data, "h4", value), do: %{data | h4: to_integer(value)}
+  defp do_handle_value(data, "h5", value), do: %{data | h5: to_integer(value)}
+  defp do_handle_value(data, "h6", value), do: %{data | h6: to_integer(value)}
+  defp do_handle_value(data, "h9", value), do: %{data | h9: to_integer(value, nil)}
+  defp do_handle_value(data, "h19", value), do: %{data | h19: to_integer(value, nil)}
+  defp do_handle_value(data, "h20", value), do: %{data | h20: to_integer(value, nil)}
+  defp do_handle_value(data, "h21", value), do: %{data | h21: to_integer(value, nil)}
+  defp do_handle_value(data, "h22", value), do: %{data | h22: to_integer(value, nil)}
+  defp do_handle_value(data, "h23", value), do: %{data | h23: to_integer(value, nil)}
   defp do_handle_value(data, "or", value), do: %{data | off_reason: from_hex(value)}
-  defp do_handle_value(data, "err", value), do: %{data | err: String.to_integer(value)}
+  defp do_handle_value(data, "err", value), do: %{data | err: to_integer(value)}
 
   defp do_handle_value(data, "cs", value),
-    do: %{data | cs: String.to_integer(value) |> operation_state()}
+    do: %{data | cs: to_integer(value, 255) |> operation_state()}
 
   defp do_handle_value(data, "relay", value) do
-    %{data | relay_state: value |> String.downcase() |> String.to_existing_atom()}
+    %{data | relay_state: on_off(value, data.relay_state)}
   end
 
   defp do_handle_value(data, key, value) when key in ["alarm", "load"] do
-    Map.put(data, String.to_atom(key), String.downcase(value) |> String.to_existing_atom())
+    atom_key = String.to_atom(key)
+    Map.put(data, atom_key, on_off(value, Map.get(data, atom_key)))
   end
 
   defp do_handle_value(data, "ar", value), do: %{data | alarm_reasons: alarm_reasons(value)}
 
   defp do_handle_value(data, _key, _value), do: data
 
-  defp from_hex("0x" <> hex), do: String.to_integer(hex, 16)
-  defp from_hex(hex), do: String.to_integer(hex, 16)
+  defp from_hex("0x" <> hex), do: to_integer(hex, 0, 16)
+  defp from_hex(hex), do: to_integer(hex, 0, 16)
 
   defp operation_state(0), do: :off
   defp operation_state(2), do: :fault
@@ -338,7 +343,7 @@ defmodule ExNVR.Hardware.Victron do
   defp operation_state(_other), do: :unknown
 
   defp alarm_reasons(value) do
-    value = String.to_integer(value)
+    value = to_integer(value)
 
     @alarm_reasons
     |> Enum.reduce({[], value}, fn alarm, {alarms, value} ->
@@ -348,5 +353,20 @@ defmodule ExNVR.Hardware.Victron do
       end
     end)
     |> elem(0)
+  end
+
+  defp to_integer(value, default_value \\ 0, base \\ 10) do
+    case Integer.parse(value, base) do
+      {int, _} -> int
+      :error -> default_value
+    end
+  end
+
+  defp on_off(value, default) do
+    case String.downcase(value) do
+      "on" -> :on
+      "off" -> :off
+      _other -> default
+    end
   end
 end
