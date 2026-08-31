@@ -36,6 +36,7 @@ defmodule ExNVR.Nerves.Application do
       [
         {ExNVR.Nerves.Giraffe.Init, []},
         {ExNVR.Nerves.Giraffe.FanController, []},
+        {ExNVR.Nerves.Giraffe.DoorSensor, []},
         {ExNVR.Nerves.Monitoring.UPS, []}
       ]
   end
