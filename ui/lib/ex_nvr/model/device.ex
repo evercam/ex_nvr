@@ -174,6 +174,7 @@ defmodule ExNVR.Model.Device do
   end
 
   @primary_key {:id, :binary_id, autogenerate: true}
+  @derive {LiveVue.Encoder, only: [:id, :name, :type]}
   schema "devices" do
     field :name, :string
     field :type, Ecto.Enum, values: [:ip, :file, :webcam], default: :ip
