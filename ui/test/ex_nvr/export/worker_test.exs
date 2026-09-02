@@ -58,7 +58,7 @@ defmodule ExNVR.Export.WorkerTest do
       notify: self()
     ]
 
-    DynamicSupervisor.start_child(ExNVR.Export.Supervisor, {ExNVR.Export.Worker, args})
+    DynamicSupervisor.start_child(Export.Supervisor, {ExNVR.Export.Worker, args})
   end
 
   test "exports a full range into a single file", %{device: device, dest_dir: dest_dir} do
@@ -155,7 +155,7 @@ defmodule ExNVR.Export.WorkerTest do
     Process.exit(pid, :kill)
     assert_receive {:DOWN, ^ref, :process, ^pid, :killed}
 
-    assert {:ok, manifest} = ExNVR.Export.Manifest.load(dest_dir)
+    assert {:ok, manifest} = Export.Manifest.load(dest_dir)
     assert length(manifest.files) == 1
     assert manifest.status == :running
 
