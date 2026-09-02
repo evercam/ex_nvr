@@ -14,25 +14,15 @@
         phx-change="validate"
         phx-submit="submit_export"
       >
-        <div class="grid grid-cols-2 gap-4">
-          <.input
-            field={@export_form[:device_id]}
-            type="select"
-            label="Device"
-            prompt="Select a device"
-            options={Enum.map(@devices, &{&1.name, &1.id})}
-            disabled={@job_status != :new}
-            required
-          />
-          <.input
-            field={@export_form[:stream]}
-            type="select"
-            label="Stream"
-            options={[{"High Quality", "high"}, {"Low Quality", "low"}]}
-            disabled={@job_status != :new}
-            required
-          />
-        </div>
+        <.input
+          field={@export_form[:device_id]}
+          type="select"
+          label="Device"
+          prompt="Select a device"
+          options={Enum.map(@devices, &{&1.name, &1.id})}
+          disabled={@job_status != :new}
+          required
+        />
         <div class="grid grid-cols-2 gap-4">
           <.input
             field={@export_form[:start_date]}

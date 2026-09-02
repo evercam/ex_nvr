@@ -160,12 +160,6 @@ defmodule ExNVRWeb.Components.Sidebar do
             icon: "hero-circle-stack-solid",
             href: ~p"/remote-storages",
             role: :admin
-          },
-          %{
-            label: "Export Footage",
-            icon: "hero-arrow-down-tray-solid",
-            href: ~p"/export-footage",
-            role: :admin
           }
         ],
         [
@@ -236,12 +230,6 @@ defmodule ExNVRWeb.Components.Sidebar do
             label: "Remote Storages",
             icon: "hero-circle-stack-solid",
             href: ~p"/remote-storages",
-            role: :admin
-          },
-          %{
-            label: "Export Footage",
-            icon: "hero-arrow-down-tray-solid",
-            href: ~p"/export-footage",
             role: :admin
           }
         ],
