@@ -329,7 +329,7 @@ export default defineComponent({
     },
 
     mounted() {
-        this.startStreaming(this.url);
+        this.bindPlayerStats();
     },
     data() {
         return {
@@ -419,7 +419,12 @@ export default defineComponent({
         },
         startStreaming(streamUrl) {
             const component = this.$refs.videoPlayer;
+            component?.player?.destroy();
             component?.initHls(streamUrl);
+            this.bindPlayerStats();
+        },
+        bindPlayerStats() {
+            const component = this.$refs.videoPlayer;
             const playerElement = component?.$refs?.player;
 
             if (playerElement) {

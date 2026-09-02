@@ -180,6 +180,8 @@ defmodule ExNVRWeb.Router do
       live "/remote-storages", RemoteStorageListLive, :list
       live "/remote-storages/:id", RemoteStorageLive, :edit
 
+      live "/export-footage", ExportFootageLive, :index
+
       live "/onvif-discovery", OnvifDiscoveryLive, :onvif_discovery
 
       live "/users", UserListLive, :list

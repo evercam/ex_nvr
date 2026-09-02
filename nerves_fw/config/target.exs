@@ -11,6 +11,7 @@ config :ex_nvr,
   admin_username: System.get_env("EXNVR_ADMIN_USERNAME", "admin@localhost"),
   admin_password: System.get_env("EXNVR_ADMIN_PASSWORD", "P@ssw0rd"),
   download_dir: System.get_env("EXNVR_DOWNLOAD_DIR", "/data/ex_nvr/downloads"),
+  export_mount_root: System.get_env("EXNVR_EXPORT_MOUNT_ROOT", "/data/mnt"),
   mobius_persistence_dir: System.get_env("EXNVR_MOBIUS_DIR", "/data/ex_nvr/mobius"),
   victron_probing: false
 

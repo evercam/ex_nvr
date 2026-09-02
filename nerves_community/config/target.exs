@@ -10,7 +10,8 @@ config :ex_nvr,
   hls_directory: "/tmp/hls",
   admin_username: "admin@localhost",
   admin_password: "P@ssw0rd",
-  download_dir: "/data/ex_nvr/downloads"
+  download_dir: "/data/ex_nvr/downloads",
+  export_mount_root: "/data/mnt"
 
 config :ex_nvr, ice_servers: System.get_env("EXNVR_ICE_SERVERS", "[]")
 
