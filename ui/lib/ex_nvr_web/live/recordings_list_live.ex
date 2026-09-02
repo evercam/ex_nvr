@@ -13,7 +13,12 @@ defmodule ExNVRWeb.RecordingListLive do
   def render(assigns) do
     ~H"""
     <div class="grow e-m-8">
-      <.filter_form meta={@meta} devices={@devices} id="recording-filter-form" />
+      <div class="flex justify-between items-end mb-2">
+        <.filter_form meta={@meta} devices={@devices} id="recording-filter-form" />
+        <.link navigate={~p"/export-footage"}>
+          <.button><.icon name="hero-arrow-down-tray-solid" class="h-4 w-4" />Export</.button>
+        </.link>
+      </div>
 
       <Flop.Phoenix.table
         id="recordings"

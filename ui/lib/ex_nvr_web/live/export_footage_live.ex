@@ -12,9 +12,11 @@ defmodule ExNVRWeb.ExportFootageLive do
   @gib 1024 * 1024 * 1024
   @tib 1024 * 1024 * 1024 * 1024
 
+  @default_max_duration 3_600
+  @default_max_file_size_mb 4_096
+
   @types %{
     device_id: :string,
-    stream: :string,
     start_date: :naive_datetime,
     end_date: :naive_datetime,
     max_duration: :integer,
@@ -23,7 +25,7 @@ defmodule ExNVRWeb.ExportFootageLive do
     folder_name: :string
   }
 
-  def mount(_params, _session, socket) do
+  def mount(params, _session, socket) do
     socket
     |> assign(
       devices: Devices.list(),
@@ -33,9 +35,12 @@ defmodule ExNVRWeb.ExportFootageLive do
       job_progress: nil,
       poll_timer: nil
     )
-    |> assign(export_form: to_form(export_changeset(%{}), as: "export"))
+    |> assign(export_form: to_form(export_changeset(initial_params(params)), as: "export"))
     |> then(&{:ok, &1})
   end
+
+  defp initial_params(%{"device_id" => device_id}), do: %{"device_id" => device_id}
+  defp initial_params(_params), do: %{}
 
   def handle_event("validate", %{"export" => params}, socket) do
     changeset = params |> export_changeset() |> Map.put(:action, :validate)
@@ -117,7 +122,6 @@ defmodule ExNVRWeb.ExportFootageLive do
   defp do_start(socket, data, opts) do
     device = Enum.find(socket.assigns.devices, &(&1.id == data.device_id))
     dest_dir = Path.join(data.storage_mountpoint, data.folder_name)
-    stream = String.to_existing_atom(data.stream)
     start_date = DateTime.from_naive!(data.start_date, device.timezone)
     end_date = DateTime.from_naive!(data.end_date, device.timezone)
     max_duration = Map.get(data, :max_duration)
@@ -128,7 +132,7 @@ defmodule ExNVRWeb.ExportFootageLive do
       [max_duration: max_duration, max_file_size: max_file_size] |> Keyword.merge(opts)
 
     device
-    |> Export.start(stream, start_date, end_date, dest_dir, export_opts)
+    |> Export.start(:high, start_date, end_date, dest_dir, export_opts)
     |> handle_start_result(socket, dest_dir)
   end
 
@@ -207,11 +211,13 @@ defmodule ExNVRWeb.ExportFootageLive do
   end
 
   defp export_changeset(params) do
-    {%{stream: "high"}, @types}
+    {%{
+       max_duration: @default_max_duration,
+       max_file_size_mb: @default_max_file_size_mb
+     }, @types}
     |> Changeset.cast(params, Map.keys(@types))
     |> Changeset.validate_required([
       :device_id,
-      :stream,
       :start_date,
       :end_date,
       :storage_mountpoint,
