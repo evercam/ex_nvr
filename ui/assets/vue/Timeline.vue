@@ -22,7 +22,10 @@ export default defineComponent({
     this.setEventGroups()
   },
   watch: {
-    segments: "setEventGroups",
+    segments: {
+      handler: "setEventGroups",
+      deep: true,
+    },
   },
   methods: {
     setEventGroups() {  
@@ -85,6 +88,7 @@ export default defineComponent({
       :min-date="minDate"
       :max-date="maxDate"
       @event-clicked="$emit('run-clicked', $event)"
+      @date-clicked="$emit('run-clicked', { timestamp: $event })"
       dark
     >
       <template #tooltip="{timestamp, active}">

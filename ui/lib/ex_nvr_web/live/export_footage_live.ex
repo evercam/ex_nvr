@@ -4,7 +4,6 @@ defmodule ExNVRWeb.ExportFootageLive do
   alias Ecto.Changeset
   alias ExNVR.{Devices, Disk, Export}
 
-  @mount_root "/mnt/ex_nvr"
   @poll_interval to_timeout(second: 2)
   @folder_name_regex ~r/^[a-zA-Z0-9_.-]+$/
 
@@ -87,8 +86,10 @@ defmodule ExNVRWeb.ExportFootageLive do
 
   def terminate(_reason, _socket), do: :ok
 
+  defp mount_root, do: Application.get_env(:ex_nvr, :export_mount_root, "/mnt/ex_nvr")
+
   defp mount_candidate(socket, candidate) do
-    mountpoint = Path.join(@mount_root, candidate.name)
+    mountpoint = Path.join(mount_root(), candidate.name)
 
     with :ok <- File.mkdir_p(mountpoint),
          :ok <- do_mount(candidate, mountpoint) do
