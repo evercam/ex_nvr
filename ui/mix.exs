@@ -2,7 +2,7 @@ defmodule ExNVR.MixProject do
   use Mix.Project
 
   @app :ex_nvr
-  @version "0.27.0"
+  @version "0.28.0"
 
   def project do
     [
@@ -53,7 +53,7 @@ defmodule ExNVR.MixProject do
       {:membrane_raw_video_format, "~> 0.4.0", override: true},
       {:membrane_file_plugin, "~> 0.17.0"},
       {:membrane_realtimer_plugin, "~> 0.10.0"},
-      {:ex_webrtc, "~> 0.14.0"},
+      {:ex_webrtc, "~> 0.17.0"},
       {:ex_m3u8, "~> 0.15.0"},
       {:connection, "~> 1.1.0"},
       {:tzdata, "~> 1.1"},
@@ -75,7 +75,7 @@ defmodule ExNVR.MixProject do
       {:telemetry_poller, "~> 1.0"},
       {:mobius, "~> 0.7.0"},
       {:sizeable, "~> 1.0"},
-      {:gettext, "~> 0.20"},
+      {:gettext, "~> 1.0"},
       {:jason, "~> 1.2"},
       {:plug_cowboy, "~> 2.5"},
       {:corsica, "~> 2.1"},
@@ -86,7 +86,7 @@ defmodule ExNVR.MixProject do
       {:ex_onvif, "~> 0.9.0"},
       {:slipstream, "~> 1.2.0"},
       {:live_vue, "~> 1.2"},
-      {:sentry, "~> 11.0"},
+      {:sentry, "~> 13.0"},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:phoenix_live_reload, "~> 1.2", only: [:dev, :test]},
       {:membrane_h26x_plugin, "~> 0.10", only: :test},
