@@ -2,7 +2,7 @@ defmodule ExNVR.Nerves.MixProject do
   use Mix.Project
 
   @app :exnvr_fw
-  @version "0.27.0"
+  @version "0.28.0"
   @all_targets [:rpi4, :rpi5]
 
   def project do
@@ -32,7 +32,7 @@ defmodule ExNVR.Nerves.MixProject do
       {:nerves, "~> 1.10", runtime: false},
       {:shoehorn, "~> 0.9.1"},
       {:ring_logger, "~> 0.11.0"},
-      {:toolshed, "~> 0.4.0"},
+      {:toolshed, "~> 0.5.0"},
       {:nerves_runtime, "~> 0.13.0"},
       {:nerves_pack, "~> 0.7.1", targets: @all_targets},
       {:ex_nvr, path: "../ui", env: env},
