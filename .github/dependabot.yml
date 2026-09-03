@@ -1,0 +1,16 @@
+version: 2
+updates:
+  - package-ecosystem: "mix"
+    directory: "/ui"
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: "mix"
+    directory: "/nerves_fw"
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: "npm"
+    directory: "/ui/assets"
+    schedule:
+      interval: weekly

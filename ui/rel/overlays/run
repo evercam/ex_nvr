@@ -1,0 +1,3 @@
+#!/bin/sh
+$(dirname "$0")/bin/ex_nvr eval "ExNVR.Release.migrate"
+$(dirname "$0")/bin/ex_nvr start
