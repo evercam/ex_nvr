@@ -8,6 +8,8 @@ defmodule ExNVR.Devices.Onvif do
   alias ExOnvif.Devices.SystemDateAndTime
   alias ExOnvif.Media2
   alias ExOnvif.Media2.Profile.VideoEncoder
+  alias ExOnvif.PTZ
+  alias ExOnvif.PTZ.{ContinuousMove, Stop, Vector}
   alias ExOnvif.Search
   alias ExOnvif.Search.{FindRecordings, GetRecordingSearchResults}
 
@@ -63,6 +65,40 @@ defmodule ExNVR.Devices.Onvif do
   @spec get_recordings(Onvif.Device.t()) :: {:ok, [struct()]} | {:error, any()}
   def get_recordings(onvif_device) do
     do_get_recordings(onvif_device)
+  end
+
+  @spec ptz_supported?(Device.t()) :: boolean()
+  def ptz_supported?(device) do
+    with {:ok, onvif_device} <- onvif_device(device),
+         {:ok, _capabilities} <- PTZ.get_service_capabilities(onvif_device) do
+      true
+    else
+      _error -> false
+    end
+  end
+
+  @spec ptz_move(Device.t(), keyword()) :: :ok | {:error, any()}
+  def ptz_move(device, opts) do
+    velocity =
+      Vector.new(
+        Keyword.get(opts, :pan, 0.0),
+        Keyword.get(opts, :tilt, 0.0),
+        Keyword.get(opts, :zoom)
+      )
+
+    with {:ok, onvif_device} <- onvif_device(device) do
+      PTZ.continuous_move(
+        onvif_device,
+        ContinuousMove.new(device.stream_config.profile_token, velocity)
+      )
+    end
+  end
+
+  @spec ptz_stop(Device.t()) :: :ok | {:error, any()}
+  def ptz_stop(device) do
+    with {:ok, onvif_device} <- onvif_device(device) do
+      PTZ.stop(onvif_device, Stop.new(device.stream_config.profile_token))
+    end
   end
 
   # Auto configure cameras

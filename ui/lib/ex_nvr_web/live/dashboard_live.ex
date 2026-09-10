@@ -1,8 +1,11 @@
 defmodule ExNVRWeb.DashboardLive do
   use ExNVRWeb, :live_view
 
+  require Logger
+
   alias Ecto.Changeset
   alias ExNVR.Devices
+  alias ExNVR.Devices.Onvif
   alias ExNVR.Model.Device
   alias ExNVR.Recordings
   alias ExNVRWeb.Router.Helpers, as: Routes
@@ -38,11 +41,14 @@ defmodule ExNVRWeb.DashboardLive do
           device={Map.take(@current_device, [:id, :name, :timezone])}
           live-view-enabled={@live_view_enabled?}
           live-view-disabled-reason={@live_view_disabled_reason}
+          ptz-enabled={@ptz_enabled?}
           start-date={@start_date}
           v-on:switch_stream={JS.push("switch_stream")}
           v-on:switch_device={JS.push("switch_device")}
           v-on:show-download-modal={show_modal("download-modal")}
           v-on:load-recording={JS.push("load-recording")}
+          v-on:ptz-move={JS.push("ptz-move")}
+          v-on:ptz-stop={JS.push("ptz-stop")}
         />
       </div>
 
@@ -135,12 +141,15 @@ defmodule ExNVRWeb.DashboardLive do
 
     stream = Map.get(params, "stream", socket.assigns[:stream]) || "sub_stream"
 
+    previous_device = socket.assigns[:current_device]
+
     socket
     |> assign(current_device: device)
     |> assign(stream: stream, start_date: nil)
     |> assign_streams()
     |> assign_footage_form(%{"device_id" => device && device.id})
     |> live_view_enabled?()
+    |> assign_ptz_enabled?(previous_device)
     |> assign_runs()
     |> assign_timezone()
     |> maybe_push_stream_event(socket.assigns.start_date)
@@ -188,6 +197,35 @@ defmodule ExNVRWeb.DashboardLive do
     {:noreply, socket}
   end
 
+  def handle_event("ptz-move", params, socket) do
+    device = socket.assigns.current_device
+    opts = ptz_move_opts(params)
+
+    case Onvif.ptz_move(device, opts) do
+      :ok ->
+        :ok
+
+      {:error, reason} ->
+        Logger.warning("[PTZ] could not move device #{device.id}: #{inspect(reason)}")
+    end
+
+    {:noreply, socket}
+  end
+
+  def handle_event("ptz-stop", _params, socket) do
+    device = socket.assigns.current_device
+
+    case Onvif.ptz_stop(device) do
+      :ok ->
+        :ok
+
+      {:error, reason} ->
+        Logger.warning("[PTZ] could not stop device #{device.id}: #{inspect(reason)}")
+    end
+
+    {:noreply, socket}
+  end
+
   def handle_event("footage_duration", %{"footage" => params}, socket) do
     if params["duration"] == "",
       do: {:noreply, assign(socket, custom_duration: true)},
@@ -215,6 +253,21 @@ defmodule ExNVRWeb.DashboardLive do
         {:noreply, assign_footage_form(socket, changeset)}
     end
   end
+
+  defp ptz_move_opts(params) do
+    [:pan, :tilt, :zoom]
+    |> Enum.map(&{&1, params[Atom.to_string(&1)]})
+    |> Enum.reject(fn {_key, value} -> is_nil(value) end)
+    |> Enum.map(fn {key, value} -> {key, value |> to_float() |> clamp(-1.0, 1.0)} end)
+  end
+
+  defp to_float(value) when is_float(value), do: value
+  defp to_float(value) when is_integer(value), do: value * 1.0
+  defp to_float(value) when is_binary(value), do: String.to_float(value)
+
+  defp clamp(value, min, _max) when value < min, do: min
+  defp clamp(value, _min, max) when value > max, do: max
+  defp clamp(value, _min, _max), do: value
 
   defp assign_devices(socket) do
     assign(socket, devices: Devices.list())
@@ -288,6 +341,18 @@ defmodule ExNVRWeb.DashboardLive do
 
         assign(socket, stream_url: stream_url, poster_url: poster_url)
     end
+  end
+
+  defp assign_ptz_enabled?(%{assigns: %{current_device: nil}} = socket, _previous_device) do
+    assign(socket, ptz_enabled?: false)
+  end
+
+  defp assign_ptz_enabled?(%{assigns: %{current_device: %{id: id}}} = socket, %Device{id: id}) do
+    socket
+  end
+
+  defp assign_ptz_enabled?(socket, _previous_device) do
+    assign(socket, ptz_enabled?: Onvif.ptz_supported?(socket.assigns.current_device))
   end
 
   defp live_view_enabled?(socket) do
