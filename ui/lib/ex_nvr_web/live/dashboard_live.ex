@@ -9,6 +9,7 @@ defmodule ExNVRWeb.DashboardLive do
   alias ExNVR.Model.Device
   alias ExNVR.Recordings
   alias ExNVRWeb.Router.Helpers, as: Routes
+  alias ExOnvif.PTZ
 
   @durations [
     {"2 Minutes", "120"},
@@ -49,6 +50,7 @@ defmodule ExNVRWeb.DashboardLive do
           v-on:load-recording={JS.push("load-recording")}
           v-on:ptz-move={JS.push("ptz-move")}
           v-on:ptz-stop={JS.push("ptz-stop")}
+          v-on:ptz-home={JS.push("ptz-home")}
         />
       </div>
 
@@ -149,7 +151,7 @@ defmodule ExNVRWeb.DashboardLive do
     |> assign_streams()
     |> assign_footage_form(%{"device_id" => device && device.id})
     |> live_view_enabled?()
-    |> assign_ptz_enabled?(previous_device)
+    |> assign_ptz(previous_device)
     |> assign_runs()
     |> assign_timezone()
     |> maybe_push_stream_event(socket.assigns.start_date)
@@ -198,10 +200,19 @@ defmodule ExNVRWeb.DashboardLive do
   end
 
   def handle_event("ptz-move", params, socket) do
-    device = socket.assigns.current_device
+    %{onvif_device: onvif_device, current_device: device} = socket.assigns
     opts = ptz_move_opts(params)
 
-    case Onvif.ptz_move(device, opts) do
+    velocity =
+      PTZ.Vector.new(
+        Keyword.get(opts, :pan, 0.0),
+        Keyword.get(opts, :tilt, 0.0),
+        Keyword.get(opts, :zoom)
+      )
+
+    continuous_move = PTZ.ContinuousMove.new(device.stream_config.profile_token, velocity)
+
+    case PTZ.continuous_move(onvif_device, continuous_move) do
       :ok ->
         :ok
 
@@ -213,14 +224,31 @@ defmodule ExNVRWeb.DashboardLive do
   end
 
   def handle_event("ptz-stop", _params, socket) do
-    device = socket.assigns.current_device
+    %{onvif_device: onvif_device, current_device: device} = socket.assigns
+    stop = PTZ.Stop.new(device.stream_config.profile_token)
 
-    case Onvif.ptz_stop(device) do
+    case PTZ.stop(onvif_device, stop) do
       :ok ->
         :ok
 
       {:error, reason} ->
         Logger.warning("[PTZ] could not stop device #{device.id}: #{inspect(reason)}")
+    end
+
+    {:noreply, socket}
+  end
+
+  def handle_event("ptz-home", _params, socket) do
+    %{onvif_device: onvif_device, current_device: device} = socket.assigns
+
+    case PTZ.goto_home_position(onvif_device, device.stream_config.profile_token) do
+      :ok ->
+        :ok
+
+      {:error, reason} ->
+        Logger.warning(
+          "[PTZ] could not go to home position for device #{device.id}: #{inspect(reason)}"
+        )
     end
 
     {:noreply, socket}
@@ -343,16 +371,21 @@ defmodule ExNVRWeb.DashboardLive do
     end
   end
 
-  defp assign_ptz_enabled?(%{assigns: %{current_device: nil}} = socket, _previous_device) do
-    assign(socket, ptz_enabled?: false)
+  defp assign_ptz(%{assigns: %{current_device: nil}} = socket, _previous_device) do
+    assign(socket, ptz_enabled?: false, onvif_device: nil)
   end
 
-  defp assign_ptz_enabled?(%{assigns: %{current_device: %{id: id}}} = socket, %Device{id: id}) do
+  defp assign_ptz(%{assigns: %{current_device: %{id: id}}} = socket, %Device{id: id}) do
     socket
   end
 
-  defp assign_ptz_enabled?(socket, _previous_device) do
-    assign(socket, ptz_enabled?: Onvif.ptz_supported?(socket.assigns.current_device))
+  defp assign_ptz(socket, _previous_device) do
+    with {:ok, onvif_device} <- Onvif.onvif_device(socket.assigns.current_device),
+         {:ok, _capabilities} <- PTZ.get_service_capabilities(onvif_device) do
+      assign(socket, ptz_enabled?: true, onvif_device: onvif_device)
+    else
+      _error -> assign(socket, ptz_enabled?: false, onvif_device: nil)
+    end
   end
 
   defp live_view_enabled?(socket) do

@@ -26,8 +26,8 @@
             >
                 <i class="fa-solid fa-chevron-left"></i>
             </button>
-            <button class="ptz-btn" disabled>
-                <i class="fa-solid fa-circle text-xs"></i>
+            <button class="ptz-btn" title="Go to home position" @click="home">
+                <i class="fa-solid fa-house text-xs"></i>
             </button>
             <button
                 class="ptz-btn"
@@ -83,13 +83,16 @@
 import { defineComponent } from "vue";
 
 export default defineComponent({
-    emits: ["move", "stop"],
+    emits: ["move", "stop", "home"],
     methods: {
         move(direction) {
             this.$emit("move", direction);
         },
         stop() {
             this.$emit("stop");
+        },
+        home() {
+            this.$emit("home");
         },
     },
 });

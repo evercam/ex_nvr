@@ -194,6 +194,7 @@
                     v-if="isPtzShown"
                     @move="$emit('ptz-move', $event)"
                     @stop="$emit('ptz-stop')"
+                    @home="$emit('ptz-home')"
                 />
                 <EVideoPlayer
                     id="main"
