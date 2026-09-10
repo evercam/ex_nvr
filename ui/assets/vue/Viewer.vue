@@ -190,6 +190,12 @@
                         </div>
                     </div>
                 </div>
+                <PtzController
+                    v-if="isPtzShown"
+                    @move="$emit('ptz-move', $event)"
+                    @stop="$emit('ptz-stop')"
+                    @home="$emit('ptz-home')"
+                />
                 <EVideoPlayer
                     id="main"
                     v-if="liveViewEnabled"
@@ -233,6 +239,15 @@
                         </button>
                     </div>
 
+                    <div v-if="ptzEnabled" class="mb-2">
+                        <button
+                            class="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-white px-3.5 e-py-2.5 flex items-center hover:bg-gray-200 dark:hover:bg-gray-600 rounded"
+                            @click="togglePtz"
+                        >
+                            <i class="fa-solid fa-arrows-up-down-left-right"></i>
+                        </button>
+                    </div>
+
                     <button
                         class="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-white px-3 e-py-1.5 flex items-center hover:bg-gray-200 dark:hover:bg-gray-600 rounded"
                         @click="toggleFullscreen"
@@ -257,6 +272,7 @@
 <script>
 import { defineComponent, isProxy, toRaw } from "vue";
 import Timeline from "./Timeline.vue";
+import PtzController from "./PtzController.vue";
 import { makeFullScreen, exitFullScreen } from "@evercam/ui/vue3";
 import Hls from "hls.js";
 
@@ -304,6 +320,10 @@ export default defineComponent({
             type: String,
             default: null,
         },
+        ptzEnabled: {
+            type: Boolean,
+            default: false,
+        },
         startDate: {
             type: String,
             default: null,
@@ -311,6 +331,7 @@ export default defineComponent({
     },
     components: {
         Timeline,
+        PtzController,
     },
     computed: {
         videoOptions() {
@@ -337,6 +358,7 @@ export default defineComponent({
             navElement: null,
             isFullScreen: false,
             isStreamShown: false,
+            isPtzShown: false,
             interval: null,
             stats: {
                 availableLevels: 0,
@@ -416,6 +438,9 @@ export default defineComponent({
         },
         openStatsTab() {
             this.isStreamShown = !this.isStreamShown;
+        },
+        togglePtz() {
+            this.isPtzShown = !this.isPtzShown;
         },
         startStreaming(streamUrl) {
             const component = this.$refs.videoPlayer;
