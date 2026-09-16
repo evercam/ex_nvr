@@ -73,11 +73,24 @@ defmodule ExNVR.Nerves.Monitoring.UPS do
   end
 
   @impl true
+  def handle_info({bat_pid, value}, %{bat_pid: bat_pid, config: %{enabled: false}} = state) do
+    # giraffe kits keep UPS disabled on non-mains power, but must still power off on low battery
+    if Application.target() == :giraffe do
+      record_event(:low_battery?, value, state)
+      do_trigger_action(:power_off, pin_state(state, :low_battery?))
+      {:noreply, state}
+    else
+      enable_ups_on_trigger(state)
+    end
+  end
+
+  @impl true
   def handle_info({pid, _value}, %{config: %{enabled: false}} = state) when is_pid(pid) do
-    # After updating the ups settings, this module will receive a notification and
-    # will trigger the actions
-    {:ok, %{ups: ups}} = SystemSettings.update_ups_settings(%{enabled: true})
-    {:noreply, %{state | config: ups}}
+    if Application.target() == :giraffe do
+      {:noreply, state}
+    else
+      enable_ups_on_trigger(state)
+    end
   end
 
   @impl true
@@ -108,6 +121,11 @@ defmodule ExNVR.Nerves.Monitoring.UPS do
     {:noreply, state}
   end
 
+  defp enable_ups_on_trigger(state) do
+    {:ok, %{ups: ups}} = SystemSettings.update_ups_settings(%{enabled: true})
+    {:noreply, %{state | config: ups}}
+  end
+
   defp do_start_monitor(ups_config, opts) do
     ac_pin = Keyword.get(opts, :ac_pin, ups_config.ac_pin)
     bat_pin = Keyword.get(opts, :battery_pin, ups_config.battery_pin)
@@ -126,16 +144,7 @@ defmodule ExNVR.Nerves.Monitoring.UPS do
   end
 
   defp do_handle_pin_state_change(key, value, state) do
-    Logger.warning("[UPS] #{key} changed to #{value}")
-    event = %{type: event_name(key), metadata: %{state: value}}
-
-    Logger.info("[UPS] store event for #{key}")
-
-    set_system_status(state)
-
-    with {:error, changeset} <- ExNVR.Events.create_event(event) do
-      Logger.error("Failed to save event: #{inspect(changeset)}")
-    end
+    record_event(key, value, state)
 
     ref =
       if (key == :ac_ok? and state.config.ac_failure_action != :nothing) or
@@ -150,6 +159,19 @@ defmodule ExNVR.Nerves.Monitoring.UPS do
     if state.action_timer, do: Process.cancel_timer(state.action_timer)
 
     {:noreply, %{state | action_timer: ref}}
+  end
+
+  defp record_event(key, value, state) do
+    Logger.warning("[UPS] #{key} changed to #{value}")
+    Logger.info("[UPS] store event for #{key}")
+
+    set_system_status(state)
+
+    event = %{type: event_name(key), metadata: %{state: value}}
+
+    with {:error, changeset} <- ExNVR.Events.create_event(event) do
+      Logger.error("Failed to save event: #{inspect(changeset)}")
+    end
   end
 
   defp maybe_enable_ups(state) do
