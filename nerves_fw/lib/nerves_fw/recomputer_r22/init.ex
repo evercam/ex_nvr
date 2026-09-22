@@ -51,11 +51,7 @@ defmodule ExNVR.Nerves.RecomputerR22.Init do
 
       with {:ok, _} <- ATModem.start() do
         if not sim_detected?(), do: ATModem.reboot()
-
-        if sim_detected?() do
-          SimConfigurer.configure_apn()
-          ensure_ecm_mode()
-        end
+        if sim_detected?(), do: setup_modem()
       end
 
       {:noreply, state}
@@ -102,24 +98,42 @@ defmodule ExNVR.Nerves.RecomputerR22.Init do
 
   def sim_detected?, do: match?({:ok, _}, ATModem.sim_status())
 
-  def ensure_ecm_mode do
+  defp setup_modem do
+    ensure_qmi_mode()
+
+    case SimConfigurer.configure_apn() do
+      {:ok, apn} -> configure_qmi_interface(apn)
+      {:error, reason} -> Logger.error("[R22] failed to resolve APN: #{inspect(reason)}")
+    end
+  end
+
+  def ensure_qmi_mode do
     case ATModem.usbnet_mode() do
-      {:ok, :ecm} ->
+      {:ok, :qmi} ->
         :ok
 
       {:ok, mode} ->
-        Logger.info("[RemoteConfigurer] modem using #{mode}, switching to ECM (usb1)")
-        switch_to_ecm()
+        Logger.info("[R22] modem using #{mode}, switching to QMI (wwan0)")
+        switch_to_qmi()
 
       {:error, reason} ->
         {:error, {:usbnet_mode_unavailable, reason}}
     end
   end
 
-  def switch_to_ecm do
-    case ATModem.set_usbnet_mode(:ecm) do
-      {:ok, _} -> :ok
+  def switch_to_qmi do
+    with {:ok, _} <- ATModem.set_usbnet_mode(:qmi),
+         :ok <- ATModem.reboot() do
+      :ok
+    else
       {:error, reason} -> {:error, {:set_usbnet_failed, reason}}
     end
+  end
+
+  def configure_qmi_interface(apn) do
+    VintageNet.configure("wwan0", %{
+      type: VintageNetQMI,
+      vintage_net_qmi: %{service_providers: [%{apn: apn}]}
+    })
   end
 end

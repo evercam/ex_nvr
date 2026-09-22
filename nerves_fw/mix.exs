@@ -52,6 +52,7 @@ defmodule NervesFw.MixProject do
 
       # Dependencies for all targets except :host
       {:nerves_pack, "~> 0.7.0", targets: @all_targets},
+      {:vintage_net_qmi, "~> 0.4.5", targets: :recomputer_r22},
       {:mimic, "~> 2.1", only: :test},
       {:ex_nvr_system_rpi4,
        github: "evercam/ex_nvr_system_rpi4", tag: "v1.33.0", runtime: false, targets: :ex_nvr_rpi4},

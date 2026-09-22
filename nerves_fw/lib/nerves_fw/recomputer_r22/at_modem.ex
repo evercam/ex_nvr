@@ -125,8 +125,8 @@ defmodule ExNVR.Nerves.RecomputerR22.ATModem do
   def pdp_address(cid \\ 1), do: send_command("AT+CGPADDR=#{cid}")
 
   # USB network mode (Quectel `AT+QCFG="usbnet"`). Modes: :qmi | :ecm | :mbim | :rndis.
-  # The reComputer R22 expects a usbnet (CDC ECM) interface rather than a QMI
-  # device, so VintageNet can manage it as a regular ethernet interface.
+  # The reComputer R22 expects QMI mode so VintageNetQMI can manage the modem
+  # as a `wwan0` interface over the QMI control protocol.
 
   @doc "Return the current USB network mode as `{:ok, mode}` or `{:error, reason}`."
   def usbnet_mode do

@@ -11,11 +11,6 @@ config :vintage_net,
        type: VintageNetEthernet,
        ipv4: %{method: :dhcp}
      }},
-    {"usb1",
-     %{
-       type: VintageNetEthernet,
-       ipv4: %{method: :dhcp}
-     }},
     {"wlan0", %{type: VintageNetWiFi}},
     {"eth1",
      %{
