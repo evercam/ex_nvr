@@ -40,9 +40,7 @@ defmodule ExNVR.Nerves.Giraffe.Init do
   @impl true
   def init(_options) do
     power_type = SystemSettings.get_settings() |> Map.fetch!(:power_type)
-
     set_ups(power_type)
-
     {:ok, nil, {:continue, :init}}
   end
 

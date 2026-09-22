@@ -40,6 +40,10 @@ defmodule ExNVR.Nerves.Application do
       ]
   end
 
+  def children(:recomputer_r22) do
+    [{ExNVR.Nerves.RecomputerR22.Init, []}] ++ common_config()
+  end
+
   def children(_target) do
     common_config() ++ [{ExNVR.Nerves.Monitoring.UPS, []}]
   end

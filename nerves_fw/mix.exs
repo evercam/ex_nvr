@@ -3,7 +3,7 @@ defmodule NervesFw.MixProject do
 
   @app :ex_nvr_fw
   @version "0.28.3"
-  @all_targets [:ex_nvr_rpi4, :ex_nvr_rpi5, :giraffe]
+  @all_targets [:ex_nvr_rpi4, :ex_nvr_rpi5, :giraffe, :recomputer_r22]
 
   def project do
     [
@@ -44,6 +44,7 @@ defmodule NervesFw.MixProject do
       {:ex_nvr, path: "../ui", env: env},
       {:circuits_gpio, "~> 2.2"},
       {:circuits_i2c, "~> 2.0"},
+      {:circuits_uart, "~> 1.5"},
 
       # Allow Nerves.Runtime on host to support development, testing and CI.
       # See config/host.exs for usage.
@@ -51,14 +52,15 @@ defmodule NervesFw.MixProject do
 
       # Dependencies for all targets except :host
       {:nerves_pack, "~> 0.7.0", targets: @all_targets},
+      {:vintage_net_qmi, "~> 0.4.5", targets: :recomputer_r22},
       {:mimic, "~> 2.1", only: :test},
       {:ex_nvr_system_rpi4,
        github: "evercam/ex_nvr_system_rpi4", tag: "v1.33.0", runtime: false, targets: :ex_nvr_rpi4},
       {:ex_nvr_system_rpi5,
        github: "evercam/ex_nvr_system_rpi5",
-       tag: "v0.8.0",
+       branch: "seed-recomputer-r22",
        runtime: false,
-       targets: [:ex_nvr_rpi5, :giraffe]}
+       targets: [:ex_nvr_rpi5, :giraffe, :recomputer_r22]}
     ]
   end
 
