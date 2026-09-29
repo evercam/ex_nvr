@@ -292,12 +292,12 @@
             <table class="w-full text-sm text-left">
               <thead class="text-xs uppercase text-gray-500 dark:text-gray-400">
                 <tr>
-                  <th class="py-2 pr-4">Device</th>
-                  <th class="py-2 pr-4">Range</th>
-                  <th class="py-2 pr-4">Destination</th>
-                  <th class="py-2 pr-4">Status</th>
-                  <th class="py-2 pr-4">Files</th>
-                  <th class="py-2"></th>
+                  <th class="py-3 px-4">Device</th>
+                  <th class="py-3 px-4">Range</th>
+                  <th class="py-3 px-4">Destination</th>
+                  <th class="py-3 px-4">Status</th>
+                  <th class="py-3 px-4">Files</th>
+                  <th class="py-3 px-4"></th>
                 </tr>
               </thead>
               <tbody>
@@ -309,12 +309,12 @@
                     job.dest_dir == @dest_dir && "bg-gray-50 dark:bg-gray-700/40"
                   ]}
                 >
-                  <td class="py-2 pr-4">{job_device_name(job, @devices)}</td>
-                  <td class="py-2 pr-4 whitespace-nowrap">{job_range_label(job, @devices)}</td>
-                  <td class="py-2 pr-4 break-all">
+                  <td class="py-3 px-4">{job_device_name(job, @devices)}</td>
+                  <td class="py-3 px-4 whitespace-nowrap">{job_range_label(job, @devices)}</td>
+                  <td class="py-3 px-4 break-all">
                     {job_destination_label(job, @remote_storages)}
                   </td>
-                  <td class="py-2 pr-4">
+                  <td class="py-3 px-4">
                     <span class={[
                       "px-2 py-0.5 rounded text-xs font-medium",
                       status_badge_class(job_status(job))
@@ -334,7 +334,7 @@
                       folder not reachable (drive unplugged or deleted?)
                     </p>
                   </td>
-                  <td class="py-2 pr-4 whitespace-nowrap">
+                  <td class="py-3 px-4 whitespace-nowrap">
                     {job_files_label(job)}
                     <p
                       :if={flags = job_flags_label(job)}
@@ -343,7 +343,7 @@
                       {flags}
                     </p>
                   </td>
-                  <td class="py-2 text-right">
+                  <td class="py-3 px-4 text-right">
                     <button
                       :if={job.manifest}
                       type="button"
