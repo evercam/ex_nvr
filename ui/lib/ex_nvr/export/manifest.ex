@@ -6,11 +6,31 @@ defmodule ExNVR.Export.Manifest do
 
   @type status :: :running | :paused | :completed | :failed
 
+  @typedoc """
+  How files are split. `:duration` rotates on `max_duration`/`max_file_size`,
+  `:hourly` rotates on wall-clock hours (in `timezone`) and on recording gaps.
+  """
+  @type split :: :duration | :hourly
+
+  @type upload_status :: :pending | :uploaded | :skipped | :overwritten
+
+  @type destination :: %{
+          type: :s3,
+          remote_storage_id: integer(),
+          kit_id: String.t(),
+          camera_id: String.t(),
+          job_id: String.t()
+        }
+
+  @typedoc "`key` and `upload_status` are only set for jobs with a remote destination."
   @type file_entry :: %{
-          filename: String.t(),
-          start_date: DateTime.t(),
-          end_date: DateTime.t(),
-          size: non_neg_integer()
+          required(:filename) => String.t(),
+          required(:start_date) => DateTime.t(),
+          required(:end_date) => DateTime.t(),
+          required(:size) => non_neg_integer(),
+          optional(:key) => String.t(),
+          optional(:upload_status) => upload_status(),
+          optional(:previous_size) => non_neg_integer()
         }
 
   @type t :: %__MODULE__{
@@ -21,6 +41,9 @@ defmodule ExNVR.Export.Manifest do
           end_date: DateTime.t(),
           max_duration: pos_integer() | nil,
           max_file_size: pos_integer() | nil,
+          split: split(),
+          timezone: String.t() | nil,
+          destination: destination() | nil,
           cursor: DateTime.t(),
           status: status(),
           error: String.t() | nil,
@@ -38,6 +61,9 @@ defmodule ExNVR.Export.Manifest do
             end_date: nil,
             max_duration: nil,
             max_file_size: nil,
+            split: :duration,
+            timezone: nil,
+            destination: nil,
             cursor: nil,
             status: :running,
             error: nil,
@@ -59,6 +85,9 @@ defmodule ExNVR.Export.Manifest do
       end_date: Map.fetch!(params, :end_date),
       max_duration: params[:max_duration],
       max_file_size: params[:max_file_size],
+      split: params[:split] || :duration,
+      timezone: params[:timezone],
+      destination: params[:destination],
       cursor: Map.fetch!(params, :start_date),
       status: :running,
       inserted_at: now,
@@ -91,6 +120,24 @@ defmodule ExNVR.Export.Manifest do
     manifest
   end
 
+  @spec uploaded_count(t()) :: non_neg_integer()
+  def uploaded_count(%__MODULE__{files: files}),
+    do: Enum.count(files, &(&1[:upload_status] in [:uploaded, :skipped, :overwritten]))
+
+  @doc "Files that were not plainly uploaded: already in the bucket, or replacing an object."
+  @spec upload_flags(t() | [file_entry()]) :: %{
+          skipped: [file_entry()],
+          overwritten: [file_entry()]
+        }
+  def upload_flags(%__MODULE__{files: files}), do: upload_flags(files)
+
+  def upload_flags(files) do
+    %{
+      skipped: Enum.filter(files, &(&1[:upload_status] == :skipped)),
+      overwritten: Enum.filter(files, &(&1[:upload_status] == :overwritten))
+    }
+  end
+
   defp read_manifest_file(dest_dir) do
     case File.read(manifest_path(dest_dir)) do
       {:ok, content} -> {:ok, content}
@@ -109,6 +156,9 @@ defmodule ExNVR.Export.Manifest do
        end_date: parse_date!(Map.fetch!(json, "end_date")),
        max_duration: Map.get(json, "max_duration"),
        max_file_size: Map.get(json, "max_file_size"),
+       split: String.to_existing_atom(Map.get(json, "split", "duration")),
+       timezone: Map.get(json, "timezone"),
+       destination: destination_from_json(Map.get(json, "destination")),
        cursor: parse_date!(Map.fetch!(json, "cursor")),
        status: String.to_existing_atom(Map.fetch!(json, "status")),
        error: Map.get(json, "error"),
@@ -121,11 +171,33 @@ defmodule ExNVR.Export.Manifest do
   end
 
   defp file_entry_from_json(json) do
-    %{
+    entry = %{
       filename: Map.fetch!(json, "filename"),
       start_date: parse_date!(Map.fetch!(json, "start_date")),
       end_date: parse_date!(Map.fetch!(json, "end_date")),
       size: Map.fetch!(json, "size")
+    }
+
+    case json do
+      %{"key" => key, "upload_status" => status} ->
+        entry
+        |> Map.merge(%{key: key, upload_status: String.to_existing_atom(status)})
+        |> then(&if size = json["previous_size"], do: Map.put(&1, :previous_size, size), else: &1)
+
+      _json ->
+        entry
+    end
+  end
+
+  defp destination_from_json(nil), do: nil
+
+  defp destination_from_json(json) do
+    %{
+      type: String.to_existing_atom(Map.fetch!(json, "type")),
+      remote_storage_id: Map.fetch!(json, "remote_storage_id"),
+      kit_id: Map.fetch!(json, "kit_id"),
+      camera_id: Map.fetch!(json, "camera_id"),
+      job_id: Map.fetch!(json, "job_id")
     }
   end
 

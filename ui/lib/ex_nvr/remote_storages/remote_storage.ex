@@ -25,7 +25,8 @@ defmodule ExNVR.RemoteStorage do
             bucket: binary(),
             region: binary(),
             access_key_id: binary(),
-            secret_access_key: binary()
+            secret_access_key: binary(),
+            kit_id: binary() | nil
           }
 
     @primary_key false
@@ -34,16 +35,45 @@ defmodule ExNVR.RemoteStorage do
       field :region, :string, default: "us-east-1"
       field :access_key_id, :string
       field :secret_access_key, :string
+      # Root folder for footage exports; overrides the firmware-provided kit id.
+      field :kit_id, :string
     end
+
+    # S3 bucket naming rules: 3-63 lowercase letters, digits, dots and dashes.
+    @bucket_regex ~r/^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/
 
     def changeset(struct, params) do
       struct
       |> Changeset.cast(params, __MODULE__.__schema__(:fields))
+      |> Changeset.update_change(:bucket, &String.trim/1)
       |> Changeset.validate_required([
         :bucket,
         :access_key_id,
         :secret_access_key
       ])
+      |> Changeset.validate_change(:bucket, &validate_bucket/2)
+    end
+
+    defp validate_bucket(field, bucket) do
+      cond do
+        bucket =~ "://" ->
+          [
+            {field,
+             "remove the \"#{hd(String.split(bucket, "://"))}://\" prefix, enter the bucket name only"}
+          ]
+
+        String.starts_with?(bucket, "arn:") ->
+          [{field, "enter the bucket name, not its ARN"}]
+
+        bucket =~ "/" ->
+          [{field, "enter the bucket name only, without slashes or folders"}]
+
+        not (bucket =~ @bucket_regex) ->
+          [{field, "must be 3-63 lowercase letters, digits, dots or dashes"}]
+
+        true ->
+          []
+      end
     end
   end
 
