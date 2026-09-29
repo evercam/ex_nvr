@@ -39,7 +39,7 @@ defmodule NervesFw.MixProject do
       {:shoehorn, "~> 0.9.1"},
       {:ring_logger, "~> 0.11.0"},
       {:toolshed, "~> 0.5.0"},
-      {:nerves_hub_link, "~> 2.10.0"},
+      {:nerves_hub_link, "~> 2.12.0"},
       {:nerves_hub_cli, "~> 2.0"},
       {:ex_nvr, path: "../ui", env: env},
       {:circuits_gpio, "~> 2.2"},
@@ -55,10 +55,10 @@ defmodule NervesFw.MixProject do
       {:vintage_net_qmi, "~> 0.4.5", targets: :recomputer_r22},
       {:mimic, "~> 2.1", only: :test},
       {:ex_nvr_system_rpi4,
-       github: "evercam/ex_nvr_system_rpi4", tag: "v1.33.0", runtime: false, targets: :ex_nvr_rpi4},
+       github: "evercam/ex_nvr_system_rpi4", tag: "v1.33.1", runtime: false, targets: :ex_nvr_rpi4},
       {:ex_nvr_system_rpi5,
        github: "evercam/ex_nvr_system_rpi5",
-       branch: "seed-recomputer-r22",
+       tag: "v0.8.1",
        runtime: false,
        targets: [:ex_nvr_rpi5, :giraffe, :recomputer_r22]}
     ]
