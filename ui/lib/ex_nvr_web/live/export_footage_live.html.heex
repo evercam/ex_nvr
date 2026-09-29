@@ -3,195 +3,363 @@
     <div class="my-8">
       <h1 class="text-2xl font-bold">Export Footage</h1>
       <p class="mt-2 dark:text-gray-400">
-        Export a device's recordings to a folder on local storage
+        Export a device's recordings to a folder on local storage or to an S3 bucket
       </p>
     </div>
 
-    <.card class="space-y-6">
-      <.simple_form
-        id="export-form"
-        for={@export_form}
-        phx-change="validate"
-        phx-submit="submit_export"
-      >
-        <.input
-          field={@export_form[:device_id]}
-          type="select"
-          label="Device"
-          prompt="Select a device"
-          options={Enum.map(@devices, &{&1.name, &1.id})}
-          disabled={@job_status != :new}
-          required
-        />
-        <div class="grid grid-cols-2 gap-4">
-          <.input
-            field={@export_form[:start_date]}
-            type="datetime-local"
-            label="Start Date"
-            disabled={@job_status != :new}
-            required
-          />
-          <.input
-            field={@export_form[:end_date]}
-            type="datetime-local"
-            label="End Date"
-            disabled={@job_status != :new}
-            required
-          />
-        </div>
-        <div class="grid grid-cols-2 gap-4">
-          <.input
-            field={@export_form[:max_duration]}
-            type="number"
-            min="1"
-            label="Max file duration (seconds)"
-            disabled={@job_status != :new}
-          />
-          <.input
-            field={@export_form[:max_file_size_mb]}
-            type="number"
-            min="1"
-            label="Max file size (MiB)"
-            disabled={@job_status != :new}
-          />
-        </div>
-        <p class="text-sm dark:text-gray-400">
-          Optional — splits the export into multiple files once either limit is reached.
-        </p>
+    <.tabs id="export-tabs" active_tab={@active_tab} on_change={:tab_changed}>
+      <:tab id="export" label="Export" />
+      <:tab id="recent" label={"Recent exports (#{length(@recent_exports)})"} />
 
-        <.separator />
-
-        <div class="w-full font-medium">Destination</div>
-
-        <.input
-          :let={option}
-          field={@export_form[:storage_mountpoint]}
-          type="radio"
-          label=""
-          options={Enum.map(mounted_candidates(@disks), &{&1.fs.mountpoint, &1})}
-        >
-          <div class="w-full px-2 font-normal text-xs">
-            <div class="flex justify-between mb-1">
-              <span>{elem(option, 1).label} — {elem(option, 0)}</span>
-              <span>
-                {format_bytes(elem(option, 1).fs.avail)} free of {format_bytes(
-                  elem(option, 1).fs.size
-                )}
-              </span>
+      <:tab_content for="export">
+        <.card class="space-y-6">
+          <.simple_form
+            id="export-form"
+            for={@export_form}
+            phx-change="validate"
+            phx-submit="submit_export"
+          >
+            <.input
+              field={@export_form[:device_id]}
+              type="select"
+              label="Device"
+              prompt="Select a device"
+              options={Enum.map(@devices, &{&1.name, &1.id})}
+              disabled={@job_status != :new}
+              required
+            />
+            <.input
+              field={@export_form[:destination]}
+              type="select"
+              label="Export to"
+              options={[{"USB / local disk", "usb"}, {"S3 bucket", "s3"}]}
+              disabled={@job_status != :new}
+            />
+            <div class="grid grid-cols-2 gap-4">
+              <.input
+                field={@export_form[:start_date]}
+                type="datetime-local"
+                label="Start Date"
+                disabled={@job_status != :new}
+                required
+              />
+              <.input
+                field={@export_form[:end_date]}
+                type="datetime-local"
+                label="End Date"
+                disabled={@job_status != :new}
+                required
+              />
             </div>
-            <div class="w-full bg-gray-200 rounded-full dark:bg-gray-700">
-              <div
-                class="bg-blue-800 text-xs font-medium text-blue-100 text-center leading-none rounded-full"
-                style={"width: #{percent_used(elem(option, 1).fs)}%"}
-              >
-                {percent_used(elem(option, 1).fs)}% used
+
+            <div :if={@export_form[:destination].value == "s3"} class="space-y-4">
+              <.input
+                field={@export_form[:remote_storage_id]}
+                type="select"
+                label="S3 storage"
+                prompt="Select an S3 remote storage"
+                options={Enum.map(@remote_storages, &{&1.name, &1.id})}
+                disabled={@job_status != :new}
+              />
+              <p :if={@remote_storages == []} class="text-sm dark:text-gray-400">
+                No S3 storage configured yet.
+                <.link navigate={~p"/remote-storages/new"} class="text-blue-600 hover:underline">
+                  Add one
+                </.link>
+              </p>
+              <div class="grid grid-cols-2 gap-4">
+                <.input
+                  field={@export_form[:stream]}
+                  type="select"
+                  label="Stream"
+                  options={stream_options(@devices, @export_form[:device_id].value)}
+                  disabled={@job_status != :new}
+                />
+                <.input
+                  field={@export_form[:camera_id]}
+                  type="text"
+                  label="Camera ID (optional)"
+                  placeholder={@export_form[:device_id].value || "defaults to the device id"}
+                  disabled={@job_status != :new}
+                />
               </div>
             </div>
-          </div>
-        </.input>
 
-        <div
-          :for={candidate <- unmounted_candidates(@disks)}
-          class="flex items-center justify-between p-2 border border-gray-200 rounded-lg dark:border-gray-600 text-xs"
-        >
-          <div>
-            <span class="font-medium">{candidate.name}</span>
-            <span class="text-gray-500 dark:text-gray-400">
-              ({candidate.label}, {candidate.fs.type}, {format_bytes(candidate.fs.size)}, not mounted)
-            </span>
-          </div>
-          <button
-            type="button"
-            phx-click="mount_disk"
-            phx-value-part={candidate.name}
-            class="text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
-          >
-            <.icon name="hero-arrow-up-tray" class="w-4 h-4" /> Mount
-          </button>
-        </div>
-
-        <.input
-          field={@export_form[:folder_name]}
-          type="text"
-          label="Folder name"
-          placeholder="e.g. incident-2026-09-01"
-        />
-        <p class="text-sm dark:text-gray-400">
-          Identifies this export on the chosen storage. Using the same storage and folder name again
-          resumes a paused export or retries a failed one; a different folder name always starts a new export.
-        </p>
-
-        <.separator />
-
-        <div :if={@job_status == :new} class="flex justify-end">
-          <.button type="submit" phx-disable-with="Starting...">
-            <.icon name="hero-play-solid" class="w-4 h-4 mr-1" /> Start Export
-          </.button>
-        </div>
-
-        <div :if={@job_status == :running} class="space-y-3">
-          <div class="flex items-center gap-2 text-lg">
-            <.icon name="hero-arrow-path" class="h-5 w-5 animate-spin" /> Exporting…
-          </div>
-          <div class="w-full bg-gray-200 rounded-full dark:bg-gray-700">
-            <div
-              class="bg-blue-800 text-xs font-medium text-blue-100 text-center leading-none rounded-full"
-              style={"width: #{@job_progress.percentage}%"}
-            >
-              {@job_progress.percentage}%
+            <div :if={@export_form[:destination].value != "s3"} class="grid grid-cols-2 gap-4">
+              <.input
+                field={@export_form[:max_duration]}
+                type="number"
+                min="1"
+                label="Max file duration (seconds)"
+                disabled={@job_status != :new}
+              />
+              <.input
+                field={@export_form[:max_file_size_mb]}
+                type="number"
+                min="1"
+                label="Max file size (MiB)"
+                disabled={@job_status != :new}
+              />
             </div>
-          </div>
-          <p class="text-sm dark:text-gray-400">
-            Files completed: {@job_progress.files_completed}
-          </p>
-          <p :if={@job_progress.current_file} class="text-sm dark:text-gray-400">
-            Current file: {@job_progress.current_file.filename} ({format_bytes(
-              @job_progress.current_file.bytes
-            )}, {@job_progress.current_file.elapsed_seconds}s)
-          </p>
-          <div class="flex justify-end">
-            <button
-              type="button"
-              phx-click="stop_export"
-              class="text-red-600 dark:text-red-400 hover:underline"
-            >
-              Stop
-            </button>
-          </div>
-        </div>
+            <div :if={@export_form[:destination].value != "s3"} class="space-y-4">
+              <p class="text-sm dark:text-gray-400">
+                Optional — splits the export into multiple files once either limit is reached.
+              </p>
 
-        <div :if={@job_status == :paused} class="space-y-3">
-          <p>
-            Export paused at {@job_progress.percentage}% ({@job_progress.files_completed} files written).
+              <.separator />
+
+              <div class="w-full font-medium">Destination</div>
+
+              <.input
+                :let={option}
+                field={@export_form[:storage_mountpoint]}
+                type="radio"
+                label=""
+                options={Enum.map(mounted_candidates(@disks), &{&1.fs.mountpoint, &1})}
+              >
+                <div class="w-full px-2 font-normal text-xs">
+                  <div class="flex justify-between mb-1">
+                    <span>{elem(option, 1).label} — {elem(option, 0)}</span>
+                    <span>
+                      {format_bytes(elem(option, 1).fs.avail)} free of {format_bytes(
+                        elem(option, 1).fs.size
+                      )}
+                    </span>
+                  </div>
+                  <div class="w-full bg-gray-200 rounded-full dark:bg-gray-700">
+                    <div
+                      class="bg-blue-800 text-xs font-medium text-blue-100 text-center leading-none rounded-full"
+                      style={"width: #{percent_used(elem(option, 1).fs)}%"}
+                    >
+                      {percent_used(elem(option, 1).fs)}% used
+                    </div>
+                  </div>
+                </div>
+              </.input>
+
+              <div
+                :for={candidate <- unmounted_candidates(@disks)}
+                class="flex items-center justify-between p-2 border border-gray-200 rounded-lg dark:border-gray-600 text-xs"
+              >
+                <div>
+                  <span class="font-medium">{candidate.name}</span>
+                  <span class="text-gray-500 dark:text-gray-400">
+                    ({candidate.label}, {candidate.fs.type}, {format_bytes(candidate.fs.size)}, not mounted)
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  phx-click="mount_disk"
+                  phx-value-part={candidate.name}
+                  class="text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
+                >
+                  <.icon name="hero-arrow-up-tray" class="w-4 h-4" /> Mount
+                </button>
+              </div>
+
+              <.input
+                field={@export_form[:folder_name]}
+                type="text"
+                label="Folder name"
+                placeholder="e.g. incident-2026-09-01"
+              />
+              <p class="text-sm dark:text-gray-400">
+                Identifies this export on the chosen storage. Using the same storage and folder name again
+                resumes a paused export or retries a failed one; a different folder name always starts a new export.
+              </p>
+            </div>
+
+            <.separator />
+
+            <div :if={@job_status == :new} class="flex justify-end">
+              <.button type="submit" phx-disable-with="Starting...">
+                <.icon name="hero-play-solid" class="w-4 h-4 mr-1" /> Start Export
+              </.button>
+            </div>
+
+            <div :if={@job_status == :running} class="space-y-3">
+              <div class="flex items-center gap-2 text-lg">
+                <.icon name="hero-arrow-path" class="h-5 w-5 animate-spin" /> Exporting…
+              </div>
+              <div class="w-full bg-gray-200 rounded-full dark:bg-gray-700">
+                <div
+                  class="bg-blue-800 text-xs font-medium text-blue-100 text-center leading-none rounded-full"
+                  style={"width: #{@job_progress.percentage}%"}
+                >
+                  {@job_progress.percentage}%
+                </div>
+              </div>
+              <p class="text-sm dark:text-gray-400">
+                Files completed: {@job_progress.files_completed}
+              </p>
+              <p :if={@job_progress.remote?} class="text-sm dark:text-gray-400">
+                Files uploaded: {@job_progress.files_uploaded} / {@job_progress.files_completed}
+              </p>
+              <p :if={@job_progress.current_file} class="text-sm dark:text-gray-400">
+                Current file: {@job_progress.current_file.filename} ({format_bytes(
+                  @job_progress.current_file.bytes
+                )}, {@job_progress.current_file.elapsed_seconds}s)
+              </p>
+              <div class="flex justify-end">
+                <button
+                  type="button"
+                  phx-click="stop_export"
+                  class="text-red-600 dark:text-red-400 hover:underline"
+                >
+                  Stop
+                </button>
+              </div>
+            </div>
+
+            <div :if={@job_status == :paused} class="space-y-3">
+              <p :if={@job_progress.error} class="text-yellow-600 dark:text-yellow-400">
+                {@job_progress.error}
+              </p>
+              <p>
+                Export paused at {@job_progress.percentage}% ({@job_progress.files_completed} files written<span :if={
+                  @job_progress.remote?
+                }>, {@job_progress.files_uploaded} uploaded</span>).
+              </p>
+              <div class="flex justify-end">
+                <.button type="submit" phx-disable-with="Resuming...">
+                  <.icon name="hero-play-solid" class="w-4 h-4 mr-1" /> Resume Export
+                </.button>
+              </div>
+            </div>
+
+            <div :if={@job_status == :completed} class="space-y-3">
+              <div class="flex items-center gap-2 text-lg">
+                <.icon name="hero-check-circle-solid" class="h-5 w-5 text-green-600" />
+                Export already complete
+              </div>
+              <div
+                :for={flags <- [upload_flags(@job_progress.files)]}
+                :if={@job_progress.remote?}
+                id="upload-flags"
+              >
+                <div
+                  :if={flags.skipped != [] or flags.overwritten != []}
+                  class="p-3 rounded-lg border border-yellow-400 bg-yellow-50 text-yellow-900 dark:bg-yellow-900/30 dark:text-yellow-200 text-sm space-y-2"
+                >
+                  <div class="flex items-center gap-2 font-medium">
+                    <.icon name="hero-exclamation-triangle" class="h-5 w-5" />
+                    {length(flags.skipped)} skipped, {length(flags.overwritten)} overwritten
+                  </div>
+                  <div :if={flags.skipped != []}>
+                    <p>Skipped (already in the bucket with the same size):</p>
+                    <ul class="list-disc ml-5">
+                      <li :for={file <- flags.skipped}>{file.key}</li>
+                    </ul>
+                  </div>
+                  <div :if={flags.overwritten != []}>
+                    <p>Overwritten (an existing file of a different size was replaced):</p>
+                    <ul class="list-disc ml-5">
+                      <li :for={file <- flags.overwritten}>
+                        {file.key} — {format_bytes(file[:previous_size])} → {format_bytes(
+                          file.size
+                        )}
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+              <ul class="text-sm dark:text-gray-400">
+                <li :for={file <- @job_progress.files}>
+                  {remote_file_label(file)} — {format_bytes(file.size)}
+                </li>
+              </ul>
+            </div>
+
+            <div :if={@job_status == :failed} class="space-y-3">
+              <p class="text-red-600 dark:text-red-400">Export failed: {@job_progress.error}</p>
+              <div class="flex justify-end">
+                <.button type="submit" phx-disable-with="Retrying...">
+                  <.icon name="hero-arrow-path" class="w-4 h-4 mr-1" /> Retry Export
+                </.button>
+              </div>
+            </div>
+          </.simple_form>
+        </.card>
+      </:tab_content>
+
+      <:tab_content for="recent">
+        <.card class="mb-8">
+          <div id="recent-exports" class="font-medium mb-3">Recent exports</div>
+          <p :if={@recent_exports == []} class="text-sm dark:text-gray-400">
+            No exports yet.
           </p>
-          <div class="flex justify-end">
-            <.button type="submit" phx-disable-with="Resuming...">
-              <.icon name="hero-play-solid" class="w-4 h-4 mr-1" /> Resume Export
-            </.button>
+          <div :if={@recent_exports != []} class="overflow-x-auto">
+            <table class="w-full text-sm text-left">
+              <thead class="text-xs uppercase text-gray-500 dark:text-gray-400">
+                <tr>
+                  <th class="py-2 pr-4">Device</th>
+                  <th class="py-2 pr-4">Range</th>
+                  <th class="py-2 pr-4">Destination</th>
+                  <th class="py-2 pr-4">Status</th>
+                  <th class="py-2 pr-4">Files</th>
+                  <th class="py-2"></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  :for={job <- @recent_exports}
+                  id={"export-job-#{Base.url_encode64(job.dest_dir, padding: false)}"}
+                  class={[
+                    "border-t border-gray-200 dark:border-gray-700 align-top",
+                    job.dest_dir == @dest_dir && "bg-gray-50 dark:bg-gray-700/40"
+                  ]}
+                >
+                  <td class="py-2 pr-4">{job_device_name(job, @devices)}</td>
+                  <td class="py-2 pr-4 whitespace-nowrap">{job_range_label(job, @devices)}</td>
+                  <td class="py-2 pr-4 break-all">
+                    {job_destination_label(job, @remote_storages)}
+                  </td>
+                  <td class="py-2 pr-4">
+                    <span class={[
+                      "px-2 py-0.5 rounded text-xs font-medium",
+                      status_badge_class(job_status(job))
+                    ]}>
+                      {job_status(job)}
+                    </span>
+                    <p
+                      :if={job.progress && job.progress.error}
+                      class="mt-1 text-xs text-red-600 dark:text-red-400 max-w-xs"
+                    >
+                      {job.progress.error}
+                    </p>
+                    <p
+                      :if={job_status(job) == :unavailable}
+                      class="mt-1 text-xs dark:text-gray-400"
+                    >
+                      folder not reachable (drive unplugged or deleted?)
+                    </p>
+                  </td>
+                  <td class="py-2 pr-4 whitespace-nowrap">
+                    {job_files_label(job)}
+                    <p
+                      :if={flags = job_flags_label(job)}
+                      class="text-xs text-yellow-600 dark:text-yellow-400"
+                    >
+                      {flags}
+                    </p>
+                  </td>
+                  <td class="py-2 text-right">
+                    <button
+                      :if={job.manifest}
+                      type="button"
+                      phx-click="open_export"
+                      phx-value-dest-dir={job.dest_dir}
+                      class="text-blue-600 dark:text-blue-400 hover:underline"
+                    >
+                      Open
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
-        </div>
-
-        <div :if={@job_status == :completed} class="space-y-3">
-          <div class="flex items-center gap-2 text-lg">
-            <.icon name="hero-check-circle-solid" class="h-5 w-5 text-green-600" />
-            Export already complete
-          </div>
-          <ul class="text-sm dark:text-gray-400">
-            <li :for={file <- @job_progress.files}>
-              {file.filename} — {format_bytes(file.size)}
-            </li>
-          </ul>
-        </div>
-
-        <div :if={@job_status == :failed} class="space-y-3">
-          <p class="text-red-600 dark:text-red-400">Export failed: {@job_progress.error}</p>
-          <div class="flex justify-end">
-            <.button type="submit" phx-disable-with="Retrying...">
-              <.icon name="hero-arrow-path" class="w-4 h-4 mr-1" /> Retry Export
-            </.button>
-          </div>
-        </div>
-      </.simple_form>
-    </.card>
+        </.card>
+      </:tab_content>
+    </.tabs>
   </div>
 </div>
