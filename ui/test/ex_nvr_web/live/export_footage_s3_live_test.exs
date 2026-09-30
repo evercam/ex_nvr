@@ -6,11 +6,16 @@ defmodule ExNVRWeb.ExportFootageS3LiveTest do
   import Phoenix.LiveViewTest
 
   alias ExNVR.Export
-  alias ExNVR.Export.S3
+  alias ExNVR.Export.{Recent, S3}
 
   @moduletag :tmp_dir
 
   setup :set_mimic_global
+
+  setup do
+    Recent.clear()
+    :ok
+  end
 
   setup %{conn: conn, tmp_dir: tmp_dir} do
     stub(ExNVR.Disk, :list_drives!, fn -> [] end)
@@ -225,6 +230,72 @@ defmodule ExNVRWeb.ExportFootageS3LiveTest do
     assert html =~ "Retry Export"
     assert html =~ ~s(value="cam-exid")
     assert html =~ ~s(value="2024-12-15T11:00")
+
+    # retrying the reopened job keeps the page and its inputs
+    html = lv |> form("#export-form") |> render_submit()
+    assert html =~ "Export failed: no_recordings"
+    assert html =~ ~s(value="cam-exid")
+  end
+
+  test "retrying a reopened USB export keeps the page and its inputs", %{
+    conn: conn,
+    device: device,
+    tmp_dir: tmp_dir
+  } do
+    dest_dir = Path.join([tmp_dir, "usb", "incident-1"])
+
+    {:ok, _pid} =
+      Export.start(device, :high, ~U(2024-12-15T11:00:00Z), ~U(2024-12-15T12:00:00Z), dest_dir)
+
+    wait_until(fn -> match?({:ok, %{status: :failed}}, Export.progress(dest_dir)) end)
+
+    {:ok, lv, html} = live(conn, ~p"/export-footage?tab=recent")
+    assert html =~ "USB · #{dest_dir}"
+
+    lv |> element(~s(button[phx-click="open_export"])) |> render_click()
+    html = lv |> form("#export-form") |> render_submit()
+
+    assert html =~ "Export failed: no_recordings"
+    assert html =~ ~s(value="incident-1")
+    assert html =~ ~s(value="2024-12-15T11:00")
+  end
+
+  test "inputs stay editable after an export that found no recordings", %{
+    conn: conn,
+    device: device,
+    remote_storage: remote_storage
+  } do
+    {:ok, lv, _html} = live(conn, ~p"/export-footage")
+    select_s3(lv, device)
+    params = s3_params(device, remote_storage)
+    lv |> form("#export-form", export: params) |> render_change()
+    lv |> form("#export-form", export: params) |> render_submit()
+
+    {:ok, job} =
+      S3.job(
+        device,
+        remote_storage,
+        :low,
+        "cam-exid",
+        ~U(2024-12-15T11:00:00Z),
+        ~U(2024-12-15T12:00:00Z)
+      )
+
+    wait_until(fn -> match?({:ok, %{status: :failed}}, Export.progress(job.dest_dir)) end)
+    html = lv |> form("#export-form", export: params) |> render_change()
+
+    assert html =~ "Export failed: no_recordings"
+    assert html =~ "Nothing was exported"
+    refute has_element?(lv, "#export_start_date[disabled]")
+
+    # new dates make it a new export
+    html =
+      lv
+      |> form("#export-form", export: %{params | "start_date" => "2024-12-16T11:00"})
+      |> render_change()
+
+    refute html =~ "Export failed"
+    assert html =~ "Start Export"
   end
 
   test "requires a kit id", %{conn: conn, device: device} do

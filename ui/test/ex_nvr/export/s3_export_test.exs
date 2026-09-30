@@ -4,12 +4,17 @@ defmodule ExNVR.Export.S3ExportTest do
   import ExNVR.RemoteStoragesFixtures
 
   alias ExNVR.Export
-  alias ExNVR.Export.{Manifest, S3}
+  alias ExNVR.Export.{Manifest, Recent, S3}
 
   @moduletag :tmp_dir
 
   @kit_id "kit-42"
   @bucket "footage"
+
+  setup do
+    Recent.clear()
+    :ok
+  end
 
   setup %{tmp_dir: tmp_dir} do
     bypass = Bypass.open()

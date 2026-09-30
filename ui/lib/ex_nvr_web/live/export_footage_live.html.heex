@@ -25,7 +25,7 @@
               label="Device"
               prompt="Select a device"
               options={Enum.map(@devices, &{&1.name, &1.id})}
-              disabled={@job_status != :new}
+              disabled={@inputs_locked?}
               required
             />
             <.input
@@ -33,21 +33,21 @@
               type="select"
               label="Export to"
               options={[{"USB / local disk", "usb"}, {"S3 bucket", "s3"}]}
-              disabled={@job_status != :new}
+              disabled={@inputs_locked?}
             />
             <div class="grid grid-cols-2 gap-4">
               <.input
                 field={@export_form[:start_date]}
                 type="datetime-local"
                 label="Start Date"
-                disabled={@job_status != :new}
+                disabled={@inputs_locked?}
                 required
               />
               <.input
                 field={@export_form[:end_date]}
                 type="datetime-local"
                 label="End Date"
-                disabled={@job_status != :new}
+                disabled={@inputs_locked?}
                 required
               />
             </div>
@@ -59,7 +59,7 @@
                 label="S3 storage"
                 prompt="Select an S3 remote storage"
                 options={Enum.map(@remote_storages, &{&1.name, &1.id})}
-                disabled={@job_status != :new}
+                disabled={@inputs_locked?}
               />
               <p :if={@remote_storages == []} class="text-sm dark:text-gray-400">
                 No S3 storage configured yet.
@@ -73,14 +73,14 @@
                   type="select"
                   label="Stream"
                   options={stream_options(@devices, @export_form[:device_id].value)}
-                  disabled={@job_status != :new}
+                  disabled={@inputs_locked?}
                 />
                 <.input
                   field={@export_form[:camera_id]}
                   type="text"
                   label="Camera ID (optional)"
                   placeholder={@export_form[:device_id].value || "defaults to the device id"}
-                  disabled={@job_status != :new}
+                  disabled={@inputs_locked?}
                 />
               </div>
             </div>
@@ -91,14 +91,14 @@
                 type="number"
                 min="1"
                 label="Max file duration (seconds)"
-                disabled={@job_status != :new}
+                disabled={@inputs_locked?}
               />
               <.input
                 field={@export_form[:max_file_size_mb]}
                 type="number"
                 min="1"
                 label="Max file size (MiB)"
-                disabled={@job_status != :new}
+                disabled={@inputs_locked?}
               />
             </div>
             <div :if={@export_form[:destination].value != "s3"} class="space-y-4">
@@ -272,6 +272,9 @@
 
             <div :if={@job_status == :failed} class="space-y-3">
               <p class="text-red-600 dark:text-red-400">Export failed: {@job_progress.error}</p>
+              <p :if={not @inputs_locked?} class="text-sm dark:text-gray-400">
+                Nothing was exported. You can change the dates or other inputs above and retry.
+              </p>
               <div class="flex justify-end">
                 <.button type="submit" phx-disable-with="Retrying...">
                   <.icon name="hero-arrow-path" class="w-4 h-4 mr-1" /> Retry Export
@@ -284,7 +287,11 @@
 
       <:tab_content for="recent">
         <.card class="mb-8">
-          <div id="recent-exports" class="font-medium mb-3">Recent exports</div>
+          <div id="recent-exports" class="font-medium">Recent exports</div>
+          <p class="text-sm mb-3 text-gray-500 dark:text-gray-400">
+            Exports started since ExNVR was last restarted. An earlier export can still be
+            resumed or retried by entering the same device, dates and destination on the Export tab.
+          </p>
           <p :if={@recent_exports == []} class="text-sm dark:text-gray-400">
             No exports yet.
           </p>
