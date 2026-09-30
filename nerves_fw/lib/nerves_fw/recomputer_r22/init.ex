@@ -67,6 +67,12 @@ defmodule ExNVR.Nerves.RecomputerR22.Init do
 
   def handle_info({pid, value}, %{ups: pid} = state) do
     Logger.info("[R22] UPS state changed: #{value}")
+    event = %{type: "low-battery", metadata: %{state: 0}}
+
+    with {:error, changeset} <- ExNVR.Events.create_event(event) do
+      Logger.error("Failed to save event: #{inspect(changeset)}")
+    end
+
     {:noreply, state}
   end
 
@@ -96,7 +102,7 @@ defmodule ExNVR.Nerves.RecomputerR22.Init do
     end
   end
 
-  def sim_detected?, do: match?({:ok, _}, ATModem.sim_status())
+  defp sim_detected?, do: match?({:ok, _}, ATModem.sim_status())
 
   defp setup_modem do
     ensure_qmi_mode()
