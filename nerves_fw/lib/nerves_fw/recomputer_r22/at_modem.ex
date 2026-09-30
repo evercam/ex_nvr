@@ -84,7 +84,7 @@ defmodule ExNVR.Nerves.RecomputerR22.ATModem do
   def pdp_contexts, do: send_command("AT+CGDCONT?")
 
   def set_pdp_context(cid, type \\ "IP", apn),
-    do: send_command("AT+CGDCONT=#{cid},\"#{type}\",\"#{apn}\"")
+    do: send_command(~s(AT+CGDCONT=#{cid},"#{type}","#{apn}"))
 
   def context_states, do: send_command("AT+CGACT?")
 
@@ -441,39 +441,16 @@ defmodule ExNVR.Nerves.RecomputerR22.ATModem do
       String.match?(line, ~r/^\+CMS ERROR:/)
   end
 
-  defp build_result(response_lines, final) do
-    case final do
-      "OK" ->
-        {:ok, parse_response(response_lines)}
-
-      <<"CONNECT", _::binary>> ->
-        {:ok, :connected}
-
-      "NO CARRIER" ->
-        {:error, :no_carrier}
-
-      "BUSY" ->
-        {:error, :busy}
-
-      "NO ANSWER" ->
-        {:error, :no_answer}
-
-      "NO DIALTONE" ->
-        {:error, :no_dialtone}
-
-      <<"ERROR">> ->
-        {:error, :error}
-
-      <<"+CME ERROR:", rest::binary>> ->
-        {:error, {:cme_error, String.trim(rest)}}
-
-      <<"+CMS ERROR:", rest::binary>> ->
-        {:error, {:cms_error, String.trim(rest)}}
-
-      _ ->
-        {:error, :error}
-    end
-  end
+  defp build_result(response_lines, "OK"), do: {:ok, parse_response(response_lines)}
+  defp build_result(response_lines, <<"CONNECT", _::binary>>), do: {:ok, :connected}
+  defp build_result(response_lines, <<"NO CARRIER">>), do: {:error, :no_carrier}
+  defp build_result(response_lines, <<"BUSY">>), do: {:error, :busy}
+  defp build_result(response_lines, <<"NO ANSWER">>), do: {:error, :no_answer}
+  defp build_result(response_lines, <<"NO DIALTONE">>), do: {:error, :no_dialtone}
+  defp build_result(response_lines, <<"ERROR">>), do: {:error, :error}
+  defp build_result(response_lines, <<"+CME ERROR:", rest::binary>>), do: {:error, {:cme_error, String.trim(rest)}}
+  defp build_result(response_lines, <<"+CMS ERROR:", rest::binary>>), do: {:error, {:cms_error, String.trim(rest)}}
+  defp build_result(response_lines, _final), do: {:error, :unknwon_error}
 
   defp parse_response([]), do: :ok
   defp parse_response([line]), do: parse_line(line)
@@ -590,21 +567,15 @@ defmodule ExNVR.Nerves.RecomputerR22.ATModem do
   defp interface_ip(name) do
     charlist = String.to_charlist(name)
 
-    case :inet.getifaddrs() do
-      {:ok, ifaddrs} ->
-        case List.keyfind(ifaddrs, charlist, 0) do
-          {_, opts} ->
-            case Keyword.get(opts, :addr) do
-              nil -> {:error, {:no_address, name}}
-              addr -> {:ok, addr}
-            end
-
-          nil ->
-            {:error, {:interface_not_found, name}}
-        end
-
-      error ->
-        error
+    with {:ok, ifaddrs} <- :inet.getifaddrs(),
+         {_, opts} <- List.keyfind(ifaddrs, charlist, 0) do
+      case Keyword.get(opts, :addr) do
+        nil -> {:error, {:no_address, name}}
+        addr -> {:ok, addr}
+      end
+    else
+      nil -> {:error, {:interface_not_found, name}}
+      {:error, reason} -> {:error, reason}
     end
   end
 
