@@ -17,7 +17,7 @@ defmodule ExNVR.Nerves.RemoteConfigurer do
 
   alias __MODULE__.{Router, Step}
   alias ExNVR.{Accounts, RemoteConnection}
-  alias ExNVR.Nerves.{DiskMounter, GrafanaAgent, Netbird, SystemSettings, Utils}
+  alias ExNVR.Nerves.{Application, DiskMounter, GrafanaAgent, Netbird, SystemSettings, Utils}
   alias Nerves.Runtime
 
   @netbird_mangement_url "https://vpn.evercam.io"
@@ -66,7 +66,11 @@ defmodule ExNVR.Nerves.RemoteConfigurer do
         serial_number: Runtime.serial_number(),
         device_name: Runtime.KV.get("a.nerves_fw_platform"),
         version: @config_version,
-        gateway_mac_address: mac_addr
+        gateway_mac_address:
+          case Application.target() do
+            :recomputer_r22 -> VintageNet.get(["interface", "eth0", "mac_address"])
+            _other -> mac_addr
+          end
       }
 
       case RemoteConnection.push_and_wait("register-kit", payload, @call_timeout) do
@@ -103,10 +107,16 @@ defmodule ExNVR.Nerves.RemoteConfigurer do
       Task.async(fn -> format_hdd() end),
       Task.async(fn -> create_user(config) end),
       Task.async(fn -> configure_grafana_agent(config) end),
-      Task.async(fn -> Router.configure(config["gateway_config"]) end)
+      Task.async(fn -> configure_gateway(config) end)
     ]
 
     Task.await_many(tasks, :infinity)
+  end
+
+  defp configure_gateway(config) do
+    if Application.target() != :recomputer_r22 do
+      Router.configure(config["gateway_config"])
+    end
   end
 
   defp connect_to_netbird(config) do
