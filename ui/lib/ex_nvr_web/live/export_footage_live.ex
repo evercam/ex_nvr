@@ -48,6 +48,7 @@ defmodule ExNVRWeb.ExportFootageLive do
       remote_storages: Enum.filter(RemoteStorages.list(), &(&1.type == :s3)),
       dest_dir: nil,
       job_status: :new,
+      inputs_locked?: false,
       job_progress: nil,
       poll_timer: nil
     )
@@ -61,6 +62,11 @@ defmodule ExNVRWeb.ExportFootageLive do
 
   defp initial_params(%{"device_id" => device_id}), do: %{"device_id" => device_id}
   defp initial_params(_params), do: %{}
+
+  # Inputs of the selected job are disabled and browsers don't submit disabled
+  # fields, so layer what was sent over the params the form was rendered from.
+  defp form_params(event_params, socket),
+    do: Map.merge(socket.assigns.export_form.params, Map.get(event_params, "export", %{}))
 
   defp params_tab(%{"tab" => tab}), do: tab
   defp params_tab(_params), do: nil
@@ -219,8 +225,8 @@ defmodule ExNVRWeb.ExportFootageLive do
     end
   end
 
-  def handle_event("validate", %{"export" => params}, socket) do
-    {socket, params} = refresh_default_dates(socket, params)
+  def handle_event("validate", event_params, socket) do
+    {socket, params} = refresh_default_dates(socket, form_params(event_params, socket))
     params = reset_unrecorded_stream(socket, params)
     changeset = params |> export_changeset(socket) |> Map.put(:action, :validate)
 
@@ -230,8 +236,12 @@ defmodule ExNVRWeb.ExportFootageLive do
     |> then(&{:noreply, &1})
   end
 
-  def handle_event("submit_export", %{"export" => params}, socket) do
-    changeset = params |> export_changeset(socket) |> Map.put(:action, :insert)
+  def handle_event("submit_export", event_params, socket) do
+    changeset =
+      event_params
+      |> form_params(socket)
+      |> export_changeset(socket)
+      |> Map.put(:action, :insert)
 
     case Changeset.apply_action(changeset, :insert) do
       {:ok, data} ->
@@ -430,7 +440,7 @@ defmodule ExNVRWeb.ExportFootageLive do
 
   defp refresh_dest_status(socket, nil) do
     socket
-    |> assign(dest_dir: nil, job_status: :new, job_progress: nil)
+    |> assign(dest_dir: nil, job_status: :new, job_progress: nil, inputs_locked?: false)
     |> cancel_polling()
   end
 
@@ -438,15 +448,27 @@ defmodule ExNVRWeb.ExportFootageLive do
     case Export.progress(dest_dir) do
       {:ok, progress} ->
         socket
-        |> assign(dest_dir: dest_dir, job_status: progress.status, job_progress: progress)
+        |> assign(
+          dest_dir: dest_dir,
+          job_status: progress.status,
+          job_progress: progress,
+          inputs_locked?: inputs_locked?(progress)
+        )
         |> then(&if progress.status == :running, do: ensure_polling(&1), else: cancel_polling(&1))
 
       {:error, :not_found} ->
         socket
-        |> assign(dest_dir: dest_dir, job_status: :new, job_progress: nil)
+        |> assign(dest_dir: dest_dir, job_status: :new, job_progress: nil, inputs_locked?: false)
         |> cancel_polling()
     end
   end
+
+  # Inputs are locked only while they describe work worth resuming: a running
+  # or paused job, or a failed one that already produced files. A completed
+  # job or one that exported nothing can be edited into a new export.
+  defp inputs_locked?(%{status: status}) when status in [:running, :paused], do: true
+  defp inputs_locked?(%{status: :failed, files_completed: files}), do: files > 0
+  defp inputs_locked?(_progress), do: false
 
   defp ensure_polling(%{assigns: %{poll_timer: nil}} = socket) do
     if connected?(socket) do

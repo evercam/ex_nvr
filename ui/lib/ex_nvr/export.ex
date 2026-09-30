@@ -1,11 +1,9 @@
 defmodule ExNVR.Export do
   @moduledoc "Export device footage to sequential MP4 files. The destination directory is the job's identity."
 
-  import Ecto.Query
-
-  alias ExNVR.Export.{Job, Manifest, Worker}
+  alias ExNVR.Export.{Manifest, Recent, Worker}
   alias ExNVR.Model.Device
-  alias ExNVR.{Recordings, Repo}
+  alias ExNVR.Recordings
 
   @type export_opts :: [
           max_duration: pos_integer(),
@@ -92,16 +90,14 @@ defmodule ExNVR.Export do
         }
 
   @doc """
-  Most recently started or resumed jobs, newest first. `manifest` and
+  Jobs started or resumed since the app booted, newest first. `manifest` and
   `progress` are nil when the job's directory is no longer reachable (e.g. the
   USB drive was unplugged or the folder deleted).
   """
   @spec list_recent(pos_integer()) :: [recent_job()]
   def list_recent(limit \\ 10) do
-    Job
-    |> order_by(desc: :updated_at, desc: :id)
-    |> limit(^limit)
-    |> Repo.all()
+    limit
+    |> Recent.list()
     |> Enum.map(fn job ->
       {manifest, progress} =
         case Manifest.load(job.dest_dir) do
@@ -113,27 +109,17 @@ defmodule ExNVR.Export do
             {nil, nil}
         end
 
-      job
-      |> Map.take([:dest_dir, :device_id, :kind, :updated_at])
-      |> Map.merge(%{manifest: manifest, progress: progress})
+      Map.merge(job, %{manifest: manifest, progress: progress})
     end)
   end
 
   defp track(dest_dir, device, destination) do
-    kind = if destination, do: :s3, else: :usb
-    now = DateTime.utc_now()
-
-    Repo.insert!(
-      %Job{
-        dest_dir: dest_dir,
-        device_id: device.id,
-        kind: kind,
-        inserted_at: now,
-        updated_at: now
-      },
-      on_conflict: [set: [updated_at: now]],
-      conflict_target: :dest_dir
-    )
+    Recent.track(%{
+      dest_dir: dest_dir,
+      device_id: device.id,
+      kind: if(destination, do: :s3, else: :usb),
+      updated_at: DateTime.utc_now()
+    })
   end
 
   @spec stop(Path.t()) :: :ok | {:error, :not_found}

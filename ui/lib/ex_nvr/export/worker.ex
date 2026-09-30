@@ -602,32 +602,38 @@ defmodule ExNVR.Export.Worker do
         maybe_force_restart(manifest, args, dest_dir)
 
       {:error, :not_found} ->
-        File.mkdir_p!(dest_dir)
-
-        params = %{
-          device_id: args[:device].id,
-          stream: args[:stream],
-          start_date: args[:start_date],
-          end_date: args[:end_date],
-          max_duration: args[:max_duration],
-          max_file_size: args[:max_file_size],
-          split: args[:split],
-          timezone: args[:device].timezone,
-          destination: args[:destination]
-        }
-
-        {:ok, Manifest.new(params) |> Manifest.save!(dest_dir)}
+        new_manifest(args, dest_dir)
 
       {:error, :invalid} ->
         {:error, :invalid_manifest}
     end
   end
 
+  defp new_manifest(args, dest_dir) do
+    File.mkdir_p!(dest_dir)
+
+    params = %{
+      device_id: args[:device].id,
+      stream: args[:stream],
+      start_date: args[:start_date],
+      end_date: args[:end_date],
+      max_duration: args[:max_duration],
+      max_file_size: args[:max_file_size],
+      split: args[:split],
+      timezone: args[:device].timezone,
+      destination: args[:destination]
+    }
+
+    {:ok, Manifest.new(params) |> Manifest.save!(dest_dir)}
+  end
+
+  # A failed job that exported nothing (e.g. no recordings in range) has
+  # nothing to resume, so a retry starts over with the new inputs.
   defp maybe_force_restart(manifest, args, dest_dir) do
-    if args[:force] do
-      {:ok, Manifest.save!(%{manifest | status: :running, error: nil}, dest_dir)}
-    else
-      {:error, {:job_failed, manifest}}
+    cond do
+      not args[:force] -> {:error, {:job_failed, manifest}}
+      manifest.files == [] -> new_manifest(args, dest_dir)
+      true -> {:ok, Manifest.save!(%{manifest | status: :running, error: nil}, dest_dir)}
     end
   end
 
