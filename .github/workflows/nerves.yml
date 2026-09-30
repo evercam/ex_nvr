@@ -22,7 +22,9 @@ on:
         required: false
         type: string
       target:
-        description: "Specific target to build (ex_nvr_rpi4, ex_nvr_rpi5, or giraffe). If not specified, all targets will be built."
+        description: |
+          Specific target to build (ex_nvr_rpi4, ex_nvr_rpi5, giraffe or recomputer_r22). 
+          If not specified, all targets will be built.
         required: false
         type: string
       git_sha:
@@ -84,8 +86,8 @@ jobs:
           elixir-version: 1.19.5-otp-28
 
       - name: Set platform env variable
-        run: echo "NERVES_FW_PLATFORM=giraffe" >> $GITHUB_ENV
-        if: matrix.target == 'giraffe'
+        run: echo "NERVES_FW_PLATFORM=${{ matrix.target }}" >> $GITHUB_ENV
+        if: contains(fromJSON('["giraffe", "recomputer_r22"]'), matrix.target)
 
       - name: Set version if provided
         if: inputs.version != ''
