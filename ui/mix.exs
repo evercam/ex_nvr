@@ -69,7 +69,7 @@ defmodule ExNVR.MixProject do
       {:phoenix_ecto, "~> 4.4"},
       {:phoenix_html, "~> 4.0"},
       {:phoenix_live_view, "~> 1.0"},
-      {:phoenix_live_dashboard, "~> 0.8.1"},
+      {:phoenix_live_dashboard, "~> 0.9.1"},
       {:phoenix_html_helpers, "~> 1.0"},
       {:telemetry_metrics, "~> 1.0"},
       {:telemetry_poller, "~> 1.0"},
