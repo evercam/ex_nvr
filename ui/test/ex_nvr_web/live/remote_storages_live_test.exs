@@ -67,6 +67,44 @@ defmodule ExNVRWeb.RemoteStoragesLiveTest do
     end
   end
 
+  describe "Bucket validation" do
+    test "flags an s3:// bucket while typing, without flagging untouched fields", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/remote-storages/new")
+
+      html =
+        lv
+        |> form("#remote_storage_form", %{
+          "remote_storage" => %{"s3_config" => %{"bucket" => "s3://my-bucket"}}
+        })
+        |> render_change()
+
+      assert html =~ "remove the &quot;s3://&quot; prefix, enter the bucket name only"
+      refute html =~ "can&#39;t be blank"
+    end
+
+    test "refuses to save an s3:// bucket", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/remote-storages/new")
+
+      html =
+        lv
+        |> form("#remote_storage_form", %{
+          "remote_storage" => %{
+            "name" => "bad bucket",
+            "type" => "s3",
+            "s3_config" => %{
+              "bucket" => "s3://my-bucket",
+              "access_key_id" => "key",
+              "secret_access_key" => "secret"
+            }
+          }
+        })
+        |> render_submit()
+
+      assert html =~ "remove the &quot;s3://&quot; prefix"
+      assert RemoteStorages.get_by(name: "bad bucket") == nil
+    end
+  end
+
   describe "Update a remote storage" do
     setup do
       %{

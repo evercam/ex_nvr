@@ -26,6 +26,7 @@ defmodule ExNVRWeb.RemoteStorageLive do
           id="remote_storage_form"
           for={@remote_storage_form}
           class="space-y-6"
+          phx-change="validate"
           phx-submit="save_remote_storage"
         >
           <.input
@@ -33,6 +34,7 @@ defmodule ExNVRWeb.RemoteStorageLive do
             id="remote_storage_name"
             type="text"
             label="Name"
+            placeholder="e.g. evercam-footage"
             disabled={@remote_storage.id != nil}
             required
           />
@@ -45,7 +47,17 @@ defmodule ExNVRWeb.RemoteStorageLive do
             phx-change="update_type"
             disabled={@remote_storage.id != nil}
           />
-          <.input field={@remote_storage_form[:url]} id="remote_storage_url" type="text" label="Url" />
+          <.input
+            field={@remote_storage_form[:url]}
+            id="remote_storage_url"
+            type="text"
+            label="Url"
+            placeholder={
+              if @remote_storage_type == "s3",
+                do: "Leave blank for AWS, or e.g. https://s3.wasabisys.com",
+                else: "e.g. https://example.com/upload"
+            }
+          />
 
           <p class="text-xl font-medium mb-4 text-gray-800 dark:text-white">
             Storage Config
@@ -61,14 +73,22 @@ defmodule ExNVRWeb.RemoteStorageLive do
               id="remote_storage_username"
               type="text"
               label="Username"
+              placeholder="optional, for basic auth"
             />
             <.input
               field={http_config[:password]}
               id="remote_storage_password"
               type="password"
               label="Password"
+              placeholder="optional, for basic auth"
             />
-            <.input field={http_config[:token]} id="remote_storage_token" type="text" label="Token" />
+            <.input
+              field={http_config[:token]}
+              id="remote_storage_token"
+              type="text"
+              label="Token"
+              placeholder="optional, sent as a Bearer token"
+            />
           </.inputs_for>
           <.inputs_for
             :let={s3_config}
@@ -80,13 +100,14 @@ defmodule ExNVRWeb.RemoteStorageLive do
               id="remote_storage_region"
               type="text"
               label="Region"
-              placeholder="default to us-east-1"
+              placeholder="e.g. eu-west-1 (defaults to us-east-1)"
             />
             <.input
               field={s3_config[:bucket]}
               id="remote_storage_bucket"
               type="text"
               label="Bucket"
+              placeholder="e.g. my-bucket (name only, no s3:// or slashes)"
               required
             />
             <.input
@@ -94,6 +115,7 @@ defmodule ExNVRWeb.RemoteStorageLive do
               id="remote_storage_access_key_id"
               type="text"
               label="Access key"
+              placeholder="e.g. AKIAIOSFODNN7EXAMPLE"
               required
             />
             <.input
@@ -101,7 +123,19 @@ defmodule ExNVRWeb.RemoteStorageLive do
               id="remote_storage_secret_access_key"
               type="password"
               label="Secret access key"
+              placeholder="the secret paired with the access key"
               required
+            />
+            <.input
+              field={s3_config[:kit_id]}
+              id="remote_storage_kit_id"
+              type="text"
+              label="Kit ID (footage export folder)"
+              placeholder={
+                if kit_id = Application.get_env(:ex_nvr, :kit_id),
+                  do: "#{kit_id} (from this kit), or override e.g. kit-123",
+                  else: "required for exports, e.g. kit-123"
+              }
             />
           </.inputs_for>
           <:actions>
@@ -147,12 +181,41 @@ defmodule ExNVRWeb.RemoteStorageLive do
     {:noreply, assign(socket, remote_storage_type: type)}
   end
 
+  # Live feedback on what has been typed (e.g. an "s3://" bucket); "can't be
+  # blank" errors wait for submit so untouched fields aren't flagged.
+  def handle_event("validate", %{"remote_storage" => params}, socket) do
+    remote_storage = socket.assigns.remote_storage
+
+    changeset =
+      if remote_storage.id,
+        do: RemoteStorages.change_remote_storage_update(remote_storage, params),
+        else: RemoteStorages.change_remote_storage_creation(remote_storage, params)
+
+    changeset = changeset |> drop_required_errors() |> Map.put(:action, :validate)
+    {:noreply, assign(socket, remote_storage_form: to_form(changeset))}
+  end
+
   def handle_event("save_remote_storage", %{"remote_storage" => remote_storage_params}, socket) do
     remote_storage = socket.assigns.remote_storage
 
     if remote_storage.id,
       do: do_update_remote_storage(socket, remote_storage, remote_storage_params),
       else: do_save_remote_storage(socket, remote_storage_params)
+  end
+
+  defp drop_required_errors(%Ecto.Changeset{} = changeset) do
+    changes =
+      Map.new(changeset.changes, fn
+        {key, %Ecto.Changeset{} = nested} -> {key, drop_required_errors(nested)}
+        other -> other
+      end)
+
+    errors =
+      Enum.reject(changeset.errors, fn {_field, {_msg, opts}} ->
+        opts[:validation] == :required
+      end)
+
+    %{changeset | changes: changes, errors: errors}
   end
 
   defp do_update_remote_storage(socket, remote_storage, remote_storage_params) do
