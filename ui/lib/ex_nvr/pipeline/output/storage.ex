@@ -20,6 +20,8 @@ defmodule ExNVR.Pipeline.Output.Storage do
 
   @recordings_event [:ex_nvr, :recordings, :stop]
 
+  @metadata_uuid UUID.string_to_binary!("8f3a2c1e-6b4d-4e9a-a7c5-2d1f0e9b8c74")
+
   def_input_pad :input,
     accepted_format:
       any_of(
@@ -66,6 +68,10 @@ defmodule ExNVR.Pipeline.Output.Storage do
                 spec: boolean(),
                 default: false
               ]
+
+  @doc "Type of the `uuid` box holding the recording metadata (JSON)."
+  @spec metadata_uuid() :: <<_::128>>
+  def metadata_uuid, do: @metadata_uuid
 
   @impl true
   def handle_init(_ctx, opts) do
@@ -141,10 +147,7 @@ defmodule ExNVR.Pipeline.Output.Storage do
           state.correct_timestamp
         )
 
-      state =
-        state
-        |> close_file(discontinuity)
-        |> rename_first_segment(segment)
+      state = close_file(state, segment, discontinuity)
 
       # in case of time jump, we need to start a new segment
       start_time =
@@ -216,8 +219,7 @@ defmodule ExNVR.Pipeline.Output.Storage do
     {state, _discontinuity} = finalize_segment(state, System.os_time(:millisecond), false)
 
     state
-    |> close_file(true)
-    |> rename_first_segment(old_segment)
+    |> close_file(old_segment, true)
     |> reset_state_fields()
   end
 
@@ -323,13 +325,8 @@ defmodule ExNVR.Pipeline.Output.Storage do
     }
   end
 
-  defp close_file(state, discontinuity?) do
+  defp close_file(state, opened_segment, discontinuity?) do
     %{writer: writer, track: track, current_segment: segment} = state
-
-    :ok =
-      writer
-      |> Writer.update_track(track.id, priv_data: track.priv_data)
-      |> Writer.write_trailer()
 
     state = %{run_from_segment(state, segment, discontinuity?) | writer: nil}
 
@@ -341,8 +338,13 @@ defmodule ExNVR.Pipeline.Output.Storage do
       device_id: state.device.id
     }
 
+    writer = Writer.update_track(writer, track.id, priv_data: track.priv_data)
+
+    # save to db first, the run id is needed in the file metadata
     case ExNVR.Recordings.create(state.device, state.run, recording, false) do
       {:ok, _, run} ->
+        :ok = Writer.write_trailer(writer, uuid: [metadata_box(run, segment)])
+
         duration_ms = Time.as_milliseconds(Segment.duration(segment), :round)
 
         log_recording_details(state, segment)
@@ -357,16 +359,31 @@ defmodule ExNVR.Pipeline.Output.Storage do
           Membrane.Logger.info("run discontinuity: #{run.id}")
         end
 
-        maybe_new_run(state, run)
+        state
+        |> maybe_new_run(run)
+        |> rename_first_segment(opened_segment)
 
       {:error, error} ->
         Membrane.Logger.error("""
-        Could not save recording #{inspect(recording)}
+        Could not save recording #{inspect(recording)}, deleting file
         #{inspect(error)}
         """)
 
+        # files without a run id must not be kept
+        :ok = Writer.write_trailer(writer)
+        File.rm(recording_path(state, Segment.start_date(opened_segment)))
+
         maybe_new_run(state, nil)
     end
+  end
+
+  defp metadata_box(%Run{id: run_id}, segment) do
+    metadata = %{
+      run_id: run_id,
+      start_date: Segment.start_date(segment) |> Time.as_milliseconds(:round)
+    }
+
+    Box.UUID.new(@metadata_uuid, Jason.encode!(metadata))
   end
 
   defp recording_path(state, start_date) do

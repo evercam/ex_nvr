@@ -201,10 +201,9 @@ defmodule ExNVR.Pipeline.Output.Storage.StoragePipelineTest do
   describe "database failure" do
     setup :set_mimic_global
 
-    test "segments stay on disk and the element keeps running", %{device: device} do
-      # When the database insert fails, the run/recording is dropped and the
-      # segment is orphaned on disk. This test pins the current behavior so
-      # that a future fix is a deliberate change.
+    test "segments are deleted and the element keeps running", %{device: device} do
+      # When the database insert fails, there's no run id to store in the
+      # file metadata, so the segment is deleted.
       stub(ExNVR.Recordings, :create, fn _device, _run, _recording, _copy_file? ->
         {:error, :database_unavailable}
       end)
@@ -225,14 +224,7 @@ defmodule ExNVR.Pipeline.Output.Storage.StoragePipelineTest do
       assert {:ok, {[], _meta}} = ExNVR.Recordings.list()
       assert [] = ExNVR.Recordings.list_runs(%{device_id: device.id})
 
-      # the segments are still written to disk as complete, readable files
-      files =
-        Device.recording_dir(device)
-        |> Path.join("**/*.mp4")
-        |> Path.wildcard()
-
-      assert length(files) == 3
-      Enum.each(files, &assert_valid_mp4(&1, :h264))
+      assert Device.recording_dir(device) |> Path.join("**/*.mp4") |> Path.wildcard() == []
     end
   end
 
@@ -351,13 +343,10 @@ defmodule ExNVR.Pipeline.Output.Storage.StoragePipelineTest do
   defp assert_valid_recording(device, recording, media) do
     path = ExNVR.Recordings.recording_path(device, recording)
     db_duration = DateTime.diff(recording.end_date, recording.start_date, :millisecond)
-    assert_valid_mp4(path, media, db_duration)
-  end
 
-  # asserts the file on disk is a complete, readable mp4 with a non-empty
-  # video track of the expected codec (and, when given, a movie duration
-  # within 100 ms of the database recording's duration)
-  defp assert_valid_mp4(path, media, expected_duration_ms \\ nil) do
+    # asserts the file on disk is a complete, readable mp4 with a non-empty
+    # video track of the expected codec, a movie duration within 100 ms of
+    # the database recording's duration and the run id in its metadata
     assert File.exists?(path)
     assert {:ok, reader} = ExMP4.Reader.new(path)
 
@@ -365,8 +354,13 @@ defmodule ExNVR.Pipeline.Output.Storage.StoragePipelineTest do
     assert track.media == media
     assert track.sample_count > 0
 
-    if expected_duration_ms do
-      assert_in_delta ExMP4.Reader.duration(reader, :millisecond), expected_duration_ms, 100
-    end
+    assert_in_delta ExMP4.Reader.duration(reader, :millisecond), db_duration, 100
+
+    assert [%{data: data}] = Enum.filter(reader.uuid, &(&1.type == Storage.metadata_uuid()))
+
+    assert Jason.decode!(data) == %{
+             "run_id" => recording.run_id,
+             "start_date" => DateTime.to_unix(recording.start_date, :millisecond)
+           }
   end
 end
