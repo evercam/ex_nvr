@@ -119,6 +119,22 @@ defmodule ExNVR.Disk do
 
   def has_mountpoint?(_, _), do: false
 
+  @doc """
+  Get the serial number of the drive mounted at `mountpoint`.
+  """
+  @spec serial(String.t()) :: String.t() | nil
+  def serial(mountpoint) do
+    case list_drives() do
+      {:ok, drives} ->
+        drives
+        |> Enum.find(%{serial: nil}, &has_mountpoint?(&1, mountpoint))
+        |> Map.get(:serial)
+
+      _error ->
+        nil
+    end
+  end
+
   defp list_unix_drives(opts) do
     # By default retrieve disks with major version of 8 and 259
     major_numbers = Keyword.get(opts, :major_number, [8, 259])
