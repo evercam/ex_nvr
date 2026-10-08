@@ -1,2 +1,4 @@
 # License policy exceptions are reviewed by the policy owner
 /.github/license-policy.yml @Abdelhak-Bahri
+/.github/workflows/license-check.yml @Abdelhak-Bahri
+/.github/workflows/license-check-comment.yml @Abdelhak-Bahri
