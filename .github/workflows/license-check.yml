@@ -1,0 +1,42 @@
+# .github/workflows/license-check.yml
+# For PUBLIC repos that receive fork PRs (ex_nvr). Pair with license-check-comment.yml.
+#
+# Fork PRs get a read-only token, so this workflow only runs the check and uploads the
+# report. license-check-comment.yml (workflow_run) posts the comment with write access,
+# without ever checking out or running PR code.
+#
+# ex_nvr is public and cannot `uses:` the private evercam/license-check-gh-action repo,
+# so the action is vendored into .github/actions/license-check (see scripts/vendor.sh).
+name: License check
+
+on:
+  pull_request:
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  licenses:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: check
+        uses: ./.github/actions/license-check
+        with:
+          fail-on: none        # rollout: none -> deny -> deny,unknown
+          comment: "false"     # commenting happens in license-check-comment.yml
+
+      - name: Save PR number for the comment workflow
+        if: always() && github.event_name == 'pull_request'
+        run: echo "${{ github.event.pull_request.number }}" > "${{ runner.temp }}/license-check/pr-number"
+
+      - uses: actions/upload-artifact@v4
+        if: always() && github.event_name == 'pull_request'
+        with:
+          name: license-check-report
+          path: ${{ runner.temp }}/license-check/
+          retention-days: 7

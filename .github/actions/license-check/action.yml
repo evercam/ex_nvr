@@ -1,0 +1,146 @@
+name: "Evercam license check"
+description: "Flag dependencies with restricted licences (Hex, npm, PyPI) added or changed in a pull request."
+author: "Evercam"
+
+inputs:
+  mode:
+    description: "`diff` (only dependencies added/changed vs base), `full` (everything), or `auto` (diff on pull_request, full otherwise)."
+    default: "auto"
+  base:
+    description: "Base commit for diff mode. Defaults to the PR base SHA (pull_request) or the previous commit (push)."
+    default: ""
+  fail-on:
+    description: "Comma-separated categories that fail the check (deny, unknown, review), or `none` to only report."
+    default: "deny"
+  policy:
+    description: "Repo policy file, relative to working-directory."
+    default: ".github/license-policy.yml"
+  working-directory:
+    description: "Repository root to scan."
+    default: "."
+  comment:
+    description: "Post or update a sticky PR comment (`true`/`false`). Needs `pull-requests: write`. Skipped automatically on fork PRs."
+    default: "true"
+  token:
+    description: "Token for the GitHub API (licences of git dependencies, PR comment)."
+    default: ${{ github.token }}
+
+outputs:
+  failed:
+    description: "`true` when a dependency is in a fail-on category."
+    value: ${{ steps.check.outputs.failed }}
+  checked:
+    description: "Number of dependencies checked."
+    value: ${{ steps.check.outputs.checked }}
+  deny:
+    description: "Number of denied dependencies (after exceptions)."
+    value: ${{ steps.check.outputs.deny }}
+  unknown:
+    description: "Number of dependencies with an unknown licence (after exceptions)."
+    value: ${{ steps.check.outputs.unknown }}
+  review:
+    description: "Number of dependencies needing review (after exceptions)."
+    value: ${{ steps.check.outputs.review }}
+  report-md:
+    description: "Path to the Markdown report."
+    value: ${{ steps.check.outputs.report-md }}
+  report-json:
+    description: "Path to the JSON report."
+    value: ${{ steps.check.outputs.report-json }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Prepare Python
+      id: python
+      shell: bash
+      run: |
+        if python3 -c "import yaml" 2>/dev/null; then
+          echo "bin=python3" >> "$GITHUB_OUTPUT"
+        else
+          python3 -m venv "$RUNNER_TEMP/license-check-venv"
+          "$RUNNER_TEMP/license-check-venv/bin/pip" install --quiet --disable-pip-version-check "pyyaml==6.0.2"
+          echo "bin=$RUNNER_TEMP/license-check-venv/bin/python" >> "$GITHUB_OUTPUT"
+        fi
+
+    - name: Restore licence cache
+      uses: actions/cache@v4
+      with:
+        path: ${{ runner.temp }}/license-check-cache
+        key: license-check-v1-${{ github.repository }}-${{ github.run_id }}-${{ github.run_attempt }}
+        restore-keys: |
+          license-check-v1-${{ github.repository }}-
+
+    - name: Resolve mode and base
+      id: resolve
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        INPUT_MODE: ${{ inputs.mode }}
+        INPUT_BASE: ${{ inputs.base }}
+        PR_BASE: ${{ github.event.pull_request.base.sha }}
+        PUSH_BEFORE: ${{ github.event.before }}
+      run: |
+        mode="$INPUT_MODE"
+        if [ "$mode" = "auto" ]; then
+          if [ -n "$PR_BASE" ]; then mode=diff; else mode=full; fi
+        fi
+        base="$INPUT_BASE"
+        if [ "$mode" = "diff" ] && [ -z "$base" ]; then
+          base="${PR_BASE:-$PUSH_BEFORE}"
+        fi
+        if [ "$mode" = "diff" ]; then
+          if [ -z "$base" ] || [ "$base" = "0000000000000000000000000000000000000000" ]; then
+            echo "::warning::No base commit available, running a full scan instead."
+            mode=full
+          elif ! git cat-file -e "${base}^{commit}" 2>/dev/null; then
+            git fetch --no-tags --quiet --depth=1 origin "$base"
+          fi
+        fi
+        echo "mode=$mode" >> "$GITHUB_OUTPUT"
+        echo "base=$base" >> "$GITHUB_OUTPUT"
+
+    - name: Check licences
+      id: check
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        GITHUB_TOKEN: ${{ inputs.token }}
+        REPORT_DIR: ${{ runner.temp }}/license-check
+      run: |
+        mkdir -p "$REPORT_DIR"
+        args=(--root . --mode "${{ steps.resolve.outputs.mode }}" --policy "${{ inputs.policy }}"
+              --fail-on "${{ inputs.fail-on }}" --cache "$RUNNER_TEMP/license-check-cache/cache.json"
+              --report-md "$REPORT_DIR/report.md" --report-json "$REPORT_DIR/report.json")
+        if [ "${{ steps.resolve.outputs.mode }}" = "diff" ]; then
+          args+=(--base "${{ steps.resolve.outputs.base }}")
+        fi
+        set +e
+        "${{ steps.python.outputs.bin }}" "${{ github.action_path }}/check.py" "${args[@]}"
+        code=$?
+        set -e
+        echo "exit-code=$code" >> "$GITHUB_OUTPUT"
+        if [ "$code" = "2" ]; then exit 2; fi
+
+    - name: Comment on pull request
+      if: >-
+        always() && inputs.comment == 'true' && github.event_name == 'pull_request'
+        && github.event.pull_request.head.repo.full_name == github.repository
+        && steps.check.outputs.report-md != ''
+      shell: bash
+      continue-on-error: true
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+        REPO: ${{ github.repository }}
+        PR_NUMBER: ${{ github.event.pull_request.number }}
+        REPORT_FILE: ${{ steps.check.outputs.report-md }}
+        REPORT_JSON: ${{ steps.check.outputs.report-json }}
+      run: bash "${{ github.action_path }}/scripts/comment.sh"
+
+    - name: Result
+      shell: bash
+      run: |
+        if [ "${{ steps.check.outputs.exit-code }}" = "1" ]; then
+          echo "::error::License check failed: dependencies in a fail-on category (${{ inputs.fail-on }}). See the job summary."
+          exit 1
+        fi

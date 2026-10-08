@@ -1,0 +1,52 @@
+# .github/license-policy.yml for evercam/ex_nvr
+# Seeded from the Software Composition Analysis (2026-10-02). Review before committing.
+# Refs (NL-x) point to section 7.3 of the SCA in Outline (Engineering manuals).
+# ExNVR is distributed (source, Docker image, device firmware): GPL exceptions here are
+# only valid together with the per-release GPL source-offer process (SCA NL-1, NL-2).
+# NOTE: this repo is public, so this file is public too. Do not put contract references here.
+
+first_party:
+  - "npm:@evercam/*"
+  - "hex:ex_nvr_system_*"     # Evercam's own Nerves systems (git deps); licences tracked in those repos (REUSE)
+
+ignore_paths: []
+
+exceptions:
+  - package: "hex:nerves_system_*"
+    reason: "Buildroot-based Nerves system images (Linux kernel, BusyBox: GPL-2.0). Shipped in firmware; covered by the GPL source-offer process (SCA NL-2)"
+    approved_by: "Abdelhak-Bahri"
+    review_by: "2027-04-01"
+  - package: "hex:nerves_toolchain_*"
+    reason: "GCC cross-compilers used to build firmware; runtime libraries covered by the GPL source-offer process (SCA NL-2)"
+    approved_by: "Abdelhak-Bahri"
+    review_by: "2027-04-01"
+  - package: "hex:bcrypt_elixir"
+    license: "BSD-3-Clause AND ISC AND BSD-4-Clause"
+    reason: "BSD-4-Clause advertising clause only applies to marketing material naming the component (SCA NL-4)"
+    approved_by: "Abdelhak-Bahri"
+    review_by: "2027-10-01"
+  - package: "npm:libav.js"
+    license: "LGPL-2.1"
+    reason: "FFmpeg WASM build served unmodified as a separate file; confirm variant is LGPL-only (SCA NL-3)"
+    approved_by: "Abdelhak-Bahri"
+    review_by: "2027-01-31"
+  - package: "npm:@fontsource/*"
+    license: "OFL-1.1"
+    reason: "Web fonts, OFL allows bundling"
+    approved_by: "Abdelhak-Bahri"
+    review_by: "2027-10-01"
+  - package: "npm:@fontsource-variable/*"
+    license: "OFL-1.1"
+    reason: "Web fonts, OFL allows bundling"
+    approved_by: "Abdelhak-Bahri"
+    review_by: "2027-10-01"
+  - package: "npm:@fortawesome/fontawesome-free"
+    license: "CC-BY-4.0 AND OFL-1.1 AND MIT"
+    reason: "Icons CC-BY-4.0 (attribution kept in shipped files), fonts OFL, code MIT"
+    approved_by: "Abdelhak-Bahri"
+    review_by: "2027-10-01"
+  - package: "npm:caniuse-lite"
+    license: "CC-BY-4.0"
+    reason: "Browser support data used at build time by browserslist"
+    approved_by: "Abdelhak-Bahri"
+    review_by: "2027-10-01"

@@ -1,0 +1,68 @@
+# Evercam default licence policy.
+#
+# Every detected licence is normalised to an SPDX identifier and placed in the
+# first category whose pattern matches it (patterns are case-insensitive globs).
+# Anything that matches no pattern is "unknown".
+#
+# Repositories cannot loosen this policy. They can:
+#   - make a licence stricter with `license_overrides`
+#   - approve individual packages with `exceptions`
+# in their own .github/license-policy.yml (see README).
+
+categories:
+  # Permissive. Pass.
+  allow:
+    - MIT
+    - MIT-0
+    - MIT-CMU
+    - ISC
+    - BSD-2-Clause
+    - BSD-2-Clause-Patent
+    - BSD-3-Clause
+    - 0BSD
+    - Apache-2.0
+    - Zlib
+    - Unlicense
+    - CC0-1.0
+    - BlueOak-1.0.0
+    - Python-2.0
+    - PSF-2.0
+    - BSL-1.0
+    - PostgreSQL
+    - X11
+    - WTFPL
+    - Beerware
+    - LicenseRef-BSD            # "BSD" with no variant; all non-4-clause variants are permissive
+    - LicenseRef-PublicDomain
+
+  # Weak copyleft, attribution-heavy, or advertising clauses.
+  # Fine in most uses, but someone should look once and record an exception.
+  review:
+    - LGPL-*
+    - MPL-*
+    - EPL-*
+    - CDDL-*
+    - OFL-*
+    - CC-BY-3.0
+    - CC-BY-4.0
+    - BSD-4-Clause
+    - Artistic-*
+    - LicenseRef-LGPL*
+
+  # Strong or network copyleft, non-commercial, source-available.
+  # Fails the check unless the package has an exception.
+  deny:
+    - GPL-*
+    - AGPL-*
+    - SSPL-*
+    - EUPL-*
+    - OSL-*
+    - CPAL-*
+    - CC-BY-NC*
+    - CC-BY-SA*
+    - CC-BY-ND*
+    - Commons-Clause
+    - BUSL-*
+    - Elastic-*
+    - LicenseRef-GPL*
+    - LicenseRef-AGPL*
