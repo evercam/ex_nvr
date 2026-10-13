@@ -13,6 +13,19 @@ defmodule ExNVR.HTTP do
     call(:post, url, body, opts)
   end
 
+  @doc """
+  Stream the response body of a GET request directly into `dest`.
+  """
+  @spec download(binary(), Path.t(), Keyword.t()) ::
+          {:ok, Req.Response.t()} | {:error, Exception.t()}
+  def download(url, dest, opts \\ []) do
+    opts = Keyword.merge(opts, method: :get, url: url)
+
+    :get
+    |> build_request(opts, &Req.Steps.run_finch/1)
+    |> Req.request(into: File.stream!(dest), auth: auth_from_opts(opts))
+  end
+
   defp call(method, url, body, opts) do
     opts = Keyword.merge(opts, method: method, url: url)
     do_call(method, body, opts)
@@ -26,8 +39,8 @@ defmodule ExNVR.HTTP do
     build_request(method, opts) |> Req.request(body: body, auth: auth_from_opts(opts))
   end
 
-  defp build_request(method, opts) do
-    Req.Request.new(method: method, url: opts[:url], adapter: http_poison_adapter())
+  defp build_request(method, opts, adapter \\ http_poison_adapter()) do
+    Req.Request.new(method: method, url: opts[:url], adapter: adapter)
     |> Req.Steps.attach()
     |> Req.Request.prepend_response_steps(
       digest_auth: fn params -> digest_auth(params, {opts[:username], opts[:password]}) end
