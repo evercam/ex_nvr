@@ -531,6 +531,8 @@ class Policy:
                 self.overrides.append((pat, cat))
         self.ignore_paths = list(repo.get("ignore_paths") or [])
         self.first_party = list(repo.get("first_party") or [])
+        self.labels = dict(default.get("labels") or {})
+        self.policy_url = repo.get("policy_url") or default.get("policy_url")
         self.exceptions = []
         for i, ex in enumerate(repo.get("exceptions") or []):
             missing = [k for k in ("package", "reason", "approved_by") if not ex.get(k)]
@@ -634,7 +636,8 @@ def fmt_dep(r):
     return f"`{d['eco']}:{d['name']}`"
 
 
-def build_report(results, mode, fail_on, warnings, total_scanned, failed):
+def build_report(results, mode, fail_on, warnings, total_scanned, failed, labels=None, policy_url=None):
+    labels = labels or {}
     eff = lambda r: "allow" if r["exception"] else r["category"]  # noqa: E731
     counts = {c: sum(1 for r in results if eff(r) == c) for c in CATEGORIES}
     excepted = [r for r in results if r["exception"]]
@@ -650,6 +653,21 @@ def build_report(results, mode, fail_on, warnings, total_scanned, failed):
                  f"**allowed:** {counts['allow'] - len(excepted)} · **approved exceptions:** {len(excepted)} · "
                  f"failing on: `{', '.join(fail_on) or 'none'}`")
 
+    policy_link = f" See the [OSS policy]({policy_url})." if policy_url else ""
+    blocking = [r for r in results if eff(r) in fail_on]
+    if failed:
+        n = len(blocking)
+        cats = sorted({eff(r) for r in blocking}, key=lambda c: -RANK[c])
+        why = " or ".join((labels[c][0].lower() + labels[c][1:]) if labels.get(c) else f"in the `{c}` category"
+                          for c in cats)
+        lines += ["", "> [!CAUTION]",
+                  f"> **This pull request is blocked.** {n} dependenc{'y' if n == 1 else 'ies'} "
+                  f"{'uses' if n == 1 else 'use'} a licence that is {why}.{policy_link}",
+                  "> Remove or replace the dependency. If there is no alternative, record an approved waiver under "
+                  "`exceptions:` in `.github/license-policy.yml` (waivers for banned licences need CTO/CEO approval)."]
+    elif any(eff(r) != "allow" for r in results):
+        lines += ["", "> [!NOTE]", "> Nothing here blocks the merge. The items below are for review."]
+
     flagged = sorted((r for r in results if eff(r) != "allow"), key=lambda r: (-RANK[eff(r)], r["dep"]["name"]))
     if flagged:
         lines += ["", "### Needs attention", "", "| | Package | Version | Licence | Category | Lockfile | Note |",
@@ -658,7 +676,7 @@ def build_report(results, mode, fail_on, warnings, total_scanned, failed):
             cat = eff(r)
             mark = "❌" if cat in fail_on else "⚠️"
             ver = r["dep"]["version"] + (f" (was {r['from']})" if r.get("from") else "")
-            note = (r.get("note") or "").replace("|", "\\|")
+            note = "; ".join(x for x in (labels.get(cat), r.get("note")) if x).replace("|", "\\|")
             lines.append(f"| {mark} | {fmt_dep(r)} | {ver} | {r['spdx']} | {cat} | "
                          f"{', '.join(sorted(r['dep']['files']))} | {note} |")
     if excepted:
@@ -742,7 +760,8 @@ def main(argv=None):
 
     effective = ["allow" if r["exception"] else r["category"] for r in results]
     failed = any(c in fail_on for c in effective)
-    md, counts = build_report(results, args.mode, fail_on, warnings, len(head), failed)
+    md, counts = build_report(results, args.mode, fail_on, warnings, len(head), failed,
+                              labels=policy.labels, policy_url=policy.policy_url)
 
     with open(args.report_md, "w") as fh:
         fh.write(md)

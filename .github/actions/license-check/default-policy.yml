@@ -1,16 +1,27 @@
-# Evercam default licence policy.
+# Evercam default licence policy, aligned with the Evercam Open Source Software (OSS) Policy, section 2.1.
 #
 # Every detected licence is normalised to an SPDX identifier and placed in the
 # first category whose pattern matches it (patterns are case-insensitive globs).
 # Anything that matches no pattern is "unknown".
 #
+# Only `deny` blocks pull requests (with the recommended `fail-on: deny`). It holds exactly the
+# licences the OSS policy marks "Strictly Banned (Strong Copyleft): DO NOT USE". Everything else
+# that needs a human decision is reported in the PR comment without blocking.
+#
 # Repositories cannot loosen this policy. They can:
 #   - make a licence stricter with `license_overrides`
-#   - approve individual packages with `exceptions`
+#   - approve individual packages with `exceptions` (OSS policy section 6: waivers for banned
+#     licences are granted by the CTO/CEO)
 # in their own .github/license-policy.yml (see README).
 
+# Shown in the report next to each flagged dependency.
+labels:
+  deny: "Strictly banned by the OSS policy (strong copyleft)"
+  review: "Needs review (weak copyleft, source-available/commercial, or attribution terms)"
+  unknown: "No recognisable licence declared"
+
 categories:
-  # Permissive. Pass.
+  # OSS policy "Pre-Approved (Permissive)": MIT, Apache 2.0, BSD, plus equivalent permissive licences.
   allow:
     - MIT
     - MIT-0
@@ -27,7 +38,7 @@ categories:
     - BlueOak-1.0.0
     - Python-2.0
     - PSF-2.0
-    - BSL-1.0
+    - BSL-1.0                   # Boost Software License (not Business Source License, see BUSL below)
     - PostgreSQL
     - X11
     - WTFPL
@@ -35,34 +46,36 @@ categories:
     - LicenseRef-BSD            # "BSD" with no variant; all non-4-clause variants are permissive
     - LicenseRef-PublicDomain
 
-  # Weak copyleft, attribution-heavy, or advertising clauses.
-  # Fine in most uses, but someone should look once and record an exception.
+  # Reported in the PR comment, does not block.
   review:
+    # OSS policy "Conditional Review (Weak Copyleft)": dynamically linked, unmodified.
     - LGPL-*
+    - LicenseRef-LGPL*
     - MPL-*
     - EPL-*
     - CDDL-*
-    - OFL-*
-    - CC-BY-3.0
-    - CC-BY-4.0
-    - BSD-4-Clause
-    - Artistic-*
-    - LicenseRef-LGPL*
-
-  # Strong or network copyleft, non-commercial, source-available.
-  # Fails the check unless the package has an exception.
-  deny:
-    - GPL-*
-    - AGPL-*
+    # OSS policy "Source-Available / Commercial": requires external legal review.
     - SSPL-*
+    - BUSL-*
+    - Elastic-*
+    - Commons-Clause
+    # Not named in the OSS policy; flagged so someone decides.
     - EUPL-*
     - OSL-*
     - CPAL-*
     - CC-BY-NC*
     - CC-BY-SA*
     - CC-BY-ND*
-    - Commons-Clause
-    - BUSL-*
-    - Elastic-*
+    - OFL-*
+    - CC-BY-3.0
+    - CC-BY-4.0
+    - BSD-4-Clause
+    - Artistic-*
+
+  # OSS policy "Strictly Banned (Strong Copyleft)": GPL, GPL v2, GPL v3, AGPL v3. DO NOT USE.
+  # Blocks the PR unless the package has a recorded exception.
+  deny:
+    - GPL-*
+    - AGPL-*
     - LicenseRef-GPL*
     - LicenseRef-AGPL*
