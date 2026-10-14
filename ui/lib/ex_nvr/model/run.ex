@@ -49,6 +49,7 @@ defmodule ExNVR.Model.Run do
     Enum.reduce(params, query, fn
       {:device_id, id}, q -> where(q, [r], r.device_id == ^id)
       {:start_date, start_date}, q -> where(q, [r], r.end_date > ^start_date)
+      {:end_date, end_date}, q -> where(q, [r], r.start_date < ^end_date)
       _, q -> q
     end)
     |> order_by([r], asc: r.device_id, asc: r.start_date)
