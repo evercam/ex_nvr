@@ -191,6 +191,20 @@ defmodule ExNVR.Devices do
     end
   end
 
+  def list_camera_recordings(device, start_date, end_date) do
+    with {:ok, module} <- camera_module(Device.vendor(device)),
+         {:ok, {url, opts}} <- url_and_opts(device) do
+      module.list_recordings(url, start_date, end_date, opts ++ [timezone: device.timezone])
+    end
+  end
+
+  def download_camera_recording(device, recording, dest) do
+    with {:ok, module} <- camera_module(Device.vendor(device)),
+         {:ok, {url, opts}} <- url_and_opts(device) do
+      module.download_recording(url, recording, dest, opts ++ [timezone: device.timezone])
+    end
+  end
+
   def fetch_lpr_event(device, last_event_timestamp \\ nil) do
     with {:ok, {url, opts}} <- url_and_opts(device) do
       opts = opts ++ [last_event_timestamp: last_event_timestamp, timezone: device.timezone]

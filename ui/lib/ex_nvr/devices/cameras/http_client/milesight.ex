@@ -7,13 +7,16 @@ defmodule ExNVR.Devices.Cameras.HttpClient.Milesight do
 
   require Logger
 
-  alias ExNVR.Devices.Cameras.{DeviceInfo, StreamProfile}
+  alias ExNVR.Devices.Cameras.{DeviceInfo, RemoteRecording, StreamProfile}
   alias ExNVR.HTTP
 
   @admin_path "/cgi-bin/admin/admin.cgi"
   @operator_path "/cgi-bin/operator/operator.cgi"
   @lpr_path "/cgi-bin/operator/operator.cgi?action=get.lpr.lastdata&format=inf"
   @lpr_image_path "/LPR"
+  @search_path "/vb.htm"
+  @download_path "/dataloader.cgi"
+  @page_size 100
 
   @impl true
   def fetch_lpr_event(url, opts) do
@@ -41,6 +44,7 @@ defmodule ExNVR.Devices.Cameras.HttpClient.Milesight do
     |> handle_http_response(&parse_system_response/1)
   end
 
+  @impl true
   def stream_profiles(url, opts) do
     url = url <> @operator_path <> "?action=get.video.general&format=json"
 
@@ -48,6 +52,7 @@ defmodule ExNVR.Devices.Cameras.HttpClient.Milesight do
     |> handle_http_response(&parse_stream_profiles_response/1)
   end
 
+  @impl true
   def set_stream_profile(url, %StreamProfile{} = profile, opts) do
     url = url <> @operator_path <> "?action=set.video.general&format=json"
     body = %{"streamList" => %{profile.name => map_stream_profile(profile)}}
@@ -61,6 +66,143 @@ defmodule ExNVR.Devices.Cameras.HttpClient.Milesight do
       end
     end)
   end
+
+  @impl true
+  def list_recordings(url, start_date, end_date, opts) do
+    timezone = opts[:timezone] || "Etc/UTC"
+
+    params = [
+      page: "sdexplorer",
+      use_sid: 1,
+      maintype: 0,
+      subtype: -1,
+      time_start: to_local_time(start_date, timezone),
+      time_end: to_local_time(end_date, timezone),
+      iDisplayLength: @page_size
+    ]
+
+    with {:ok, rows} <- search_recordings(url, params, 0, [], opts) do
+      {:ok, Enum.map(rows, &parse_recording(&1, timezone))}
+    end
+  end
+
+  @impl true
+  def download_recording(url, %RemoteRecording{priv_data: priv_data} = recording, dest, opts) do
+    timezone = opts[:timezone] || "Etc/UTC"
+
+    query =
+      encode_query(
+        dw: "sd",
+        filename: recording.id,
+        starttime: to_local_time(recording.start_date, timezone),
+        endtime: to_local_time(recording.end_date, timezone),
+        index: priv_data.index,
+        sid: priv_data.sid,
+        uuid: priv_data.uuid
+      )
+
+    case HTTP.download(url <> @download_path <> "?" <> query, dest, opts) do
+      {:ok, %{status: 200}} ->
+        :ok
+
+      {:ok, %{status: status, body: body}} ->
+        {:error, {status, body}}
+
+      {:error, reason} ->
+        File.rm(dest)
+        {:error, reason}
+    end
+  end
+
+  @doc """
+  Release the search session (sid & uuid) created by `list_recordings/4`.
+  """
+  @spec release_search_session(binary(), binary(), binary(), Keyword.t()) :: :ok | {:error, any()}
+  def release_search_session(url, sid, uuid, opts) do
+    (url <> @search_path <> "?closemsfshandle=#{sid};#{uuid}")
+    |> HTTP.get(opts)
+    |> handle_http_response(& &1)
+    |> case do
+      {:ok, _body} -> :ok
+      error -> error
+    end
+  end
+
+  defp search_recordings(url, params, offset, acc, opts) do
+    query = encode_query(params ++ [iDisplayStart: offset])
+
+    (url <> @search_path <> "?" <> query)
+    |> HTTP.get(opts)
+    |> handle_http_response(&decode_json/1)
+    |> case do
+      {:ok, %{"aaData" => [first_row | _rest] = rows} = response} ->
+        acc = acc ++ rows
+
+        if length(acc) >= Map.get(response, "iTotalRecords", 0) do
+          {:ok, acc}
+        else
+          # reuse the search session for subsequent pages
+          {sid, uuid} = search_session(first_row)
+          params = Keyword.merge(params, sid: sid, uuid: uuid)
+          search_recordings(url, params, offset + @page_size, acc, opts)
+        end
+
+      {:ok, _response} ->
+        {:ok, acc}
+
+      error ->
+        error
+    end
+  end
+
+  defp parse_recording([filename, start_time, end_time, type, size, param, index], timezone) do
+    {sid, uuid} = search_session(param)
+
+    %RemoteRecording{
+      id: filename,
+      start_date: from_local_time(start_time, timezone),
+      end_date: from_local_time(end_time, timezone),
+      size: String.to_integer(size),
+      type: recording_type(type),
+      priv_data: %{sid: sid, uuid: uuid, index: index}
+    }
+  end
+
+  # param is "sid&uuid", or "plate&sid&uuid" for LPR snapshots
+  defp search_session([_filename, _start, _end, _type, _size, param, _index]),
+    do: search_session(param)
+
+  defp search_session(param) do
+    [sid, uuid] = param |> String.split("&") |> Enum.take(-2)
+    {sid, uuid}
+  end
+
+  defp recording_type("1"), do: :schedule
+  defp recording_type("2"), do: :alarm
+  defp recording_type(_type), do: :unknown
+
+  defp to_local_time(datetime, timezone) do
+    datetime
+    |> DateTime.shift_zone!(timezone)
+    |> Calendar.strftime("%Y-%m-%d %H:%M:%S")
+  end
+
+  defp from_local_time(time, timezone) do
+    time
+    |> NaiveDateTime.from_iso8601!()
+    |> DateTime.from_naive!(timezone)
+    |> DateTime.shift_zone!("Etc/UTC")
+  end
+
+  # camera expects spaces as %20 and literal colons in dates
+  defp encode_query(params) do
+    Enum.map_join(params, "&", fn {key, value} ->
+      "#{key}=#{URI.encode(to_string(value), &(URI.char_unreserved?(&1) or &1 == ?:))}"
+    end)
+  end
+
+  defp decode_json(body) when is_map(body), do: body
+  defp decode_json(body), do: Jason.decode!(body)
 
   defp parse_system_response(body) do
     response = Jason.decode!(body)
