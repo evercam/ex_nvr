@@ -26,26 +26,19 @@ defmodule ExNVR.RemoteStorageTest do
     end
   end
 
-  test "rejects URLs, ARNs and paths, saying what to enter instead" do
-    assert bucket_error(changeset("s3://my-bucket")) ==
-             ~s(remove the "s3://" prefix, enter the bucket name only)
-
-    assert bucket_error(changeset("https://my-bucket.s3.amazonaws.com")) ==
-             ~s(remove the "https://" prefix, enter the bucket name only)
-
-    assert bucket_error(changeset("arn:aws:s3:::my-bucket")) ==
-             "enter the bucket name, not its ARN"
-
-    for input <- ["my-bucket/", "my-bucket/footage"] do
+  test "rejects URLs, ARNs, paths and names S3 would refuse" do
+    for input <- [
+          "s3://my-bucket",
+          "https://my-bucket.s3.amazonaws.com",
+          "arn:aws:s3:::my-bucket",
+          "my-bucket/",
+          "my-bucket/footage",
+          "My_Bucket",
+          "ab",
+          "-bucket"
+        ] do
       assert bucket_error(changeset(input)) ==
-               "enter the bucket name only, without slashes or folders"
-    end
-  end
-
-  test "rejects names S3 would refuse" do
-    for input <- ["My_Bucket", "ab", "-bucket"] do
-      assert bucket_error(changeset(input)) ==
-               "must be 3-63 lowercase letters, digits, dots or dashes",
+               "must be the bucket name only (no s3:// or slashes): 3-63 lowercase letters, digits, dots or dashes",
              input
     end
   end

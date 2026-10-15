@@ -78,7 +78,7 @@ defmodule ExNVRWeb.RemoteStoragesLiveTest do
         })
         |> render_change()
 
-      assert html =~ "remove the &quot;s3://&quot; prefix, enter the bucket name only"
+      assert html =~ "must be the bucket name only (no s3:// or slashes)"
       refute html =~ "can&#39;t be blank"
     end
 
@@ -100,7 +100,7 @@ defmodule ExNVRWeb.RemoteStoragesLiveTest do
         })
         |> render_submit()
 
-      assert html =~ "remove the &quot;s3://&quot; prefix"
+      assert html =~ "must be the bucket name only (no s3:// or slashes)"
       assert RemoteStorages.get_by(name: "bad bucket") == nil
     end
   end

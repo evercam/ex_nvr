@@ -28,15 +28,20 @@ defmodule ExNVR.Export.S3ExportTest do
           bucket: @bucket,
           region: "us-east-1",
           access_key_id: "access-key",
-          secret_access_key: "secret",
-          kit_id: @kit_id
+          secret_access_key: "secret"
         }
       })
 
     device = camera_device_fixture(tmp_dir, %{timezone: "Europe/Paris"})
 
     Application.put_env(:ex_nvr, :export_upload_retry_base_ms, 1)
-    on_exit(fn -> Application.delete_env(:ex_nvr, :export_upload_retry_base_ms) end)
+    # as set by the firmware
+    Application.put_env(:ex_nvr, :kit_id, @kit_id)
+
+    on_exit(fn ->
+      Application.delete_env(:ex_nvr, :export_upload_retry_base_ms)
+      Application.delete_env(:ex_nvr, :kit_id)
+    end)
 
     %{bypass: bypass, store: store, remote_storage: remote_storage, device: device}
   end
@@ -395,17 +400,33 @@ defmodule ExNVR.Export.S3ExportTest do
     if fun.(), do: :ok, else: Process.sleep(10) && wait_until(fun, attempts - 1)
   end
 
-  test "job/6 requires a kit id", %{device: device, remote_storage: remote_storage} do
-    remote_storage = %{remote_storage | s3_config: %{remote_storage.s3_config | kit_id: nil}}
+  test "job/7 uses the kit's id unless overridden, and requires one", %{
+    device: device,
+    remote_storage: remote_storage
+  } do
+    job =
+      &S3.job(
+        device,
+        remote_storage,
+        :high,
+        nil,
+        ~U(2024-12-15T11:00:00Z),
+        ~U(2024-12-15T12:00:00Z),
+        &1
+      )
 
-    assert {:error, :missing_kit_id} =
-             S3.job(device, remote_storage, :high, nil, DateTime.utc_now(), DateTime.utc_now())
+    assert {:ok, %{destination: %{kit_id: @kit_id}} = from_kit} = job.([])
+    assert {:ok, %{destination: %{kit_id: "other-kit"}} = overridden} = job.(kit_id: "other-kit")
+    # a different root folder is a different job
+    refute from_kit.dest_dir == overridden.dest_dir
 
-    Application.put_env(:ex_nvr, :kit_id, "fw-kit")
-    on_exit(fn -> Application.delete_env(:ex_nvr, :kit_id) end)
+    # the firmware may provide a function, read on each call
+    Application.put_env(:ex_nvr, :kit_id, fn -> "configured-later" end)
+    assert {:ok, %{destination: %{kit_id: "configured-later"}}} = job.(kit_id: "")
 
-    assert {:ok, %{destination: %{kit_id: "fw-kit"}}} =
-             S3.job(device, remote_storage, :high, nil, DateTime.utc_now(), DateTime.utc_now())
+    Application.delete_env(:ex_nvr, :kit_id)
+    assert {:error, :missing_kit_id} = job.([])
+    assert {:ok, %{destination: %{kit_id: "manual"}}} = job.(kit_id: "manual")
   end
 
   test "next_hour_boundary/2 follows the local clock, including DST" do

@@ -20,20 +20,22 @@ defmodule ExNVR.Export.S3 do
   @upload_opts [content_type: "video/mp4", max_concurrency: 2, timeout: to_timeout(minute: 2)]
 
   @doc """
-  The kit id used as the root of the object keys: the remote storage's
-  override if set, otherwise the one provided by the firmware (`:ex_nvr, :kit_id`).
+  This kit's id, the default root of the object keys. Set by the firmware as
+  `config :ex_nvr, :kit_id`, either a value or a zero-arity function read
+  each time (the kit may be configured after boot).
   """
-  @spec kit_id(RemoteStorage.t()) :: String.t() | nil
-  def kit_id(%RemoteStorage{s3_config: s3_config}) do
-    case s3_config && s3_config.kit_id do
-      id when is_binary(id) and id != "" -> id
-      _other -> Application.get_env(:ex_nvr, :kit_id)
+  @spec kit_id() :: String.t() | nil
+  def kit_id do
+    case Application.get_env(:ex_nvr, :kit_id) do
+      fun when is_function(fun, 0) -> fun.()
+      kit_id -> kit_id
     end
   end
 
   @doc """
   Resolves the staging directory (the job's identity) and the destination to
-  pass to `ExNVR.Export.start/6`. A blank `camera_id` falls back to the device id.
+  pass to `ExNVR.Export.start/6`. A blank `camera_id` falls back to the
+  device id and a blank `:kit_id` option to `kit_id/0`.
   """
   @spec job(
           Device.t(),
@@ -41,16 +43,17 @@ defmodule ExNVR.Export.S3 do
           atom(),
           String.t() | nil,
           DateTime.t(),
-          DateTime.t()
+          DateTime.t(),
+          kit_id: String.t() | nil
         ) ::
           {:ok, %{dest_dir: Path.t(), destination: Manifest.destination()}}
           | {:error, :missing_kit_id | :no_storage}
-  def job(device, remote_storage, stream, camera_id, start_date, end_date) do
+  def job(device, remote_storage, stream, camera_id, start_date, end_date, opts \\ []) do
     camera_id = if camera_id in [nil, ""], do: device.id, else: camera_id
-    job_id = job_id(remote_storage, device, stream, camera_id, start_date, end_date)
+    kit_id = if opts[:kit_id] in [nil, ""], do: kit_id(), else: opts[:kit_id]
 
-    with {:kit_id, kit_id} when is_binary(kit_id) and kit_id != "" <-
-           {:kit_id, kit_id(remote_storage)},
+    with {:kit_id, kit_id} when is_binary(kit_id) and kit_id != "" <- {:kit_id, kit_id},
+         job_id = job_id(remote_storage, device, stream, kit_id, camera_id, start_date, end_date),
          {:dir, dest_dir} when is_binary(dest_dir) <- {:dir, staging_dir(device, job_id)} do
       destination = %{
         type: :s3,
@@ -67,15 +70,14 @@ defmodule ExNVR.Export.S3 do
     end
   end
 
-  @doc "Deterministic job id: the same inputs always resolve to the same job."
-  @spec job_id(RemoteStorage.t(), Device.t(), atom(), String.t(), DateTime.t(), DateTime.t()) ::
-          String.t()
-  def job_id(remote_storage, device, stream, camera_id, start_date, end_date) do
+  # Deterministic: the same inputs always resolve to the same job.
+  defp job_id(remote_storage, device, stream, kit_id, camera_id, start_date, end_date) do
     hash =
       [
         to_string(remote_storage.id),
         device.id,
         to_string(stream),
+        kit_id,
         camera_id,
         # unix time so precision/zone differences don't change the identity
         to_string(DateTime.to_unix(start_date, :microsecond)),
