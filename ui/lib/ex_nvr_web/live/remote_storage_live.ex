@@ -126,17 +126,6 @@ defmodule ExNVRWeb.RemoteStorageLive do
               placeholder="the secret paired with the access key"
               required
             />
-            <.input
-              field={s3_config[:kit_id]}
-              id="remote_storage_kit_id"
-              type="text"
-              label="Kit ID (footage export folder)"
-              placeholder={
-                if kit_id = Application.get_env(:ex_nvr, :kit_id),
-                  do: "#{kit_id} (from this kit), or override e.g. kit-123",
-                  else: "required for exports, e.g. kit-123"
-              }
-            />
           </.inputs_for>
           <:actions>
             <.button :if={is_nil(@remote_storage.id)} class="w-full" phx-disable-with="Creating...">

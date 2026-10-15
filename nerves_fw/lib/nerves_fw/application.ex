@@ -15,16 +15,18 @@ defmodule ExNVR.Nerves.Application do
 
     children =
       if Application.get_env(:ex_nvr, :env) != :test do
+        # Root folder of S3 footage exports (see ExNVR.Export.S3.kit_id/0). Read
+        # on each export since the kit can be configured after boot.
+        Application.put_env(:ex_nvr, :kit_id, fn ->
+          ExNVR.Nerves.SystemSettings.get_settings().kit_serial
+        end)
+
         children ++ [{ExNVR.Nerves.SystemSettings, []}]
       else
         children
       end
 
     children = children ++ children(target())
-
-    # Root folder of S3 footage exports (see ExNVR.Export.S3.kit_id/1).
-    if target() != :host,
-      do: Application.put_env(:ex_nvr, :kit_id, Runtime.KV.get("nerves_evercam_id"))
 
     ExNVR.Release.migrate()
     Supervisor.start_link(children, opts)

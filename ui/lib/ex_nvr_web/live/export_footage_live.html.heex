@@ -67,12 +67,19 @@
                   Add one
                 </.link>
               </p>
+              <.input
+                field={@export_form[:stream]}
+                type="select"
+                label="Stream"
+                options={stream_options(@devices, @export_form[:device_id].value)}
+                disabled={@inputs_locked?}
+              />
               <div class="grid grid-cols-2 gap-4">
                 <.input
-                  field={@export_form[:stream]}
-                  type="select"
-                  label="Stream"
-                  options={stream_options(@devices, @export_form[:device_id].value)}
+                  field={@export_form[:kit_id]}
+                  type="text"
+                  label="Kit ID (optional)"
+                  placeholder={kit_id_placeholder()}
                   disabled={@inputs_locked?}
                 />
                 <.input

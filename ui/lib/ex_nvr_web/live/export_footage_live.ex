@@ -30,7 +30,8 @@ defmodule ExNVRWeb.ExportFootageLive do
     destination: :string,
     remote_storage_id: :integer,
     stream: :string,
-    camera_id: :string
+    camera_id: :string,
+    kit_id: :string
   }
 
   def mount(raw_params, _session, socket) do
@@ -131,7 +132,8 @@ defmodule ExNVRWeb.ExportFootageLive do
           "destination" => "s3",
           "remote_storage_id" => destination.remote_storage_id,
           "camera_id" =>
-            if(destination.camera_id == device.id, do: "", else: destination.camera_id)
+            if(destination.camera_id == device.id, do: "", else: destination.camera_id),
+          "kit_id" => if(destination.kit_id == S3.kit_id(), do: "", else: destination.kit_id)
         })
 
       nil ->
@@ -431,7 +433,8 @@ defmodule ExNVRWeb.ExportFootageLive do
         String.to_existing_atom(data.stream),
         data[:camera_id],
         DateTime.from_naive!(data.start_date, device.timezone),
-        DateTime.from_naive!(data.end_date, device.timezone)
+        DateTime.from_naive!(data.end_date, device.timezone),
+        kit_id: data[:kit_id]
       )
     else
       {:error, :not_found}
@@ -514,7 +517,10 @@ defmodule ExNVRWeb.ExportFootageLive do
         |> Changeset.validate_format(:camera_id, @folder_name_regex,
           message: "only letters, numbers, dot, dash and underscore allowed"
         )
-        |> validate_kit_id(socket)
+        |> Changeset.validate_format(:kit_id, @folder_name_regex,
+          message: "only letters, numbers, dot, dash and underscore allowed"
+        )
+        |> validate_kit_id()
 
       _usb ->
         changeset
@@ -527,22 +533,19 @@ defmodule ExNVRWeb.ExportFootageLive do
     end
   end
 
-  defp validate_kit_id(changeset, socket) do
-    id = Changeset.get_field(changeset, :remote_storage_id)
+  # Only required when this install has no kit id of its own (e.g. Docker).
+  defp validate_kit_id(changeset) do
+    if Changeset.get_field(changeset, :kit_id) in [nil, ""] and S3.kit_id() in [nil, ""],
+      do:
+        Changeset.add_error(changeset, :kit_id, "required, this ExNVR has no kit id of its own"),
+      else: changeset
+  end
 
-    case Enum.find(socket.assigns.remote_storages, &(&1.id == id)) do
-      nil ->
-        changeset
-
-      remote_storage ->
-        if S3.kit_id(remote_storage) in [nil, ""],
-          do:
-            Changeset.add_error(
-              changeset,
-              :remote_storage_id,
-              "no kit id available, set one on the remote storage"
-            ),
-          else: changeset
+  @doc false
+  def kit_id_placeholder do
+    case S3.kit_id() do
+      kit_id when kit_id in [nil, ""] -> "required, e.g. kit-123"
+      kit_id -> "#{kit_id} (this kit)"
     end
   end
 
