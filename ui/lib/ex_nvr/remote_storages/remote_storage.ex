@@ -36,14 +36,22 @@ defmodule ExNVR.RemoteStorage do
       field :secret_access_key, :string
     end
 
+    # S3 bucket naming rules: 3-63 lowercase letters, digits, dots and dashes.
+    @bucket_regex ~r/^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/
+
     def changeset(struct, params) do
       struct
       |> Changeset.cast(params, __MODULE__.__schema__(:fields))
+      |> Changeset.update_change(:bucket, &String.trim/1)
       |> Changeset.validate_required([
         :bucket,
         :access_key_id,
         :secret_access_key
       ])
+      |> Changeset.validate_format(:bucket, @bucket_regex,
+        message:
+          "must be the bucket name only (no s3:// or slashes): 3-63 lowercase letters, digits, dots or dashes"
+      )
     end
   end
 

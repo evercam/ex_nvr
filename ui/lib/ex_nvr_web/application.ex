@@ -23,6 +23,7 @@ defmodule ExNVRWeb.Application do
         {ExNVR.SystemStatus, []},
         {DynamicSupervisor, [name: ExNVR.PipelineSupervisor, strategy: :one_for_one]},
         {Registry, keys: :unique, name: ExNVR.Export.Registry},
+        ExNVR.Export.Recent,
         {DynamicSupervisor, [name: ExNVR.Export.Supervisor, strategy: :one_for_one]},
         ExNVRWeb.Telemetry,
         {Mobius, metrics: ExNVR.Metrics.list(), persistence_dir: mobius_persistence_dir()},
