@@ -3,9 +3,12 @@ defmodule ExNvrWeb.DeviceDetailsLiveTest do
   use Mimic
 
   import ExNVR.{AccountsFixtures, DevicesFixtures, RecordingsFixtures}
+  import ExUnit.CaptureLog
   import Phoenix.LiveViewTest
 
   alias ExNVR.Devices
+  alias ExNVR.Model.Run
+  alias ExNVR.Recordings.{Backfiller, BackfillJob}
   alias ExNVRWeb.ViewUtils
 
   @moduletag :tmp_dir
@@ -17,7 +20,7 @@ defmodule ExNvrWeb.DeviceDetailsLiveTest do
     setup ctx do
       %{
         device: camera_device_fixture(ctx.tmp_dir),
-        tabs: ["details", "recordings", "stats", "settings", "events"]
+        tabs: ["details", "recordings", "stats", "settings", "recover_footage", "events"]
       }
     end
 
@@ -506,6 +509,82 @@ defmodule ExNvrWeb.DeviceDetailsLiveTest do
 
       refute has_element?(lv, "img[src^='data:image']")
       assert has_element?(lv, "p", "Device is stopped")
+    end
+  end
+
+  describe "Backfill tab" do
+    # the backfill job runs under a supervisor, not in the live view process
+    setup :set_mimic_global
+
+    setup %{conn: conn} do
+      %{conn: log_in_user(conn, user_fixture())}
+    end
+
+    test "is hidden for non IP cameras", %{conn: conn} do
+      device = file_device_fixture()
+
+      {:ok, lv, _html} = live(conn, ~p"/devices/#{device.id}/details?tab=recover_footage")
+
+      refute has_element?(lv, "#tab-recover_footage")
+      assert has_element?(lv, "#tab-details[aria-selected='true']")
+    end
+
+    test "start a backfill and show its result", %{conn: conn, tmp_dir: tmp_dir} do
+      test_pid = self()
+      device = camera_device_fixture(tmp_dir)
+      run = %Run{start_date: ~U(2026-10-01 10:00:00Z), end_date: ~U(2026-10-01 11:30:00Z)}
+
+      expect(Backfiller, :run, fn _device, _start_date, _end_date, opts ->
+        send(test_pid, {:running, self(), opts})
+        receive do: (:finish -> {:ok, [run]})
+      end)
+
+      {:ok, lv, _html} = live(conn, ~p"/devices/#{device.id}/details?tab=recover_footage")
+
+      assert has_element?(lv, "#start-backfill", "Recover footage")
+
+      lv
+      |> form("#backfill_form_#{device.id}", backfill: %{min_gap: 15})
+      |> render_submit()
+
+      assert_receive {:running, pid, [min_gap: 900]}
+      assert has_element?(lv, "#backfill-in-progress", "Filling gaps longer than 15 min")
+      assert has_element?(lv, "#start-backfill[disabled]", "Recovering footage")
+
+      ref = Process.monitor(pid)
+      capture_log(fn -> send(pid, :finish) end)
+      assert_receive {:DOWN, ^ref, :process, ^pid, :normal}
+
+      assert has_element?(lv, "#backfill-result", "Recovered 1h 30m of footage")
+      refute has_element?(lv, "#backfill-in-progress")
+    end
+
+    test "show backfill failure reason", %{conn: conn, tmp_dir: tmp_dir} do
+      device = camera_device_fixture(tmp_dir)
+
+      {:ok, lv, _html} = live(conn, ~p"/devices/#{device.id}/details?tab=recover_footage")
+
+      send(lv.pid, {:backfill, {:failed, :not_implemented}})
+
+      assert has_element?(
+               lv,
+               "#backfill-result",
+               "this camera does not support downloading recordings"
+             )
+    end
+
+    test "reject invalid minimum gap", %{conn: conn, tmp_dir: tmp_dir} do
+      device = camera_device_fixture(tmp_dir)
+
+      {:ok, lv, _html} = live(conn, ~p"/devices/#{device.id}/details?tab=recover_footage")
+
+      html =
+        lv
+        |> form("#backfill_form_#{device.id}", backfill: %{min_gap: 0})
+        |> render_submit()
+
+      assert html =~ "must be a whole number of at least 1 minute"
+      assert is_nil(BackfillJob.status(device))
     end
   end
 end
