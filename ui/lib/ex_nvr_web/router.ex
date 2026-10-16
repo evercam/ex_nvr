@@ -46,6 +46,8 @@ defmodule ExNVRWeb.Router do
     get "/events", API.EventController, :events
     get "/events/lpr", API.EventController, :lpr
 
+    get "/activity", API.ActivityController, :index
+
     get "/recordings/chunks", API.RecordingController, :chunks
 
     post "/onvif/discover", API.OnvifController, :discover
@@ -61,6 +63,8 @@ defmodule ExNVRWeb.Router do
       get "/footage", API.DeviceStreamingController, :footage
 
       get "/bif/:hour", API.DeviceStreamingController, :bif
+
+      get "/activity", API.ActivityController, :index
     end
 
     get "/system/status", API.SystemStatusController, :status
@@ -121,6 +125,7 @@ defmodule ExNVRWeb.Router do
 
     get "/", PageController, :home
     get "/webrtc/:device_id", PageController, :webrtc
+    get "/events/generic", PageController, :generic_events
 
     import Phoenix.LiveDashboard.Router
     live_dashboard "/live-dashboard", metrics: ExNVRWeb.Telemetry
@@ -136,7 +141,7 @@ defmodule ExNVRWeb.Router do
       live "/devices/:id/details", DeviceDetailsLive, :show
 
       live "/recordings", RecordingListLive, :list
-      live "/events/generic", GenericEventsLive, :index
+      live "/activity", ActivityLive, :index
       live "/events/lpr", LPREventsListLive, :list
 
       live "/users/settings", UserSettingsLive, :edit

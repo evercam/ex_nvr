@@ -2,7 +2,6 @@ defmodule ExNVRWeb.GenericEventsLive.EventsList do
   use ExNVRWeb, :live_component
 
   alias ExNVR.Events
-  alias ExNVRWeb.Router.Helpers, as: Routes
 
   @impl true
   def render(assigns) do
@@ -49,7 +48,7 @@ defmodule ExNVRWeb.GenericEventsLive.EventsList do
           opts={ExNVRWeb.FlopConfig.table_opts()}
           items={@events}
           meta={@meta}
-          path={~p"/events/generic"}
+          path={~p"/activity?tab=system"}
         >
           <:col :let={event} label="Device" field={:device_name}>
             {if event.device, do: event.device.name, else: "N/A"}
@@ -90,7 +89,7 @@ defmodule ExNVRWeb.GenericEventsLive.EventsList do
     {:noreply,
      socket
      |> assign(:filter_params, filter_params)
-     |> push_patch(to: Routes.generic_events_path(socket, :index, filter_params))}
+     |> push_patch(to: ~p"/activity?#{Map.put(filter_params, "tab", "system")}")}
   end
 
   @impl true
@@ -104,7 +103,7 @@ defmodule ExNVRWeb.GenericEventsLive.EventsList do
     {:noreply,
      socket
      |> assign(pagination_params: pagination_params)
-     |> push_patch(to: Routes.generic_events_path(socket, :index, params), replace: true)}
+     |> push_patch(to: ~p"/activity?#{Map.put(params, "tab", "system")}", replace: true)}
   end
 
   defp load_events(socket, params) do

@@ -21,6 +21,12 @@ defmodule ExNVRWeb.PageController do
     )
   end
 
+  # The generic events page was merged into the activity page, keep the old links working.
+  def generic_events(conn, params) do
+    tab = if params["tab"] == "webhook", do: "webhook", else: "system"
+    redirect(conn, to: ~p"/activity?#{Map.put(params, "tab", tab)}")
+  end
+
   defp parse_stream(params) do
     case params["stream"] do
       "low" -> :low

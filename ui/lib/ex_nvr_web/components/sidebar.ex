@@ -138,7 +138,7 @@ defmodule ExNVRWeb.Components.Sidebar do
             label: "Events",
             icon: "hero-camera-solid",
             children: [
-              %{label: "Generic Events", icon: "hero-code-bracket", href: ~p"/events/generic"},
+              %{label: "Activity", icon: "hero-queue-list", href: ~p"/activity"},
               %{label: "Vehicle Plates", icon: "hero-truck-solid", href: ~p"/events/lpr"}
             ]
           }
@@ -209,7 +209,7 @@ defmodule ExNVRWeb.Components.Sidebar do
             label: "Events",
             icon: "hero-camera-solid",
             children: [
-              %{label: "Generic Events", icon: "hero-code-bracket", href: ~p"/events/generic"},
+              %{label: "Activity", icon: "hero-queue-list", href: ~p"/activity"},
               %{label: "Vehicle Plates", icon: "hero-truck-solid", href: ~p"/events/lpr"}
             ]
           }

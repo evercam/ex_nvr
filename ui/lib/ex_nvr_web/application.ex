@@ -18,6 +18,7 @@ defmodule ExNVRWeb.Application do
         ExNVR.Repo,
         ExNVR.TokenPruner,
         {Phoenix.PubSub, name: ExNVR.PubSub},
+        ExNVR.Activity.Writer,
         {Finch, name: ExNVR.Finch},
         {Task.Supervisor, name: ExNVR.TaskSupervisor},
         {ExNVR.SystemStatus, []},
@@ -32,7 +33,7 @@ defmodule ExNVRWeb.Application do
         {DynamicSupervisor, [name: ExNVR.Hardware.Supervisor, strategy: :one_for_one]},
         {ExNVR.Hardware.SerialPortChecker, []},
         {ExNVR.PipelineStarter, []}
-      ] ++ trigger_listener() ++ remote_connector()
+      ] ++ activity_pruner() ++ trigger_listener() ++ remote_connector()
 
     opts = [strategy: :one_for_one, name: ExNVRWeb.Supervisor]
     Supervisor.start_link(children, opts)
@@ -42,6 +43,13 @@ defmodule ExNVRWeb.Application do
   def config_change(changed, _new, removed) do
     ExNVRWeb.Endpoint.config_change(changed, removed)
     :ok
+  end
+
+  defp activity_pruner do
+    case Application.get_env(:ex_nvr, :activity_retention_days) do
+      days when is_integer(days) and days > 0 -> [{ExNVR.Activity.Pruner, retention_days: days}]
+      _forever -> []
+    end
   end
 
   defp trigger_listener do

@@ -9,6 +9,11 @@ if victron_probing = System.get_env("EXNVR_VICTRON_PROBING") do
   config :ex_nvr, victron_probing: victron_probing == "true"
 end
 
+# Activity log entries are kept forever unless a retention is set.
+if retention_days = System.get_env("EXNVR_ACTIVITY_RETENTION_DAYS") do
+  config :ex_nvr, activity_retention_days: String.to_integer(retention_days)
+end
+
 if config_env() == :prod do
   config :ex_nvr, hls_directory: System.get_env("EXNVR_HLS_DIRECTORY", "./hls")
 

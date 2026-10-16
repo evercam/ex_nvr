@@ -1134,6 +1134,76 @@ paths:
         "400":
           $ref: "#/components/responses/BadArg"
 
+  /api/activity:
+    get:
+      summary: List activity
+      description: |
+        Get the activity log: actions made by users, API clients and the remote server
+        (logins, configuration changes, exports, ...). Newest entries first.
+        What the system does on its own is available as events, see `/api/events`.
+
+        Filter with the `filters` parameter on `time`, `category`, `action`,
+        `severity`, `actor_type`, `actor_id`, `device_id` and `message`.
+      operationId: getActivity
+      tags:
+        - Activity
+      parameters:
+        - $ref: "#/components/parameters/filters"
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/page_size"
+        - $ref: "#/components/parameters/order_by"
+        - $ref: "#/components/parameters/order_directions"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  meta:
+                    $ref: "#/components/schemas/ResultMeta"
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ActivityEntry"
+        "400":
+          $ref: "#/components/responses/BadArg"
+
+  /api/devices/{device_id}/activity:
+    get:
+      summary: List device activity
+      description: |
+        Same as `/api/activity` but limited to the entries of a single device.
+      operationId: getDeviceActivity
+      tags:
+        - Activity
+      parameters:
+        - $ref: "#/components/parameters/device_id"
+        - $ref: "#/components/parameters/filters"
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/page_size"
+        - $ref: "#/components/parameters/order_by"
+        - $ref: "#/components/parameters/order_directions"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  meta:
+                    $ref: "#/components/schemas/ResultMeta"
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ActivityEntry"
+        "400":
+          $ref: "#/components/responses/BadArg"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
 components:
   securitySchemes:
     bearerAuth:
@@ -1307,6 +1377,60 @@ components:
           type: string
           format: uuid
           description: ID of the associated device
+    ActivityEntry:
+      type: object
+      properties:
+        id:
+          type: integer
+        time:
+          type: string
+          format: date-time
+        category:
+          type: string
+          enum: [auth, user, device, export, config, remote]
+        action:
+          type: string
+          description: Dotted action name
+          example: device.updated
+        severity:
+          type: string
+          enum: [info, warning, critical]
+        actor_type:
+          type: string
+          enum: [user, api, remote]
+        actor_id:
+          type: string
+          nullable: true
+          description: Id of the user who made the action
+        actor_label:
+          type: string
+          nullable: true
+          description: Email of the user at the time of the entry, or the name of the remote server
+        source_ip:
+          type: string
+          nullable: true
+        device_id:
+          type: string
+          format: uuid
+          nullable: true
+        device_name:
+          type: string
+          nullable: true
+          description: Device name at the time of the entry
+        resource_type:
+          type: string
+          nullable: true
+        resource_id:
+          type: string
+          nullable: true
+        resource_label:
+          type: string
+          nullable: true
+        message:
+          type: string
+        metadata:
+          type: object
+          description: Additional data, e.g. `changes` with the new value of each changed field. Secrets are redacted.
     LPREvent:
       type: object
       properties:
