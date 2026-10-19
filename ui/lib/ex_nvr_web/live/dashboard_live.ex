@@ -386,6 +386,14 @@ defmodule ExNVRWeb.DashboardLive do
     else
       _error -> assign(socket, ptz_enabled?: false, onvif_device: nil)
     end
+  rescue
+    error ->
+      Logger.warning("[PTZ] could not get onvif device: #{inspect(error)}")
+      assign(socket, ptz_enabled?: false, onvif_device: nil)
+  catch
+    :exit, reason ->
+      Logger.warning("[PTZ] could not get onvif device: #{inspect(reason)}")
+      assign(socket, ptz_enabled?: false, onvif_device: nil)
   end
 
   defp live_view_enabled?(socket) do

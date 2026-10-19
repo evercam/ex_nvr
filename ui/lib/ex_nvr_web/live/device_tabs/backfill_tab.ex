@@ -6,9 +6,11 @@ defmodule ExNVRWeb.DeviceTabs.BackfillTab do
   import ExNVR.Authorization
   import ExNVRWeb.Components.Settings
 
+  alias Ecto.Changeset
   alias ExNVR.Recordings.BackfillJob
 
   @default_min_gap 10
+  @types %{start_date: :naive_datetime, end_date: :naive_datetime, min_gap: :integer}
 
   @impl true
   def render(assigns) do
@@ -29,6 +31,24 @@ defmodule ExNVRWeb.DeviceTabs.BackfillTab do
             <.backfill_status :if={@backfill} backfill={@backfill} timezone={@device.timezone} />
             <.backfill_result :if={is_nil(@backfill) and @last_result} result={@last_result} />
           </div>
+          <.settings_row label="Period" description={"In the device timezone (#{@device.timezone})"}>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <.input
+                field={@form[:start_date]}
+                type="datetime-local"
+                label="From"
+                disabled={!!@backfill}
+                required
+              />
+              <.input
+                field={@form[:end_date]}
+                type="datetime-local"
+                label="To"
+                disabled={!!@backfill}
+                required
+              />
+            </div>
+          </.settings_row>
           <.settings_row label="Minimum gap" description="Gaps shorter than this are skipped">
             <div class="flex items-center gap-3">
               <div class="w-32">
@@ -57,7 +77,13 @@ defmodule ExNVRWeb.DeviceTabs.BackfillTab do
   attr :backfill, :map, required: true
   attr :timezone, :string, required: true
 
-  defp backfill_status(assigns) do
+  defp backfill_status(%{backfill: backfill, timezone: timezone} = assigns) do
+    assigns =
+      assign(assigns,
+        start_date: format_date(backfill.start_date, timezone),
+        end_date: format_date(backfill.end_date, timezone)
+      )
+
     ~H"""
     <div
       id="backfill-in-progress"
@@ -66,7 +92,7 @@ defmodule ExNVRWeb.DeviceTabs.BackfillTab do
       <.icon name="hero-arrow-path" class="w-5 h-5 shrink-0 animate-spin" />
       <div>
         <p class="font-medium">
-          Recovering footage since {format_date(@backfill.started_at, @timezone)}
+          Recovering footage from {@start_date} to {@end_date}
         </p>
         <p class="mt-0.5">
           Filling gaps longer than {@backfill.min_gap} min. It keeps running in the background if you leave this page.
@@ -132,27 +158,32 @@ defmodule ExNVRWeb.DeviceTabs.BackfillTab do
     {:ok,
      socket
      |> assign(assigns)
-     |> assign_new(:form, fn -> to_form(%{"min_gap" => @default_min_gap}, as: :backfill) end)}
+     |> assign_new(:form, fn %{device: device} ->
+       %{} |> backfill_changeset(device.timezone) |> to_form(as: :backfill)
+     end)}
   end
 
   @impl true
   def handle_event("start_backfill", %{"backfill" => params}, socket) do
+    device = socket.assigns.device
+    changeset = backfill_changeset(params, device.timezone)
+
     with :ok <- authorize(socket.assigns.current_user, :device, :update),
-         {:ok, min_gap} <- parse_min_gap(params["min_gap"]),
-         {:ok, _pid} <- BackfillJob.start(socket.assigns.device, min_gap) do
-      {:noreply, assign(socket, :form, to_form(params, as: :backfill))}
+         {:ok, data} <- Changeset.apply_action(changeset, :insert),
+         {:ok, _pid} <-
+           BackfillJob.start(
+             device,
+             to_utc(data.start_date, device.timezone),
+             to_utc(data.end_date, device.timezone),
+             data.min_gap
+           ) do
+      {:noreply, assign(socket, :form, to_form(changeset, as: :backfill))}
     else
       {:error, :unauthorized} ->
         {:noreply, put_flash(socket, :error, "You are not authorized to perform this action")}
 
-      {:error, :invalid_min_gap} ->
-        form =
-          to_form(params,
-            as: :backfill,
-            errors: [min_gap: {"must be a whole number of at least 1 minute", []}]
-          )
-
-        {:noreply, assign(socket, :form, form)}
+      {:error, %Changeset{} = changeset} ->
+        {:noreply, assign(socket, :form, to_form(changeset, as: :backfill))}
 
       {:error, :already_running} ->
         {:noreply,
@@ -163,11 +194,49 @@ defmodule ExNVRWeb.DeviceTabs.BackfillTab do
     end
   end
 
-  defp parse_min_gap(value) do
-    case Integer.parse(value || "") do
-      {min_gap, ""} when min_gap >= 1 -> {:ok, min_gap}
-      _other -> {:error, :invalid_min_gap}
+  defp backfill_changeset(params, timezone) do
+    {default_values(timezone), @types}
+    |> Changeset.cast(params, Map.keys(@types))
+    |> Changeset.validate_required([:start_date, :end_date, :min_gap])
+    |> Changeset.validate_number(:min_gap,
+      greater_than_or_equal_to: 1,
+      message: "must be a whole number of at least 1 minute"
+    )
+    |> validate_date_order()
+  end
+
+  defp default_values(timezone) do
+    end_date =
+      timezone |> DateTime.now!() |> DateTime.to_naive() |> NaiveDateTime.truncate(:second)
+
+    %{
+      start_date: NaiveDateTime.add(end_date, -1, :day),
+      end_date: end_date,
+      min_gap: @default_min_gap
+    }
+  end
+
+  defp validate_date_order(changeset) do
+    start_date = Changeset.get_field(changeset, :start_date)
+    end_date = Changeset.get_field(changeset, :end_date)
+
+    if start_date && end_date && NaiveDateTime.compare(end_date, start_date) != :gt do
+      Changeset.add_error(changeset, :end_date, "must be after start date")
+    else
+      changeset
     end
+  end
+
+  # datetimes skipped or repeated by DST changes are resolved to the closest valid one
+  defp to_utc(naive_datetime, timezone) do
+    naive_datetime
+    |> DateTime.from_naive(timezone)
+    |> case do
+      {:ok, datetime} -> datetime
+      {:ambiguous, datetime, _other} -> datetime
+      {:gap, _before, datetime} -> datetime
+    end
+    |> DateTime.shift_zone!("Etc/UTC")
   end
 
   defp recovered_duration(runs) do

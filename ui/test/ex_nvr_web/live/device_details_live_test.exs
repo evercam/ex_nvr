@@ -531,11 +531,11 @@ defmodule ExNvrWeb.DeviceDetailsLiveTest do
 
     test "start a backfill and show its result", %{conn: conn, tmp_dir: tmp_dir} do
       test_pid = self()
-      device = camera_device_fixture(tmp_dir)
+      device = camera_device_fixture(tmp_dir, %{timezone: "Europe/Paris"})
       run = %Run{start_date: ~U(2026-10-01 10:00:00Z), end_date: ~U(2026-10-01 11:30:00Z)}
 
-      expect(Backfiller, :run, fn _device, _start_date, _end_date, opts ->
-        send(test_pid, {:running, self(), opts})
+      expect(Backfiller, :run, fn _device, start_date, end_date, opts ->
+        send(test_pid, {:running, self(), start_date, end_date, opts})
         receive do: (:finish -> {:ok, [run]})
       end)
 
@@ -544,10 +544,20 @@ defmodule ExNvrWeb.DeviceDetailsLiveTest do
       assert has_element?(lv, "#start-backfill", "Recover footage")
 
       lv
-      |> form("#backfill_form_#{device.id}", backfill: %{min_gap: 15})
+      |> form("#backfill_form_#{device.id}",
+        backfill: %{start_date: "2026-10-01T08:00", end_date: "2026-10-01T14:30", min_gap: 15}
+      )
       |> render_submit()
 
-      assert_receive {:running, pid, [min_gap: 900]}
+      assert_receive {:running, pid, ~U(2026-10-01 06:00:00Z), ~U(2026-10-01 12:30:00Z),
+                      [min_gap: 900]}
+
+      assert has_element?(
+               lv,
+               "#backfill-in-progress",
+               "Recovering footage from Oct 01, 2026 · 08:00:00 CEST to Oct 01, 2026 · 14:30:00 CEST"
+             )
+
       assert has_element?(lv, "#backfill-in-progress", "Filling gaps longer than 15 min")
       assert has_element?(lv, "#start-backfill[disabled]", "Recovering footage")
 
@@ -573,6 +583,34 @@ defmodule ExNvrWeb.DeviceDetailsLiveTest do
              )
     end
 
+    test "default period is the last day", %{conn: conn, tmp_dir: tmp_dir} do
+      device = camera_device_fixture(tmp_dir)
+
+      {:ok, lv, _html} = live(conn, ~p"/devices/#{device.id}/details?tab=recover_footage")
+
+      start_date = input_date(lv, "backfill[start_date]")
+      end_date = input_date(lv, "backfill[end_date]")
+
+      assert NaiveDateTime.diff(NaiveDateTime.utc_now(), end_date) in 0..120
+      assert NaiveDateTime.diff(end_date, start_date, :day) == 1
+    end
+
+    test "reject end date before start date", %{conn: conn, tmp_dir: tmp_dir} do
+      device = camera_device_fixture(tmp_dir)
+
+      {:ok, lv, _html} = live(conn, ~p"/devices/#{device.id}/details?tab=recover_footage")
+
+      html =
+        lv
+        |> form("#backfill_form_#{device.id}",
+          backfill: %{start_date: "2026-10-02T00:00", end_date: "2026-10-01T00:00"}
+        )
+        |> render_submit()
+
+      assert html =~ "must be after start date"
+      assert is_nil(BackfillJob.status(device))
+    end
+
     test "reject invalid minimum gap", %{conn: conn, tmp_dir: tmp_dir} do
       device = camera_device_fixture(tmp_dir)
 
@@ -586,5 +624,13 @@ defmodule ExNvrWeb.DeviceDetailsLiveTest do
       assert html =~ "must be a whole number of at least 1 minute"
       assert is_nil(BackfillJob.status(device))
     end
+  end
+
+  defp input_date(lv, name) do
+    lv
+    |> element("input[name='#{name}']")
+    |> render()
+    |> then(&Regex.run(~r/value="([^"]+)"/, &1, capture: :all_but_first))
+    |> then(&NaiveDateTime.from_iso8601!(hd(&1) <> ":00"))
   end
 end

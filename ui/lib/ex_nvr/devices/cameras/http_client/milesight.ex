@@ -17,6 +17,8 @@ defmodule ExNVR.Devices.Cameras.HttpClient.Milesight do
   @search_path "/vb.htm"
   @download_path "/dataloader.cgi"
   @page_size 100
+  # the camera hangs when searching long periods
+  @search_window_seconds 12 * 3600
 
   @impl true
   def fetch_lpr_event(url, opts) do
@@ -71,18 +73,31 @@ defmodule ExNVR.Devices.Cameras.HttpClient.Milesight do
   def list_recordings(url, start_date, end_date, opts) do
     timezone = opts[:timezone] || "Etc/UTC"
 
-    params = [
-      page: "sdexplorer",
-      use_sid: 1,
-      maintype: 0,
-      subtype: -1,
-      time_start: to_local_time(start_date, timezone),
-      time_end: to_local_time(end_date, timezone),
-      iDisplayLength: @page_size
-    ]
+    start_date
+    |> search_windows(end_date)
+    |> Enum.reduce_while({:ok, []}, fn {window_start, window_end}, {:ok, acc} ->
+      params = [
+        page: "sdexplorer",
+        use_sid: 1,
+        maintype: 0,
+        subtype: -1,
+        time_start: to_local_time(window_start, timezone),
+        time_end: to_local_time(window_end, timezone),
+        iDisplayLength: @page_size
+      ]
 
-    with {:ok, rows} <- search_recordings(url, params, 0, [], opts) do
-      {:ok, Enum.map(rows, &parse_recording(&1, timezone))}
+      case search_recordings(url, params, 0, [], opts) do
+        {:ok, rows} -> {:cont, {:ok, acc ++ rows}}
+        error -> {:halt, error}
+      end
+    end)
+    |> case do
+      # recordings overlapping two windows are returned twice
+      {:ok, rows} ->
+        {:ok, rows |> Enum.map(&parse_recording(&1, timezone)) |> Enum.uniq_by(& &1.id)}
+
+      error ->
+        error
     end
   end
 
@@ -91,7 +106,7 @@ defmodule ExNVR.Devices.Cameras.HttpClient.Milesight do
     timezone = opts[:timezone] || "Etc/UTC"
 
     query =
-      encode_query(
+      URI.encode_query(
         dw: "sd",
         filename: recording.id,
         starttime: to_local_time(recording.start_date, timezone),
@@ -128,8 +143,19 @@ defmodule ExNVR.Devices.Cameras.HttpClient.Milesight do
     end
   end
 
+  defp search_windows(start_date, end_date) do
+    Stream.unfold(start_date, fn window_start ->
+      if DateTime.before?(window_start, end_date) do
+        window_end =
+          Enum.min([DateTime.add(window_start, @search_window_seconds), end_date], DateTime)
+
+        {{window_start, window_end}, window_end}
+      end
+    end)
+  end
+
   defp search_recordings(url, params, offset, acc, opts) do
-    query = encode_query(params ++ [iDisplayStart: offset])
+    query = URI.encode_query(params ++ [iDisplayStart: offset])
 
     (url <> @search_path <> "?" <> query)
     |> HTTP.get(opts)
@@ -194,15 +220,13 @@ defmodule ExNVR.Devices.Cameras.HttpClient.Milesight do
     |> DateTime.shift_zone!("Etc/UTC")
   end
 
-  # camera expects spaces as %20 and literal colons in dates
-  defp encode_query(params) do
-    Enum.map_join(params, "&", fn {key, value} ->
-      "#{key}=#{URI.encode(to_string(value), &(URI.char_unreserved?(&1) or &1 == ?:))}"
-    end)
-  end
-
   defp decode_json(body) when is_map(body), do: body
-  defp decode_json(body), do: Jason.decode!(body)
+
+  defp decode_json(body) do
+    # Fix invalid JSON with no value, e.g. {"key":, "other_key": "value"} => {"key": null, "other_key": "value"}
+    body = Regex.replace(~r/:\s*(?=[,}])/, body, ": null")
+    Jason.decode!(body)
+  end
 
   defp parse_system_response(body) do
     response = Jason.decode!(body)

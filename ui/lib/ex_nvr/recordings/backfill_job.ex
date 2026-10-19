@@ -13,16 +13,20 @@ defmodule ExNVR.Recordings.BackfillJob do
   alias ExNVR.Model.Device
   alias ExNVR.Recordings.Backfiller
 
-  # older than any footage a camera may have
-  @camera_storage_start ~U(2000-01-01 00:00:00Z)
+  @type status :: %{
+          started_at: DateTime.t(),
+          start_date: DateTime.t(),
+          end_date: DateTime.t(),
+          min_gap: pos_integer()
+        }
 
-  @type status :: %{started_at: DateTime.t(), min_gap: pos_integer()}
-
-  @spec start(Device.t(), pos_integer()) :: {:ok, pid()} | {:error, :already_running | any()}
-  def start(%Device{} = device, min_gap) do
+  @spec start(Device.t(), DateTime.t(), DateTime.t(), pos_integer()) ::
+          {:ok, pid()} | {:error, :already_running | any()}
+  def start(%Device{} = device, start_date, end_date, min_gap) do
     case DynamicSupervisor.start_child(
            __MODULE__.Supervisor,
-           {__MODULE__, device: device, min_gap: min_gap}
+           {__MODULE__,
+            device: device, start_date: start_date, end_date: end_date, min_gap: min_gap}
          ) do
       {:ok, pid} -> {:ok, pid}
       {:error, {:already_started, _pid}} -> {:error, :already_running}
@@ -48,7 +52,12 @@ defmodule ExNVR.Recordings.BackfillJob do
 
   def start_link(args) do
     device = Keyword.fetch!(args, :device)
-    status = %{started_at: DateTime.utc_now(), min_gap: Keyword.fetch!(args, :min_gap)}
+
+    status =
+      args
+      |> Keyword.take([:start_date, :end_date, :min_gap])
+      |> Map.new()
+      |> Map.put(:started_at, DateTime.utc_now())
 
     GenServer.start_link(__MODULE__, args,
       name: {:via, Registry, {__MODULE__.Registry, device.id, status}}
@@ -59,7 +68,9 @@ defmodule ExNVR.Recordings.BackfillJob do
   def init(args) do
     device = Keyword.fetch!(args, :device)
     broadcast(device, :started)
-    {:ok, %{device: device, min_gap: Keyword.fetch!(args, :min_gap)}, {:continue, :run}}
+
+    {:ok, args |> Keyword.take([:device, :start_date, :end_date, :min_gap]) |> Map.new(),
+     {:continue, :run}}
   end
 
   @impl true
@@ -83,9 +94,7 @@ defmodule ExNVR.Recordings.BackfillJob do
   end
 
   defp run(state) do
-    Backfiller.run(state.device, @camera_storage_start, DateTime.utc_now(),
-      min_gap: state.min_gap * 60
-    )
+    Backfiller.run(state.device, state.start_date, state.end_date, min_gap: state.min_gap * 60)
   rescue
     error -> {:error, Exception.message(error)}
   end
