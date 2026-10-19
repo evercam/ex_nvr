@@ -24,7 +24,7 @@ defmodule ExNVR.Devices.Cameras.HttpClient.MilesightTest do
                  "maintype" => "0",
                  "subtype" => "-1",
                  "time_start" => "2024-11-13 00:00:00",
-                 "time_end" => "2024-11-13 23:59:59",
+                 "time_end" => "2024-11-13 11:59:59",
                  "iDisplayLength" => "100"
                } = query
 
@@ -46,7 +46,7 @@ defmodule ExNVR.Devices.Cameras.HttpClient.MilesightTest do
                Milesight.list_recordings(
                  url,
                  ~U[2024-11-12 23:00:00Z],
-                 ~U[2024-11-13 22:59:59Z],
+                 ~U[2024-11-13 10:59:59Z],
                  @opts
                )
 
@@ -62,8 +62,32 @@ defmodule ExNVR.Devices.Cameras.HttpClient.MilesightTest do
              } = hd(recordings)
     end
 
+    test "search the period by half day windows", %{bypass: bypass, url: url} do
+      Bypass.expect(bypass, "GET", "/vb.htm", fn conn ->
+        # second window overlaps the last recording of the first one
+        case URI.decode_query(conn.query_string) do
+          %{"time_start" => "2024-11-13 00:00:00", "time_end" => "2024-11-13 12:00:00"} ->
+            Conn.resp(conn, 200, search_response(0, 10, 10))
+
+          %{"time_start" => "2024-11-13 12:00:00", "time_end" => "2024-11-13 23:59:59"} ->
+            Conn.resp(conn, 200, search_response(9, 6, 6))
+        end
+      end)
+
+      assert {:ok, recordings} =
+               Milesight.list_recordings(
+                 url,
+                 ~U[2024-11-12 23:00:00Z],
+                 ~U[2024-11-13 22:59:59Z],
+                 @opts
+               )
+
+      assert length(recordings) == 15
+      assert recordings == Enum.uniq_by(recordings, & &1.id)
+    end
+
     test "return empty list when no recordings", %{bypass: bypass, url: url} do
-      Bypass.expect_once(bypass, "GET", "/vb.htm", fn conn ->
+      Bypass.expect(bypass, "GET", "/vb.htm", fn conn ->
         Conn.resp(
           conn,
           200,
@@ -98,7 +122,7 @@ defmodule ExNVR.Devices.Cameras.HttpClient.MilesightTest do
     recording = recording()
 
     Bypass.expect_once(bypass, "GET", "/dataloader.cgi", fn conn ->
-      assert conn.query_string =~ "starttime=2024-11-13%2009:06:32"
+      assert conn.query_string =~ "starttime=2024-11-13+09%3A06%3A32"
 
       assert URI.decode_query(conn.query_string) == %{
                "dw" => "sd",

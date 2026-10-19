@@ -7,7 +7,17 @@ defmodule ExNVRWeb.DeviceDetailsLive do
 
   alias ExNVR.Devices
   alias ExNVR.Model.Device
-  alias ExNVRWeb.DeviceTabs.{EventsListTab, RecordingsListTab, SettingsTab, StatsTab, TriggersTab}
+  alias ExNVR.Recordings.BackfillJob
+
+  alias ExNVRWeb.DeviceTabs.{
+    BackfillTab,
+    EventsListTab,
+    RecordingsListTab,
+    SettingsTab,
+    StatsTab,
+    TriggersTab
+  }
+
   alias ExNVRWeb.Router.Helpers, as: Routes
 
   @snapshot_refresh_interval to_timeout(second: 10)
@@ -24,6 +34,7 @@ defmodule ExNVRWeb.DeviceDetailsLive do
         <:tab id="recordings" label="Recordings" />
         <:tab id="stats" label="Stats" />
         <:tab id="settings" label="Settings" />
+        <:tab :if={@device.type == :ip} id="recover_footage" label="Recover Footage" />
         <:tab id="events" label="Events" />
         <:tab id="triggers" label="Triggers" />
 
@@ -314,6 +325,17 @@ defmodule ExNVRWeb.DeviceDetailsLive do
           />
         </:tab_content>
 
+        <:tab_content :if={@device.type == :ip} for="recover_footage">
+          <.live_component
+            id="backfill_tab"
+            module={BackfillTab}
+            device={@device}
+            current_user={@current_user}
+            backfill={@backfill}
+            last_result={@backfill_result}
+          />
+        </:tab_content>
+
         <!-- events tab-->
         <:tab_content for="events">
           <.live_component
@@ -341,7 +363,7 @@ defmodule ExNVRWeb.DeviceDetailsLive do
   def mount(%{"id" => device_id} = params, _session, socket) do
     device = Devices.get!(device_id)
 
-    active_tab = params["tab"] || "details"
+    active_tab = active_tab(device, params["tab"]) || "details"
 
     snapshot_enabled =
       not is_nil(device.stream_config.snapshot_uri) and Device.streaming?(device)
@@ -349,6 +371,9 @@ defmodule ExNVRWeb.DeviceDetailsLive do
     if connected?(socket) do
       Phoenix.PubSub.subscribe(ExNVR.PubSub, "device:#{device.id}")
       if snapshot_enabled, do: send(self(), :refresh_snapshot)
+
+      if device.type == :ip,
+        do: Phoenix.PubSub.subscribe(ExNVR.PubSub, BackfillJob.topic(device.id))
     end
 
     {:ok,
@@ -358,13 +383,15 @@ defmodule ExNVRWeb.DeviceDetailsLive do
        main_stream_stats: nil,
        sub_stream_stats: nil,
        snapshot_enabled: snapshot_enabled,
-       snapshot_data: nil
+       snapshot_data: nil,
+       backfill: BackfillJob.status(device),
+       backfill_result: nil
      )}
   end
 
   @impl true
   def handle_params(params, _uri, socket) do
-    active_tab = params["tab"] || socket.assigns.active_tab
+    active_tab = active_tab(socket.assigns.device, params["tab"]) || socket.assigns.active_tab
 
     stats_topic = "stats:#{socket.assigns.device.id}"
 
@@ -457,9 +484,23 @@ defmodule ExNVRWeb.DeviceDetailsLive do
     {:noreply, assign(socket, :sub_stream_stats, stats)}
   end
 
+  @impl true
+  def handle_info({:backfill, :started}, socket) do
+    {:noreply,
+     assign(socket, backfill: BackfillJob.status(socket.assigns.device), backfill_result: nil)}
+  end
+
+  @impl true
+  def handle_info({:backfill, result}, socket) do
+    {:noreply, assign(socket, backfill: nil, backfill_result: result)}
+  end
+
   def update_params(tab, id) do
     send_update(tab, id: id, params: %{})
   end
+
+  defp active_tab(%Device{type: type}, "recover_footage") when type != :ip, do: "details"
+  defp active_tab(_device, tab), do: tab
 
   defp update_device_state(socket, new_state) do
     user = socket.assigns.current_user

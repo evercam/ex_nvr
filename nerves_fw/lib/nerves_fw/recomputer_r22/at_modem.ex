@@ -442,22 +442,22 @@ defmodule ExNVR.Nerves.RecomputerR22.ATModem do
   end
 
   defp build_result(response_lines, "OK"), do: {:ok, parse_response(response_lines)}
-  defp build_result(response_lines, <<"CONNECT", _::binary>>), do: {:ok, :connected}
-  defp build_result(response_lines, <<"NO CARRIER">>), do: {:error, :no_carrier}
-  defp build_result(response_lines, <<"BUSY">>), do: {:error, :busy}
-  defp build_result(response_lines, <<"NO ANSWER">>), do: {:error, :no_answer}
-  defp build_result(response_lines, <<"NO DIALTONE">>), do: {:error, :no_dialtone}
-  defp build_result(response_lines, <<"ERROR">>), do: {:error, :error}
+  defp build_result(_response_lines, <<"CONNECT", _::binary>>), do: {:ok, :connected}
+  defp build_result(_response_lines, <<"NO CARRIER">>), do: {:error, :no_carrier}
+  defp build_result(_response_lines, <<"BUSY">>), do: {:error, :busy}
+  defp build_result(_response_lines, <<"NO ANSWER">>), do: {:error, :no_answer}
+  defp build_result(_response_lines, <<"NO DIALTONE">>), do: {:error, :no_dialtone}
+  defp build_result(_response_lines, <<"ERROR">>), do: {:error, :error}
 
-  defp build_result(response_lines, <<"+CME ERROR:", rest::binary>>) do
+  defp build_result(_response_lines, <<"+CME ERROR:", rest::binary>>) do
     {:error, {:cme_error, String.trim(rest)}}
   end
 
-  defp build_result(response_lines, <<"+CMS ERROR:", rest::binary>>) do
+  defp build_result(_response_lines, <<"+CMS ERROR:", rest::binary>>) do
     {:error, {:cms_error, String.trim(rest)}}
   end
 
-  defp build_result(response_lines, _final), do: {:error, :unknwon_error}
+  defp build_result(_response_lines, _final), do: {:error, :unknwon_error}
 
   defp parse_response([]), do: :ok
   defp parse_response([line]), do: parse_line(line)
