@@ -122,7 +122,7 @@ defmodule ExNVR.Devices.Cameras.HttpClient.MilesightTest do
     recording = recording()
 
     Bypass.expect_once(bypass, "GET", "/dataloader.cgi", fn conn ->
-      assert conn.query_string =~ "starttime=2024-11-13%2009:06:32"
+      assert conn.query_string =~ "starttime=2024-11-13+09%3A06%3A32"
 
       assert URI.decode_query(conn.query_string) == %{
                "dw" => "sd",
