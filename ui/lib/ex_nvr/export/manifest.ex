@@ -17,7 +17,7 @@ defmodule ExNVR.Export.Manifest do
   @type destination :: %{
           type: :s3,
           remote_storage_id: integer(),
-          kit_id: String.t(),
+          prefix: String.t(),
           camera_id: String.t(),
           job_id: String.t()
         }
@@ -195,7 +195,7 @@ defmodule ExNVR.Export.Manifest do
     %{
       type: String.to_existing_atom(Map.fetch!(json, "type")),
       remote_storage_id: Map.fetch!(json, "remote_storage_id"),
-      kit_id: Map.fetch!(json, "kit_id"),
+      prefix: Map.fetch!(json, "prefix"),
       camera_id: Map.fetch!(json, "camera_id"),
       job_id: Map.fetch!(json, "job_id")
     }

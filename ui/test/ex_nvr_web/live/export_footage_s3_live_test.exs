@@ -19,9 +19,6 @@ defmodule ExNVRWeb.ExportFootageS3LiveTest do
 
   setup %{conn: conn, tmp_dir: tmp_dir} do
     stub(ExNVR.Disk, :list_drives!, fn -> [] end)
-    # as set by the firmware
-    Application.put_env(:ex_nvr, :kit_id, "kit-1")
-    on_exit(fn -> Application.delete_env(:ex_nvr, :kit_id) end)
 
     %{
       conn: log_in_user(conn, user_fixture()),
@@ -33,7 +30,7 @@ defmodule ExNVRWeb.ExportFootageS3LiveTest do
           },
           storage_config: %{record_sub_stream: :always}
         }),
-      remote_storage: remote_storage_fixture(%{s3_config: s3_config(%{})})
+      remote_storage: remote_storage_fixture(%{s3_config: s3_config(%{prefix: "kit-1"})})
     }
   end
 
@@ -97,7 +94,7 @@ defmodule ExNVRWeb.ExportFootageS3LiveTest do
     assert manifest.stream == :low
     assert manifest.split == :hourly
     assert manifest.destination.camera_id == "cam-exid"
-    assert manifest.destination.kit_id == "kit-1"
+    assert manifest.destination.prefix == "kit-1"
   end
 
   test "flags skipped and overwritten files once completed", %{
@@ -301,35 +298,19 @@ defmodule ExNVRWeb.ExportFootageS3LiveTest do
     assert html =~ "Start Export"
   end
 
-  test "requires a kit id when this install has none", %{
+  test "the storage's prefix can be overridden per export", %{
     conn: conn,
     device: device,
     remote_storage: remote_storage
   } do
-    Application.delete_env(:ex_nvr, :kit_id)
     {:ok, lv, _html} = live(conn, ~p"/export-footage")
     select_s3(lv, device)
-    assert render(lv) =~ "required, e.g. kit-123"
 
-    html =
-      lv
-      |> form("#export-form", export: s3_params(device, remote_storage))
-      |> render_submit()
+    params = s3_params(device, remote_storage, %{"prefix" => "/site-b/override/"})
 
-    assert html =~ "required, this ExNVR has no kit id of its own"
-    refute html =~ "Export started"
-  end
+    assert lv |> form("#export-form", export: params) |> render_change() =~
+             "kit-1 (storage default)"
 
-  test "the kit id can be overridden per export", %{
-    conn: conn,
-    device: device,
-    remote_storage: remote_storage
-  } do
-    {:ok, lv, _html} = live(conn, ~p"/export-footage")
-    assert select_s3(lv, device) =~ "kit-1 (this kit)"
-
-    params = s3_params(device, remote_storage, %{"kit_id" => "kit-override"})
-    lv |> form("#export-form", export: params) |> render_change()
     assert lv |> form("#export-form", export: params) |> render_submit() =~ "Export started"
 
     {:ok, job} =
@@ -340,11 +321,13 @@ defmodule ExNVRWeb.ExportFootageS3LiveTest do
         "cam-exid",
         ~U(2024-12-15T11:00:00Z),
         ~U(2024-12-15T12:00:00Z),
-        kit_id: "kit-override"
+        prefix: "site-b/override"
       )
 
     wait_until(fn -> match?({:ok, %{status: :failed}}, Export.progress(job.dest_dir)) end)
-    assert {:ok, %{destination: %{kit_id: "kit-override"}}} = Export.Manifest.load(job.dest_dir)
+
+    assert {:ok, %{destination: %{prefix: "site-b/override"}}} =
+             Export.Manifest.load(job.dest_dir)
   end
 
   defp select_s3(lv, device) do

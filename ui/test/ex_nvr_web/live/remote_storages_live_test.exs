@@ -43,6 +43,7 @@ defmodule ExNVRWeb.RemoteStoragesLiveTest do
             "s3_config" => %{
               "bucket" => "my-bucket",
               "region" => "us-east-1",
+              "prefix" => "site-a/kit-1",
               "access_key_id" => "ACCESSKEYID",
               "secret_access_key" => "SECRETACCESSKEY"
             }
@@ -60,6 +61,7 @@ defmodule ExNVRWeb.RemoteStoragesLiveTest do
       assert created_remote_storage.type == :s3
       assert created_remote_storage.url == "https://localhost"
       assert created_remote_storage.s3_config.bucket == "my-bucket"
+      assert created_remote_storage.s3_config.prefix == "site-a/kit-1"
       assert created_remote_storage.s3_config.access_key_id == "ACCESSKEYID"
       assert created_remote_storage.s3_config.secret_access_key == "SECRETACCESSKEY"
 

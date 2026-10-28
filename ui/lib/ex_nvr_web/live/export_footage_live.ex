@@ -8,6 +8,7 @@ defmodule ExNVRWeb.ExportFootageLive do
 
   @poll_interval to_timeout(second: 2)
   @folder_name_regex ~r/^[a-zA-Z0-9_.-]+$/
+  @prefix_regex ~r/^[a-zA-Z0-9_.-]+(\/[a-zA-Z0-9_.-]+)*$/
 
   @kib 1024
   @mib 1024 * 1024
@@ -31,7 +32,7 @@ defmodule ExNVRWeb.ExportFootageLive do
     remote_storage_id: :integer,
     stream: :string,
     camera_id: :string,
-    kit_id: :string
+    prefix: :string
   }
 
   def mount(raw_params, _session, socket) do
@@ -133,7 +134,7 @@ defmodule ExNVRWeb.ExportFootageLive do
           "remote_storage_id" => destination.remote_storage_id,
           "camera_id" =>
             if(destination.camera_id == device.id, do: "", else: destination.camera_id),
-          "kit_id" => if(destination.kit_id == S3.kit_id(), do: "", else: destination.kit_id)
+          "prefix" => destination.prefix
         })
 
       nil ->
@@ -151,7 +152,7 @@ defmodule ExNVRWeb.ExportFootageLive do
   def job_destination_label(%{manifest: %{destination: %{type: :s3} = dest}}, remote_storages) do
     storage = Enum.find(remote_storages, &(&1.id == dest.remote_storage_id))
     name = if storage, do: storage.name, else: "deleted storage"
-    "S3 · #{name} · #{dest.kit_id}/#{dest.camera_id}/"
+    "S3 · #{name} · #{Path.join([dest.prefix, dest.camera_id])}/"
   end
 
   def job_destination_label(%{dest_dir: dest_dir}, _remote_storages), do: "USB · #{dest_dir}"
@@ -434,7 +435,7 @@ defmodule ExNVRWeb.ExportFootageLive do
         data[:camera_id],
         DateTime.from_naive!(data.start_date, device.timezone),
         DateTime.from_naive!(data.end_date, device.timezone),
-        kit_id: data[:kit_id]
+        prefix: data[:prefix]
       )
     else
       {:error, :not_found}
@@ -517,10 +518,11 @@ defmodule ExNVRWeb.ExportFootageLive do
         |> Changeset.validate_format(:camera_id, @folder_name_regex,
           message: "only letters, numbers, dot, dash and underscore allowed"
         )
-        |> Changeset.validate_format(:kit_id, @folder_name_regex,
-          message: "only letters, numbers, dot, dash and underscore allowed"
+        |> Changeset.update_change(:prefix, &(&1 && String.trim(&1, "/")))
+        |> Changeset.validate_format(:prefix, @prefix_regex,
+          message:
+            "folders separated by /, each made of letters, numbers, dot, dash or underscore"
         )
-        |> validate_kit_id()
 
       _usb ->
         changeset
@@ -533,19 +535,14 @@ defmodule ExNVRWeb.ExportFootageLive do
     end
   end
 
-  # Only required when this install has no kit id of its own (e.g. Docker).
-  defp validate_kit_id(changeset) do
-    if Changeset.get_field(changeset, :kit_id) in [nil, ""] and S3.kit_id() in [nil, ""],
-      do:
-        Changeset.add_error(changeset, :kit_id, "required, this ExNVR has no kit id of its own"),
-      else: changeset
-  end
-
   @doc false
-  def kit_id_placeholder do
-    case S3.kit_id() do
-      kit_id when kit_id in [nil, ""] -> "required, e.g. kit-123"
-      kit_id -> "#{kit_id} (this kit)"
+  def prefix_placeholder(remote_storages, remote_storage_id) do
+    case Enum.find(remote_storages, &(to_string(&1.id) == to_string(remote_storage_id))) do
+      %{s3_config: %{prefix: prefix}} when prefix not in [nil, ""] ->
+        "#{prefix} (storage default)"
+
+      _storage ->
+        "defaults to the bucket root"
     end
   end
 

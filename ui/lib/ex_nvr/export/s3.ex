@@ -4,9 +4,9 @@ defmodule ExNVR.Export.S3 do
 
   Objects follow Evercam's footage layout, in the device's local time:
 
-      <kit_id>/<camera_id>/YYYY/MM/DD/HH/MM_SS.mp4
+      [<prefix>/]<camera_id>/YYYY/MM/DD/HH/MM_SS.mp4
 
-  and a job manifest is written to `<kit_id>/<camera_id>/exports/<job_id>.json`
+  and a job manifest is written to `[<prefix>/]<camera_id>/exports/<job_id>.json`
   once the job completes.
   """
 
@@ -20,22 +20,9 @@ defmodule ExNVR.Export.S3 do
   @upload_opts [content_type: "video/mp4", max_concurrency: 2, timeout: to_timeout(minute: 2)]
 
   @doc """
-  This kit's id, the default root of the object keys. Set by the firmware as
-  `config :ex_nvr, :kit_id`, either a value or a zero-arity function read
-  each time (the kit may be configured after boot).
-  """
-  @spec kit_id() :: String.t() | nil
-  def kit_id do
-    case Application.get_env(:ex_nvr, :kit_id) do
-      fun when is_function(fun, 0) -> fun.()
-      kit_id -> kit_id
-    end
-  end
-
-  @doc """
   Resolves the staging directory (the job's identity) and the destination to
   pass to `ExNVR.Export.start/6`. A blank `camera_id` falls back to the
-  device id and a blank `:kit_id` option to `kit_id/0`.
+  device id and a blank `:prefix` option to the remote storage's prefix.
   """
   @spec job(
           Device.t(),
@@ -44,40 +31,45 @@ defmodule ExNVR.Export.S3 do
           String.t() | nil,
           DateTime.t(),
           DateTime.t(),
-          kit_id: String.t() | nil
+          prefix: String.t() | nil
         ) ::
           {:ok, %{dest_dir: Path.t(), destination: Manifest.destination()}}
-          | {:error, :missing_kit_id | :no_storage}
+          | {:error, :no_storage}
   def job(device, remote_storage, stream, camera_id, start_date, end_date, opts \\ []) do
     camera_id = if camera_id in [nil, ""], do: device.id, else: camera_id
-    kit_id = if opts[:kit_id] in [nil, ""], do: kit_id(), else: opts[:kit_id]
 
-    with {:kit_id, kit_id} when is_binary(kit_id) and kit_id != "" <- {:kit_id, kit_id},
-         job_id = job_id(remote_storage, device, stream, kit_id, camera_id, start_date, end_date),
-         {:dir, dest_dir} when is_binary(dest_dir) <- {:dir, staging_dir(device, job_id)} do
-      destination = %{
-        type: :s3,
-        remote_storage_id: remote_storage.id,
-        kit_id: kit_id,
-        camera_id: camera_id,
-        job_id: job_id
-      }
+    prefix =
+      if opts[:prefix] in [nil, ""],
+        do: remote_storage.s3_config.prefix || "",
+        else: opts[:prefix]
 
-      {:ok, %{dest_dir: dest_dir, destination: destination}}
-    else
-      {:kit_id, _kit_id} -> {:error, :missing_kit_id}
-      {:dir, _dir} -> {:error, :no_storage}
+    job_id = job_id(remote_storage, device, stream, prefix, camera_id, start_date, end_date)
+
+    case staging_dir(device, job_id) do
+      nil ->
+        {:error, :no_storage}
+
+      dest_dir ->
+        destination = %{
+          type: :s3,
+          remote_storage_id: remote_storage.id,
+          prefix: prefix,
+          camera_id: camera_id,
+          job_id: job_id
+        }
+
+        {:ok, %{dest_dir: dest_dir, destination: destination}}
     end
   end
 
   # Deterministic: the same inputs always resolve to the same job.
-  defp job_id(remote_storage, device, stream, kit_id, camera_id, start_date, end_date) do
+  defp job_id(remote_storage, device, stream, prefix, camera_id, start_date, end_date) do
     hash =
       [
         to_string(remote_storage.id),
         device.id,
         to_string(stream),
-        kit_id,
+        prefix,
         camera_id,
         # unix time so precision/zone differences don't change the identity
         to_string(DateTime.to_unix(start_date, :microsecond)),
@@ -101,21 +93,18 @@ defmodule ExNVR.Export.S3 do
   def object_key(destination, start_date, timezone) do
     local_start = DateTime.shift_zone!(start_date, timezone)
 
-    Path.join([
-      destination.kit_id,
-      destination.camera_id,
-      Calendar.strftime(local_start, "%Y/%m/%d/%H/%M_%S.mp4")
-    ])
+    key_path(destination, [Calendar.strftime(local_start, "%Y/%m/%d/%H/%M_%S.mp4")])
   end
 
   @spec manifest_key(Manifest.destination()) :: String.t()
   def manifest_key(destination) do
-    Path.join([
-      destination.kit_id,
-      destination.camera_id,
-      "exports",
-      destination.job_id <> ".json"
-    ])
+    key_path(destination, ["exports", destination.job_id <> ".json"])
+  end
+
+  defp key_path(destination, rest) do
+    [destination.prefix, destination.camera_id | rest]
+    |> Enum.reject(&(&1 in [nil, ""]))
+    |> Path.join()
   end
 
   @doc """

@@ -153,6 +153,18 @@ defmodule ExNVRWeb.API.RemoteStorageTest do
       assert updated_remote_storage.url == url
       assert updated_remote_storage.id == remote_storage.id
     end
+
+    test "update the s3 prefix", %{conn: conn, remote_storage: remote_storage} do
+      conn
+      |> put(~p"/api/remote-storages/#{remote_storage.id}", %{
+        s3_config: %{prefix: "/site-a/kit-1/"}
+      })
+      |> json_response(200)
+
+      updated_remote_storage = RemoteStorages.get!(remote_storage.id)
+      assert updated_remote_storage.s3_config.prefix == "site-a/kit-1"
+      assert updated_remote_storage.s3_config.bucket == remote_storage.s3_config.bucket
+    end
   end
 
   describe "DELETE /api/remote-storages/:id" do

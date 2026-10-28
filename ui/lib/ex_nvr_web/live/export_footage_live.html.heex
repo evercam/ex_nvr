@@ -76,10 +76,12 @@
               />
               <div class="grid grid-cols-2 gap-4">
                 <.input
-                  field={@export_form[:kit_id]}
+                  field={@export_form[:prefix]}
                   type="text"
-                  label="Kit ID (optional)"
-                  placeholder={kit_id_placeholder()}
+                  label="Prefix (optional)"
+                  placeholder={
+                    prefix_placeholder(@remote_storages, @export_form[:remote_storage_id].value)
+                  }
                   disabled={@inputs_locked?}
                 />
                 <.input

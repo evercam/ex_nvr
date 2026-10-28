@@ -546,7 +546,7 @@ defmodule ExNVR.Export.Worker do
 
     %{
       job_id: manifest.destination.job_id,
-      kit_id: manifest.destination.kit_id,
+      prefix: manifest.destination.prefix,
       camera_id: manifest.destination.camera_id,
       device_id: manifest.device_id,
       stream: manifest.stream,

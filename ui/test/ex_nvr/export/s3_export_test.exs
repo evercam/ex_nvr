@@ -8,7 +8,7 @@ defmodule ExNVR.Export.S3ExportTest do
 
   @moduletag :tmp_dir
 
-  @kit_id "kit-42"
+  @prefix "site-a/kit-42"
   @bucket "footage"
 
   setup do
@@ -27,6 +27,7 @@ defmodule ExNVR.Export.S3ExportTest do
         s3_config: %{
           bucket: @bucket,
           region: "us-east-1",
+          prefix: @prefix,
           access_key_id: "access-key",
           secret_access_key: "secret"
         }
@@ -35,13 +36,7 @@ defmodule ExNVR.Export.S3ExportTest do
     device = camera_device_fixture(tmp_dir, %{timezone: "Europe/Paris"})
 
     Application.put_env(:ex_nvr, :export_upload_retry_base_ms, 1)
-    # as set by the firmware
-    Application.put_env(:ex_nvr, :kit_id, @kit_id)
-
-    on_exit(fn ->
-      Application.delete_env(:ex_nvr, :export_upload_retry_base_ms)
-      Application.delete_env(:ex_nvr, :kit_id)
-    end)
+    on_exit(fn -> Application.delete_env(:ex_nvr, :export_upload_retry_base_ms) end)
 
     %{bypass: bypass, store: store, remote_storage: remote_storage, device: device}
   end
@@ -101,7 +96,7 @@ defmodule ExNVR.Export.S3ExportTest do
     assert {:ok, %{status: :completed, files: files, files_uploaded: 2}} =
              wait_finished(job.dest_dir)
 
-    prefix = "#{@kit_id}/#{device.id}"
+    prefix = "#{@prefix}/#{device.id}"
 
     assert Enum.map(files, & &1.key) == [
              "#{prefix}/2024/12/15/11/59_50.mp4",
@@ -134,7 +129,7 @@ defmodule ExNVR.Export.S3ExportTest do
       )
 
     assert {:ok, %{status: :completed, files: [file]}} = wait_finished(job.dest_dir)
-    assert file.key == "#{@kit_id}/evercam-cam/2024/12/15/12/00_00.mp4"
+    assert file.key == "#{@prefix}/evercam-cam/2024/12/15/12/00_00.mp4"
   end
 
   test "starts a new file after a gap longer than 5 minutes only", %{
@@ -190,7 +185,7 @@ defmodule ExNVR.Export.S3ExportTest do
     store: store
   } do
     recordings(device, [~U(2024-12-15T11:00:00.000000Z)])
-    key = "#{@kit_id}/#{device.id}/2024/12/15/12/00_00.mp4"
+    key = "#{@prefix}/#{device.id}/2024/12/15/12/00_00.mp4"
     Agent.update(store, &put_in(&1, [:objects, key], "partial"))
 
     job = start_s3(device, remote_storage, ~U(2024-12-15T11:00:00Z), ~U(2024-12-15T11:00:05Z))
@@ -400,7 +395,7 @@ defmodule ExNVR.Export.S3ExportTest do
     if fun.(), do: :ok, else: Process.sleep(10) && wait_until(fun, attempts - 1)
   end
 
-  test "job/7 uses the kit's id unless overridden, and requires one", %{
+  test "job/7 uses the storage's prefix unless overridden", %{
     device: device,
     remote_storage: remote_storage
   } do
@@ -415,18 +410,20 @@ defmodule ExNVR.Export.S3ExportTest do
         &1
       )
 
-    assert {:ok, %{destination: %{kit_id: @kit_id}} = from_kit} = job.([])
-    assert {:ok, %{destination: %{kit_id: "other-kit"}} = overridden} = job.(kit_id: "other-kit")
+    assert {:ok, %{destination: %{prefix: @prefix}} = from_storage} = job.([])
+    assert {:ok, %{destination: %{prefix: @prefix}}} = job.(prefix: "")
+    assert {:ok, %{destination: %{prefix: "other"}} = overridden} = job.(prefix: "other")
     # a different root folder is a different job
-    refute from_kit.dest_dir == overridden.dest_dir
+    refute from_storage.dest_dir == overridden.dest_dir
+  end
 
-    # the firmware may provide a function, read on each call
-    Application.put_env(:ex_nvr, :kit_id, fn -> "configured-later" end)
-    assert {:ok, %{destination: %{kit_id: "configured-later"}}} = job.(kit_id: "")
+  test "keys start at the bucket root without a prefix" do
+    destination = %{prefix: "", camera_id: "cam", job_id: "j"}
 
-    Application.delete_env(:ex_nvr, :kit_id)
-    assert {:error, :missing_kit_id} = job.([])
-    assert {:ok, %{destination: %{kit_id: "manual"}}} = job.(kit_id: "manual")
+    assert S3.object_key(destination, ~U(2024-12-15T11:00:00Z), "Europe/Paris") ==
+             "cam/2024/12/15/12/00_00.mp4"
+
+    assert S3.manifest_key(destination) == "cam/exports/j.json"
   end
 
   test "next_hour_boundary/2 follows the local clock, including DST" do
@@ -445,7 +442,7 @@ defmodule ExNVR.Export.S3ExportTest do
     destination = %{
       type: :s3,
       remote_storage_id: 1,
-      kit_id: "k",
+      prefix: "k",
       camera_id: "c",
       job_id: "j"
     }

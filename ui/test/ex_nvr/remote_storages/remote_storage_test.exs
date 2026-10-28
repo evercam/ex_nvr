@@ -3,11 +3,12 @@ defmodule ExNVR.RemoteStorageTest do
 
   alias ExNVR.RemoteStorage
 
-  defp changeset(bucket) do
+  defp changeset(bucket, config \\ %{}) do
     RemoteStorage.create_changeset(%{
       name: "storage",
       type: :s3,
-      s3_config: %{bucket: bucket, access_key_id: "key", secret_access_key: "secret"}
+      s3_config:
+        Map.merge(%{bucket: bucket, access_key_id: "key", secret_access_key: "secret"}, config)
     })
   end
 
@@ -40,6 +41,20 @@ defmodule ExNVR.RemoteStorageTest do
       assert bucket_error(changeset(input)) ==
                "must be the bucket name only (no s3:// or slashes): 3-63 lowercase letters, digits, dots or dashes",
              input
+    end
+  end
+
+  test "normalizes the prefix, dropping surrounding slashes and spaces" do
+    for {input, prefix} <- [{"kit-1", "kit-1"}, {" /site-a/kit-1/ ", "site-a/kit-1"}, {"/", nil}] do
+      changeset = changeset("my-bucket", %{prefix: input})
+      assert changeset.valid?, input
+      assert Ecto.Changeset.get_field(changeset.changes.s3_config, :prefix) == prefix, input
+    end
+  end
+
+  test "rejects prefixes with empty folders or unsafe characters" do
+    for input <- ["site-a//kit-1", "kit 1", "kit?1"] do
+      refute changeset("my-bucket", %{prefix: input}).valid?, input
     end
   end
 end

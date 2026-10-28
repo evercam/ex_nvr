@@ -5,7 +5,6 @@ defmodule ExNVR.Nerves.Application do
 
   use Application
 
-  alias ExNVR.Nerves.SystemSettings
   alias Nerves.Runtime
 
   @impl true
@@ -16,11 +15,7 @@ defmodule ExNVR.Nerves.Application do
 
     children =
       if Application.get_env(:ex_nvr, :env) != :test do
-        # Root folder of S3 footage exports (see ExNVR.Export.S3.kit_id/0). Read
-        # on each export since the kit can be configured after boot.
-        Application.put_env(:ex_nvr, :kit_id, fn -> SystemSettings.get_settings().kit_serial end)
-
-        children ++ [{SystemSettings, []}]
+        children ++ [{ExNVR.Nerves.SystemSettings, []}]
       else
         children
       end

@@ -111,6 +111,13 @@ defmodule ExNVRWeb.RemoteStorageLive do
               required
             />
             <.input
+              field={s3_config[:prefix]}
+              id="remote_storage_prefix"
+              type="text"
+              label="Prefix (optional)"
+              placeholder="e.g. site-a/nvr-1, exports go to the bucket root if blank"
+            />
+            <.input
               field={s3_config[:access_key_id]}
               id="remote_storage_access_key_id"
               type="text"
