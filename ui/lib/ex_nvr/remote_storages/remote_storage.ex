@@ -24,6 +24,7 @@ defmodule ExNVR.RemoteStorage do
     @type t :: %__MODULE__{
             bucket: binary(),
             region: binary(),
+            prefix: binary() | nil,
             access_key_id: binary(),
             secret_access_key: binary()
           }
@@ -32,18 +33,41 @@ defmodule ExNVR.RemoteStorage do
     embedded_schema do
       field :bucket, :string
       field :region, :string, default: "us-east-1"
+      field :prefix, :string
       field :access_key_id, :string
       field :secret_access_key, :string
     end
 
+    # S3 bucket naming rules: 3-63 lowercase letters, digits, dots and dashes.
+    @bucket_regex ~r/^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/
+    @prefix_regex ~r/^[a-zA-Z0-9_.-]+(\/[a-zA-Z0-9_.-]+)*$/
+
     def changeset(struct, params) do
       struct
       |> Changeset.cast(params, __MODULE__.__schema__(:fields))
+      |> Changeset.update_change(:bucket, &String.trim/1)
+      |> Changeset.update_change(:prefix, &normalize_prefix/1)
       |> Changeset.validate_required([
         :bucket,
         :access_key_id,
         :secret_access_key
       ])
+      |> Changeset.validate_format(:bucket, @bucket_regex,
+        message:
+          "must be the bucket name only (no s3:// or slashes): 3-63 lowercase letters, digits, dots or dashes"
+      )
+      |> Changeset.validate_format(:prefix, @prefix_regex,
+        message: "folders separated by /, each made of letters, numbers, dot, dash or underscore"
+      )
+    end
+
+    defp normalize_prefix(nil), do: nil
+
+    defp normalize_prefix(prefix) do
+      case prefix |> String.trim() |> String.trim("/") do
+        "" -> nil
+        prefix -> prefix
+      end
     end
   end
 

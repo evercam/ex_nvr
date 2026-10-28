@@ -270,6 +270,28 @@ defmodule ExNVR.Export.WorkerTest do
     assert {:ok, %{status: :failed, error: "no_recordings", files: []}} = wait_completed(dest_dir)
   end
 
+  test "retrying a failed job that exported nothing starts over with the new inputs", %{
+    device: device,
+    dest_dir: dest_dir
+  } do
+    {:ok, _pid} =
+      Export.start(device, :high, ~U(2024-12-14T11:00:00Z), ~U(2024-12-14T11:00:15Z), dest_dir)
+
+    assert {:ok, %{status: :failed, error: "no_recordings", files: []}} =
+             wait_completed(dest_dir)
+
+    contiguous_recordings(device)
+
+    {:ok, _pid} =
+      Export.start(device, :high, ~U(2024-12-15T11:00:00Z), ~U(2024-12-15T11:00:15Z), dest_dir,
+        force: true
+      )
+
+    assert {:ok, %{status: :completed, files: [_file]}} = wait_completed(dest_dir)
+    assert {:ok, manifest} = ExNVR.Export.Manifest.load(dest_dir)
+    assert manifest.start_date == ~U(2024-12-15T11:00:00Z)
+  end
+
   test "fails with :codec_changed and keeps files produced before the change", %{
     device: device,
     dest_dir: dest_dir

@@ -303,6 +303,10 @@ paths:
                 url:
                   type: string
                   description: Remote Storage url
+                s3_config:
+                  $ref: "#/components/schemas/S3Config"
+                http_config:
+                  $ref: "#/components/schemas/HttpConfig"
       responses:
         "200":
           description: Success
@@ -1466,6 +1470,16 @@ components:
           type: string
           description: Remote Storage region
           default: "us-east-1"
+        prefix:
+          type: string
+          nullable: true
+          description: |
+            Folder in the bucket under which footage exports are written, as
+            `<prefix>/<camera_id>/YYYY/MM/DD/HH/MM_SS.mp4`. Folders are separated
+            by `/` and made of letters, numbers, dot, dash or underscore; leading
+            and trailing slashes are dropped. Exports go to the bucket root when
+            empty.
+          example: "site-a/nvr-1"
         access_key_id:
           type: string
           description: Remote Storage access_key_id.

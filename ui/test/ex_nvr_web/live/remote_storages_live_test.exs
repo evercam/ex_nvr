@@ -43,6 +43,7 @@ defmodule ExNVRWeb.RemoteStoragesLiveTest do
             "s3_config" => %{
               "bucket" => "my-bucket",
               "region" => "us-east-1",
+              "prefix" => "site-a/kit-1",
               "access_key_id" => "ACCESSKEYID",
               "secret_access_key" => "SECRETACCESSKEY"
             }
@@ -60,10 +61,49 @@ defmodule ExNVRWeb.RemoteStoragesLiveTest do
       assert created_remote_storage.type == :s3
       assert created_remote_storage.url == "https://localhost"
       assert created_remote_storage.s3_config.bucket == "my-bucket"
+      assert created_remote_storage.s3_config.prefix == "site-a/kit-1"
       assert created_remote_storage.s3_config.access_key_id == "ACCESSKEYID"
       assert created_remote_storage.s3_config.secret_access_key == "SECRETACCESSKEY"
 
       assert Phoenix.Flash.get(conn.assigns.flash, :info) == "Remote storage created successfully"
+    end
+  end
+
+  describe "Bucket validation" do
+    test "flags an s3:// bucket while typing, without flagging untouched fields", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/remote-storages/new")
+
+      html =
+        lv
+        |> form("#remote_storage_form", %{
+          "remote_storage" => %{"s3_config" => %{"bucket" => "s3://my-bucket"}}
+        })
+        |> render_change()
+
+      assert html =~ "must be the bucket name only (no s3:// or slashes)"
+      refute html =~ "can&#39;t be blank"
+    end
+
+    test "refuses to save an s3:// bucket", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/remote-storages/new")
+
+      html =
+        lv
+        |> form("#remote_storage_form", %{
+          "remote_storage" => %{
+            "name" => "bad bucket",
+            "type" => "s3",
+            "s3_config" => %{
+              "bucket" => "s3://my-bucket",
+              "access_key_id" => "key",
+              "secret_access_key" => "secret"
+            }
+          }
+        })
+        |> render_submit()
+
+      assert html =~ "must be the bucket name only (no s3:// or slashes)"
+      assert RemoteStorages.get_by(name: "bad bucket") == nil
     end
   end
 
