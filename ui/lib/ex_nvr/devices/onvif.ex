@@ -4,12 +4,16 @@ defmodule ExNVR.Devices.Onvif do
   require Logger
 
   alias __MODULE__.AutoConfig
+  alias ExNVR.Devices.Cameras.HttpClient.Milesight
+  alias ExNVR.Devices.Cameras.{ImageSettings, OSD}
   alias ExNVR.Model.Device
   alias ExOnvif.Devices.SystemDateAndTime
   alias ExOnvif.Media2
   alias ExOnvif.Media2.Profile.VideoEncoder
   alias ExOnvif.Search
   alias ExOnvif.Search.{FindRecordings, GetRecordingSearchResults}
+
+  @milesight_vendors ["Milesight Technology Co.,Ltd.", "EVERCAM LTD"]
 
   @spec discover(Keyword.t()) :: [ExOnvif.Discovery.Probe.t()]
   def discover(options) do
@@ -74,6 +78,22 @@ defmodule ExNVR.Devices.Onvif do
     |> maybe_create_and_configure_profiles(onvif_device)
   end
 
+  def auto_configure(%{manufacturer: vendor} = onvif_device) when vendor in @milesight_vendors do
+    Logger.info("Auto configure Milesight camera")
+    opts = [username: onvif_device.username, password: onvif_device.password]
+
+    %AutoConfig{}
+    |> do_configure_profiles(onvif_device)
+    |> configure_milesight(:image_settings, fn ->
+      settings = %ImageSettings{brightness: 50, contrast: 65, saturation: 60}
+      Milesight.set_image_settings(onvif_device.address, settings, opts)
+    end)
+    |> configure_milesight(:osd, fn ->
+      osd = %OSD{position: :top_left, date_format: :dmy, font_size: :smallest}
+      Milesight.set_osd(onvif_device.address, osd, opts)
+    end)
+  end
+
   def auto_configure(%{manufacturer: vendor} = onvif_device) do
     Logger.info("Auto configure #{vendor} camera")
 
@@ -82,6 +102,17 @@ defmodule ExNVR.Devices.Onvif do
   end
 
   def auto_configure(_onvif_device), do: %AutoConfig{}
+
+  defp configure_milesight(auto_config, field, config_fn) do
+    case config_fn.() do
+      :ok ->
+        Map.put(auto_config, field, true)
+
+      {:error, reason} ->
+        Logger.error("[Onvif] could not configure Milesight #{field}: #{inspect(reason)}")
+        auto_config
+    end
+  end
 
   defp maybe_create_and_configure_profiles(auto_config, device) do
     case fetch_profiles(device) do

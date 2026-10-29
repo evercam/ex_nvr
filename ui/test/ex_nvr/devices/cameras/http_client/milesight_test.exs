@@ -2,7 +2,7 @@ defmodule ExNVR.Devices.Cameras.HttpClient.MilesightTest do
   use ExUnit.Case, async: true
 
   alias ExNVR.Devices.Cameras.HttpClient.{Axis, Milesight}
-  alias ExNVR.Devices.Cameras.RemoteRecording
+  alias ExNVR.Devices.Cameras.{ImageSettings, OSD, RemoteRecording}
   alias Plug.Conn
 
   @uuid "1ee4e962-bdb6-4339-b27e-2d43a8be1bdb"
@@ -178,12 +178,96 @@ defmodule ExNVR.Devices.Cameras.HttpClient.MilesightTest do
     refute File.exists?(dest)
   end
 
+  describe "set_image_settings/3" do
+    test "set brightness, contrast and saturation", %{bypass: bypass, url: url} do
+      Bypass.expect_once(bypass, "POST", "/cgi-bin/operator/operator.cgi", fn conn ->
+        assert %{"action" => "set.camera.setting"} = URI.decode_query(conn.query_string)
+        {:ok, body, conn} = Conn.read_body(conn)
+
+        assert %{"brightness" => 50, "contrast" => 65, "colorSaturation" => 60} ==
+                 Jason.decode!(body)
+
+        Conn.resp(conn, 200, ~s({"setState": "succeed"}))
+      end)
+
+      settings = %ImageSettings{brightness: 50, contrast: 65, saturation: 60}
+      assert :ok = Milesight.set_image_settings(url, settings, [])
+    end
+
+    test "return error on http failure", %{bypass: bypass, url: url} do
+      Bypass.expect_once(bypass, "POST", "/cgi-bin/operator/operator.cgi", fn conn ->
+        Conn.resp(conn, 401, "unauthorized")
+      end)
+
+      assert {:error, {401, "unauthorized"}} =
+               Milesight.set_image_settings(url, %ImageSettings{brightness: 50}, [])
+    end
+  end
+
+  test "set_osd/3 updates all streams", %{bypass: bypass, url: url} do
+    Bypass.expect(bypass, "GET", "/cgi-bin/operator/operator.cgi", fn conn ->
+      assert %{"action" => "get.video.advanced"} = URI.decode_query(conn.query_string)
+      Conn.resp(conn, 200, osd_response())
+    end)
+
+    Bypass.expect_once(bypass, "POST", "/cgi-bin/operator/operator.cgi", fn conn ->
+      assert %{"action" => "set.video.advanced"} = URI.decode_query(conn.query_string)
+      {:ok, body, conn} = Conn.read_body(conn)
+
+      assert %{"osdInfoList" => streams} = Jason.decode!(body)
+      assert Enum.map(streams, & &1["streamIndex"]) == [0, 1, 2]
+
+      for stream <- streams do
+        assert %{
+                 "osdTextPosition" => 0,
+                 "osdDateTimePosition" => 0,
+                 "osdDateTimeFormat" => 2,
+                 "osdFontSize" => 0,
+                 "osdDateTimeEnable" => 1,
+                 "osdString" => "Network Camera",
+                 "osdFontColor" => "255:255:255"
+               } = stream
+
+        refute Map.has_key?(stream, "cropRoiEnable")
+      end
+
+      Conn.resp(conn, 200, ~s({"setState": "succeed"}))
+    end)
+
+    osd = %OSD{position: :top_left, date_format: :dmy, font_size: :smallest}
+    assert :ok = Milesight.set_osd(url, osd, [])
+  end
+
   test "other vendors are not implemented", %{url: url} do
     assert {:error, :not_implemented} =
              Axis.list_recordings(url, DateTime.utc_now(), DateTime.utc_now(), [])
 
     assert {:error, :not_implemented} =
              Axis.download_recording(url, %RemoteRecording{}, "/tmp/x.mp4", [])
+
+    assert {:error, :not_implemented} = Axis.set_image_settings(url, %ImageSettings{}, [])
+    assert {:error, :not_implemented} = Axis.set_osd(url, %OSD{}, [])
+  end
+
+  defp osd_response do
+    stream = %{
+      "osdEnable" => 0,
+      "osdString" => "Network Camera",
+      "osdDateTimeEnable" => 0,
+      "osdFontSize" => 2,
+      "osdFontColor" => "255:255:255",
+      "osdBackgroundEnable" => 0,
+      "osdBackgroundColor" => "0:0:0",
+      "osdTextPosition" => 2,
+      "osdDateTimePosition" => 3,
+      "osdDateTimeFormat" => 0,
+      "cropRoiEnable" => 0
+    }
+
+    Jason.encode!(%{
+      "osdInfoList" => Enum.map(0..2, &Map.put(stream, "streamIndex", &1)),
+      "osdZoomTime" => 5
+    })
   end
 
   defp recording do
