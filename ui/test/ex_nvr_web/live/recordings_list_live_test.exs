@@ -327,4 +327,18 @@ defmodule ExNVRWeb.RecordingListLiveTest do
       assert lv |> element("button[title='Close']") |> has_element?()
     end
   end
+
+  describe "Export button" do
+    test "is shown to admins", %{conn: conn} do
+      {:ok, lv, _html} = conn |> log_in_user(user_fixture()) |> live(~p"/recordings")
+      assert has_element?(lv, ~s|a[href="/export-footage"]|)
+    end
+
+    test "is hidden from regular users", %{conn: conn} do
+      {:ok, lv, _html} =
+        conn |> log_in_user(user_fixture(%{role: :user})) |> live(~p"/recordings")
+
+      refute has_element?(lv, ~s|a[href="/export-footage"]|)
+    end
+  end
 end

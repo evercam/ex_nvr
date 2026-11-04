@@ -122,9 +122,6 @@ defmodule ExNVRWeb.Router do
     get "/", PageController, :home
     get "/webrtc/:device_id", PageController, :webrtc
 
-    import Phoenix.LiveDashboard.Router
-    live_dashboard "/live-dashboard", metrics: ExNVRWeb.Telemetry
-
     live_session :require_authenticated_user,
       on_mount: [
         {ExNVRWeb.UserAuth, :ensure_authenticated},
@@ -159,6 +156,19 @@ defmodule ExNVRWeb.Router do
       on_mount: [{ExNVRWeb.UserAuth, :mount_current_user}] do
       live "/installer", HealthDashboardLive, :installer
     end
+  end
+
+  scope "/", ExNVRWeb do
+    pipe_through [:browser, :require_authenticated_user, :require_admin_user]
+
+    import Phoenix.LiveDashboard.Router
+
+    live_dashboard "/live-dashboard",
+      metrics: ExNVRWeb.Telemetry,
+      on_mount: [
+        {ExNVRWeb.UserAuth, :ensure_authenticated},
+        {ExNVRWeb.UserAuth, :ensure_user_is_admin}
+      ]
   end
 
   scope "/", ExNVRWeb do

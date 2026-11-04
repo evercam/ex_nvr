@@ -3,6 +3,8 @@ defmodule ExNVRWeb.DashboardLive do
 
   require Logger
 
+  import ExNVR.Authorization
+
   alias Ecto.Changeset
   alias ExNVR.Devices
   alias ExNVR.Devices.Onvif
@@ -199,59 +201,14 @@ defmodule ExNVRWeb.DashboardLive do
     {:noreply, socket}
   end
 
-  def handle_event("ptz-move", params, socket) do
-    %{onvif_device: onvif_device, current_device: device} = socket.assigns
-    opts = ptz_move_opts(params)
-
-    velocity =
-      PTZ.Vector.new(
-        Keyword.get(opts, :pan, 0.0),
-        Keyword.get(opts, :tilt, 0.0),
-        Keyword.get(opts, :zoom)
-      )
-
-    continuous_move = PTZ.ContinuousMove.new(device.stream_config.profile_token, velocity)
-
-    case PTZ.continuous_move(onvif_device, continuous_move) do
+  def handle_event("ptz-" <> _ = event, params, socket) do
+    case authorize(socket.assigns.current_user, :ptz, :control) do
       :ok ->
-        :ok
+        handle_ptz(event, params, socket)
 
-      {:error, reason} ->
-        Logger.warning("[PTZ] could not move device #{device.id}: #{inspect(reason)}")
+      {:error, :unauthorized} ->
+        {:noreply, put_flash(socket, :error, "You are not authorized to perform this action")}
     end
-
-    {:noreply, socket}
-  end
-
-  def handle_event("ptz-stop", _params, socket) do
-    %{onvif_device: onvif_device, current_device: device} = socket.assigns
-    stop = PTZ.Stop.new(device.stream_config.profile_token)
-
-    case PTZ.stop(onvif_device, stop) do
-      :ok ->
-        :ok
-
-      {:error, reason} ->
-        Logger.warning("[PTZ] could not stop device #{device.id}: #{inspect(reason)}")
-    end
-
-    {:noreply, socket}
-  end
-
-  def handle_event("ptz-home", _params, socket) do
-    %{onvif_device: onvif_device, current_device: device} = socket.assigns
-
-    case PTZ.goto_home_position(onvif_device, device.stream_config.profile_token) do
-      :ok ->
-        :ok
-
-      {:error, reason} ->
-        Logger.warning(
-          "[PTZ] could not go to home position for device #{device.id}: #{inspect(reason)}"
-        )
-    end
-
-    {:noreply, socket}
   end
 
   def handle_event("footage_duration", %{"footage" => params}, socket) do
@@ -280,6 +237,61 @@ defmodule ExNVRWeb.DashboardLive do
       {:error, changeset} ->
         {:noreply, assign_footage_form(socket, changeset)}
     end
+  end
+
+  defp handle_ptz("ptz-move", params, socket) do
+    %{onvif_device: onvif_device, current_device: device} = socket.assigns
+    opts = ptz_move_opts(params)
+
+    velocity =
+      PTZ.Vector.new(
+        Keyword.get(opts, :pan, 0.0),
+        Keyword.get(opts, :tilt, 0.0),
+        Keyword.get(opts, :zoom)
+      )
+
+    continuous_move = PTZ.ContinuousMove.new(device.stream_config.profile_token, velocity)
+
+    case PTZ.continuous_move(onvif_device, continuous_move) do
+      :ok ->
+        :ok
+
+      {:error, reason} ->
+        Logger.warning("[PTZ] could not move device #{device.id}: #{inspect(reason)}")
+    end
+
+    {:noreply, socket}
+  end
+
+  defp handle_ptz("ptz-stop", _params, socket) do
+    %{onvif_device: onvif_device, current_device: device} = socket.assigns
+    stop = PTZ.Stop.new(device.stream_config.profile_token)
+
+    case PTZ.stop(onvif_device, stop) do
+      :ok ->
+        :ok
+
+      {:error, reason} ->
+        Logger.warning("[PTZ] could not stop device #{device.id}: #{inspect(reason)}")
+    end
+
+    {:noreply, socket}
+  end
+
+  defp handle_ptz("ptz-home", _params, socket) do
+    %{onvif_device: onvif_device, current_device: device} = socket.assigns
+
+    case PTZ.goto_home_position(onvif_device, device.stream_config.profile_token) do
+      :ok ->
+        :ok
+
+      {:error, reason} ->
+        Logger.warning(
+          "[PTZ] could not go to home position for device #{device.id}: #{inspect(reason)}"
+        )
+    end
+
+    {:noreply, socket}
   end
 
   defp ptz_move_opts(params) do

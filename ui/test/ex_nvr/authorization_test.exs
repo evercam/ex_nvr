@@ -7,7 +7,7 @@ defmodule ExNVR.AuthorizationTest do
   # Resources and actions used across the codebase, plus an arbitrary
   # atom for each to make sure the policy doesn't depend on a fixed list.
   @restricted_resources [:user, :system]
-  @other_resources [:device, :onvif, :remote_storage, :trigger, :other_resource]
+  @other_resources [:device, :onvif, :remote_storage, :trigger, :webhook, :other_resource]
   @resources @restricted_resources ++ @other_resources
 
   @read_action :read
@@ -41,6 +41,12 @@ defmodule ExNVR.AuthorizationTest do
       for resource <- @other_resources do
         assert Authorization.authorize(user, resource, @read_action) == :ok,
                "expected user to be authorized to read #{inspect(resource)}"
+      end
+    end
+
+    test "allows any action on :ptz", %{user: user} do
+      for action <- @actions do
+        assert Authorization.authorize(user, :ptz, action) == :ok
       end
     end
 

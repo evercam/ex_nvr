@@ -54,6 +54,52 @@ defmodule ExNvrWeb.DeviceDetailsLiveTest do
     end
   end
 
+  describe "Device details page as a regular user" do
+    setup %{conn: conn, tmp_dir: tmp_dir} do
+      %{
+        conn: log_in_user(conn, user_fixture(%{role: :user})),
+        device: camera_device_fixture(tmp_dir)
+      }
+    end
+
+    test "hides admin-only tabs", %{conn: conn, device: device} do
+      {:ok, lv, _html} = live(conn, ~p"/devices/#{device.id}/details")
+
+      for tab <- ["details", "recordings", "stats", "events", "triggers"] do
+        assert has_element?(lv, ~s|[id="tab-#{tab}"]|)
+      end
+
+      refute has_element?(lv, ~s|[id="tab-settings"]|)
+      refute has_element?(lv, ~s|[id="tab-recover_footage"]|)
+      refute has_element?(lv, "#settings_tab")
+      refute has_element?(lv, "#backfill_tab")
+    end
+
+    test "falls back to details when an admin-only tab is requested", %{
+      conn: conn,
+      device: device
+    } do
+      for tab <- ["settings", "recover_footage"] do
+        {:ok, lv, _html} = live(conn, ~p"/devices/#{device.id}/details?tab=#{tab}")
+
+        assert has_element?(lv, "#tab-details[aria-selected='true']")
+        refute has_element?(lv, "#settings_tab")
+        refute has_element?(lv, "#backfill_tab")
+      end
+    end
+
+    test "cannot switch to an admin-only tab via a forged event", %{conn: conn, device: device} do
+      {:ok, lv, _html} = live(conn, ~p"/devices/#{device.id}/details")
+
+      lv
+      |> with_target("#device-details-tabs")
+      |> render_click("switch_tab", %{"tab" => "settings"})
+
+      assert has_element?(lv, "#tab-details[aria-selected='true']")
+      refute has_element?(lv, "#settings_tab")
+    end
+  end
+
   describe "Details tab - General card" do
     test "renders device name, type, timezone and created at", %{conn: conn, tmp_dir: tmp_dir} do
       device = camera_device_fixture(tmp_dir)

@@ -99,6 +99,35 @@ defmodule ExNVRWeb.GenericEventsLiveTest do
     end
   end
 
+  describe "Generic Events page as a regular user" do
+    setup %{conn: conn} do
+      user = user_fixture(%{role: :user})
+      {:ok, conn: log_in_user(conn, user), user: user}
+    end
+
+    test "hides the webhook config tab", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/events/generic")
+
+      assert has_element?(lv, "#tab-events")
+      refute has_element?(lv, "#tab-webhook")
+      refute has_element?(lv, "#webhook-config")
+    end
+
+    test "falls back to events when webhook tab is requested", %{conn: conn, user: user} do
+      {:ok, lv, _html} = live(conn, ~p"/events/generic?tab=webhook")
+
+      assert has_element?(lv, "#tab-events[aria-selected=true]")
+      refute has_element?(lv, "#webhook-config")
+
+      lv
+      |> with_target("#generic-events-live")
+      |> render_click("switch_tab", %{"tab" => "webhook"})
+
+      refute has_element?(lv, "#webhook-config")
+      assert is_nil(Accounts.get_webhook_token(user))
+    end
+  end
+
   describe "Webhook Config functionality" do
     setup %{conn: conn, tmp_dir: tmp_dir} do
       Mimic.copy(ExNVRWeb.Endpoint)

@@ -590,19 +590,22 @@ defmodule ExNVRWeb.DeviceTabs.SettingsTab do
   end
 
   defp do_save(socket, device_params, section) do
-    device = socket.assigns.device
+    %{device: device, current_user: user} = socket.assigns
 
-    case Devices.update(device, device_params) do
-      {:ok, updated_device} ->
-        send(self(), {:device_updated, updated_device})
-        changeset = Devices.change_device_update(updated_device, %{})
+    with :ok <- authorize(user, :device, :update),
+         {:ok, updated_device} <- Devices.update(device, device_params) do
+      send(self(), {:device_updated, updated_device})
+      changeset = Devices.change_device_update(updated_device, %{})
 
-        {:noreply,
-         socket
-         |> assign(:device, updated_device)
-         |> assign(:device_form, to_form(changeset))
-         |> assign(:recording_mode, Atom.to_string(Device.recording_mode(updated_device)))
-         |> assign(:save_section, section)}
+      {:noreply,
+       socket
+       |> assign(:device, updated_device)
+       |> assign(:device_form, to_form(changeset))
+       |> assign(:recording_mode, Atom.to_string(Device.recording_mode(updated_device)))
+       |> assign(:save_section, section)}
+    else
+      {:error, :unauthorized} ->
+        {:noreply, put_flash(socket, :error, "You are not authorized to perform this action")}
 
       {:error, changeset} ->
         {:noreply, assign(socket, device_form: to_form(changeset), save_section: nil)}

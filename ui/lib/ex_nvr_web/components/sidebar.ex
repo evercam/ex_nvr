@@ -176,7 +176,8 @@ defmodule ExNVRWeb.Components.Sidebar do
             label: "Live Dashboard",
             icon: "hero-chart-bar-solid",
             href: ~p"/live-dashboard",
-            target: "_blank"
+            target: "_blank",
+            role: :admin
           },
           %{
             label: "API Documentation",
@@ -239,7 +240,8 @@ defmodule ExNVRWeb.Components.Sidebar do
             label: "Live Dashboard",
             icon: "hero-chart-bar-solid",
             href: ~p"/live-dashboard",
-            target: "_blank"
+            target: "_blank",
+            role: :admin
           },
           %{
             label: "API Documentation",

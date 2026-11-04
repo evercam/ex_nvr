@@ -15,7 +15,7 @@ defmodule ExNVRWeb.RecordingListLive do
     <div class="grow e-m-8">
       <div class="flex justify-between items-end mb-2">
         <.filter_form meta={@meta} devices={@devices} id="recording-filter-form" />
-        <.link navigate={~p"/export-footage"}>
+        <.link :if={@current_user.role == :admin} navigate={~p"/export-footage"}>
           <.button><.icon name="hero-arrow-down-tray-solid" class="h-4 w-4" />Export</.button>
         </.link>
       </div>
