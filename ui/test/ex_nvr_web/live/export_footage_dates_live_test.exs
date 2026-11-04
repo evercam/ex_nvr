@@ -31,6 +31,13 @@ defmodule ExNVRWeb.ExportFootageDatesLiveTest do
     assert abs(NaiveDateTime.diff(now, end_date, :second)) < 120
   end
 
+  test "regular users are redirected away from the export page", %{conn: conn} do
+    assert {:error, {:redirect, %{to: "/dashboard"}}} =
+             conn
+             |> log_in_user(user_fixture(%{role: :user}))
+             |> live(~p"/export-footage")
+  end
+
   test "defaults to the last 15 minutes in the device's timezone", %{
     conn: conn,
     tmp_dir: tmp_dir

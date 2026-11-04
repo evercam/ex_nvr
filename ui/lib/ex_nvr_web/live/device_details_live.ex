@@ -33,8 +33,12 @@ defmodule ExNVRWeb.DeviceDetailsLive do
         <:tab id="details" label="Details" />
         <:tab id="recordings" label="Recordings" />
         <:tab id="stats" label="Stats" />
-        <:tab id="settings" label="Settings" />
-        <:tab :if={@device.type == :ip} id="recover_footage" label="Recover Footage" />
+        <:tab :if={admin?(@current_user)} id="settings" label="Settings" />
+        <:tab
+          :if={admin?(@current_user) and @device.type == :ip}
+          id="recover_footage"
+          label="Recover Footage"
+        />
         <:tab id="events" label="Events" />
         <:tab id="triggers" label="Triggers" />
 
@@ -316,7 +320,7 @@ defmodule ExNVRWeb.DeviceDetailsLive do
           />
         </:tab_content>
 
-        <:tab_content for="settings">
+        <:tab_content :if={admin?(@current_user)} for="settings">
           <.live_component
             id="settings_tab"
             module={SettingsTab}
@@ -325,7 +329,7 @@ defmodule ExNVRWeb.DeviceDetailsLive do
           />
         </:tab_content>
 
-        <:tab_content :if={@device.type == :ip} for="recover_footage">
+        <:tab_content :if={admin?(@current_user) and @device.type == :ip} for="recover_footage">
           <.live_component
             id="backfill_tab"
             module={BackfillTab}
@@ -363,7 +367,7 @@ defmodule ExNVRWeb.DeviceDetailsLive do
   def mount(%{"id" => device_id} = params, _session, socket) do
     device = Devices.get!(device_id)
 
-    active_tab = active_tab(device, params["tab"]) || "details"
+    active_tab = active_tab(socket.assigns.current_user, device, params["tab"]) || "details"
 
     snapshot_enabled =
       not is_nil(device.stream_config.snapshot_uri) and Device.streaming?(device)
@@ -391,7 +395,8 @@ defmodule ExNVRWeb.DeviceDetailsLive do
 
   @impl true
   def handle_params(params, _uri, socket) do
-    active_tab = active_tab(socket.assigns.device, params["tab"]) || socket.assigns.active_tab
+    %{current_user: user, device: device} = socket.assigns
+    active_tab = active_tab(user, device, params["tab"]) || socket.assigns.active_tab
 
     stats_topic = "stats:#{socket.assigns.device.id}"
 
@@ -417,6 +422,8 @@ defmodule ExNVRWeb.DeviceDetailsLive do
 
   @impl true
   def handle_info({:tab_changed, %{tab: tab}}, socket) do
+    tab = active_tab(socket.assigns.current_user, socket.assigns.device, tab)
+
     params =
       socket.assigns.params
       |> Map.put("tab", tab)
@@ -499,8 +506,13 @@ defmodule ExNVRWeb.DeviceDetailsLive do
     send_update(tab, id: id, params: %{})
   end
 
-  defp active_tab(%Device{type: type}, "recover_footage") when type != :ip, do: "details"
-  defp active_tab(_device, tab), do: tab
+  defp active_tab(%{role: role}, _device, tab)
+       when role != :admin and tab in ["settings", "recover_footage"], do: "details"
+
+  defp active_tab(_user, %Device{type: type}, "recover_footage") when type != :ip, do: "details"
+  defp active_tab(_user, _device, tab), do: tab
+
+  defp admin?(user), do: user.role == :admin
 
   defp update_device_state(socket, new_state) do
     user = socket.assigns.current_user

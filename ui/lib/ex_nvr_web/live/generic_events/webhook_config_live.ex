@@ -1,6 +1,8 @@
 defmodule ExNVRWeb.GenericEventsLive.WebhookConfig do
   use ExNVRWeb, :live_component
 
+  import ExNVR.Authorization
+
   alias ExNVR.Accounts
 
   @impl true
@@ -174,22 +176,38 @@ defmodule ExNVRWeb.GenericEventsLive.WebhookConfig do
 
   @impl true
   def handle_event("generate_token", _params, socket) do
-    Accounts.generate_webhook_token(socket.assigns.current_user)
+    user = socket.assigns.current_user
 
-    {:noreply,
-     socket
-     |> assign(:token_data, Accounts.get_webhook_token(socket.assigns.current_user))
-     |> put_flash(:info, "Webhook token created successfully")}
+    case authorize(user, :webhook, :create) do
+      :ok ->
+        Accounts.generate_webhook_token(user)
+
+        {:noreply,
+         socket
+         |> assign(:token_data, Accounts.get_webhook_token(user))
+         |> put_flash(:info, "Webhook token created successfully")}
+
+      {:error, :unauthorized} ->
+        {:noreply, put_flash(socket, :error, "You are not authorized to perform this action")}
+    end
   end
 
   @impl true
   def handle_event("delete_token", _params, socket) do
-    Accounts.delete_webhook_token(socket.assigns.current_user)
+    user = socket.assigns.current_user
 
-    {:noreply,
-     socket
-     |> assign(:token_data, nil)
-     |> put_flash(:info, "Webhook token deleted successfully")}
+    case authorize(user, :webhook, :delete) do
+      :ok ->
+        Accounts.delete_webhook_token(user)
+
+        {:noreply,
+         socket
+         |> assign(:token_data, nil)
+         |> put_flash(:info, "Webhook token deleted successfully")}
+
+      {:error, :unauthorized} ->
+        {:noreply, put_flash(socket, :error, "You are not authorized to perform this action")}
+    end
   end
 
   @impl true

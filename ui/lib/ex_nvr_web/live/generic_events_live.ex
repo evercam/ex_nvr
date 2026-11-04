@@ -11,13 +11,13 @@ defmodule ExNVRWeb.GenericEventsLive do
     <div class="w-full space-y-8 mt-4">
       <.tabs id="generic-events-live" active_tab={@active_tab} on_change={:tab_changed}>
         <:tab id="events" label="Events" />
-        <:tab id="webhook" label="Webhook Config" />
+        <:tab :if={admin?(@current_user)} id="webhook" label="Webhook Config" />
 
         <:tab_content for="events">
           <.live_component id="events-list" module={EventsList} params={@params} devices={@devices} />
         </:tab_content>
 
-        <:tab_content for="webhook">
+        <:tab_content :if={admin?(@current_user)} for="webhook">
           <.live_component
             id="webhook-config"
             module={WebhookConfig}
@@ -41,7 +41,7 @@ defmodule ExNVRWeb.GenericEventsLive do
 
   @impl true
   def handle_params(params, _uri, socket) do
-    active_tab = params["tab"] || "events"
+    active_tab = active_tab(socket.assigns.current_user, params["tab"])
 
     {:noreply,
      socket
@@ -51,6 +51,7 @@ defmodule ExNVRWeb.GenericEventsLive do
 
   @impl true
   def handle_info({:tab_changed, %{tab: tab}}, socket) do
+    tab = active_tab(socket.assigns.current_user, tab)
     params = Map.put(socket.assigns.params, "tab", tab)
 
     {:noreply,
@@ -58,4 +59,9 @@ defmodule ExNVRWeb.GenericEventsLive do
      |> assign(:active_tab, tab)
      |> push_patch(to: Routes.generic_events_path(socket, :index, params))}
   end
+
+  defp active_tab(%{role: :admin}, "webhook"), do: "webhook"
+  defp active_tab(_user, _tab), do: "events"
+
+  defp admin?(user), do: user.role == :admin
 end
