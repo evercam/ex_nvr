@@ -1,7 +1,14 @@
 defmodule ExNVR.Devices.Cameras.HttpClient do
   @moduledoc false
 
-  alias ExNVR.Devices.Cameras.{DeviceInfo, RemoteRecording, StreamProfile}
+  alias ExNVR.Devices.Cameras.{
+    DateTimeSettings,
+    DeviceInfo,
+    ImageSettings,
+    OSD,
+    RemoteRecording,
+    StreamProfile
+  }
 
   @type url :: binary()
   @type camera_opts :: Keyword.t()
@@ -39,12 +46,30 @@ defmodule ExNVR.Devices.Cameras.HttpClient do
   @callback download_recording(url(), RemoteRecording.t(), Path.t(), camera_opts()) ::
               :ok | error()
 
+  @doc """
+  Set image settings (brightness, contrast, saturation).
+  """
+  @callback set_image_settings(url(), ImageSettings.t(), camera_opts()) :: :ok | error()
+
+  @doc """
+  Set the OSD (date/time overlay) on all the streams of the camera.
+  """
+  @callback set_osd(url(), OSD.t(), camera_opts()) :: :ok | error()
+
+  @doc """
+  Set the timezone and synchronize the date & time with an NTP server.
+  """
+  @callback set_date_time(url(), DateTimeSettings.t(), camera_opts()) :: :ok | error()
+
   @optional_callbacks fetch_lpr_event: 2,
                       device_info: 2,
                       stream_profiles: 2,
                       set_stream_profile: 3,
                       list_recordings: 4,
-                      download_recording: 4
+                      download_recording: 4,
+                      set_image_settings: 3,
+                      set_osd: 3,
+                      set_date_time: 3
 
   defmacro __using__(_opts) do
     quote location: :keep do
@@ -68,12 +93,24 @@ defmodule ExNVR.Devices.Cameras.HttpClient do
       @impl true
       def download_recording(_url, _recording, _dest, _opts), do: {:error, :not_implemented}
 
+      @impl true
+      def set_image_settings(_url, _settings, _opts), do: {:error, :not_implemented}
+
+      @impl true
+      def set_osd(_url, _osd, _opts), do: {:error, :not_implemented}
+
+      @impl true
+      def set_date_time(_url, _settings, _opts), do: {:error, :not_implemented}
+
       defoverridable fetch_lpr_event: 2,
                      device_info: 2,
                      stream_profiles: 2,
                      set_stream_profile: 3,
                      list_recordings: 4,
-                     download_recording: 4
+                     download_recording: 4,
+                     set_image_settings: 3,
+                     set_osd: 3,
+                     set_date_time: 3
     end
   end
 end

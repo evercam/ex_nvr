@@ -1,8 +1,9 @@
 defmodule ExNVR.Devices.Cameras.HttpClient.MilesightTest do
   use ExUnit.Case, async: true
 
+  alias ExNVR.Devices.Cameras.{DateTimeSettings, ImageSettings, OSD, RemoteRecording}
   alias ExNVR.Devices.Cameras.HttpClient.{Axis, Milesight}
-  alias ExNVR.Devices.Cameras.RemoteRecording
+  alias ExNVR.Devices.Cameras.HttpClient.Milesight.Timezone
   alias Plug.Conn
 
   @uuid "1ee4e962-bdb6-4339-b27e-2d43a8be1bdb"
@@ -178,12 +179,155 @@ defmodule ExNVR.Devices.Cameras.HttpClient.MilesightTest do
     refute File.exists?(dest)
   end
 
+  describe "set_image_settings/3" do
+    test "set brightness, contrast and saturation", %{bypass: bypass, url: url} do
+      Bypass.expect_once(bypass, "POST", "/cgi-bin/operator/operator.cgi", fn conn ->
+        assert %{"action" => "set.camera.setting"} = URI.decode_query(conn.query_string)
+        {:ok, body, conn} = Conn.read_body(conn)
+
+        assert %{"brightness" => 50, "contrast" => 65, "colorSaturation" => 60} ==
+                 Jason.decode!(body)
+
+        Conn.resp(conn, 200, ~s({"setState": "succeed"}))
+      end)
+
+      settings = %ImageSettings{brightness: 50, contrast: 65, saturation: 60}
+      assert :ok = Milesight.set_image_settings(url, settings, [])
+    end
+
+    test "return error on http failure", %{bypass: bypass, url: url} do
+      Bypass.expect_once(bypass, "POST", "/cgi-bin/operator/operator.cgi", fn conn ->
+        Conn.resp(conn, 401, "unauthorized")
+      end)
+
+      assert {:error, {401, "unauthorized"}} =
+               Milesight.set_image_settings(url, %ImageSettings{brightness: 50}, [])
+    end
+  end
+
+  test "set_osd/3 updates all streams", %{bypass: bypass, url: url} do
+    Bypass.expect(bypass, "GET", "/cgi-bin/operator/operator.cgi", fn conn ->
+      assert %{"action" => "get.video.advanced"} = URI.decode_query(conn.query_string)
+      Conn.resp(conn, 200, osd_response())
+    end)
+
+    Bypass.expect_once(bypass, "POST", "/cgi-bin/operator/operator.cgi", fn conn ->
+      assert %{"action" => "set.video.advanced"} = URI.decode_query(conn.query_string)
+      {:ok, body, conn} = Conn.read_body(conn)
+
+      assert %{"osdInfoList" => streams} = Jason.decode!(body)
+      assert Enum.map(streams, & &1["streamIndex"]) == [0, 1, 2]
+
+      for stream <- streams do
+        assert %{
+                 "osdTextPosition" => 0,
+                 "osdDateTimePosition" => 0,
+                 "osdDateTimeFormat" => 2,
+                 "osdFontSize" => 0,
+                 "osdDateTimeEnable" => 1,
+                 "osdString" => "Network Camera",
+                 "osdFontColor" => "255:255:255"
+               } = stream
+
+        refute Map.has_key?(stream, "cropRoiEnable")
+      end
+
+      Conn.resp(conn, 200, ~s({"setState": "succeed"}))
+    end)
+
+    osd = %OSD{position: :top_left, date_format: :dmy, font_size: :smallest}
+    assert :ok = Milesight.set_osd(url, osd, [])
+  end
+
+  describe "set_date_time/3" do
+    test "set timezone and NTP server", %{bypass: bypass, url: url} do
+      Bypass.expect_once(bypass, "POST", "/cgi-bin/admin/admin.cgi", fn conn ->
+        assert %{"action" => "set.system.datetime"} = URI.decode_query(conn.query_string)
+        {:ok, body, conn} = Conn.read_body(conn)
+
+        assert %{
+                 "timeZoneTz" => "UTC6",
+                 "zoneNameTz" => "USA",
+                 "dayLight" => 1,
+                 "timeType" => 0,
+                 "ntpServer" => "time1.google.com",
+                 "ntpSyncEnable" => 1,
+                 "ntpInterval" => 60
+               } == Jason.decode!(body)
+
+        Conn.resp(conn, 200, ~s({"setState": "succeed"}))
+      end)
+
+      settings = %DateTimeSettings{timezone: "US/Central", ntp_server: "time1.google.com"}
+      assert :ok = Milesight.set_date_time(url, settings, [])
+    end
+
+    test "unsupported timezone", %{url: url} do
+      settings = %DateTimeSettings{timezone: "Asia/Kabul", ntp_server: "time1.google.com"}
+
+      assert {:error, {:unsupported_timezone, "Asia/Kabul"}} =
+               Milesight.set_date_time(url, settings, [])
+    end
+  end
+
+  test "find Milesight timezone" do
+    for {timezone, expected} <- [
+          {"US/Central", {"UTC6", "USA", true}},
+          {"America/Winnipeg", {"UTC6", "CAN", true}},
+          {"Pacific/Honolulu", {"UTC10", "USA", false}},
+          {"America/Adak", {"UTC10", "USA2", true}},
+          {"Europe/Dublin", {"UTC0", "IRL", true}},
+          {"Europe/London", {"UTC0", "GBR", true}},
+          {"Europe/Paris", {"UTC-1", "FRA", true}},
+          {"Asia/Kolkata", {"UTC-5:30", "IND", false}},
+          {"Asia/Shanghai", {"UTC-8", "CHN", false}},
+          {"Australia/Sydney", {"UTC-10", "AUS", true}},
+          # same rules as another country
+          {"Europe/Andorra", {"UTC-1", "ALB", true}},
+          # no DST, any zone with the same offset
+          {"America/Phoenix", {"UTC7", "USA", false}},
+          # Milesight Paraguay zone is outdated (UTC-4)
+          {"America/Asuncion", {"UTC3", "ARG", false}}
+        ] do
+      assert {:ok, ^expected} = Timezone.find(timezone), "timezone: #{timezone}"
+    end
+
+    assert {:ok, {"UTC0", _zone, false}} = Timezone.find("UTC")
+    assert :error = Timezone.find("Asia/Kabul")
+    assert :error = Timezone.find("Mars/Olympus")
+  end
+
   test "other vendors are not implemented", %{url: url} do
     assert {:error, :not_implemented} =
              Axis.list_recordings(url, DateTime.utc_now(), DateTime.utc_now(), [])
 
     assert {:error, :not_implemented} =
              Axis.download_recording(url, %RemoteRecording{}, "/tmp/x.mp4", [])
+
+    assert {:error, :not_implemented} = Axis.set_image_settings(url, %ImageSettings{}, [])
+    assert {:error, :not_implemented} = Axis.set_osd(url, %OSD{}, [])
+    assert {:error, :not_implemented} = Axis.set_date_time(url, %DateTimeSettings{}, [])
+  end
+
+  defp osd_response do
+    stream = %{
+      "osdEnable" => 0,
+      "osdString" => "Network Camera",
+      "osdDateTimeEnable" => 0,
+      "osdFontSize" => 2,
+      "osdFontColor" => "255:255:255",
+      "osdBackgroundEnable" => 0,
+      "osdBackgroundColor" => "0:0:0",
+      "osdTextPosition" => 2,
+      "osdDateTimePosition" => 3,
+      "osdDateTimeFormat" => 0,
+      "cropRoiEnable" => 0
+    }
+
+    Jason.encode!(%{
+      "osdInfoList" => Enum.map(0..2, &Map.put(stream, "streamIndex", &1)),
+      "osdZoomTime" => 5
+    })
   end
 
   defp recording do

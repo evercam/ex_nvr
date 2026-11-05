@@ -4,12 +4,17 @@ defmodule ExNVR.Devices.Onvif do
   require Logger
 
   alias __MODULE__.AutoConfig
+  alias ExNVR.Devices.Cameras.{DateTimeSettings, ImageSettings, OSD, Timezones}
+  alias ExNVR.Devices.Cameras.HttpClient.Milesight
   alias ExNVR.Model.Device
-  alias ExOnvif.Devices.SystemDateAndTime
+  alias ExOnvif.Devices.{NTP, SystemDateAndTime}
   alias ExOnvif.Media2
   alias ExOnvif.Media2.Profile.VideoEncoder
   alias ExOnvif.Search
   alias ExOnvif.Search.{FindRecordings, GetRecordingSearchResults}
+
+  @milesight_vendors ["Milesight Technology Co.,Ltd.", "EVERCAM LTD"]
+  @ntp_server "time1.google.com"
 
   @spec discover(Keyword.t()) :: [ExOnvif.Discovery.Probe.t()]
   def discover(options) do
@@ -65,23 +70,114 @@ defmodule ExNVR.Devices.Onvif do
     do_get_recordings(onvif_device)
   end
 
-  # Auto configure cameras
-  @spec auto_configure(ExOnvif.Device.t()) :: AutoConfig.t()
-  def auto_configure(%{manufacturer: "AXIS"} = onvif_device) do
+  @doc """
+  Auto configure cameras.
+
+  Options:
+    * `timezone` - IANA timezone of the camera, the date & time step is skipped if not provided.
+  """
+  @spec auto_configure(ExOnvif.Device.t(), Keyword.t()) :: AutoConfig.t()
+  def auto_configure(onvif_device, opts \\ []) do
+    %AutoConfig{}
+    |> configure_date_time(onvif_device, opts[:timezone])
+    |> do_auto_configure(onvif_device, opts)
+  end
+
+  defp do_auto_configure(auto_config, %{manufacturer: "AXIS"} = onvif_device, _opts) do
     Logger.info("Auto configure AXIS camera")
-
-    %AutoConfig{}
-    |> maybe_create_and_configure_profiles(onvif_device)
+    maybe_create_and_configure_profiles(auto_config, onvif_device)
   end
 
-  def auto_configure(%{manufacturer: vendor} = onvif_device) do
-    Logger.info("Auto configure #{vendor} camera")
+  defp do_auto_configure(auto_config, %{manufacturer: vendor} = onvif_device, config_opts)
+       when vendor in @milesight_vendors do
+    Logger.info("Auto configure Milesight camera")
+    opts = [username: onvif_device.username, password: onvif_device.password]
+    date_format = if Timezones.country(config_opts[:timezone]) == "US", do: :mdy, else: :dmy
 
-    %AutoConfig{}
+    auto_config
     |> do_configure_profiles(onvif_device)
+    |> configure_milesight(:image_settings, fn ->
+      settings = %ImageSettings{brightness: 50, contrast: 65, saturation: 60}
+      Milesight.set_image_settings(onvif_device.address, settings, opts)
+    end)
+    |> configure_milesight(:osd, fn ->
+      osd = %OSD{position: :top_left, date_format: date_format, font_size: :smallest}
+      Milesight.set_osd(onvif_device.address, osd, opts)
+    end)
   end
 
-  def auto_configure(_onvif_device), do: %AutoConfig{}
+  defp do_auto_configure(auto_config, %{manufacturer: vendor} = onvif_device, _opts) do
+    Logger.info("Auto configure #{vendor} camera")
+    do_configure_profiles(auto_config, onvif_device)
+  end
+
+  defp do_auto_configure(auto_config, _onvif_device, _opts), do: auto_config
+
+  defp configure_date_time(auto_config, _onvif_device, nil), do: auto_config
+
+  defp configure_date_time(auto_config, onvif_device, timezone) do
+    Logger.info("[Onvif] Configure NTP (#{@ntp_server}) and timezone (#{timezone})")
+
+    case do_configure_date_time(onvif_device, timezone) do
+      :ok ->
+        %{auto_config | date_time: :ok}
+
+      {:error, reason} = error ->
+        Logger.error("[Onvif] could not configure date & time: #{inspect(reason)}")
+        %{auto_config | date_time: error}
+    end
+  end
+
+  # Milesight ONVIF service only accepts the timezones of its own list
+  defp do_configure_date_time(%{manufacturer: vendor} = onvif_device, timezone)
+       when vendor in @milesight_vendors do
+    opts = [username: onvif_device.username, password: onvif_device.password]
+    settings = %DateTimeSettings{timezone: timezone, ntp_server: @ntp_server}
+    Milesight.set_date_time(onvif_device.address, settings, opts)
+  end
+
+  defp do_configure_date_time(onvif_device, timezone) do
+    ntp = %NTP{
+      from_dhcp: false,
+      ntp_manual: %NTP.NTPManual{type: :dns, dns_name: @ntp_server}
+    }
+
+    with {:ok, posix_tz} <- posix_timezone(timezone),
+         :ok <- ExOnvif.Devices.set_ntp(onvif_device, ntp) do
+      ExOnvif.Devices.set_system_date_and_time(onvif_device, %SystemDateAndTime{
+        date_time_type: :ntp,
+        daylight_savings: true,
+        time_zone: %SystemDateAndTime.TimeZone{tz: posix_tz}
+      })
+    end
+  end
+
+  defp posix_timezone(timezone) do
+    case Timezones.posix(timezone) do
+      {:ok, posix_tz} -> {:ok, posix_tz}
+      :error -> {:error, {:unknown_timezone, timezone}}
+    end
+  end
+
+  defp configure_milesight(auto_config, field, config_fn) do
+    case config_fn.() do
+      :ok ->
+        Map.put(auto_config, field, :ok)
+
+      {:error, reason} = error ->
+        Logger.error("[Onvif] could not configure Milesight #{field}: #{inspect(reason)}")
+        Map.put(auto_config, field, error)
+    end
+  end
+
+  defp put_streams_error(auto_config, reason) do
+    %{
+      auto_config
+      | main_stream: {:error, reason},
+        sub_stream: {:error, reason},
+        third_stream: {:error, reason}
+    }
+  end
 
   defp maybe_create_and_configure_profiles(auto_config, device) do
     case fetch_profiles(device) do
@@ -105,12 +201,12 @@ defmodule ExNVR.Devices.Onvif do
 
           {:error, reason} ->
             Logger.error("[Onvif] error while trying to create profiles: #{inspect(reason)}")
-            auto_config
+            put_streams_error(auto_config, reason)
         end
 
       {:error, reason} ->
         Logger.error("[Onvif] error while trying to fetch profiles: #{inspect(reason)}")
-        auto_config
+        put_streams_error(auto_config, reason)
     end
   end
 
@@ -164,8 +260,9 @@ defmodule ExNVR.Devices.Onvif do
         |> do_configure_profile(onvif_device, Enum.at(profiles, 1), :sub_stream)
         |> do_configure_profile(onvif_device, Enum.at(profiles, 2), :third_stream)
 
-      _error ->
-        auto_config
+      {:error, reason} ->
+        Logger.error("[Onvif] error while trying to fetch profiles: #{inspect(reason)}")
+        put_streams_error(auto_config, reason)
     end
   end
 
@@ -179,11 +276,11 @@ defmodule ExNVR.Devices.Onvif do
 
     with {:ok, configs} <- config_options_result,
          :ok <- set_video_encoder_config(onvif_device, profile, configs, stream_type) do
-      Map.put(auto_config, stream_type, true)
+      Map.put(auto_config, stream_type, :ok)
     else
-      {:error, reason} ->
+      {:error, reason} = error ->
         Logger.error("[Onvif] could not configure profile: #{inspect(reason)}")
-        auto_config
+        Map.put(auto_config, stream_type, error)
     end
   end
 

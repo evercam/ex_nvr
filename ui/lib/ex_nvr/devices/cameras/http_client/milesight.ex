@@ -7,7 +7,17 @@ defmodule ExNVR.Devices.Cameras.HttpClient.Milesight do
 
   require Logger
 
-  alias ExNVR.Devices.Cameras.{DeviceInfo, RemoteRecording, StreamProfile}
+  alias __MODULE__.Timezone
+
+  alias ExNVR.Devices.Cameras.{
+    DateTimeSettings,
+    DeviceInfo,
+    ImageSettings,
+    OSD,
+    RemoteRecording,
+    StreamProfile
+  }
+
   alias ExNVR.HTTP
 
   @admin_path "/cgi-bin/admin/admin.cgi"
@@ -17,6 +27,8 @@ defmodule ExNVR.Devices.Cameras.HttpClient.Milesight do
   @search_path "/vb.htm"
   @download_path "/dataloader.cgi"
   @page_size 100
+  @osd_fields ~w(streamIndex osdEnable osdString osdTextPosition osdDateTimeEnable osdDateTimePosition
+                 osdDateTimeFormat osdFontSize osdFontColor osdBackgroundEnable osdBackgroundColor)
   # the camera hangs when searching long periods
   @search_window_seconds 12 * 3600
 
@@ -126,6 +138,81 @@ defmodule ExNVR.Devices.Cameras.HttpClient.Milesight do
       {:error, reason} ->
         File.rm(dest)
         {:error, reason}
+    end
+  end
+
+  @impl true
+  def set_image_settings(url, %ImageSettings{} = settings, opts) do
+    body =
+      %{
+        brightness: settings.brightness,
+        contrast: settings.contrast,
+        colorSaturation: settings.saturation
+      }
+      |> Map.reject(fn {_key, value} -> is_nil(value) end)
+
+    (url <> @operator_path <> "?action=set.camera.setting&format=json")
+    |> HTTP.post(body, opts)
+    |> handle_http_response(& &1)
+    |> case do
+      {:ok, _body} -> :ok
+      error -> error
+    end
+  end
+
+  @impl true
+  def set_osd(url, %OSD{} = osd, opts) do
+    url = url <> @operator_path
+
+    osd_config = %{
+      "osdTextPosition" => osd_position(osd.position),
+      "osdDateTimePosition" => osd_position(osd.position),
+      "osdDateTimeFormat" => osd_date_format(osd.date_format),
+      "osdFontSize" => osd_font_size(osd.font_size),
+      "osdDateTimeEnable" => 1
+    }
+
+    # read-modify-write, the camera requires all the stream fields
+    with {:ok, %{"osdInfoList" => streams}} <-
+           (url <> "?action=get.video.advanced&format=json")
+           |> HTTP.get(opts)
+           |> handle_http_response(&decode_json/1),
+         body = %{"osdInfoList" => Enum.map(streams, &update_stream_osd(&1, osd_config))},
+         {:ok, _body} <-
+           (url <> "?action=set.video.advanced&format=json")
+           |> HTTP.post(body, opts)
+           |> handle_http_response(& &1) do
+      :ok
+    else
+      {:ok, body} -> {:error, {:invalid_response, body}}
+      error -> error
+    end
+  end
+
+  @impl true
+  def set_date_time(url, %DateTimeSettings{} = settings, opts) do
+    case Timezone.find(settings.timezone) do
+      {:ok, {timezone, zone_name, dst?}} ->
+        body = %{
+          timeZoneTz: timezone,
+          zoneNameTz: zone_name,
+          dayLight: if(dst?, do: 1, else: 0),
+          timeType: 0,
+          ntpServer: settings.ntp_server,
+          ntpSyncEnable: 1,
+          ntpInterval: 60
+        }
+
+        (url <> @admin_path <> "?action=set.system.datetime&format=json")
+        |> HTTP.post(body, opts)
+        |> handle_http_response(& &1)
+        |> case do
+          {:ok, _body} -> :ok
+          error -> error
+        end
+
+      :error ->
+        {:error, {:unsupported_timezone, settings.timezone}}
     end
   end
 
@@ -285,6 +372,13 @@ defmodule ExNVR.Devices.Cameras.HttpClient.Milesight do
     }
   end
 
+  # only send the fields the camera web UI sends
+  defp update_stream_osd(stream, osd_config) do
+    stream
+    |> Map.take(@osd_fields)
+    |> Map.merge(osd_config)
+  end
+
   defp parse_response(body, opts) do
     body
     |> String.split("\n")
@@ -402,6 +496,22 @@ defmodule ExNVR.Devices.Cameras.HttpClient.Milesight do
   defp bitrate_mode_to_integer(:cbr), do: 0
   defp bitrate_mode_to_integer(:vbr), do: 1
   defp bitrate_mode_to_integer(_other), do: 0
+
+  defp osd_position(:top_left), do: 0
+  defp osd_position(:top_right), do: 1
+  defp osd_position(:bottom_left), do: 2
+  defp osd_position(:bottom_right), do: 3
+
+  defp osd_date_format(:ymd), do: 0
+  defp osd_date_format(:mdy), do: 1
+  defp osd_date_format(:dmy), do: 2
+
+  defp osd_font_size(:smallest), do: 0
+  defp osd_font_size(:small), do: 1
+  defp osd_font_size(:medium), do: 2
+  defp osd_font_size(:large), do: 3
+  defp osd_font_size(:largest), do: 4
+  defp osd_font_size(:auto), do: 5
 
   defp handle_http_response({:ok, %{status: status, body: body}}, parser_fn)
        when status >= 200 and status < 300 do
