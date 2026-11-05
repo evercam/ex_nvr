@@ -8,6 +8,14 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
   alias ExNVR.Devices
   alias ExNVR.Devices.Cameras.{HttpClient.Milesight, NetworkInterface, NTP, StreamProfile}
 
+  @auto_config_steps [
+    main_stream: "Main stream",
+    sub_stream: "Sub stream",
+    third_stream: "Third stream",
+    image_settings: "Image settings",
+    osd: "OSD"
+  ]
+
   defmodule DiscoverSettings do
     @moduledoc false
 
@@ -388,6 +396,45 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
         </div>
       </.simple_form>
     </.modal2>
+
+    <.modal2
+      :if={@auto_config_result}
+      id="auto-config-result"
+      show
+      on_cancel={JS.push("close-auto-config-result")}
+    >
+      <:header>Auto configuration</:header>
+      <ul class="space-y-3 dark:text-white">
+        <li
+          :for={{step, label, result} <- auto_config_rows(@auto_config_result)}
+          id={"auto-config-#{step}"}
+        >
+          <div class="flex justify-between items-center">
+            <span class="font-medium">{label}</span>
+            <span
+              :if={result == :ok}
+              class="flex items-center gap-1 text-green-600 dark:text-green-400"
+            >
+              <.icon name="hero-check-circle" class="w-5 h-5" />Success
+            </span>
+            <span :if={result != :ok} class="flex items-center gap-1 text-red-600 dark:text-red-400">
+              <.icon name="hero-x-circle" class="w-5 h-5" />Failed
+            </span>
+          </div>
+          <details :if={match?({:error, _reason}, result)} class="mt-1 text-sm">
+            <summary class="cursor-pointer text-gray-500 dark:text-gray-400">Show error</summary>
+            <pre class="mt-1 max-h-48 overflow-auto whitespace-pre-wrap break-all text-xs bg-gray-50 dark:bg-gray-900 rounded p-2">{format_error(result)}</pre>
+          </details>
+        </li>
+      </ul>
+      <.button
+        type="button"
+        class="w-full mt-5"
+        phx-click={JS.exec("data-cancel", to: "#auto-config-result")}
+      >
+        Close
+      </.button>
+    </.modal2>
     """
   end
 
@@ -396,7 +443,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
       socket
       |> assign_discover_settings(%DiscoverSettings{timeout: 2})
       |> assign(devices: [], auth_form: to_form(%{"username" => nil, "password" => nil}))
-      |> assign(selected_device: nil)
+      |> assign(selected_device: nil, auto_config_result: nil)
 
     {:ok, socket}
   end
@@ -522,7 +569,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
     camera_details = socket.assigns.selected_device
     devices = socket.assigns.devices
 
-    _auto_config_result = Devices.Onvif.auto_configure(camera_details.device)
+    auto_config_result = Devices.Onvif.auto_configure(camera_details.device)
     camera_details = camera_details |> get_stream_profiles() |> set_streams_form()
 
     idx = Enum.find_index(devices, &(&1.id == camera_details.id))
@@ -530,9 +577,23 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
 
     socket
     |> assign(selected_device: camera_details, devices: devices)
-    |> put_flash(:info, "Camera configured successfully")
+    |> assign(auto_config_result: auto_config_result)
     |> then(&{:noreply, &1})
   end
+
+  def handle_event("close-auto-config-result", _params, socket) do
+    {:noreply, assign(socket, auto_config_result: nil)}
+  end
+
+  # nil results are steps that were not run
+  defp auto_config_rows(auto_config) do
+    for {step, label} <- @auto_config_steps,
+        result = Map.get(auto_config, step),
+        do: {step, label, result}
+  end
+
+  defp format_error({:error, reason}),
+    do: inspect(reason, pretty: true, limit: :infinity, printable_limit: :infinity)
 
   defp assign_discover_settings(socket, settings) do
     discover_form = to_form(DiscoverSettings.create_changeset(settings))

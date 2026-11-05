@@ -106,12 +106,21 @@ defmodule ExNVR.Devices.Onvif do
   defp configure_milesight(auto_config, field, config_fn) do
     case config_fn.() do
       :ok ->
-        Map.put(auto_config, field, true)
+        Map.put(auto_config, field, :ok)
 
-      {:error, reason} ->
+      {:error, reason} = error ->
         Logger.error("[Onvif] could not configure Milesight #{field}: #{inspect(reason)}")
-        auto_config
+        Map.put(auto_config, field, error)
     end
+  end
+
+  defp put_streams_error(auto_config, reason) do
+    %{
+      auto_config
+      | main_stream: {:error, reason},
+        sub_stream: {:error, reason},
+        third_stream: {:error, reason}
+    }
   end
 
   defp maybe_create_and_configure_profiles(auto_config, device) do
@@ -136,12 +145,12 @@ defmodule ExNVR.Devices.Onvif do
 
           {:error, reason} ->
             Logger.error("[Onvif] error while trying to create profiles: #{inspect(reason)}")
-            auto_config
+            put_streams_error(auto_config, reason)
         end
 
       {:error, reason} ->
         Logger.error("[Onvif] error while trying to fetch profiles: #{inspect(reason)}")
-        auto_config
+        put_streams_error(auto_config, reason)
     end
   end
 
@@ -195,8 +204,9 @@ defmodule ExNVR.Devices.Onvif do
         |> do_configure_profile(onvif_device, Enum.at(profiles, 1), :sub_stream)
         |> do_configure_profile(onvif_device, Enum.at(profiles, 2), :third_stream)
 
-      _error ->
-        auto_config
+      {:error, reason} ->
+        Logger.error("[Onvif] error while trying to fetch profiles: #{inspect(reason)}")
+        put_streams_error(auto_config, reason)
     end
   end
 
@@ -210,11 +220,11 @@ defmodule ExNVR.Devices.Onvif do
 
     with {:ok, configs} <- config_options_result,
          :ok <- set_video_encoder_config(onvif_device, profile, configs, stream_type) do
-      Map.put(auto_config, stream_type, true)
+      Map.put(auto_config, stream_type, :ok)
     else
-      {:error, reason} ->
+      {:error, reason} = error ->
         Logger.error("[Onvif] could not configure profile: #{inspect(reason)}")
-        auto_config
+        Map.put(auto_config, stream_type, error)
     end
   end
 

@@ -7,6 +7,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLiveTest do
   import Mimic
   import Phoenix.LiveViewTest
 
+  alias ExNVR.Devices.Onvif.AutoConfig
   alias ExOnvif.Devices.{NetworkInterface, SystemDateAndTime}
   alias ExOnvif.Discovery.Probe
   alias ExOnvif.Media.VideoResolution
@@ -40,6 +41,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLiveTest do
   setup_all do
     Mimic.copy(ExOnvif.Devices)
     Mimic.copy(ExOnvif.Media2)
+    Mimic.copy(ExNVR.Devices.Onvif)
   end
 
   setup %{conn: conn} do
@@ -330,6 +332,44 @@ defmodule ExNVRWeb.OnvifDiscoveryLiveTest do
       assert device_params.stream_config.third_snapshot_uri == "http://192.168.1.200:8101/third"
       assert device_params.stream_config.third_profile_token == "Profile_3"
       assert device_params.vendor == "Evercam"
+    end
+
+    test "Auto configure shows the result of each step", %{conn: conn} do
+      expect(ExNVR.Devices.Onvif, :auto_configure, fn _device ->
+        %AutoConfig{
+          main_stream: :ok,
+          sub_stream: {:error, %{status: 500, body: "boom"}},
+          image_settings: :ok
+        }
+      end)
+
+      # profiles are reloaded after auto configuration
+      stub(ExOnvif.Media2, :get_profiles, fn _device -> {:error, :unavailable} end)
+
+      {:ok, lv, _html} = live(conn, ~p"/onvif-discovery")
+      lv |> element("button", "Scan Network") |> render_click()
+
+      lv
+      |> element("#auth-form")
+      |> render_submit(%{username: "admin", password: "pass", id: "192.168.1.200"})
+
+      lv
+      |> element("#192\\.168\\.1\\.200 button", "View Details")
+      |> render_click()
+
+      refute has_element?(lv, "#auto-config-result")
+
+      lv |> element("button", "Auto Configure") |> render_click()
+
+      assert has_element?(lv, "#auto-config-main_stream", "Success")
+      assert has_element?(lv, "#auto-config-image_settings", "Success")
+      assert has_element?(lv, "#auto-config-sub_stream", "Failed")
+      assert has_element?(lv, "#auto-config-sub_stream details pre", "boom")
+      refute has_element?(lv, "#auto-config-third_stream")
+      refute has_element?(lv, "#auto-config-osd")
+
+      render_click(lv, "close-auto-config-result")
+      refute has_element?(lv, "#auto-config-result")
     end
   end
 end
