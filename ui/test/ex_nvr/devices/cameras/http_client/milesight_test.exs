@@ -1,8 +1,9 @@
 defmodule ExNVR.Devices.Cameras.HttpClient.MilesightTest do
   use ExUnit.Case, async: true
 
+  alias ExNVR.Devices.Cameras.{DateTimeSettings, ImageSettings, OSD, RemoteRecording}
   alias ExNVR.Devices.Cameras.HttpClient.{Axis, Milesight}
-  alias ExNVR.Devices.Cameras.{ImageSettings, OSD, RemoteRecording}
+  alias ExNVR.Devices.Cameras.HttpClient.Milesight.Timezone
   alias Plug.Conn
 
   @uuid "1ee4e962-bdb6-4339-b27e-2d43a8be1bdb"
@@ -238,6 +239,64 @@ defmodule ExNVR.Devices.Cameras.HttpClient.MilesightTest do
     assert :ok = Milesight.set_osd(url, osd, [])
   end
 
+  describe "set_date_time/3" do
+    test "set timezone and NTP server", %{bypass: bypass, url: url} do
+      Bypass.expect_once(bypass, "POST", "/cgi-bin/admin/admin.cgi", fn conn ->
+        assert %{"action" => "set.system.datetime"} = URI.decode_query(conn.query_string)
+        {:ok, body, conn} = Conn.read_body(conn)
+
+        assert %{
+                 "timeZoneTz" => "UTC6",
+                 "zoneNameTz" => "USA",
+                 "dayLight" => 1,
+                 "timeType" => 0,
+                 "ntpServer" => "time1.google.com",
+                 "ntpSyncEnable" => 1,
+                 "ntpInterval" => 60
+               } == Jason.decode!(body)
+
+        Conn.resp(conn, 200, ~s({"setState": "succeed"}))
+      end)
+
+      settings = %DateTimeSettings{timezone: "US/Central", ntp_server: "time1.google.com"}
+      assert :ok = Milesight.set_date_time(url, settings, [])
+    end
+
+    test "unsupported timezone", %{url: url} do
+      settings = %DateTimeSettings{timezone: "Asia/Kabul", ntp_server: "time1.google.com"}
+
+      assert {:error, {:unsupported_timezone, "Asia/Kabul"}} =
+               Milesight.set_date_time(url, settings, [])
+    end
+  end
+
+  test "find Milesight timezone" do
+    for {timezone, expected} <- [
+          {"US/Central", {"UTC6", "USA", true}},
+          {"America/Winnipeg", {"UTC6", "CAN", true}},
+          {"Pacific/Honolulu", {"UTC10", "USA", false}},
+          {"America/Adak", {"UTC10", "USA2", true}},
+          {"Europe/Dublin", {"UTC0", "IRL", true}},
+          {"Europe/London", {"UTC0", "GBR", true}},
+          {"Europe/Paris", {"UTC-1", "FRA", true}},
+          {"Asia/Kolkata", {"UTC-5:30", "IND", false}},
+          {"Asia/Shanghai", {"UTC-8", "CHN", false}},
+          {"Australia/Sydney", {"UTC-10", "AUS", true}},
+          # same rules as another country
+          {"Europe/Andorra", {"UTC-1", "ALB", true}},
+          # no DST, any zone with the same offset
+          {"America/Phoenix", {"UTC7", "USA", false}},
+          # Milesight Paraguay zone is outdated (UTC-4)
+          {"America/Asuncion", {"UTC3", "ARG", false}}
+        ] do
+      assert {:ok, ^expected} = Timezone.find(timezone), "timezone: #{timezone}"
+    end
+
+    assert {:ok, {"UTC0", _zone, false}} = Timezone.find("UTC")
+    assert :error = Timezone.find("Asia/Kabul")
+    assert :error = Timezone.find("Mars/Olympus")
+  end
+
   test "other vendors are not implemented", %{url: url} do
     assert {:error, :not_implemented} =
              Axis.list_recordings(url, DateTime.utc_now(), DateTime.utc_now(), [])
@@ -247,6 +306,7 @@ defmodule ExNVR.Devices.Cameras.HttpClient.MilesightTest do
 
     assert {:error, :not_implemented} = Axis.set_image_settings(url, %ImageSettings{}, [])
     assert {:error, :not_implemented} = Axis.set_osd(url, %OSD{}, [])
+    assert {:error, :not_implemented} = Axis.set_date_time(url, %DateTimeSettings{}, [])
   end
 
   defp osd_response do

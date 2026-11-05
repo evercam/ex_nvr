@@ -9,6 +9,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
   alias ExNVR.Devices.Cameras.{HttpClient.Milesight, NetworkInterface, NTP, StreamProfile}
 
   @auto_config_steps [
+    date_time: "Date & time",
     main_stream: "Main stream",
     sub_stream: "Sub stream",
     third_stream: "Third stream",
@@ -39,6 +40,29 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
       |> Changeset.cast(params, [:ip_address, :timeout])
       |> Changeset.validate_required([:timeout])
       |> Changeset.validate_number(:timeout, greater_than: 0, less_than_or_equal_to: 60)
+    end
+  end
+
+  defmodule AutoConfigSettings do
+    @moduledoc false
+
+    use Ecto.Schema
+
+    alias Ecto.Changeset
+
+    embedded_schema do
+      field :timezone, :string, default: "UTC"
+    end
+
+    def to_struct(struct, params) do
+      struct |> changeset(params) |> Changeset.apply_action(:validate)
+    end
+
+    def changeset(struct, params) do
+      struct
+      |> Changeset.cast(params, [:timezone])
+      |> Changeset.validate_required([:timezone])
+      |> Changeset.validate_inclusion(:timezone, Tzdata.zone_list())
     end
   end
 
@@ -175,8 +199,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
           <div>
             <.button
               class="bg-white !text-gray-800 hover:bg-gray-50 dark:!text-white dark:bg-gray-700 dark:hover:bg-gray-600 border border-gray-200 dark:border-gray-600"
-              phx-click="auto-configure"
-              phx-disable-with="Auto Configuring..."
+              phx-click={show_modal2("auto-config-settings")}
             >
               <.icon name="hero-wrench" class="w-4 h-4" />Auto Configure
             </.button>
@@ -397,6 +420,34 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
       </.simple_form>
     </.modal2>
 
+    <.modal2 id="auto-config-settings">
+      <:header>Auto configure</:header>
+      <.simple_form
+        id="auto-config-form"
+        for={@auto_config_form}
+        phx-change="validate-auto-config"
+        phx-submit="auto-configure"
+        class="space-y-4"
+      >
+        <.input
+          field={@auto_config_form[:timezone]}
+          type="select"
+          options={Tzdata.zone_list()}
+          label="Timezone"
+        />
+        <div class="flex items-center space-x-5">
+          <.button
+            type="button"
+            class="w-full bg-white !text-gray-800 dark:!text-white dark:bg-gray-800 border dark:border-gray-600"
+            phx-click={hide_modal2("auto-config-settings")}
+          >
+            Cancel
+          </.button>
+          <.button class="w-full" type="submit" phx-disable-with="Configuring...">Run</.button>
+        </div>
+      </.simple_form>
+    </.modal2>
+
     <.modal2
       :if={@auto_config_result}
       id="auto-config-result"
@@ -444,6 +495,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
       |> assign_discover_settings(%DiscoverSettings{timeout: 2})
       |> assign(devices: [], auth_form: to_form(%{"username" => nil, "password" => nil}))
       |> assign(selected_device: nil, auto_config_result: nil)
+      |> assign_auto_config_settings(%AutoConfigSettings{timezone: browser_timezone(socket)})
 
     {:ok, socket}
   end
@@ -559,30 +611,68 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
       url: selected_device.device.address,
       storage_config: storage_config,
       stream_config: stream_config,
-      credentials: %{username: username, password: password}
+      credentials: %{username: username, password: password},
+      timezone: socket.assigns.auto_config_settings.timezone
     })
     |> redirect(to: ~p"/devices/new")
     |> then(&{:noreply, &1})
   end
 
-  def handle_event("auto-configure", _params, socket) do
-    camera_details = socket.assigns.selected_device
-    devices = socket.assigns.devices
+  def handle_event("validate-auto-config", %{"auto_config" => params}, socket) do
+    form =
+      socket.assigns.auto_config_settings
+      |> AutoConfigSettings.changeset(params)
+      |> Map.put(:action, :validate)
+      |> to_form(as: :auto_config)
 
-    auto_config_result = Devices.Onvif.auto_configure(camera_details.device)
-    camera_details = camera_details |> get_stream_profiles() |> set_streams_form()
+    {:noreply, assign(socket, auto_config_form: form)}
+  end
+
+  def handle_event("auto-configure", %{"auto_config" => params}, socket) do
+    case AutoConfigSettings.to_struct(socket.assigns.auto_config_settings, params) do
+      {:ok, settings} ->
+        {:noreply, socket |> assign_auto_config_settings(settings) |> run_auto_configure()}
+
+      {:error, changeset} ->
+        {:noreply, assign(socket, auto_config_form: to_form(changeset, as: :auto_config))}
+    end
+  end
+
+  def handle_event("close-auto-config-result", _params, socket) do
+    {:noreply, assign(socket, auto_config_result: nil)}
+  end
+
+  defp run_auto_configure(socket) do
+    %{selected_device: camera_details, devices: devices, auto_config_settings: settings} =
+      socket.assigns
+
+    auto_config_result =
+      Devices.Onvif.auto_configure(camera_details.device, timezone: settings.timezone)
+
+    camera_details =
+      camera_details
+      |> get_system_date_and_time()
+      |> get_ntp()
+      |> get_stream_profiles()
+      |> set_streams_form()
 
     idx = Enum.find_index(devices, &(&1.id == camera_details.id))
     devices = List.replace_at(devices, idx, camera_details)
 
     socket
+    |> push_event("js-exec", %{to: "#auto-config-settings", attr: "data-cancel"})
     |> assign(selected_device: camera_details, devices: devices)
     |> assign(auto_config_result: auto_config_result)
-    |> then(&{:noreply, &1})
   end
 
-  def handle_event("close-auto-config-result", _params, socket) do
-    {:noreply, assign(socket, auto_config_result: nil)}
+  defp browser_timezone(socket) do
+    timezone = if connected?(socket), do: get_connect_params(socket)["timezone"]
+    if timezone in Tzdata.zone_list(), do: timezone, else: "UTC"
+  end
+
+  defp assign_auto_config_settings(socket, settings) do
+    form = settings |> AutoConfigSettings.changeset(%{}) |> to_form(as: :auto_config)
+    assign(socket, auto_config_settings: settings, auto_config_form: form)
   end
 
   # nil results are steps that were not run
@@ -607,6 +697,17 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
 
       {:error, reason} ->
         Logger.error("Failed to get network interfaces for camera #{inspect(reason)}")
+        camera_details
+    end
+  end
+
+  defp get_system_date_and_time(%{device: device} = camera_details) do
+    case ExOnvif.Devices.get_system_date_and_time(device) do
+      {:ok, date_time} ->
+        %{camera_details | device: %{device | system_date_time: date_time}}
+
+      {:error, reason} ->
+        Logger.error("Failed to get date and time settings for camera #{inspect(reason)}")
         camera_details
     end
   end

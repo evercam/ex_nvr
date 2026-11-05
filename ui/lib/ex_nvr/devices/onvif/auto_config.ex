@@ -5,6 +5,7 @@ defmodule ExNVR.Devices.Onvif.AutoConfig do
   @type result :: :ok | {:error, term()} | nil
 
   @type t :: %__MODULE__{
+          date_time: result(),
           main_stream: result(),
           sub_stream: result(),
           third_stream: result(),
@@ -12,5 +13,5 @@ defmodule ExNVR.Devices.Onvif.AutoConfig do
           osd: result()
         }
 
-  defstruct [:main_stream, :sub_stream, :third_stream, :image_settings, :osd]
+  defstruct [:date_time, :main_stream, :sub_stream, :third_stream, :image_settings, :osd]
 end

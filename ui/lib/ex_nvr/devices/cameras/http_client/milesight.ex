@@ -7,7 +7,17 @@ defmodule ExNVR.Devices.Cameras.HttpClient.Milesight do
 
   require Logger
 
-  alias ExNVR.Devices.Cameras.{DeviceInfo, ImageSettings, OSD, RemoteRecording, StreamProfile}
+  alias __MODULE__.Timezone
+
+  alias ExNVR.Devices.Cameras.{
+    DateTimeSettings,
+    DeviceInfo,
+    ImageSettings,
+    OSD,
+    RemoteRecording,
+    StreamProfile
+  }
+
   alias ExNVR.HTTP
 
   @admin_path "/cgi-bin/admin/admin.cgi"
@@ -176,6 +186,33 @@ defmodule ExNVR.Devices.Cameras.HttpClient.Milesight do
     else
       {:ok, body} -> {:error, {:invalid_response, body}}
       error -> error
+    end
+  end
+
+  @impl true
+  def set_date_time(url, %DateTimeSettings{} = settings, opts) do
+    case Timezone.find(settings.timezone) do
+      {:ok, {timezone, zone_name, dst?}} ->
+        body = %{
+          timeZoneTz: timezone,
+          zoneNameTz: zone_name,
+          dayLight: if(dst?, do: 1, else: 0),
+          timeType: 0,
+          ntpServer: settings.ntp_server,
+          ntpSyncEnable: 1,
+          ntpInterval: 60
+        }
+
+        (url <> @admin_path <> "?action=set.system.datetime&format=json")
+        |> HTTP.post(body, opts)
+        |> handle_http_response(& &1)
+        |> case do
+          {:ok, _body} -> :ok
+          error -> error
+        end
+
+      :error ->
+        {:error, {:unsupported_timezone, settings.timezone}}
     end
   end
 
