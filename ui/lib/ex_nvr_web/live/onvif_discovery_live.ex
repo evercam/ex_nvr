@@ -14,7 +14,9 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
     sub_stream: "Sub stream",
     third_stream: "Third stream",
     image_settings: "Image settings",
-    osd: "OSD"
+    osd: "OSD",
+    sd_card: "SD card",
+    sd_recording: "SD recording"
   ]
 
   defmodule DiscoverSettings do

@@ -4,7 +4,7 @@ defmodule ExNVR.Devices.Onvif do
   require Logger
 
   alias __MODULE__.AutoConfig
-  alias ExNVR.Devices.Cameras.{DateTimeSettings, ImageSettings, OSD, Timezones}
+  alias ExNVR.Devices.Cameras.{DateTimeSettings, ImageSettings, OSD, RecordingSettings, Timezones}
   alias ExNVR.Devices.Cameras.HttpClient.Milesight
   alias ExNVR.Model.Device
   alias ExOnvif.Devices.{NTP, SystemDateAndTime}
@@ -104,6 +104,8 @@ defmodule ExNVR.Devices.Onvif do
       osd = %OSD{position: :top_left, date_format: date_format, font_size: :smallest}
       Milesight.set_osd(onvif_device.address, osd, opts)
     end)
+    |> configure_milesight(:sd_card, fn -> prepare_sd_card(onvif_device.address, opts) end)
+    |> configure_sd_recording(onvif_device.address, opts)
   end
 
   defp do_auto_configure(auto_config, %{manufacturer: vendor} = onvif_device, _opts) do
@@ -169,6 +171,25 @@ defmodule ExNVR.Devices.Onvif do
         Map.put(auto_config, field, error)
     end
   end
+
+  # format only unformatted cards, the camera keeps formatting in background
+  defp prepare_sd_card(url, opts) do
+    case Milesight.sd_card_status(url, opts) do
+      {:ok, status} when status in [:ready, :formatting] -> :ok
+      {:ok, :unformatted} -> Milesight.format_sd_card(url, opts)
+      {:ok, :not_inserted} -> {:error, :no_sd_card}
+      {:ok, status} -> {:error, {:sd_card, status}}
+      error -> error
+    end
+  end
+
+  defp configure_sd_recording(%AutoConfig{sd_card: :ok} = auto_config, url, opts) do
+    configure_milesight(auto_config, :sd_recording, fn ->
+      Milesight.set_recording_settings(url, %RecordingSettings{}, opts)
+    end)
+  end
+
+  defp configure_sd_recording(auto_config, _url, _opts), do: auto_config
 
   defp put_streams_error(auto_config, reason) do
     %{

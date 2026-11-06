@@ -6,9 +6,13 @@ defmodule ExNVR.Devices.Cameras.HttpClient do
     DeviceInfo,
     ImageSettings,
     OSD,
+    RecordingSettings,
     RemoteRecording,
     StreamProfile
   }
+
+  @type sd_card_status ::
+          :not_inserted | :unformatted | :formatting | :ready | :bad | :unavailable
 
   @type url :: binary()
   @type camera_opts :: Keyword.t()
@@ -61,6 +65,21 @@ defmodule ExNVR.Devices.Cameras.HttpClient do
   """
   @callback set_date_time(url(), DateTimeSettings.t(), camera_opts()) :: :ok | error()
 
+  @doc """
+  Get the status of the SD card.
+  """
+  @callback sd_card_status(url(), camera_opts()) :: {:ok, sd_card_status()} | error()
+
+  @doc """
+  Format the SD card, the camera may continue formatting after the call returns.
+  """
+  @callback format_sd_card(url(), camera_opts()) :: :ok | error()
+
+  @doc """
+  Set the recording settings on the camera storage.
+  """
+  @callback set_recording_settings(url(), RecordingSettings.t(), camera_opts()) :: :ok | error()
+
   @optional_callbacks fetch_lpr_event: 2,
                       device_info: 2,
                       stream_profiles: 2,
@@ -69,7 +88,10 @@ defmodule ExNVR.Devices.Cameras.HttpClient do
                       download_recording: 4,
                       set_image_settings: 3,
                       set_osd: 3,
-                      set_date_time: 3
+                      set_date_time: 3,
+                      sd_card_status: 2,
+                      format_sd_card: 2,
+                      set_recording_settings: 3
 
   defmacro __using__(_opts) do
     quote location: :keep do
@@ -102,6 +124,15 @@ defmodule ExNVR.Devices.Cameras.HttpClient do
       @impl true
       def set_date_time(_url, _settings, _opts), do: {:error, :not_implemented}
 
+      @impl true
+      def sd_card_status(_url, _opts), do: {:error, :not_implemented}
+
+      @impl true
+      def format_sd_card(_url, _opts), do: {:error, :not_implemented}
+
+      @impl true
+      def set_recording_settings(_url, _settings, _opts), do: {:error, :not_implemented}
+
       defoverridable fetch_lpr_event: 2,
                      device_info: 2,
                      stream_profiles: 2,
@@ -110,7 +141,10 @@ defmodule ExNVR.Devices.Cameras.HttpClient do
                      download_recording: 4,
                      set_image_settings: 3,
                      set_osd: 3,
-                     set_date_time: 3
+                     set_date_time: 3,
+                     sd_card_status: 2,
+                     format_sd_card: 2,
+                     set_recording_settings: 3
     end
   end
 end

@@ -14,6 +14,7 @@ defmodule ExNVR.Devices.Cameras.HttpClient.Milesight do
     DeviceInfo,
     ImageSettings,
     OSD,
+    RecordingSettings,
     RemoteRecording,
     StreamProfile
   }
@@ -213,6 +214,52 @@ defmodule ExNVR.Devices.Cameras.HttpClient.Milesight do
 
       :error ->
         {:error, {:unsupported_timezone, settings.timezone}}
+    end
+  end
+
+  @impl true
+  def sd_card_status(url, opts) do
+    (url <> @operator_path <> "?action=get.storage.settings&format=json")
+    |> HTTP.get(opts)
+    |> handle_http_response(&decode_json/1)
+    |> case do
+      {:ok, %{"sdcardStatus" => status, "sdcardDiskStatus" => disk_status}} ->
+        {:ok, map_sd_card_status(status, disk_status)}
+
+      {:ok, body} ->
+        {:error, {:invalid_response, body}}
+
+      error ->
+        error
+    end
+  end
+
+  @impl true
+  def format_sd_card(url, opts) do
+    # type 1 is ext4
+    (url <> @operator_path <> "?action=set.storage.format&format=json")
+    |> HTTP.post(%{index: 0, type: 1}, opts)
+    |> handle_http_response(& &1)
+    |> case do
+      {:ok, _body} -> :ok
+      error -> error
+    end
+  end
+
+  @impl true
+  def set_recording_settings(url, %RecordingSettings{schedule: :always} = settings, opts) do
+    body = %{
+      recycleStorageEnable: if(settings.overwrite, do: 1, else: 0),
+      streamType: stream_type(settings.stream),
+      scheduleList: Enum.map(0..6, &%{scheduleIndex: &1, schedule: "00:00:24:00;"})
+    }
+
+    (url <> @operator_path <> "?action=set.record.settings&format=json")
+    |> HTTP.post(body, opts)
+    |> handle_http_response(& &1)
+    |> case do
+      {:ok, _body} -> :ok
+      error -> error
     end
   end
 
@@ -496,6 +543,18 @@ defmodule ExNVR.Devices.Cameras.HttpClient.Milesight do
   defp bitrate_mode_to_integer(:cbr), do: 0
   defp bitrate_mode_to_integer(:vbr), do: 1
   defp bitrate_mode_to_integer(_other), do: 0
+
+  defp map_sd_card_status(0, _disk_status), do: :not_inserted
+  defp map_sd_card_status(8, _disk_status), do: :bad
+  defp map_sd_card_status(_status, 0), do: :unformatted
+  defp map_sd_card_status(_status, 1), do: :ready
+  defp map_sd_card_status(_status, 3), do: :formatting
+  defp map_sd_card_status(_status, 4), do: :bad
+  defp map_sd_card_status(_status, _disk_status), do: :unavailable
+
+  defp stream_type(:main), do: 0
+  defp stream_type(:sub), do: 1
+  defp stream_type(:third), do: 2
 
   defp osd_position(:top_left), do: 0
   defp osd_position(:top_right), do: 1
