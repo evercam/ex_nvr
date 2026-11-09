@@ -166,6 +166,60 @@ defmodule ExNVR.Devices.OnvifTest do
     end
   end
 
+  describe "auto_configure/2 steps" do
+    setup do
+      %{device: %ExOnvif.Device{manufacturer: "Milesight Technology Co.,Ltd."}}
+    end
+
+    test "supported steps", %{device: device} do
+      assert Onvif.auto_config_steps(device) == [
+               :date_time,
+               :streams,
+               :image_settings,
+               :osd,
+               :sd_card
+             ]
+
+      assert Onvif.auto_config_steps(@device) == [:date_time, :streams]
+
+      assert Onvif.auto_config_steps(%ExOnvif.Device{manufacturer: "AXIS"}) == [
+               :date_time,
+               :streams
+             ]
+    end
+
+    test "run only the selected steps", %{device: device} do
+      reject(Milesight, :set_date_time, 3)
+      reject(ExOnvif.Media2, :get_profiles, 1)
+      reject(Milesight, :set_image_settings, 3)
+      reject(Milesight, :sd_card_status, 2)
+      reject(Milesight, :set_recording_settings, 3)
+      expect(Milesight, :set_osd, fn _url, _osd, _opts -> :ok end)
+
+      assert Onvif.auto_configure(device, timezone: "Europe/Dublin", steps: [:osd]) ==
+               %AutoConfig{osd: :ok}
+    end
+
+    test "skip SD card recording", %{device: device} do
+      stub(Milesight, :set_date_time, fn _url, _settings, _opts -> :ok end)
+      stub(Milesight, :set_image_settings, fn _url, _settings, _opts -> :ok end)
+      stub(Milesight, :set_osd, fn _url, _osd, _opts -> :ok end)
+      reject(Milesight, :sd_card_status, 2)
+      reject(Milesight, :set_recording_settings, 3)
+
+      assert %AutoConfig{date_time: :ok, osd: :ok, sd_card: nil, sd_recording: nil} =
+               Onvif.auto_configure(device,
+                 timezone: "Europe/Dublin",
+                 steps: [:date_time, :streams, :image_settings, :osd]
+               )
+    end
+
+    test "skip streams on other vendors" do
+      reject(ExOnvif.Media2, :get_profiles, 1)
+      assert Onvif.auto_configure(@device, steps: []) == %AutoConfig{}
+    end
+  end
+
   test "timezones" do
     assert {:ok, "EST5EDT,M3.2.0,M11.1.0"} = Timezones.posix("America/New_York")
     assert {:ok, "IST-5:30"} = Timezones.posix("Asia/Kolkata")
