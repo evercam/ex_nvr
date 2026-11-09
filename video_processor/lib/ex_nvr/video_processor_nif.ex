@@ -9,6 +9,8 @@ defmodule ExNVR.AV.VideoProcessor.NIF do
     :ok = :erlang.load_nif(path, 0)
   end
 
+  def set_log_level(_level), do: :erlang.nif_error(:undef)
+
   def new_encoder(_codec, _params), do: :erlang.nif_error(:undef)
 
   def new_decoder(_codec, _out_width, _out_height, _out_format, _pad?),

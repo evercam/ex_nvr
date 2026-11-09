@@ -1,5 +1,6 @@
 #include "video_processor.h"
 #include <libavutil/imgutils.h>
+#include <libavutil/log.h>
 
 ErlNifResourceType *encoder_resource_type;
 ErlNifResourceType *decoder_resource_type;
@@ -627,7 +628,18 @@ void free_converter(ErlNifEnv *env, void *obj) {
   }
 }
 
+ERL_NIF_TERM set_log_level(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
+  int level;
+  if (argc != 1 || !enif_get_int(env, argv[0], &level)) {
+    return nif_raise(env, "invalid_log_level");
+  }
+
+  av_log_set_level(level);
+  return enif_make_atom(env, "ok");
+}
+
 static ErlNifFunc funcs[] = {
+  {"set_log_level", 1, set_log_level},
   {"new_encoder", 2, new_encoder},
   {"new_decoder", 5, new_decoder},
   {"new_converter", 7, new_converter},
