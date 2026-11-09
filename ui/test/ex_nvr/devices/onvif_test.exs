@@ -3,7 +3,7 @@ defmodule ExNVR.Devices.OnvifTest do
 
   import Mimic
 
-  alias ExNVR.Devices.Cameras.{DateTimeSettings, Timezones}
+  alias ExNVR.Devices.Cameras.{DateTimeSettings, RecordingSettings, Timezones}
   alias ExNVR.Devices.Cameras.HttpClient.Milesight
   alias ExNVR.Devices.Onvif
   alias ExNVR.Devices.Onvif.AutoConfig
@@ -18,6 +18,8 @@ defmodule ExNVR.Devices.OnvifTest do
 
   setup do
     stub(ExOnvif.Media2, :get_profiles, fn _device -> {:error, :unavailable} end)
+    stub(Milesight, :sd_card_status, fn _url, _opts -> {:ok, :ready} end)
+    stub(Milesight, :set_recording_settings, fn _url, _settings, _opts -> :ok end)
     :ok
   end
 
@@ -109,6 +111,113 @@ defmodule ExNVR.Devices.OnvifTest do
     end)
 
     assert %AutoConfig{date_time: :ok} = Onvif.auto_configure(device, timezone: "US/Central")
+  end
+
+  describe "auto_configure/2 Milesight SD card" do
+    setup do
+      stub(Milesight, :set_date_time, fn _url, _settings, _opts -> :ok end)
+      stub(Milesight, :set_image_settings, fn _url, _settings, _opts -> :ok end)
+      stub(Milesight, :set_osd, fn _url, _osd, _opts -> :ok end)
+
+      %{device: %ExOnvif.Device{manufacturer: "Milesight Technology Co.,Ltd."}}
+    end
+
+    test "format unformatted card and record 24/7", %{device: device} do
+      expect(Milesight, :sd_card_status, fn _url, _opts -> {:ok, :unformatted} end)
+      expect(Milesight, :format_sd_card, fn _url, _opts -> :ok end)
+
+      expect(Milesight, :set_recording_settings, fn _url, settings, _opts ->
+        assert %RecordingSettings{stream: :main, schedule: :always, overwrite: true} = settings
+        :ok
+      end)
+
+      assert %AutoConfig{sd_card: :ok, sd_recording: :ok} = Onvif.auto_configure(device)
+    end
+
+    test "do not format a formatted card", %{device: device} do
+      reject(Milesight, :format_sd_card, 2)
+      assert %AutoConfig{sd_card: :ok, sd_recording: :ok} = Onvif.auto_configure(device)
+    end
+
+    test "no SD card", %{device: device} do
+      expect(Milesight, :sd_card_status, fn _url, _opts -> {:ok, :not_inserted} end)
+      reject(Milesight, :format_sd_card, 2)
+      reject(Milesight, :set_recording_settings, 3)
+
+      assert %AutoConfig{sd_card: {:error, :no_sd_card}, sd_recording: nil} =
+               Onvif.auto_configure(device)
+    end
+
+    test "bad SD card", %{device: device} do
+      expect(Milesight, :sd_card_status, fn _url, _opts -> {:ok, :bad} end)
+      reject(Milesight, :set_recording_settings, 3)
+
+      assert %AutoConfig{sd_card: {:error, {:sd_card, :bad}}, sd_recording: nil} =
+               Onvif.auto_configure(device)
+    end
+
+    test "format error", %{device: device} do
+      expect(Milesight, :sd_card_status, fn _url, _opts -> {:ok, :unformatted} end)
+      expect(Milesight, :format_sd_card, fn _url, _opts -> {:error, {500, "boom"}} end)
+      reject(Milesight, :set_recording_settings, 3)
+
+      assert %AutoConfig{sd_card: {:error, {500, "boom"}}, sd_recording: nil} =
+               Onvif.auto_configure(device)
+    end
+  end
+
+  describe "auto_configure/2 steps" do
+    setup do
+      %{device: %ExOnvif.Device{manufacturer: "Milesight Technology Co.,Ltd."}}
+    end
+
+    test "supported steps", %{device: device} do
+      assert Onvif.auto_config_steps(device) == [
+               :date_time,
+               :streams,
+               :image_settings,
+               :osd,
+               :sd_card
+             ]
+
+      assert Onvif.auto_config_steps(@device) == [:date_time, :streams]
+
+      assert Onvif.auto_config_steps(%ExOnvif.Device{manufacturer: "AXIS"}) == [
+               :date_time,
+               :streams
+             ]
+    end
+
+    test "run only the selected steps", %{device: device} do
+      reject(Milesight, :set_date_time, 3)
+      reject(ExOnvif.Media2, :get_profiles, 1)
+      reject(Milesight, :set_image_settings, 3)
+      reject(Milesight, :sd_card_status, 2)
+      reject(Milesight, :set_recording_settings, 3)
+      expect(Milesight, :set_osd, fn _url, _osd, _opts -> :ok end)
+
+      assert Onvif.auto_configure(device, timezone: "Europe/Dublin", steps: [:osd]) ==
+               %AutoConfig{osd: :ok}
+    end
+
+    test "skip SD card recording", %{device: device} do
+      stub(Milesight, :set_date_time, fn _url, _settings, _opts -> :ok end)
+      stub(Milesight, :set_image_settings, fn _url, _settings, _opts -> :ok end)
+      stub(Milesight, :set_osd, fn _url, _osd, _opts -> :ok end)
+      reject(Milesight, :sd_card_status, 2)
+      reject(Milesight, :set_recording_settings, 3)
+
+      assert %AutoConfig{date_time: :ok, osd: :ok, sd_card: nil, sd_recording: nil} =
+               Onvif.auto_configure(device,
+                 timezone: "Europe/Dublin",
+                 steps: [:date_time, :streams, :image_settings, :osd]
+               )
+    end
+
+    test "skip streams on other vendors" do
+      reject(ExOnvif.Media2, :get_profiles, 1)
+      assert Onvif.auto_configure(@device, steps: []) == %AutoConfig{}
+    end
   end
 
   test "timezones" do

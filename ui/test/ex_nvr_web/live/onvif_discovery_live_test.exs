@@ -303,6 +303,34 @@ defmodule ExNVRWeb.OnvifDiscoveryLiveTest do
       assert has_element?(lv, "#stream_selection_form")
     end
 
+    test "Auto configure runs directly when no settings are needed", %{conn: conn} do
+      expect(ExNVR.Devices.Onvif, :auto_configure, fn _device, opts ->
+        assert opts[:steps] == [:streams]
+        %AutoConfig{main_stream: :ok}
+      end)
+
+      stub(ExOnvif.Media2, :get_profiles, fn _device -> {:error, :unavailable} end)
+      stub(ExOnvif.Devices, :get_system_date_and_time, fn _device -> {:error, :unavailable} end)
+
+      {:ok, lv, _html} = live(conn, ~p"/onvif-discovery")
+      lv |> element("button", "Scan Network") |> render_click()
+
+      lv
+      |> element("#auth-form")
+      |> render_submit(%{username: "admin", password: "pass", id: "192.168.1.200"})
+
+      lv
+      |> element("#192\\.168\\.1\\.200 button", "View Details")
+      |> render_click()
+
+      lv |> form("#auto-config-steps", %{steps: ["", "streams"]}) |> render_change()
+      refute has_element?(lv, "#auto-config-form select")
+
+      lv |> element("#auto-config-button") |> render_click()
+      assert has_element?(lv, "#auto-config-main_stream", "Success")
+      assert has_element?(lv, "#auto-config-date_time", "Skipped")
+    end
+
     test "Add to NVR", %{conn: conn} do
       {:ok, lv, _html} = live(conn, ~p"/onvif-discovery")
       lv |> element("button", "Scan Network") |> render_click()
@@ -338,11 +366,11 @@ defmodule ExNVRWeb.OnvifDiscoveryLiveTest do
     test "Auto configure shows the result of each step", %{conn: conn} do
       expect(ExNVR.Devices.Onvif, :auto_configure, fn _device, opts ->
         assert opts[:timezone] == "Asia/Kolkata"
+        assert opts[:steps] == [:date_time]
 
         %AutoConfig{
           main_stream: :ok,
           sub_stream: {:error, %{status: 500, body: "boom"}},
-          image_settings: :ok,
           date_time: :ok
         }
       end)
@@ -368,6 +396,19 @@ defmodule ExNVRWeb.OnvifDiscoveryLiveTest do
 
       refute has_element?(lv, "#auto-config-result")
 
+      # only the steps supported by the camera are listed, all checked
+      assert has_element?(lv, "#auto-config-steps input[value=date_time][checked]")
+      assert has_element?(lv, "#auto-config-steps input[value=streams][checked]")
+      refute has_element?(lv, "#auto-config-steps input[value=osd]")
+
+      lv |> form("#auto-config-steps", %{steps: [""]}) |> render_change()
+      assert has_element?(lv, "#auto-config-button[disabled]")
+
+      # unknown steps are ignored
+      render_change(lv, "select-auto-config-steps", %{steps: ["", "date_time", "unknown"]})
+      refute has_element?(lv, "#auto-config-button[disabled]")
+      refute has_element?(lv, "#auto-config-steps input[value=streams][checked]")
+
       # defaults to the browser timezone
       assert has_element?(lv, "#auto-config-form option[selected][value='Europe/Dublin']")
 
@@ -384,11 +425,12 @@ defmodule ExNVRWeb.OnvifDiscoveryLiveTest do
       |> render_submit(%{auto_config: %{timezone: "Asia/Kolkata"}})
 
       assert has_element?(lv, "#auto-config-main_stream", "Success")
-      assert has_element?(lv, "#auto-config-image_settings", "Success")
       assert has_element?(lv, "#auto-config-date_time", "Success")
       assert has_element?(lv, "#auto-config-sub_stream", "Failed")
       assert has_element?(lv, "#auto-config-sub_stream details pre", "boom")
-      refute has_element?(lv, "#auto-config-third_stream")
+      assert has_element?(lv, "#auto-config-third_stream", "Skipped")
+      # not supported by the camera
+      refute has_element?(lv, "#auto-config-image_settings")
       refute has_element?(lv, "#auto-config-osd")
 
       render_click(lv, "close-auto-config-result")

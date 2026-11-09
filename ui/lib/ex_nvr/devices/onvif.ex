@@ -4,7 +4,7 @@ defmodule ExNVR.Devices.Onvif do
   require Logger
 
   alias __MODULE__.AutoConfig
-  alias ExNVR.Devices.Cameras.{DateTimeSettings, ImageSettings, OSD, Timezones}
+  alias ExNVR.Devices.Cameras.{DateTimeSettings, ImageSettings, OSD, RecordingSettings, Timezones}
   alias ExNVR.Devices.Cameras.HttpClient.Milesight
   alias ExNVR.Model.Device
   alias ExOnvif.Devices.{NTP, SystemDateAndTime}
@@ -70,48 +70,86 @@ defmodule ExNVR.Devices.Onvif do
     do_get_recordings(onvif_device)
   end
 
+  @type step :: :date_time | :streams | :image_settings | :osd | :sd_card
+
+  @doc """
+  Get the auto configuration steps supported by the camera.
+  """
+  @spec auto_config_steps(ExOnvif.Device.t()) :: [step()]
+  def auto_config_steps(%{manufacturer: vendor}) when vendor in @milesight_vendors,
+    do: [:date_time, :streams, :image_settings, :osd, :sd_card]
+
+  def auto_config_steps(_onvif_device), do: [:date_time, :streams]
+
   @doc """
   Auto configure cameras.
 
   Options:
     * `timezone` - IANA timezone of the camera, the date & time step is skipped if not provided.
+    * `steps` - the steps to run, defaults to `auto_config_steps/1`.
   """
   @spec auto_configure(ExOnvif.Device.t(), Keyword.t()) :: AutoConfig.t()
   def auto_configure(onvif_device, opts \\ []) do
+    opts = Keyword.put_new_lazy(opts, :steps, fn -> auto_config_steps(onvif_device) end)
+
     %AutoConfig{}
-    |> configure_date_time(onvif_device, opts[:timezone])
+    |> maybe_configure(
+      opts[:steps],
+      :date_time,
+      &configure_date_time(&1, onvif_device, opts[:timezone])
+    )
     |> do_auto_configure(onvif_device, opts)
   end
 
-  defp do_auto_configure(auto_config, %{manufacturer: "AXIS"} = onvif_device, _opts) do
+  defp do_auto_configure(auto_config, %{manufacturer: "AXIS"} = onvif_device, opts) do
     Logger.info("Auto configure AXIS camera")
-    maybe_create_and_configure_profiles(auto_config, onvif_device)
+
+    maybe_configure(
+      auto_config,
+      opts[:steps],
+      :streams,
+      &maybe_create_and_configure_profiles(&1, onvif_device)
+    )
   end
 
   defp do_auto_configure(auto_config, %{manufacturer: vendor} = onvif_device, config_opts)
        when vendor in @milesight_vendors do
     Logger.info("Auto configure Milesight camera")
+    steps = config_opts[:steps]
     opts = [username: onvif_device.username, password: onvif_device.password]
     date_format = if Timezones.country(config_opts[:timezone]) == "US", do: :mdy, else: :dmy
 
     auto_config
-    |> do_configure_profiles(onvif_device)
-    |> configure_milesight(:image_settings, fn ->
-      settings = %ImageSettings{brightness: 50, contrast: 65, saturation: 60}
-      Milesight.set_image_settings(onvif_device.address, settings, opts)
+    |> maybe_configure(steps, :streams, &do_configure_profiles(&1, onvif_device))
+    |> maybe_configure(steps, :image_settings, fn auto_config ->
+      configure_milesight(auto_config, :image_settings, fn ->
+        settings = %ImageSettings{brightness: 50, contrast: 65, saturation: 60}
+        Milesight.set_image_settings(onvif_device.address, settings, opts)
+      end)
     end)
-    |> configure_milesight(:osd, fn ->
-      osd = %OSD{position: :top_left, date_format: date_format, font_size: :smallest}
-      Milesight.set_osd(onvif_device.address, osd, opts)
+    |> maybe_configure(steps, :osd, fn auto_config ->
+      configure_milesight(auto_config, :osd, fn ->
+        osd = %OSD{position: :top_left, date_format: date_format, font_size: :smallest}
+        Milesight.set_osd(onvif_device.address, osd, opts)
+      end)
+    end)
+    |> maybe_configure(steps, :sd_card, fn auto_config ->
+      auto_config
+      |> configure_milesight(:sd_card, fn -> prepare_sd_card(onvif_device.address, opts) end)
+      |> configure_sd_recording(onvif_device.address, opts)
     end)
   end
 
-  defp do_auto_configure(auto_config, %{manufacturer: vendor} = onvif_device, _opts) do
+  defp do_auto_configure(auto_config, %{manufacturer: vendor} = onvif_device, opts) do
     Logger.info("Auto configure #{vendor} camera")
-    do_configure_profiles(auto_config, onvif_device)
+    maybe_configure(auto_config, opts[:steps], :streams, &do_configure_profiles(&1, onvif_device))
   end
 
   defp do_auto_configure(auto_config, _onvif_device, _opts), do: auto_config
+
+  defp maybe_configure(auto_config, steps, step, config_fn) do
+    if step in steps, do: config_fn.(auto_config), else: auto_config
+  end
 
   defp configure_date_time(auto_config, _onvif_device, nil), do: auto_config
 
@@ -169,6 +207,25 @@ defmodule ExNVR.Devices.Onvif do
         Map.put(auto_config, field, error)
     end
   end
+
+  # format only unformatted cards, the camera keeps formatting in background
+  defp prepare_sd_card(url, opts) do
+    case Milesight.sd_card_status(url, opts) do
+      {:ok, status} when status in [:ready, :formatting] -> :ok
+      {:ok, :unformatted} -> Milesight.format_sd_card(url, opts)
+      {:ok, :not_inserted} -> {:error, :no_sd_card}
+      {:ok, status} -> {:error, {:sd_card, status}}
+      error -> error
+    end
+  end
+
+  defp configure_sd_recording(%AutoConfig{sd_card: :ok} = auto_config, url, opts) do
+    configure_milesight(auto_config, :sd_recording, fn ->
+      Milesight.set_recording_settings(url, %RecordingSettings{}, opts)
+    end)
+  end
+
+  defp configure_sd_recording(auto_config, _url, _opts), do: auto_config
 
   defp put_streams_error(auto_config, reason) do
     %{

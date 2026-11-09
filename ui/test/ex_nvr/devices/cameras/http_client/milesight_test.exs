@@ -1,7 +1,14 @@
 defmodule ExNVR.Devices.Cameras.HttpClient.MilesightTest do
   use ExUnit.Case, async: true
 
-  alias ExNVR.Devices.Cameras.{DateTimeSettings, ImageSettings, OSD, RemoteRecording}
+  alias ExNVR.Devices.Cameras.{
+    DateTimeSettings,
+    ImageSettings,
+    OSD,
+    RecordingSettings,
+    RemoteRecording
+  }
+
   alias ExNVR.Devices.Cameras.HttpClient.{Axis, Milesight}
   alias ExNVR.Devices.Cameras.HttpClient.Milesight.Timezone
   alias Plug.Conn
@@ -297,6 +304,76 @@ defmodule ExNVR.Devices.Cameras.HttpClient.MilesightTest do
     assert :error = Timezone.find("Mars/Olympus")
   end
 
+  describe "sd_card_status/2" do
+    for {status, disk_status, expected} <- [
+          {0, 2, :not_inserted},
+          {8, 1, :bad},
+          {3, 0, :unformatted},
+          {3, 1, :ready},
+          {3, 3, :formatting},
+          {3, 4, :bad},
+          {3, 5, :unavailable}
+        ] do
+      test "sdcardStatus: #{status}, sdcardDiskStatus: #{disk_status}", %{
+        bypass: bypass,
+        url: url
+      } do
+        Bypass.expect_once(bypass, "GET", "/cgi-bin/operator/operator.cgi", fn conn ->
+          assert %{"action" => "get.storage.settings"} = URI.decode_query(conn.query_string)
+
+          body =
+            Jason.encode!(%{
+              sdcardStatus: unquote(status),
+              sdcardDiskStatus: unquote(disk_status),
+              nasList: []
+            })
+
+          Conn.resp(conn, 200, body)
+        end)
+
+        assert {:ok, unquote(expected)} = Milesight.sd_card_status(url, [])
+      end
+    end
+
+    test "return error on http failure", %{bypass: bypass, url: url} do
+      Bypass.expect_once(bypass, "GET", "/cgi-bin/operator/operator.cgi", fn conn ->
+        Conn.resp(conn, 401, "unauthorized")
+      end)
+
+      assert {:error, {401, "unauthorized"}} = Milesight.sd_card_status(url, [])
+    end
+  end
+
+  test "format_sd_card/2 formats the SD card as ext4", %{bypass: bypass, url: url} do
+    Bypass.expect_once(bypass, "POST", "/cgi-bin/operator/operator.cgi", fn conn ->
+      assert %{"action" => "set.storage.format"} = URI.decode_query(conn.query_string)
+      {:ok, body, conn} = Conn.read_body(conn)
+      assert %{"index" => 0, "type" => 1} == Jason.decode!(body)
+      Conn.resp(conn, 200, "{}")
+    end)
+
+    assert :ok = Milesight.format_sd_card(url, [])
+  end
+
+  test "set_recording_settings/3 records the main stream 24/7", %{bypass: bypass, url: url} do
+    Bypass.expect_once(bypass, "POST", "/cgi-bin/operator/operator.cgi", fn conn ->
+      assert %{"action" => "set.record.settings"} = URI.decode_query(conn.query_string)
+      {:ok, body, conn} = Conn.read_body(conn)
+
+      assert %{
+               "recycleStorageEnable" => 1,
+               "streamType" => 0,
+               "scheduleList" => schedules
+             } = Jason.decode!(body)
+
+      assert schedules == Enum.map(0..6, &%{"scheduleIndex" => &1, "schedule" => "00:00:24:00;"})
+
+      Conn.resp(conn, 200, "{}")
+    end)
+
+    assert :ok = Milesight.set_recording_settings(url, %RecordingSettings{}, [])
+  end
+
   test "other vendors are not implemented", %{url: url} do
     assert {:error, :not_implemented} =
              Axis.list_recordings(url, DateTime.utc_now(), DateTime.utc_now(), [])
@@ -307,6 +384,9 @@ defmodule ExNVR.Devices.Cameras.HttpClient.MilesightTest do
     assert {:error, :not_implemented} = Axis.set_image_settings(url, %ImageSettings{}, [])
     assert {:error, :not_implemented} = Axis.set_osd(url, %OSD{}, [])
     assert {:error, :not_implemented} = Axis.set_date_time(url, %DateTimeSettings{}, [])
+    assert {:error, :not_implemented} = Axis.sd_card_status(url, [])
+    assert {:error, :not_implemented} = Axis.format_sd_card(url, [])
+    assert {:error, :not_implemented} = Axis.set_recording_settings(url, %RecordingSettings{}, [])
   end
 
   defp osd_response do
