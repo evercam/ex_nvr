@@ -2,7 +2,7 @@ defmodule ExNVR.MixProject do
   use Mix.Project
 
   @app :ex_nvr
-  @version "0.28.0"
+  @version "0.29.0"
 
   def project do
     [
@@ -47,24 +47,21 @@ defmodule ExNVR.MixProject do
       {:ecto_sqlite3_extras, "~> 1.2.0"},
       {:swoosh, "~> 1.15"},
       {:finch, "~> 0.19"},
-      {:httpoison, "~> 2.3.0"},
-      {:membrane_h264_format, "~> 0.6"},
+      {:httpoison, "~> 3.0"},
+      {:membrane_h264_format, "~> 0.7"},
       {:membrane_h265_format, "~> 0.2"},
-      {:membrane_raw_video_format, "~> 0.4.0", override: true},
-      {:membrane_file_plugin, "~> 0.17.0"},
-      {:membrane_realtimer_plugin, "~> 0.10.0"},
-      {:ex_webrtc, "~> 0.17.0"},
+      {:membrane_file_plugin, "~> 0.17.0", only: :test},
+      {:membrane_realtimer_plugin, "~> 0.11.0"},
+      {:ex_webrtc, "~> 0.18.0"},
       {:ex_m3u8, "~> 0.16.0"},
-      {:connection, "~> 1.1.0"},
       {:tzdata, "~> 1.1"},
       {:ex_aws, "~> 2.5"},
       {:ex_aws_s3, "~> 2.5"},
-      {:flop, "~> 0.28.0"},
-      {:req, "~> 0.6.0"},
+      {:flop, "~> 0.29.0"},
+      {:req, "~> 0.7.0"},
       {:multipart, "~> 0.6.0"},
       {:ex_mp4, "~> 0.15.0"},
       {:hlx, "~> 0.6.0"},
-      {:floki, "~> 0.38.0"},
       {:phoenix, "~> 1.8.0"},
       {:phoenix_ecto, "~> 4.4"},
       {:phoenix_html, "~> 4.0"},
@@ -84,12 +81,11 @@ defmodule ExNVR.MixProject do
       {:prom_ex, "~> 1.11.0"},
       {:circuits_uart, "~> 1.5"},
       {:ex_onvif, "~> 0.9.0"},
-      {:slipstream, "~> 1.2.0"},
+      {:slipstream, "~> 1.3.0"},
       {:live_vue, "~> 1.2"},
-      {:sentry, "~> 13.0"},
+      {:sentry, "~> 14.0"},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:phoenix_live_reload, "~> 1.2", only: [:dev, :test]},
-      {:membrane_h26x_plugin, "~> 0.10", only: :test},
       {:mimic, "~> 2.1", only: :test},
       {:faker, "~> 0.17", only: :test},
       {:bypass, "~> 2.1", only: :test},

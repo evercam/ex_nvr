@@ -20,7 +20,7 @@ defmodule ExNVR.Elements.Realtimer do
 
   @impl true
   def handle_init(ctx, options) do
-    {actions, state} = Realtimer.handle_init(ctx, options)
+    {actions, state} = Realtimer.handle_init(ctx, %{max_latency: 0})
     {actions, Map.merge(state, %{duration: options.duration, first_buffer_timestamp: nil})}
   end
 
@@ -40,6 +40,9 @@ defmodule ExNVR.Elements.Realtimer do
   defdelegate handle_playing(ctx, state), to: Membrane.Realtimer
 
   @impl true
+  defdelegate handle_start_of_stream(pad, ctx, state), to: Membrane.Realtimer
+
+  @impl true
   defdelegate handle_event(pad, event, ctx, state), to: Membrane.Realtimer
 
   @impl true
@@ -49,5 +52,5 @@ defmodule ExNVR.Elements.Realtimer do
   defdelegate handle_end_of_stream(pad, ctx, state), to: Membrane.Realtimer
 
   @impl true
-  defdelegate handle_tick(tick, ctx, state), to: Membrane.Realtimer
+  defdelegate handle_info(msg, ctx, state), to: Membrane.Realtimer
 end

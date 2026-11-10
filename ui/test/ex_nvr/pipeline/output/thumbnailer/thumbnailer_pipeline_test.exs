@@ -6,6 +6,7 @@ defmodule ExNVR.Pipeline.Output.ThumbnailerPipelineTest do
   import Membrane.ChildrenSpec
   import Membrane.Testing.Assertions
 
+  alias ExNVR.Support.H26xParser
   alias Membrane.Testing.Pipeline
 
   @h264_fixture "../../../../fixtures/video-30-10s.h264" |> Path.expand(__DIR__)
@@ -39,15 +40,6 @@ defmodule ExNVR.Pipeline.Output.ThumbnailerPipelineTest do
     assert length(File.ls!(dest)) == 5
   end
 
-  defp get_parser(:H264),
-    do: %Membrane.H264.Parser{
-      output_stream_structure: :annexb,
-      generate_best_effort_timestamps: %{framerate: {30, 1}}
-    }
-
-  defp get_parser(:H265),
-    do: %Membrane.H265.Parser{
-      output_stream_structure: :annexb,
-      generate_best_effort_timestamps: %{framerate: {30, 1}}
-    }
+  defp get_parser(:H264), do: %H26xParser{codec: :h264, framerate: {30, 1}}
+  defp get_parser(:H265), do: %H26xParser{codec: :h265, framerate: {30, 1}}
 end

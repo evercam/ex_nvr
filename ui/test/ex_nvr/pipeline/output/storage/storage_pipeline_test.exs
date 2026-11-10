@@ -11,7 +11,7 @@ defmodule ExNVR.Pipeline.Output.Storage.StoragePipelineTest do
 
   alias ExNVR.Model.Device
   alias ExNVR.Pipeline.Output.Storage
-  alias ExNVR.Support.SyncEvent
+  alias ExNVR.Support.{H26xParser, SyncEvent}
   alias Membrane.Testing.{Pipeline, Source}
 
   @moduletag :tmp_dir
@@ -40,11 +40,8 @@ defmodule ExNVR.Pipeline.Output.Storage.StoragePipelineTest do
 
     @impl true
     def handle_buffer(:input, buffer, _ctx, state) do
-      # flatten metadata to match the format created by `ex_nvr_rtsp`
       metadata =
-        buffer.metadata
-        |> update_nalus_metadata()
-        |> Map.put(:timestamp, System.os_time(:millisecond) + offset(state))
+        Map.put(buffer.metadata, :timestamp, System.os_time(:millisecond) + offset(state))
 
       buffer = %{buffer | metadata: metadata}
       {[buffer: {:output, buffer}], %{state | count: state.count + 1}}
@@ -62,16 +59,6 @@ defmodule ExNVR.Pipeline.Output.Storage.StoragePipelineTest do
 
     defp offset(%{jump: {index, offset_ms}, count: count}) when count >= index, do: offset_ms
     defp offset(_state), do: 0
-
-    defp update_nalus_metadata(%{h264: %{nalus: nalus}} = metadata) do
-      nalus = Enum.map(nalus, & &1.metadata.h264.type)
-      put_in(metadata, [:h264, :nalus], nalus)
-    end
-
-    defp update_nalus_metadata(%{h265: %{nalus: nalus}} = metadata) do
-      nalus = Enum.map(nalus, & &1.metadata.h265.type)
-      put_in(metadata, [:h265, :nalus], nalus)
-    end
   end
 
   @h264_fixtures "../../../../fixtures/video-30-10s.h264" |> Path.expand(__DIR__)
@@ -292,8 +279,8 @@ defmodule ExNVR.Pipeline.Output.Storage.StoragePipelineTest do
   defp start_pipeline(device, filename, opts \\ []) do
     parser =
       case Path.extname(filename) do
-        ".h264" -> %Membrane.H264.Parser{generate_best_effort_timestamps: %{framerate: {20, 1}}}
-        ".h265" -> %Membrane.H265.Parser{generate_best_effort_timestamps: %{framerate: {20, 1}}}
+        ".h264" -> %H26xParser{codec: :h264, framerate: {20, 1}}
+        ".h265" -> %H26xParser{codec: :h265, framerate: {20, 1}}
       end
 
     source = Keyword.get(opts, :source, %Source{output: chunk_file(filename)})

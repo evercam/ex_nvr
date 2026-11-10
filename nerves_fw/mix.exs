@@ -2,7 +2,7 @@ defmodule NervesFw.MixProject do
   use Mix.Project
 
   @app :ex_nvr_fw
-  @version "0.28.3"
+  @version "0.29.0"
   @all_targets [:ex_nvr_rpi4, :ex_nvr_rpi5, :giraffe, :recomputer_r22]
 
   def project do
@@ -39,7 +39,7 @@ defmodule NervesFw.MixProject do
       {:shoehorn, "~> 0.9.1"},
       {:ring_logger, "~> 0.11.0"},
       {:toolshed, "~> 0.5.0"},
-      {:nerves_hub_link, "~> 2.12.0"},
+      {:nerves_hub_link, "~> 2.13.0"},
       {:nerves_hub_cli, "~> 2.0"},
       {:ex_nvr, path: "../ui", env: env},
       {:circuits_gpio, "~> 2.2"},

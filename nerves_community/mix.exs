@@ -2,7 +2,7 @@ defmodule ExNVR.Nerves.MixProject do
   use Mix.Project
 
   @app :exnvr_fw
-  @version "0.28.0"
+  @version "0.29.0"
   @all_targets [:rpi4, :rpi5]
 
   def project do

@@ -61,6 +61,9 @@ config :bundlex, :disable_precompiled_os_deps, apps: [:ex_libsrtp]
 
 config :exqlite, force_build: true
 
+# ExAws' hackney adapter can't handle hackney 4 HEAD responses (no body)
+config :ex_aws, http_client: ExAws.Request.Req
+
 # Health checks evaluated by ExNVR.HealthReport for the dashboard panel.
 # This is the baseline for any deployment of ex_nvr (host, docker, both
 # nerves firmwares); each firmware can override it in its own config.exs

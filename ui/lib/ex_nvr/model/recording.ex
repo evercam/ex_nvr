@@ -2,30 +2,32 @@ defmodule ExNVR.Model.Recording do
   @moduledoc false
 
   use Ecto.Schema
+  use Flop.Schema
 
   import Ecto.Query
 
   alias Ecto.Changeset
 
-  @derive {Flop.Schema,
-           filterable: [:start_date, :end_date, :device_id],
-           sortable: [:start_date, :end_date, :device_name, :device_id],
-           default_order: %{
-             order_by: [:start_date, :end_date, :device_name],
-             order_directions: [:desc]
-           },
-           adapter_opts: [
-             join_fields: [
-               device_name: [
-                 binding: :joined_device,
-                 field: :name,
-                 ecto_type: :string
-               ]
-             ]
-           ],
-           pagination_types: [:page],
-           default_limit: 20,
-           max_limit: 30}
+  @flop_options [
+    filterable: [:start_date, :end_date, :device_id],
+    sortable: [:start_date, :end_date, :device_name, :device_id],
+    default_order: %{
+      order_by: [:start_date, :end_date, :device_name],
+      order_directions: [:desc]
+    },
+    adapter_opts: [
+      join_fields: [
+        device_name: [
+          binding: :joined_device,
+          field: :name,
+          ecto_type: :string
+        ]
+      ]
+    ],
+    pagination_types: [:page],
+    default_limit: 20,
+    max_limit: 30
+  ]
 
   @type t :: %__MODULE__{}
 
