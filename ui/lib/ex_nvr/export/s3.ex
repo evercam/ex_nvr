@@ -17,7 +17,7 @@ defmodule ExNVR.Export.S3 do
   alias ExNVR.Model.Device
   alias ExNVR.RemoteStorage
 
-  @upload_opts [content_type: "video/mp4", max_concurrency: 2, timeout: to_timeout(minute: 2)]
+  @upload_opts [content_type: "video/mp4", max_concurrency: 2, timeout: to_timeout(minute: 10)]
 
   @doc """
   Resolves the staging directory (the job's identity) and the destination to
