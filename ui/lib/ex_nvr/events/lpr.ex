@@ -2,36 +2,38 @@ defmodule ExNVR.Events.LPR do
   @moduledoc false
 
   use Ecto.Schema
+  use Flop.Schema
 
   alias Ecto.Changeset
 
   @fields [:capture_time, :plate_number, :direction, :list_type, :device_id]
 
-  @derive {Flop.Schema,
-           filterable: [
-             :capture_time,
-             :plate_number,
-             :direction,
-             :list_type,
-             :device_id
-           ],
-           sortable: [:capture_time, :plate_number],
-           default_order: %{
-             order_by: [:capture_time],
-             order_directions: [:desc]
-           },
-           adapter_opts: [
-             join_fields: [
-               device_name: [
-                 binding: :device,
-                 field: :name,
-                 ecto_type: :string
-               ]
-             ]
-           ],
-           pagination_types: [:page],
-           default_limit: 20,
-           max_limit: 50}
+  @flop_options [
+    filterable: [
+      :capture_time,
+      :plate_number,
+      :direction,
+      :list_type,
+      :device_id
+    ],
+    sortable: [:capture_time, :plate_number],
+    default_order: %{
+      order_by: [:capture_time],
+      order_directions: [:desc]
+    },
+    adapter_opts: [
+      join_fields: [
+        device_name: [
+          binding: :device,
+          field: :name,
+          ecto_type: :string
+        ]
+      ]
+    ],
+    pagination_types: [:page],
+    default_limit: 20,
+    max_limit: 50
+  ]
 
   @type t :: %__MODULE__{}
 

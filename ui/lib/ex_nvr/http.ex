@@ -22,7 +22,7 @@ defmodule ExNVR.HTTP do
     opts = Keyword.merge(opts, method: :get, url: url)
 
     :get
-    |> build_request(opts, &Req.Steps.run_finch/1)
+    |> build_request(opts, Req.Finch)
     |> Req.request(into: File.stream!(dest), auth: auth_from_opts(opts))
   end
 
@@ -39,7 +39,7 @@ defmodule ExNVR.HTTP do
     build_request(method, opts) |> Req.request(body: body, auth: auth_from_opts(opts))
   end
 
-  defp build_request(method, opts, adapter \\ http_poison_adapter()) do
+  defp build_request(method, opts, adapter \\ __MODULE__.HTTPoisonAdapter) do
     Req.Request.new(method: method, url: opts[:url], adapter: adapter)
     |> Req.Steps.attach()
     |> Req.Request.prepend_response_steps(
@@ -58,14 +58,16 @@ defmodule ExNVR.HTTP do
   # Digest auth step for Req
   defp digest_auth({request, %{status: 401} = response}, {username, password}) do
     with ["Digest " <> digest | _] <- Req.Response.get_header(response, "www-authenticate"),
-         true <- not is_nil(username) and not is_nil(password) do
+         true <- not is_nil(username) and not is_nil(password),
+         false <- match?("Digest " <> _, Req.Request.get_option(request, :auth)) do
       digest =
         digest
         |> build_digest_auth_opts(request.method, request.url, username, password)
         |> encode_digest()
 
+      # run_request/1 re-runs the auth step, so the header must go through the :auth option
       request
-      |> Req.Request.put_header("Authorization", digest)
+      |> Req.Request.put_option(:auth, digest)
       |> Req.Request.run_request()
     else
       _other -> {request, response}
@@ -133,14 +135,12 @@ defmodule ExNVR.HTTP do
     |> Base.encode16(case: :lower)
   end
 
-  defp http_poison_adapter do
-    fn req ->
-      case HTTPoison.request(
-             req.method,
-             URI.to_string(req.url),
-             req.body || "",
-             req.headers
-           ) do
+  defmodule HTTPoisonAdapter do
+    @moduledoc false
+
+    @spec run(Req.Request.t()) :: {Req.Request.t(), Req.Response.t() | Exception.t()}
+    def run(req) do
+      case HTTPoison.request(req.method, URI.to_string(req.url), req.body || "", req.headers) do
         {:ok, resp} ->
           {req,
            %Req.Response{
@@ -153,12 +153,12 @@ defmodule ExNVR.HTTP do
           {req, reason}
       end
     end
-  end
 
-  defp headers_to_map(headers) do
-    Enum.reduce(headers, %{}, fn {key, value}, acc ->
-      key = String.downcase(key, :ascii)
-      Map.update(acc, key, [value], &(&1 ++ [value]))
-    end)
+    defp headers_to_map(headers) do
+      Enum.reduce(headers, %{}, fn {key, value}, acc ->
+        key = String.downcase(key, :ascii)
+        Map.update(acc, key, [value], &(&1 ++ [value]))
+      end)
+    end
   end
 end

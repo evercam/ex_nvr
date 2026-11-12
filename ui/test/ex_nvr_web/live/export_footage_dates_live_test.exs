@@ -18,7 +18,10 @@ defmodule ExNVRWeb.ExportFootageDatesLiveTest do
     [start_date, end_date] =
       for id <- ["export_start_date", "export_end_date"] do
         [value] =
-          html |> Floki.parse_document!() |> Floki.attribute("##{id}", "value")
+          html
+          |> LazyHTML.from_document()
+          |> LazyHTML.query("##{id}")
+          |> LazyHTML.attribute("value")
 
         NaiveDateTime.from_iso8601!(value <> ":00")
       end

@@ -17,7 +17,8 @@ defmodule ExNVR.Export.S3 do
   alias ExNVR.Model.Device
   alias ExNVR.RemoteStorage
 
-  @upload_opts [content_type: "video/mp4", max_concurrency: 2, timeout: to_timeout(minute: 2)]
+  @upload_opts [content_type: "video/mp4", max_concurrency: 2, timeout: to_timeout(minute: 10)]
+  @part_recv_timeout to_timeout(minute: 5)
 
   @doc """
   Resolves the staging directory (the job's identity) and the destination to
@@ -197,7 +198,7 @@ defmodule ExNVR.Export.S3 do
     path
     |> S3.Upload.stream_file()
     |> S3.upload(bucket, key, @upload_opts)
-    |> ExAws.request(opts)
+    |> ExAws.request(Keyword.put(opts, :http_opts, recv_timeout: @part_recv_timeout))
     |> case do
       {:ok, _resp} -> {:ok, :uploaded}
       {:error, reason} -> {:error, reason}

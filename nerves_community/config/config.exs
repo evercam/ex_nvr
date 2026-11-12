@@ -61,6 +61,9 @@ config :ex_nvr,
 
 config :ex_nvr, ExNVR.Mailer, adapter: Swoosh.Adapters.Local
 
+# ExAws' hackney adapter can't handle hackney 4 HEAD responses (no body)
+config :ex_aws, http_client: ExAws.Request.Req
+
 config :os_mon,
   disk_space_check_interval: {:second, 30},
   disk_almost_full_threshold: 0.9

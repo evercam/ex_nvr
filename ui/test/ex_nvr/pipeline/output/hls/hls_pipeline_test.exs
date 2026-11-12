@@ -8,6 +8,7 @@ defmodule ExNVR.Pipeline.Output.HLSPipelineTest do
   import Membrane.ChildrenSpec
   import Membrane.Testing.Assertions
 
+  alias ExNVR.Support.H26xParser
   alias Membrane.Testing
 
   @moduletag :tmp_dir
@@ -16,9 +17,7 @@ defmodule ExNVR.Pipeline.Output.HLSPipelineTest do
   defp start_pipeline(in_file, out_dir, nb_streams \\ 1) do
     spec = [
       child(:source, %Membrane.File.Source{location: in_file})
-      |> child(:parser, %Membrane.H264.Parser{
-        generate_best_effort_timestamps: %{framerate: {30, 1}}
-      })
+      |> child(:parser, %H26xParser{framerate: {30, 1}})
       |> via_in(:video)
       |> child(:sink, %ExNVR.Pipeline.Output.HLS{
         location: out_dir
@@ -30,9 +29,7 @@ defmodule ExNVR.Pipeline.Output.HLSPipelineTest do
         spec ++
           [
             child(:source2, %Membrane.File.Source{location: in_file})
-            |> child(:parser2, %Membrane.H264.Parser{
-              generate_best_effort_timestamps: %{framerate: {30, 1}}
-            })
+            |> child(:parser2, %H26xParser{framerate: {30, 1}})
             |> via_in(:video)
             |> child({:sink, :sub_stream}, %ExNVR.Pipeline.Output.HLS{
               location: out_dir
