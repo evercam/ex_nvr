@@ -1,4 +1,4 @@
-FROM hexpm/elixir:1.19.5-erlang-28.1.1-debian-bullseye-20260112
+FROM hexpm/elixir:1.19.7-erlang-28.5.0.8-debian-bookworm-20261104
 
 # install build dependencies
 RUN \

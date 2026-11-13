@@ -18,8 +18,8 @@ jobs:
 
       - uses: erlef/setup-beam@v1.18
         with:
-          otp-version: 28.1.1
-          elixir-version: 1.19.5-otp-28
+          otp-version: 28.5.0.8
+          elixir-version: 1.19.7-otp-28
 
       - uses: actions/setup-node@v4
         with:
