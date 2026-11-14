@@ -1,0 +1,969 @@
+defmodule ExNVRWeb.OnvifDiscoveryLive do
+  @moduledoc false
+
+  use ExNVRWeb, :live_view
+
+  require Logger
+
+  alias ExNVR.Devices
+  alias ExNVR.Devices.Cameras.{HttpClient.Milesight, NetworkInterface, NTP, StreamProfile}
+
+  @auto_config_steps [
+    date_time: "Date & time",
+    main_stream: "Main stream",
+    sub_stream: "Sub stream",
+    third_stream: "Third stream",
+    image_settings: "Image settings",
+    osd: "OSD",
+    sd_card: "SD card",
+    sd_recording: "SD recording"
+  ]
+
+  @auto_config_step_labels [
+    date_time: "Date & time",
+    streams: "Streams",
+    image_settings: "Image settings",
+    osd: "OSD",
+    sd_card: "SD card recording"
+  ]
+
+  defmodule DiscoverSettings do
+    @moduledoc false
+
+    use Ecto.Schema
+
+    alias Ecto.Changeset
+
+    embedded_schema do
+      field :ip_address, :string
+      field :timeout, :integer
+    end
+
+    def to_struct(params) do
+      params |> changeset() |> Changeset.apply_action(:validate)
+    end
+
+    def create_changeset(struct), do: changeset(struct, %{})
+
+    def changeset(changeset \\ %__MODULE__{}, params) do
+      changeset
+      |> Changeset.cast(params, [:ip_address, :timeout])
+      |> Changeset.validate_required([:timeout])
+      |> Changeset.validate_number(:timeout, greater_than: 0, less_than_or_equal_to: 60)
+    end
+  end
+
+  defmodule AutoConfigSettings do
+    @moduledoc false
+
+    use Ecto.Schema
+
+    alias Ecto.Changeset
+
+    embedded_schema do
+      field :timezone, :string, default: "UTC"
+    end
+
+    def to_struct(struct, params) do
+      struct |> changeset(params) |> Changeset.apply_action(:validate)
+    end
+
+    def changeset(struct, params) do
+      struct
+      |> Changeset.cast(params, [:timezone])
+      |> Changeset.validate_required([:timezone])
+      |> Changeset.validate_inclusion(:timezone, Tzdata.zone_list())
+    end
+  end
+
+  defmodule CameraDetails do
+    @moduledoc false
+
+    defstruct [
+      :id,
+      :name,
+      :probe,
+      :device,
+      :network_interface,
+      :ntp,
+      :stream_profiles,
+      :auth_form,
+      :streams_form,
+      :selected_profiles,
+      tab: "system"
+    ]
+  end
+
+  def render(assigns) do
+    ~H"""
+    <div class="w-full flex items-center flex-col space-y-5 bg-gray-50 dark:bg-gray-900 min-h-screen pb-10">
+      <div class="w-full flex items-center flex-col bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+        <div class="w-3/4 flex justify-between items-center ">
+          <div>
+            <h1 class="text-2xl font-bold dark:text-white">Onvif Camera Manager</h1>
+            <p class="text-sm text-gray-500 dark:text-gray-400">
+              Discover and manage network cameras
+            </p>
+          </div>
+
+          <.simple_form
+            id="discover_settings_form"
+            for={@discover_form}
+            phx-change="discover-settings"
+          >
+            <div class="border flex flex-col dark:text-white p-5 m-5 space-y-4 rounded-lg border-gray-200 dark:border-gray-700 dark:bg-gray-900">
+              <span class="font-bold"><.icon name="hero-cog-6-tooth" /> Network Settings</span>
+              <div class="flex items-center gap-2">
+                <.input
+                  field={@discover_form[:ip_address]}
+                  type="select"
+                  name="ip_address"
+                  options={ip_addresses()}
+                  prompt="Choose IP address to use"
+                  label="IP Address"
+                />
+                <.input
+                  field={@discover_form[:timeout]}
+                  type="number"
+                  name="timeout"
+                  min="1"
+                  label="Timeout"
+                />
+              </div>
+            </div>
+          </.simple_form>
+        </div>
+      </div>
+
+      <!-- Device Discovery Section -->
+      <div class="w-3/4 flex justify-between items-center bg-white dark:bg-gray-800 p-5 border border-gray-200 rounded-lg dark:border-gray-700 dark:text-white mr-5">
+        <div class="flex items-center space-x-2">
+          <.icon name="network" class="row-span-2 h-6 w-6" />
+          <div class="flex flex-col">
+            <span class="text-xl font-bold">Device Discovery</span>
+            <span class="text-sm text-gray-500 dark:text-gray-400">
+              Scanning: {@discover_settings.ip_address} • Timeout {@discover_settings.timeout}s
+            </span>
+          </div>
+        </div>
+
+        <.button phx-click="discover" phx-disable-with="Scanning...">
+          <.icon name="hero-magnifying-glass-solid" class="w-4 h-4" /> Scan Network
+        </.button>
+      </div>
+
+      <!-- Device List Section -->
+      <div class="w-3/4 flex flex-col space-y-5 bg-white dark:bg-gray-800 p-5 border border-gray-200 rounded-lg dark:border-gray-700 dark:text-white mr-5">
+        <span class="text-md font-bold">
+          <.icon name="hero-wifi" class="w-5 h-5 mr-1" /> Found {length(@devices)} Device(s)
+        </span>
+        <div :for={device <- @devices} id={device.id} class="flex flex-col space-y-2">
+          <div class="flex justify-between border border-gray-200 rounded-lg dark:border-gray-600 p-5">
+            <div class="flex items-center">
+              <div class="rounded-lg bg-gray-100 dark:bg-gray-700 p-2 mr-2">
+                <.icon name="hero-camera" class="w-6 h-6" />
+              </div>
+              <div class="flex flex-col">
+                <span class="text-md font-bold">{device.name}</span>
+                <div class="text-sm text-gray-500 dark:text-gray-400">
+                  <span class="mr-3">{device.probe.device_ip}</span>
+                </div>
+              </div>
+            </div>
+            <.button
+              :if={is_nil(device.device)}
+              class="bg-white !text-gray-800 hover:bg-gray-50 dark:!text-white dark:bg-gray-700 dark:hover:bg-gray-600 border border-gray-200 dark:border-gray-600"
+              phx-click={
+                show_modal2(
+                  JS.set_attribute({"phx-value-id", device.probe.device_ip}, to: "#auth-form"),
+                  "camera-authentication"
+                )
+              }
+            >
+              <.icon name="hero-lock-closed" class="w-4 h-4" />Authenticate
+            </.button>
+            <.button :if={not is_nil(device.device)} phx-click="show-details" phx-value-id={device.id}>
+              <.icon name="hero-check-circle" class="w-4 h-4" />View Details
+            </.button>
+          </div>
+        </div>
+      </div>
+
+      <.separator :if={@selected_device} class="w-3/4 mr-5" />
+
+      <!-- Device Details Section -->
+      <div :if={@selected_device} class="w-3/4 flex flex-col space-y-2 mr-5">
+        <div class="flex justify-between items-center border border-gray-200 rounded-lg bg-white dark:border-gray-700 dark:bg-gray-800 dark:text-white p-5">
+          <div class="flex items-center">
+            <div class="rounded-lg bg-gray-100 dark:bg-gray-700 p-2 mr-2">
+              <.icon name="hero-camera" class="w-7 h-7" />
+            </div>
+            <div class="flex flex-col">
+              <span class="text-lg font-bold">{@selected_device.name}</span>
+              <div class="text-sm text-gray-500 dark:text-gray-400">
+                <span class="mr-3">{@selected_device.probe.device_ip}</span>
+                <span class="mr-3">{@selected_device.device.manufacturer}</span>
+              </div>
+            </div>
+          </div>
+          <div class="flex items-center">
+            <div class="relative inline-flex mr-2">
+              <.button
+                id="auto-config-button"
+                class="rounded-r-none bg-white !text-gray-800 hover:bg-gray-50 dark:!text-white dark:bg-gray-700 dark:hover:bg-gray-600 border border-gray-200 dark:border-gray-600 disabled:opacity-50"
+                phx-click={auto_config_click(@auto_config_steps)}
+                phx-disable-with="Configuring..."
+                disabled={@auto_config_steps == []}
+              >
+                <.icon name="hero-wrench" class="w-4 h-4" />Auto Configure
+              </.button>
+              <.button
+                id="auto-config-steps-toggle"
+                type="button"
+                class="rounded-l-none px-2 bg-white !text-gray-800 hover:bg-gray-50 dark:!text-white dark:bg-gray-700 dark:hover:bg-gray-600 border border-l-0 border-gray-200 dark:border-gray-600"
+                phx-click={JS.toggle(to: "#auto-config-steps")}
+              >
+                <.icon name="hero-chevron-down" class="w-4 h-4" />
+              </.button>
+              <form
+                id="auto-config-steps"
+                phx-change="select-auto-config-steps"
+                phx-click-away={JS.hide(to: "#auto-config-steps")}
+                class="hidden absolute right-0 top-full mt-1 z-20 w-56 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 dark:text-white shadow-lg p-2"
+              >
+                <input type="hidden" name="steps[]" value="" />
+                <label
+                  :for={{step, label} <- step_options(@selected_device.device)}
+                  class="flex items-center gap-2 p-1 text-sm rounded hover:bg-gray-50 dark:hover:bg-gray-600 cursor-pointer"
+                >
+                  <input
+                    type="checkbox"
+                    name="steps[]"
+                    value={step}
+                    checked={step in @auto_config_steps}
+                    class="rounded text-blue-600 border-gray-300 bg-gray-50 focus:ring-3 focus:ring-blue-300 dark:bg-gray-600 dark:border-gray-500 dark:text-blue-500 dark:ring-offset-gray-700"
+                  />
+                  {label}
+                </label>
+              </form>
+            </div>
+            <.button phx-click="add-device">
+              <.icon name="hero-plus" class="w-4 h-4" />Add to NVR
+            </.button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-4 content-center rounded-lg bg-white dark:bg-gray-800 dark:text-white p-1 border border-gray-200 dark:border-gray-700">
+          <div class={["flex justify-center", selected_tab("system", @selected_device.tab)]}>
+            <span
+              class="text-sm font-bold p-1 hover:cursor-pointer"
+              phx-click="switch-tab"
+              phx-value-tab="system"
+            >
+              <.icon name="hero-information-circle" class="w-5 h-5 mr-1" />System
+            </span>
+          </div>
+          <div class={["flex justify-center", selected_tab("network", @selected_device.tab)]}>
+            <span
+              class="text-sm font-bold p-1 hover:cursor-pointer"
+              phx-click="switch-tab"
+              phx-value-tab="network"
+            >
+              <.icon name="network" class="w-4 h-4 mr-1 text-black dark:text-white inline" />Network
+            </span>
+          </div>
+          <div class={["flex justify-center", selected_tab("datetime", @selected_device.tab)]}>
+            <span
+              class="text-sm font-bold p-1 hover:cursor-pointer"
+              phx-click="switch-tab"
+              phx-value-tab="datetime"
+            >
+              <.icon name="hero-clock" class="w-4 h-4 mr-1" />Date & Time
+            </span>
+          </div>
+          <div class={["flex justify-center", selected_tab("streams", @selected_device.tab)]}>
+            <span
+              class="text-sm font-bold p-1 hover:cursor-pointer"
+              phx-click="switch-tab"
+              phx-value-tab="streams"
+            >
+              <.icon name="hero-tv" class="w-4 h-4 mr-1" />Streams
+            </span>
+          </div>
+        </div>
+
+        <div
+          :if={@selected_device.tab == "system"}
+          class="w-1/2 flex flex-col border border-gray-200 rounded-lg bg-white dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+        >
+          <h2 class="text-lg font-bold p-3">Hardware Information</h2>
+          <div class="space-y-2 p-5 pt-0 text-sm">
+            <div class="flex justify-between">
+              <span class="text-gray-500 dark:text-gray-400">Manufacturer:</span>
+              <span class="font-mono">{@selected_device.device.manufacturer}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-500 dark:text-gray-400">Model:</span>
+              <span class="font-mono">{@selected_device.device.model}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-500 dark:text-gray-400">Firmware:</span>
+              <span class="font-mono">{@selected_device.device.firmware_version}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-500 dark:text-gray-400">Hardware ID:</span>
+              <span class="font-mono">{@selected_device.device.hardware_id}</span>
+            </div>
+          </div>
+        </div>
+
+        <div
+          :if={@selected_device.tab == "network"}
+          class="flex flex-col border border-gray-200 rounded-lg bg-white dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+        >
+          <h2 class="text-lg font-bold p-3">Network Configuration</h2>
+          <div class="space-y-2 p-5 pt-0 text-sm">
+            <div class="grid grid-cols-2 gap-x-6 gap-y-2">
+              <div class="flex justify-between">
+                <span class="text-gray-500 dark:text-gray-400">Name:</span>
+                <span class="font-mono">{@selected_device.network_interface.name}</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-gray-500 dark:text-gray-400">IP Address:</span>
+                <span class="font-mono">{@selected_device.network_interface.ipv4.address}</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-gray-500 dark:text-gray-400">MAC Address:</span>
+                <span class="font-mono">{@selected_device.network_interface.hw_address}</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-gray-500 dark:text-gray-400">DHCP:</span>
+                <.tag>{format_dhcp(@selected_device.network_interface.ipv4.dhcp)}</.tag>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div
+          :if={@selected_device.tab == "datetime"}
+          class="flex flex-col border border-gray-200 rounded-lg bg-white dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+        >
+          <h2 class="text-lg font-bold p-3">Date & Time Settings</h2>
+          <div class="space-y-2 p-5 pt-0 text-sm">
+            <div class="grid grid-cols-2 gap-x-6 gap-y-2">
+              <div class="flex justify-between">
+                <span class="text-gray-500 dark:text-gray-400">Timezone:</span>
+                <span class="font-mono">{@selected_device.device.system_date_time.time_zone.tz}</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-gray-500 dark:text-gray-400">NTP Enabled</span>
+                <.tag>{yes_no(@selected_device.ntp)}</.tag>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-gray-500 dark:text-gray-400">Dayligth Saving</span>
+                <.tag>
+                  {yes_no(@selected_device.device.system_date_time.daylight_savings)}
+                </.tag>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-gray-500 dark:text-gray-400">NTP Server</span>
+                <span class="font-mono">
+                  {@selected_device.ntp && @selected_device.ntp.server}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div
+          :if={@selected_device.tab == "streams"}
+          class="flex flex-col border border-gray-200 rounded-lg bg-white dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+        >
+          <h2 class="text-lg font-bold p-3">Stream Selection</h2>
+          <div class="space-y-2 p-5 pt-0 text-sm">
+            <.simple_form
+              id="stream_selection_form"
+              for={@selected_device.streams_form}
+              phx-change="update-selected-stream"
+            >
+              <div class="grid grid-cols-3 gap-x-5">
+                <.input
+                  field={@selected_device.streams_form[:main_stream]}
+                  type="select"
+                  name="main_stream"
+                  options={stream_options(@selected_device.stream_profiles)}
+                  label="Main Stream"
+                />
+
+                <.input
+                  field={@selected_device.streams_form[:sub_stream]}
+                  type="select"
+                  name="sub_stream"
+                  options={stream_options(@selected_device.stream_profiles)}
+                  label="Sub Stream"
+                  prompt=""
+                />
+
+                <.input
+                  field={@selected_device.streams_form[:third_stream]}
+                  type="select"
+                  name="third_stream"
+                  options={stream_options(@selected_device.stream_profiles)}
+                  label="Third Stream"
+                  prompt=""
+                />
+              </div>
+            </.simple_form>
+          </div>
+        </div>
+        <div :if={@selected_device.tab == "streams"} class="grid grid-cols-2 gap-x-5">
+          <ExNVRWeb.Onvif.StreamProfile.profile
+            :for={
+              {profile, idx} <-
+                @selected_device.selected_profiles
+                |> Enum.reject(&is_nil/1)
+                |> Enum.with_index()
+            }
+            id={"#{profile.id}-#{idx}"}
+            profile={profile}
+          />
+        </div>
+      </div>
+    </div>
+
+    <.modal2 id="camera-authentication">
+      <:header>Sign in</:header>
+      <.simple_form id="auth-form" phx-submit="authenticate-device" for={@auth_form} class="space-y-4">
+        <.input
+          field={@auth_form[:username]}
+          name="username"
+          id="username"
+          placeholder="admin"
+          label="Your username"
+          required
+        />
+        <.input
+          field={@auth_form[:password]}
+          type="password"
+          name="password"
+          id="password"
+          placeholder="••••••••"
+          label="Your password"
+          required
+        />
+        <div class="flex items-center space-x-5">
+          <.button
+            type="button"
+            class="w-full bg-white !text-gray-800 dark:!text-white dark:bg-gray-800 border dark:border-gray-600"
+            phx-click={hide_modal2("camera-authentication")}
+          >
+            Cancel
+          </.button>
+          <.button class="w-full" type="submit" phx-disable-with="Authenticating...">Connect</.button>
+        </div>
+      </.simple_form>
+    </.modal2>
+
+    <.modal2 id="auto-config-settings">
+      <:header>Auto configure</:header>
+      <.simple_form
+        id="auto-config-form"
+        for={@auto_config_form}
+        phx-change="validate-auto-config"
+        phx-submit="auto-configure"
+        class="space-y-4"
+      >
+        <.input
+          :if={needs_timezone?(@auto_config_steps)}
+          field={@auto_config_form[:timezone]}
+          type="select"
+          options={Tzdata.zone_list()}
+          label="Timezone"
+        />
+        <div class="flex items-center space-x-5">
+          <.button
+            type="button"
+            class="w-full bg-white !text-gray-800 dark:!text-white dark:bg-gray-800 border dark:border-gray-600"
+            phx-click={hide_modal2("auto-config-settings")}
+          >
+            Cancel
+          </.button>
+          <.button class="w-full" type="submit" phx-disable-with="Configuring...">Run</.button>
+        </div>
+      </.simple_form>
+    </.modal2>
+
+    <.modal2
+      :if={@auto_config_result}
+      id="auto-config-result"
+      show
+      on_cancel={JS.push("close-auto-config-result")}
+    >
+      <:header>Auto configuration</:header>
+      <ul class="space-y-3 dark:text-white">
+        <li
+          :for={
+            {step, label, result} <- auto_config_rows(@auto_config_result, @selected_device.device)
+          }
+          id={"auto-config-#{step}"}
+        >
+          <div class="flex justify-between items-center">
+            <span class="font-medium">{label}</span>
+            <span
+              :if={result == :ok}
+              class="flex items-center gap-1 text-green-600 dark:text-green-400"
+            >
+              <.icon name="hero-check-circle" class="w-5 h-5" />Success
+            </span>
+            <span
+              :if={is_nil(result)}
+              class="flex items-center gap-1 text-gray-500 dark:text-gray-400"
+            >
+              <.icon name="hero-minus-circle" class="w-5 h-5" />Skipped
+            </span>
+            <span
+              :if={match?({:error, _reason}, result)}
+              class="flex items-center gap-1 text-red-600 dark:text-red-400"
+            >
+              <.icon name="hero-x-circle" class="w-5 h-5" />Failed
+            </span>
+          </div>
+          <details :if={match?({:error, _reason}, result)} class="mt-1 text-sm">
+            <summary class="cursor-pointer text-gray-500 dark:text-gray-400">Show error</summary>
+            <pre class="mt-1 max-h-48 overflow-auto whitespace-pre-wrap break-all text-xs bg-gray-50 dark:bg-gray-900 rounded p-2">{format_error(result)}</pre>
+          </details>
+        </li>
+      </ul>
+      <.button
+        type="button"
+        class="w-full mt-5"
+        phx-click={JS.exec("data-cancel", to: "#auto-config-result")}
+      >
+        Close
+      </.button>
+    </.modal2>
+    """
+  end
+
+  def mount(_params, _session, socket) do
+    socket =
+      socket
+      |> assign_discover_settings(%DiscoverSettings{timeout: 2})
+      |> assign(devices: [], auth_form: to_form(%{"username" => nil, "password" => nil}))
+      |> assign(selected_device: nil, auto_config_result: nil, auto_config_steps: [])
+      |> assign_auto_config_settings(%AutoConfigSettings{timezone: browser_timezone(socket)})
+
+    {:ok, socket}
+  end
+
+  def handle_event("discover-settings", params, socket) do
+    case DiscoverSettings.to_struct(params) do
+      {:ok, settings} ->
+        {:noreply, assign_discover_settings(socket, settings)}
+
+      {:error, changeset} ->
+        {:noreply, assign(socket, discover_form: to_form(changeset))}
+    end
+  end
+
+  def handle_event("discover", _params, socket) do
+    settings = socket.assigns.discover_settings
+
+    devices =
+      ExNVR.Devices.Onvif.discover(
+        ip_address: settings.ip_address,
+        timeout: :timer.seconds(settings.timeout)
+      )
+      |> Enum.map(
+        &%CameraDetails{id: &1.device_ip, probe: &1, name: scope_value(&1.scopes, "name")}
+      )
+
+    {:noreply, assign(socket, devices: devices, selected_device: nil)}
+  end
+
+  def handle_event("authenticate-device", params, socket) do
+    devices = socket.assigns.devices
+    idx = Enum.find_index(devices, &(&1.id == params["id"]))
+
+    if idx != nil do
+      %CameraDetails{} = camera_details = Enum.at(devices, idx)
+
+      case ExOnvif.Device.init(camera_details.probe, params["username"], params["password"]) do
+        {:ok, onvif_device} ->
+          camera_details =
+            %CameraDetails{camera_details | device: onvif_device}
+            |> get_network_interface()
+            |> get_ntp()
+            |> get_stream_profiles()
+            |> set_streams_form()
+
+          socket =
+            socket
+            |> push_event("js-exec", %{to: "#camera-authentication", attr: "data-cancel"})
+            |> assign(devices: List.replace_at(devices, idx, camera_details))
+
+          {:noreply, socket}
+
+        {:error, _reason} ->
+          {:noreply, put_flash(socket, :error, "Invalid credentials")}
+      end
+    else
+      {:noreply, put_flash(socket, :error, "could not find device with id: #{params["id"]}")}
+    end
+  end
+
+  def handle_event("show-details", params, socket) do
+    devices = socket.assigns.devices
+
+    case Enum.find(devices, &(&1.id == params["id"])) do
+      nil -> {:noreply, socket}
+      device -> {:noreply, assign_selected_device(socket, device)}
+    end
+  end
+
+  def handle_event("switch-tab", %{"tab" => tab}, socket) do
+    device = %{socket.assigns.selected_device | tab: tab}
+    {:noreply, assign(socket, selected_device: device)}
+  end
+
+  def handle_event("update-selected-stream", params, socket) do
+    selected_device = socket.assigns.selected_device
+
+    profiles = [
+      Enum.find(selected_device.stream_profiles, &(&1.id == params["main_stream"])),
+      Enum.find(selected_device.stream_profiles, &(&1.id == params["sub_stream"])),
+      Enum.find(selected_device.stream_profiles, &(&1.id == params["third_stream"]))
+    ]
+
+    {:noreply, assign(socket, selected_device: %{selected_device | selected_profiles: profiles})}
+  end
+
+  def handle_event("add-device", _params, socket) do
+    selected_device = socket.assigns.selected_device
+    %{username: username, password: password} = selected_device.device
+
+    [main_stream, sub_stream, third_stream] = selected_device.selected_profiles
+
+    stream_config =
+      %{}
+      |> put_stream_config(main_stream, :stream_uri, :snapshot_uri, :profile_token)
+      |> put_stream_config(sub_stream, :sub_stream_uri, :sub_snapshot_uri, :sub_profile_token)
+      |> put_stream_config(
+        third_stream,
+        :third_stream_uri,
+        :third_snapshot_uri,
+        :third_profile_token
+      )
+
+    storage_config = if third_stream, do: %{storage_stream: :third_stream}
+
+    socket
+    |> put_flash(:device_params, %{
+      name: selected_device.name,
+      type: :ip,
+      vendor: selected_device.device.manufacturer,
+      model: selected_device.device.model,
+      mac: selected_device.network_interface && selected_device.network_interface.hw_address,
+      url: selected_device.device.address,
+      storage_config: storage_config,
+      stream_config: stream_config,
+      credentials: %{username: username, password: password},
+      timezone: socket.assigns.auto_config_settings.timezone
+    })
+    |> redirect(to: ~p"/devices/new")
+    |> then(&{:noreply, &1})
+  end
+
+  def handle_event("validate-auto-config", %{"auto_config" => params}, socket) do
+    form =
+      socket.assigns.auto_config_settings
+      |> AutoConfigSettings.changeset(params)
+      |> Map.put(:action, :validate)
+      |> to_form(as: :auto_config)
+
+    {:noreply, assign(socket, auto_config_form: form)}
+  end
+
+  def handle_event("auto-configure", %{"auto_config" => params}, socket) do
+    case AutoConfigSettings.to_struct(socket.assigns.auto_config_settings, params) do
+      {:ok, settings} ->
+        {:noreply, socket |> assign_auto_config_settings(settings) |> run_auto_configure()}
+
+      {:error, changeset} ->
+        {:noreply, assign(socket, auto_config_form: to_form(changeset, as: :auto_config))}
+    end
+  end
+
+  def handle_event("select-auto-config-steps", %{"steps" => steps}, socket) do
+    steps =
+      socket.assigns.selected_device.device
+      |> Devices.Onvif.auto_config_steps()
+      |> Enum.filter(&(to_string(&1) in steps))
+
+    {:noreply, assign(socket, auto_config_steps: steps)}
+  end
+
+  # no settings to ask for
+  def handle_event("auto-configure", _params, socket) do
+    {:noreply, run_auto_configure(socket)}
+  end
+
+  def handle_event("close-auto-config-result", _params, socket) do
+    {:noreply, assign(socket, auto_config_result: nil)}
+  end
+
+  defp run_auto_configure(socket) do
+    %{selected_device: camera_details, devices: devices, auto_config_settings: settings} =
+      socket.assigns
+
+    auto_config_result =
+      Devices.Onvif.auto_configure(camera_details.device,
+        timezone: settings.timezone,
+        steps: socket.assigns.auto_config_steps
+      )
+
+    camera_details =
+      camera_details
+      |> get_system_date_and_time()
+      |> get_ntp()
+      |> get_stream_profiles()
+      |> set_streams_form()
+
+    idx = Enum.find_index(devices, &(&1.id == camera_details.id))
+    devices = List.replace_at(devices, idx, camera_details)
+
+    socket
+    |> push_event("js-exec", %{to: "#auto-config-settings", attr: "data-cancel"})
+    |> assign(selected_device: camera_details, devices: devices)
+    |> assign(auto_config_result: auto_config_result)
+  end
+
+  # checked steps are reset to the supported ones when another camera is selected
+  defp assign_selected_device(socket, %{id: id} = device) do
+    case socket.assigns.selected_device do
+      %{id: ^id} ->
+        assign(socket, selected_device: device)
+
+      _other ->
+        assign(socket, selected_device: device, auto_config_steps: auto_config_steps(device))
+    end
+  end
+
+  defp auto_config_steps(%{device: nil}), do: []
+  defp auto_config_steps(%{device: device}), do: Devices.Onvif.auto_config_steps(device)
+
+  # the timezone is used by date & time and by the OSD date format
+  defp needs_timezone?(steps), do: :date_time in steps or :osd in steps
+
+  defp auto_config_click(steps) do
+    if needs_timezone?(steps),
+      do: show_modal2("auto-config-settings"),
+      else: JS.push("auto-configure")
+  end
+
+  defp step_options(device) do
+    steps = Devices.Onvif.auto_config_steps(device)
+    Enum.filter(@auto_config_step_labels, fn {step, _label} -> step in steps end)
+  end
+
+  defp browser_timezone(socket) do
+    timezone = if connected?(socket), do: get_connect_params(socket)["timezone"]
+    if timezone in Tzdata.zone_list(), do: timezone, else: "UTC"
+  end
+
+  defp assign_auto_config_settings(socket, settings) do
+    form = settings |> AutoConfigSettings.changeset(%{}) |> to_form(as: :auto_config)
+    assign(socket, auto_config_settings: settings, auto_config_form: form)
+  end
+
+  # only the steps supported by the camera, nil results were not run
+  defp auto_config_rows(auto_config, device) do
+    steps = Devices.Onvif.auto_config_steps(device)
+
+    for {step, label} <- @auto_config_steps,
+        config_step(step) in steps,
+        do: {step, label, Map.get(auto_config, step)}
+  end
+
+  # the selectable step a result belongs to
+  defp config_step(step) when step in [:main_stream, :sub_stream, :third_stream], do: :streams
+  defp config_step(:sd_recording), do: :sd_card
+  defp config_step(step), do: step
+
+  defp format_error({:error, reason}),
+    do: inspect(reason, pretty: true, limit: :infinity, printable_limit: :infinity)
+
+  defp assign_discover_settings(socket, settings) do
+    discover_form = to_form(DiscoverSettings.create_changeset(settings))
+    assign(socket, discover_settings: settings, discover_form: discover_form)
+  end
+
+  defp get_network_interface(camera_details) do
+    case ExOnvif.Devices.get_network_interfaces(camera_details.device) do
+      {:ok, interfaces} ->
+        %{camera_details | network_interface: NetworkInterface.from_onvif(List.first(interfaces))}
+
+      {:error, reason} ->
+        Logger.error("Failed to get network interfaces for camera #{inspect(reason)}")
+        camera_details
+    end
+  end
+
+  defp get_system_date_and_time(%{device: device} = camera_details) do
+    case ExOnvif.Devices.get_system_date_and_time(device) do
+      {:ok, date_time} ->
+        %{camera_details | device: %{device | system_date_time: date_time}}
+
+      {:error, reason} ->
+        Logger.error("Failed to get date and time settings for camera #{inspect(reason)}")
+        camera_details
+    end
+  end
+
+  defp get_ntp(%{device: %{system_date_time: %{date_time_type: :ntp}}} = camera_details) do
+    case ExOnvif.Devices.get_ntp(camera_details.device) do
+      {:ok, ntp} ->
+        %{camera_details | ntp: NTP.from_onvif(ntp)}
+
+      {:error, reason} ->
+        Logger.error("Failed to get ntp settings for camera #{inspect(reason)}")
+        camera_details
+    end
+  end
+
+  defp get_ntp(camera_details), do: camera_details
+
+  defp get_stream_profiles(%{device: %{media_ver20_service_path: nil}} = camera_details) do
+    Logger.warning("[OnvifDiscovery] camera does not support onvif media version 2")
+    camera_details
+  end
+
+  defp get_stream_profiles(camera_details) do
+    if milesight?(camera_details.device.manufacturer),
+      do: enable_milesight_profiles(camera_details.device)
+
+    case ExOnvif.Media2.get_profiles(camera_details.device) do
+      {:ok, profiles} ->
+        profiles =
+          profiles
+          |> Stream.reject(&is_nil(&1.video_encoder_configuration))
+          |> Stream.map(&StreamProfile.from_onvif/1)
+          |> Enum.sort_by(&profile_sort_key/1)
+
+        %{camera_details | stream_profiles: profiles}
+        |> get_stream_uris()
+
+      {:error, reason} ->
+        Logger.error("Failed to get stream profiles for camera #{inspect(reason)}")
+        camera_details
+    end
+  end
+
+  @spec milesight?(String.t()) :: boolean()
+  defp milesight?(manufacturer) do
+    manufacturer == "Milesight Technology Co.,Ltd." or manufacturer == "EVERCAM LTD"
+  end
+
+  defp enable_milesight_profiles(device) do
+    opts = [username: device.username, password: device.password]
+
+    case Milesight.stream_profiles(device.address, opts) do
+      {:ok, profiles} ->
+        profiles
+        |> Enum.take(3)
+        |> Enum.reject(& &1.enabled)
+        |> Enum.each(&Milesight.set_stream_profile(device.address, %{&1 | enabled: true}, opts))
+
+      {:error, reason} ->
+        Logger.error("Failed to get stream profiles for camera #{inspect(reason)}")
+    end
+  end
+
+  defp profile_sort_key(%{name: "ex_nvr_main"}), do: {0, ""}
+  defp profile_sort_key(%{name: "ex_nvr_sub"}), do: {1, ""}
+  defp profile_sort_key(%{name: "ex_nvr_third"}), do: {2, ""}
+  defp profile_sort_key(%{name: name}), do: {3, name}
+
+  defp get_stream_uris(%{device: device} = camera_details) do
+    profiles =
+      Enum.map(camera_details.stream_profiles, fn profile ->
+        with {:ok, stream_uri} <- ExOnvif.Media2.get_stream_uri(device, profile.id),
+             {:ok, snapshot_uri} <- ExOnvif.Media2.get_snapshot_uri(device, profile.id) do
+          %{profile | stream_uri: stream_uri, snapshot_uri: snapshot_uri}
+        else
+          _error ->
+            profile
+        end
+      end)
+
+    %{camera_details | stream_profiles: profiles}
+  end
+
+  defp set_streams_form(%{stream_profiles: profiles} = camera_details) do
+    main_stream = Enum.at(profiles, 0)
+    sub_stream = Enum.at(profiles, 1)
+    third_stream = Enum.at(profiles, 2)
+
+    streams_form =
+      to_form(%{
+        "main_stream" => main_stream && main_stream.id,
+        "sub_stream" => sub_stream && sub_stream.id,
+        "third_stream" => third_stream && third_stream.id
+      })
+
+    selected_profiles = [main_stream, sub_stream, third_stream]
+
+    %{camera_details | streams_form: streams_form, selected_profiles: selected_profiles}
+  end
+
+  defp put_stream_config(map, nil, _stream_key, _snapshot_key, _token_key), do: map
+
+  defp put_stream_config(map, profile, stream_key, snapshot_key, token_key) do
+    map
+    |> Map.put(stream_key, profile.stream_uri)
+    |> Map.put(snapshot_key, profile.snapshot_uri)
+    |> Map.put(token_key, profile.id)
+  end
+
+  # view functions
+  defp ip_addresses do
+    case :inet.getifaddrs() do
+      {:ok, if_addrs} ->
+        if_addrs
+        |> Enum.reject(fn {_name, options} -> is_nil(options[:addr]) end)
+        |> Enum.map(fn {name, options} ->
+          addr = :inet.ntoa(options[:addr]) |> List.to_string()
+          {"#{name} - #{addr}", addr}
+        end)
+
+      _error ->
+        []
+    end
+  end
+
+  defp scope_value(scopes, scope_key) do
+    regex = ~r[^onvif://www.onvif.org/(name|hardware)/(.*)]
+
+    scopes
+    |> Enum.flat_map(&Regex.scan(regex, &1, capture: :all_but_first))
+    |> Enum.find(fn [key, _value] -> key == scope_key end)
+    |> case do
+      [_key, value] -> URI.decode(value)
+      _other -> nil
+    end
+  end
+
+  defp selected_tab(tab, tab), do: ["rounded-sm", "bg-gray-100", "dark:bg-gray-700"]
+  defp selected_tab(_, _), do: []
+
+  defp format_dhcp(true), do: "Enabled"
+  defp format_dhcp(false), do: "Disabled"
+
+  defp yes_no(nil), do: "No"
+  defp yes_no(false), do: "No"
+  defp yes_no(_other), do: "Yes"
+
+  defp stream_options(stream_profiles) do
+    Enum.map(stream_profiles, &{&1.name, &1.id})
+  end
+end

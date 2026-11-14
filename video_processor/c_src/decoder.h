@@ -1,0 +1,21 @@
+#pragma once
+
+#include "utils.h"
+#include <libavcodec/avcodec.h>
+
+typedef struct Decoder Decoder;
+
+struct Decoder {
+  const AVCodec *codec;
+  AVCodecContext *c;
+  int max_frames;
+  int count_frames;
+  AVFrame **frames;
+};
+
+Decoder *decoder_alloc();
+int decoder_init(Decoder *decoder, const AVCodec *codec);
+int decoder_init_by_parameters(Decoder *decoder, const AVCodecParameters *codec_params);
+int decoder_decode(Decoder *decoder, AVPacket *pkt);
+int decoder_flush(Decoder *decoder);
+void decoder_free(Decoder **decoder);

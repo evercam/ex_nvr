@@ -1,0 +1,33 @@
+# .github/workflows/license-check-comment.yml
+# Posts the report produced by license-check.yml as a sticky PR comment, including on fork PRs.
+# Runs from the default branch with the base repo's token; it only reads the uploaded
+# artifact (Markdown + PR number) and never checks out or executes PR code.
+name: License check comment
+
+on:
+  workflow_run:
+    workflows: ["License check"]
+    types: [completed]
+
+permissions:
+  contents: read
+  actions: read          # download the artifact from the other run
+  pull-requests: write
+
+jobs:
+  comment:
+    if: github.event.workflow_run.event == 'pull_request'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4      # default branch: provides the vendored action, not PR code
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: license-check-report
+          path: ${{ runner.temp }}/license-check
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
+
+      - uses: ./.github/actions/license-check/comment
+        with:
+          report-dir: ${{ runner.temp }}/license-check

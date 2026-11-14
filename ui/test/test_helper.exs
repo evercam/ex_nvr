@@ -1,0 +1,10 @@
+ExUnit.start()
+Ecto.Adapters.SQL.Sandbox.mode(ExNVR.Repo, :manual)
+
+Mimic.copy(ExOnvif.Discovery)
+Mimic.copy(ExOnvif.Device)
+Mimic.copy(ExNVR.Devices)
+Mimic.copy(ExNVR.Recordings)
+Mimic.copy(ExNVR.Recordings.Backfiller)
+Mimic.copy(ExNVR.Disk)
+Faker.start()

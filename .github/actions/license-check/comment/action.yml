@@ -1,0 +1,28 @@
+name: "Evercam license check: post comment"
+description: >-
+  Posts the license-check report as a sticky PR comment. Use from a `workflow_run`
+  workflow so fork PRs (read-only token) still get a comment. See README.
+author: "Evercam"
+
+inputs:
+  report-dir:
+    description: "Directory containing report.md, report.json and pr-number (the uploaded artifact)."
+    required: true
+  token:
+    description: "Token with pull-requests: write."
+    default: ${{ github.token }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Post comment
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+        REPO: ${{ github.repository }}
+        REPORT_FILE: ${{ inputs.report-dir }}/report.md
+        REPORT_JSON: ${{ inputs.report-dir }}/report.json
+      run: |
+        pr=$(tr -cd '0-9' < "${{ inputs.report-dir }}/pr-number")
+        if [ -z "$pr" ]; then echo "::error::No PR number in artifact"; exit 1; fi
+        PR_NUMBER="$pr" bash "${{ github.action_path }}/../scripts/comment.sh"
