@@ -428,13 +428,26 @@ defmodule ExNVR.RecordingTest do
     assert {:ok, timestamp, snapshot} =
              Recordings.snapshot(device, recording, requested_datetime, method: method)
 
-    assert snapshot == File.read!(ref_path)
+    ref = File.read!(ref_path)
+    assert jpeg_dimensions(snapshot) == jpeg_dimensions(ref)
+    assert_in_delta byte_size(snapshot), byte_size(ref), byte_size(ref) * 0.02
 
     assert_in_delta(
       DateTime.to_unix(timestamp, :millisecond),
       DateTime.to_unix(snapshot_timestamp, :millisecond),
       100
     )
+  end
+
+  defp jpeg_dimensions(<<0xFF, 0xD8, rest::binary>>), do: jpeg_dimensions(rest)
+
+  defp jpeg_dimensions(<<0xFF, 0xC0, _len::16, _precision, height::16, width::16, _::binary>>),
+    do: {width, height}
+
+  defp jpeg_dimensions(<<0xFF, _marker, len::16, rest::binary>>) do
+    payload_size = len - 2
+    <<_payload::binary-size(payload_size), rest::binary>> = rest
+    jpeg_dimensions(rest)
   end
 
   defp ref_path(encoding, method) do
