@@ -438,6 +438,7 @@ defmodule ExNVR.RecordingTest do
   end
 
   defp ref_path(encoding, method) do
-    Path.expand("../../fixtures/images/#{encoding}/ref-#{method}.jpeg", __DIR__)
+    suffix = if :os.type() == {:unix, :darwin}, do: "-macos", else: ""
+    Path.expand("../../fixtures/images/#{encoding}/ref-#{method}#{suffix}.jpeg", __DIR__)
   end
 end
