@@ -1024,6 +1024,59 @@ paths:
           $ref: "#/components/responses/BadArg"
         "404":
           $ref: "#/components/responses/NotFound"
+  /api/webhook-token:
+    get:
+      summary: Get webhook token
+      description: |
+        Get the webhook token of the current user.
+      operationId: getWebhookToken
+      tags:
+        - Event
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookToken"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    post:
+      summary: Create webhook token
+      description: |
+        Create a webhook token for the current user.
+
+        A user has at most one webhook token, if a token already exists it is returned as is.
+      operationId: createWebhookToken
+      tags:
+        - Event
+      responses:
+        "200":
+          description: The token already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookToken"
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookToken"
+        "403":
+          $ref: "#/components/responses/Unauthorized"
+    delete:
+      summary: Delete webhook token
+      description: |
+        Delete the webhook token of the current user.
+      operationId: deleteWebhookToken
+      tags:
+        - Event
+      responses:
+        "204":
+          description: Success
+        "403":
+          $ref: "#/components/responses/Unauthorized"
   /api/system/status:
     get:
       summary: Get system status.
@@ -1732,6 +1785,16 @@ components:
         serial_number:
           type: string
           description: The serial number.
+    WebhookToken:
+      type: object
+      properties:
+        token:
+          type: string
+          description: The webhook token
+        inserted_at:
+          type: string
+          format: date-time
+          description: The creation date of the token
   parameters:
     remote_storage_id:
       name: remote_storage_id

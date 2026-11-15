@@ -41,6 +41,10 @@ defmodule ExNVRWeb.Router do
 
     resources "/remote-storages", API.RemoteStorageController, except: [:new, :edit]
 
+    resources "/webhook-token", API.WebhookTokenController,
+      only: [:show, :create, :delete],
+      singleton: true
+
     resources "/devices", API.DeviceController, except: [:new, :edit]
 
     get "/events", API.EventController, :events
