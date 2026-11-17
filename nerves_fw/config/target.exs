@@ -168,6 +168,30 @@ config :nerves_hub_link,
     product_key: System.get_env("NERVES_HUB_PRODUCT_KEY", "fake_key"),
     product_secret: System.get_env("NERVES_HUB_PRODUCT_SECRET", "fake_secret")
   ],
+  # Offer TLS 1.3 and resume with a session ticket on reconnect, which skips
+  # sending and verifying certificates. TLS 1.2 stays in the list for servers
+  # without 1.3. `session_tickets` needs 1.3 in `versions` or `:ssl` refuses it.
+  ssl: [
+    versions: [:"tlsv1.3", :"tlsv1.2"],
+    session_tickets: :auto
+  ],
+  # Firmware downloads already negotiate TLS 1.3, so they only need tickets
+  # turned on to resume when a download is retried.
+  downloader_ssl: [session_tickets: :auto],
+  # This replaces the default list, so every extension wanted is named here.
+  # LocalShell is left out because the firmware doesn't include ExPTY.
+  extension_modules: [
+    NervesHubLink.Extensions.Geo,
+    NervesHubLink.Extensions.Health,
+    NervesHubLink.Extensions.NetworkIdentity,
+    NervesHubLink.Extensions.Logging
+  ],
+  network_identity: [
+    providers: [ExNVR.Nerves.Netbird.Identity]
+  ],
+  # nginx writes its access log to Logger at :info, so sending :info would
+  # mostly be one line per HLS request. Warnings and errors only.
+  logging: [level: :warning],
   health: [
     metadata: %{
       "Router Mac Address" => {ExNVR.Nerves.Health.Metadata, :router_mac_address, []},
