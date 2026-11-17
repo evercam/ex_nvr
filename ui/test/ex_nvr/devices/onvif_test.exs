@@ -3,7 +3,7 @@ defmodule ExNVR.Devices.OnvifTest do
 
   import Mimic
 
-  alias ExNVR.Devices.Cameras.{DateTimeSettings, RecordingSettings, Timezones}
+  alias ExNVR.Devices.Cameras.{DateTimeSettings, Firmware, RecordingSettings, Timezones}
   alias ExNVR.Devices.Cameras.HttpClient.Milesight
   alias ExNVR.Devices.Onvif
   alias ExNVR.Devices.Onvif.AutoConfig
@@ -14,6 +14,7 @@ defmodule ExNVR.Devices.OnvifTest do
     Mimic.copy(ExOnvif.Devices)
     Mimic.copy(ExOnvif.Media2)
     Mimic.copy(Milesight)
+    Mimic.copy(Firmware)
   end
 
   setup do
@@ -217,6 +218,109 @@ defmodule ExNVR.Devices.OnvifTest do
     test "skip streams on other vendors" do
       reject(ExOnvif.Media2, :get_profiles, 1)
       assert Onvif.auto_configure(@device, steps: []) == %AutoConfig{}
+    end
+  end
+
+  describe "firmware" do
+    @firmware %Firmware{version: "52.8.0.5", url: "https://fw/52", sha256: "abc"}
+    @info %{platform: "52", version: "52.8.0.4", model: "SP111"}
+
+    setup do
+      stub(Firmware, :available?, fn -> true end)
+      stub(Milesight, :firmware_info, fn _url, _opts -> {:ok, @info} end)
+
+      device = %ExOnvif.Device{
+        manufacturer: "Milesight Technology Co.,Ltd.",
+        address: "http://camera",
+        serial_number: "6CF17E000001"
+      }
+
+      %{device: device}
+    end
+
+    test "is only offered with a remote connection", %{device: device} do
+      assert :firmware in Onvif.auto_config_steps(device)
+      refute :firmware in Onvif.auto_config_steps(@device)
+
+      stub(Firmware, :available?, fn -> false end)
+      refute :firmware in Onvif.auto_config_steps(device)
+    end
+
+    test "upgrade when the assigned firmware differs", %{device: device} do
+      expect(Firmware, :assigned, fn request ->
+        assert request == %{
+                 vendor: "Milesight Technology Co.,Ltd.",
+                 model: "SP111",
+                 platform: "52",
+                 version: "52.8.0.4",
+                 serial: "6CF17E000001"
+               }
+
+        {:ok, @firmware}
+      end)
+
+      assert %AutoConfig{firmware: {:upgrade, "52.8.0.4", @firmware}} =
+               Onvif.auto_configure(device, steps: [:firmware])
+    end
+
+    test "up to date", %{device: device} do
+      stub(Firmware, :assigned, fn _request -> {:ok, %{@firmware | version: "52.8.0.4"}} end)
+      assert %AutoConfig{firmware: :ok} = Onvif.auto_configure(device, steps: [:firmware])
+
+      stub(Firmware, :assigned, fn _request -> {:ok, nil} end)
+      assert %AutoConfig{firmware: :ok} = Onvif.auto_configure(device, steps: [:firmware])
+    end
+
+    test "check errors", %{device: device} do
+      stub(Firmware, :assigned, fn _request -> {:error, :timeout} end)
+
+      assert %AutoConfig{firmware: {:error, :timeout}} =
+               Onvif.auto_configure(device, steps: [:firmware])
+    end
+
+    test "upgrade_firmware/4 uploads and waits for the new version", %{device: device} do
+      expect(Firmware, :download, fn @firmware -> {:ok, "/tmp/fw"} end)
+
+      expect(Milesight, :upgrade_firmware, fn "http://camera", "/tmp/fw", _opts ->
+        {:error, %HTTPoison.Error{reason: :closed}}
+      end)
+
+      Milesight
+      |> expect(:firmware_info, fn _url, _opts -> {:error, :econnrefused} end)
+      |> expect(:firmware_info, fn _url, _opts -> {:ok, %{@info | version: "52.8.0.5"}} end)
+
+      test_pid = self()
+      notify = &send(test_pid, {:progress, &1})
+
+      assert :ok = Onvif.upgrade_firmware(device, @firmware, notify, poll_interval: 0)
+
+      assert_received {:progress, :downloading}
+      assert_received {:progress, :uploading}
+      assert_received {:progress, :rebooting}
+      assert_received {:progress, :ok}
+    end
+
+    test "upgrade_firmware/4 times out", %{device: device} do
+      stub(Firmware, :download, fn _firmware -> {:ok, "/tmp/fw"} end)
+      stub(Milesight, :upgrade_firmware, fn _url, _path, _opts -> :ok end)
+
+      assert {:error, {:upgrade_timeout, "52.8.0.5"}} =
+               Onvif.upgrade_firmware(device, @firmware, fn _ -> :ok end,
+                 poll_interval: 1,
+                 timeout: 10
+               )
+    end
+
+    test "upgrade_firmware/4 stops on download errors", %{device: device} do
+      stub(Firmware, :download, fn _firmware -> {:error, :checksum_mismatch} end)
+      reject(Milesight, :upgrade_firmware, 3)
+
+      test_pid = self()
+      notify = &send(test_pid, {:progress, &1})
+
+      assert {:error, :checksum_mismatch} = Onvif.upgrade_firmware(device, @firmware, notify)
+      assert_received {:progress, {:error, :checksum_mismatch}}
+      refute_received {:progress, :uploading}
     end
   end
 

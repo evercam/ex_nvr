@@ -14,6 +14,8 @@ defmodule ExNVR.Devices.Cameras.HttpClient do
   @type sd_card_status ::
           :not_inserted | :unformatted | :formatting | :ready | :bad | :unavailable
 
+  @type firmware_info :: %{platform: String.t(), version: String.t(), model: String.t()}
+
   @type url :: binary()
   @type camera_opts :: Keyword.t()
   @type error :: {:error, {status :: non_neg_integer(), resp :: any()}} | {:error, any()}
@@ -80,6 +82,18 @@ defmodule ExNVR.Devices.Cameras.HttpClient do
   """
   @callback set_recording_settings(url(), RecordingSettings.t(), camera_opts()) :: :ok | error()
 
+  @doc """
+  Get the current firmware of the camera.
+  """
+  @callback firmware_info(url(), camera_opts()) :: {:ok, firmware_info()} | error()
+
+  @doc """
+  Upload a firmware file to the camera, keeping its configuration.
+
+  The camera reboots after the upgrade.
+  """
+  @callback upgrade_firmware(url(), Path.t(), camera_opts()) :: :ok | error()
+
   @optional_callbacks fetch_lpr_event: 2,
                       device_info: 2,
                       stream_profiles: 2,
@@ -91,7 +105,9 @@ defmodule ExNVR.Devices.Cameras.HttpClient do
                       set_date_time: 3,
                       sd_card_status: 2,
                       format_sd_card: 2,
-                      set_recording_settings: 3
+                      set_recording_settings: 3,
+                      firmware_info: 2,
+                      upgrade_firmware: 3
 
   defmacro __using__(_opts) do
     quote location: :keep do
@@ -133,6 +149,12 @@ defmodule ExNVR.Devices.Cameras.HttpClient do
       @impl true
       def set_recording_settings(_url, _settings, _opts), do: {:error, :not_implemented}
 
+      @impl true
+      def firmware_info(_url, _opts), do: {:error, :not_implemented}
+
+      @impl true
+      def upgrade_firmware(_url, _path, _opts), do: {:error, :not_implemented}
+
       defoverridable fetch_lpr_event: 2,
                      device_info: 2,
                      stream_profiles: 2,
@@ -144,7 +166,9 @@ defmodule ExNVR.Devices.Cameras.HttpClient do
                      set_date_time: 3,
                      sd_card_status: 2,
                      format_sd_card: 2,
-                     set_recording_settings: 3
+                     set_recording_settings: 3,
+                     firmware_info: 2,
+                     upgrade_firmware: 3
     end
   end
 end

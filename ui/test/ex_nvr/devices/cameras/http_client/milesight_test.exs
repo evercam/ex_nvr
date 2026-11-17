@@ -387,6 +387,46 @@ defmodule ExNVR.Devices.Cameras.HttpClient.MilesightTest do
     assert {:error, :not_implemented} = Axis.sd_card_status(url, [])
     assert {:error, :not_implemented} = Axis.format_sd_card(url, [])
     assert {:error, :not_implemented} = Axis.set_recording_settings(url, %RecordingSettings{}, [])
+    assert {:error, :not_implemented} = Axis.firmware_info(url, [])
+    assert {:error, :not_implemented} = Axis.upgrade_firmware(url, "/tmp/firmware", [])
+  end
+
+  test "firmware_info/2 parses the upgrade info", %{bypass: bypass, url: url} do
+    Bypass.expect_once(bypass, "GET", "/cgi-bin/admin/admin.cgi", fn conn ->
+      assert %{"action" => "get.upgrade.info"} = URI.decode_query(conn.query_string)
+
+      body = %{
+        "upgradeInfo" =>
+          "platform=52&AIType=0&softversion=52.8.0.4-r2-a1&apptype=0&hardware=V1.0&model=SP111&actived=0"
+      }
+
+      Conn.resp(conn, 200, Jason.encode!(body))
+    end)
+
+    assert {:ok, %{platform: "52", version: "52.8.0.4-r2-a1", model: "SP111"}} =
+             Milesight.firmware_info(url, [])
+  end
+
+  @tag :tmp_dir
+  test "upgrade_firmware/3 keeps the config and uploads the file", %{
+    bypass: bypass,
+    url: url,
+    tmp_dir: tmp_dir
+  } do
+    path = Path.join(tmp_dir, "firmware")
+    File.write!(path, "firmware content")
+
+    Bypass.expect_once(bypass, "GET", "/vb.htm", fn conn ->
+      assert conn.query_string == "keepconfig=1"
+      Conn.resp(conn, 200, "OK keepconfig")
+    end)
+
+    Bypass.expect_once(bypass, "POST", "/update.cgi", fn conn ->
+      assert {:ok, "firmware content", conn} = Conn.read_body(conn)
+      Conn.resp(conn, 200, "{}")
+    end)
+
+    assert :ok = Milesight.upgrade_firmware(url, path, [])
   end
 
   defp osd_response do

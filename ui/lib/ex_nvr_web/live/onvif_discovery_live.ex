@@ -16,7 +16,8 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
     image_settings: "Image settings",
     osd: "OSD",
     sd_card: "SD card",
-    sd_recording: "SD recording"
+    sd_recording: "SD recording",
+    firmware: "Firmware"
   ]
 
   @auto_config_step_labels [
@@ -24,7 +25,8 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
     streams: "Streams",
     image_settings: "Image settings",
     osd: "OSD",
-    sd_card: "SD card recording"
+    sd_card: "SD card recording",
+    firmware: "Firmware upgrade"
   ]
 
   defmodule DiscoverSettings do
@@ -527,7 +529,21 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
             >
               <.icon name="hero-x-circle" class="w-5 h-5" />Failed
             </span>
+            <span
+              :if={match?({:upgrade, _from, _firmware}, result)}
+              class="flex items-center gap-1 text-blue-600 dark:text-blue-400"
+            >
+              <.icon name="hero-arrow-path" class="w-5 h-5 animate-spin" />{firmware_progress_label(
+                @firmware_progress
+              )}
+            </span>
           </div>
+          <p
+            :if={match?({:upgrade, _from, _firmware}, result)}
+            class="mt-1 text-sm text-gray-500 dark:text-gray-400"
+          >
+            {firmware_versions(result)}
+          </p>
           <details :if={match?({:error, _reason}, result)} class="mt-1 text-sm">
             <summary class="cursor-pointer text-gray-500 dark:text-gray-400">Show error</summary>
             <pre class="mt-1 max-h-48 overflow-auto whitespace-pre-wrap break-all text-xs bg-gray-50 dark:bg-gray-900 rounded p-2">{format_error(result)}</pre>
@@ -551,6 +567,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
       |> assign_discover_settings(%DiscoverSettings{timeout: 2})
       |> assign(devices: [], auth_form: to_form(%{"username" => nil, "password" => nil}))
       |> assign(selected_device: nil, auto_config_result: nil, auto_config_steps: [])
+      |> assign(firmware_progress: nil)
       |> assign_auto_config_settings(%AutoConfigSettings{timezone: browser_timezone(socket)})
 
     {:ok, socket}
@@ -712,6 +729,28 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
     {:noreply, assign(socket, auto_config_result: nil)}
   end
 
+  def handle_info({:firmware_progress, id, :ok}, socket), do: firmware_done(socket, id, :ok)
+
+  def handle_info({:firmware_progress, id, {:error, _reason} = error}, socket),
+    do: firmware_done(socket, id, error)
+
+  def handle_info({:firmware_progress, _id, step}, socket) do
+    {:noreply, assign(socket, firmware_progress: step)}
+  end
+
+  defp firmware_done(socket, id, result) do
+    socket = assign(socket, firmware_progress: nil)
+
+    case socket.assigns do
+      %{auto_config_result: %{} = auto_config, selected_device: %{id: ^id}} ->
+        {:noreply, assign(socket, auto_config_result: %{auto_config | firmware: result})}
+
+      # the result popup was closed
+      _other ->
+        {:noreply, put_firmware_flash(socket, id, result)}
+    end
+  end
+
   defp run_auto_configure(socket) do
     %{selected_device: camera_details, devices: devices, auto_config_settings: settings} =
       socket.assigns
@@ -736,7 +775,26 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
     |> push_event("js-exec", %{to: "#auto-config-settings", attr: "data-cancel"})
     |> assign(selected_device: camera_details, devices: devices)
     |> assign(auto_config_result: auto_config_result)
+    |> maybe_upgrade_firmware()
   end
+
+  # not linked, closing the page must not stop an upload half-way
+  defp maybe_upgrade_firmware(
+         %{assigns: %{auto_config_result: %{firmware: {:upgrade, _from, firmware}}}} = socket
+       ) do
+    %{selected_device: %{id: id, device: device}} = socket.assigns
+    pid = self()
+    notify = &send(pid, {:firmware_progress, id, &1})
+
+    {:ok, _pid} =
+      Task.Supervisor.start_child(ExNVR.TaskSupervisor, fn ->
+        Devices.Onvif.upgrade_firmware(device, firmware, notify)
+      end)
+
+    assign(socket, firmware_progress: :starting)
+  end
+
+  defp maybe_upgrade_firmware(socket), do: socket
 
   # checked steps are reset to the supported ones when another camera is selected
   defp assign_selected_device(socket, %{id: id} = device) do
@@ -789,6 +847,19 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
   defp config_step(step) when step in [:main_stream, :sub_stream, :third_stream], do: :streams
   defp config_step(:sd_recording), do: :sd_card
   defp config_step(step), do: step
+
+  defp firmware_progress_label(:downloading), do: "Downloading..."
+  defp firmware_progress_label(:uploading), do: "Uploading..."
+  defp firmware_progress_label(:rebooting), do: "Rebooting..."
+  defp firmware_progress_label(_step), do: "Upgrading..."
+
+  defp firmware_versions({:upgrade, from, firmware}), do: "#{from} → #{firmware.version}"
+
+  defp put_firmware_flash(socket, id, :ok),
+    do: put_flash(socket, :info, "Firmware of #{id} upgraded")
+
+  defp put_firmware_flash(socket, id, {:error, _reason}),
+    do: put_flash(socket, :error, "Firmware upgrade of #{id} failed")
 
   defp format_error({:error, reason}),
     do: inspect(reason, pretty: true, limit: :infinity, printable_limit: :infinity)
