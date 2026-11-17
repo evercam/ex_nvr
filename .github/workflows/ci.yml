@@ -7,14 +7,18 @@ on:
 jobs:
   ci:
     if: github.event.pull_request.draft == false
-    runs-on: ubuntu-22.04
+    runs-on: ${{ matrix.os }}
 
     env:
       MIX_ENV: test
 
     strategy:
       matrix:
+        os: [ubuntu-22.04, macos-15]
         folder: [video_processor, ui, nerves_fw]
+        exclude:
+          - os: macos-15
+            folder: nerves_fw
       fail-fast: false
 
     defaults:
@@ -26,7 +30,14 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Install deps
+        if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libmnl-dev xz-utils libsrtp2-dev
+
+      - name: Install deps (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install ffmpeg@7 srtp
+          echo "PKG_CONFIG_PATH=$(brew --prefix ffmpeg@7)/lib/pkgconfig:$(brew --prefix openssl@3)/lib/pkgconfig" >> "$GITHUB_ENV"
 
       - name: Set up Elixir
         uses: erlef/setup-elixir@v1
