@@ -39,7 +39,7 @@ defmodule NervesFw.MixProject do
       {:shoehorn, "~> 0.9.1"},
       {:ring_logger, "~> 0.11.0"},
       {:toolshed, "~> 0.5.0"},
-      {:nerves_hub_link, "~> 2.13.0"},
+      {:nerves_hub_link, "~> 2.14.0"},
       {:nerves_hub_cli, "~> 2.0"},
       {:ex_nvr, path: "../ui", env: env},
       # decimal < 3.1.2 has two DoS advisories (CVE-2026-32686,
