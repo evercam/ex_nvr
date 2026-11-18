@@ -42,6 +42,11 @@ defmodule NervesFw.MixProject do
       {:nerves_hub_link, "~> 2.13.0"},
       {:nerves_hub_cli, "~> 2.0"},
       {:ex_nvr, path: "../ui", env: env},
+      # decimal < 3.1.2 has two DoS advisories (CVE-2026-32686,
+      # CVE-2026-97853). ratio, which membrane_core needs, still declares
+      # decimal ~> 2.0 in its latest release, but only reads the %Decimal{}
+      # struct fields, which decimal 3 didn't change.
+      {:decimal, "~> 3.1", override: true},
       {:circuits_gpio, "~> 2.2"},
       {:circuits_i2c, "~> 2.0"},
       {:circuits_uart, "~> 1.5"},

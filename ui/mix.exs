@@ -74,6 +74,11 @@ defmodule ExNVR.MixProject do
       {:sizeable, "~> 1.0"},
       {:gettext, "~> 1.0"},
       {:jason, "~> 1.2"},
+      # decimal < 3.1.2 has two DoS advisories (CVE-2026-32686,
+      # CVE-2026-97853). ratio, which membrane_core needs, still declares
+      # decimal ~> 2.0 in its latest release, but only reads the %Decimal{}
+      # struct fields, which decimal 3 didn't change.
+      {:decimal, "~> 3.1", override: true},
       {:plug_cowboy, "~> 2.5"},
       {:corsica, "~> 2.1"},
       {:logger_json, "~> 7.0"},
