@@ -103,6 +103,9 @@ config :membrane_core, enable_metrics: false
 
 config :nerves_hub_link, connect: false
 
+# Handled errors reported with ExNVR.ErrorReporter go to Sentry and to NervesHub.
+config :ex_nvr, error_reporters: [ExNVR.Nerves.ErrorReporting.NervesHubReporter]
+
 config :exqlite, force_build: true
 
 if Mix.target() == :host do
