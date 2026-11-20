@@ -1,6 +1,8 @@
 defmodule ExNVR.Devices.Onvif.AutoConfig do
   @moduledoc false
 
+  alias ExNVR.Devices.Cameras.Firmware
+
   # nil means the step was not run
   @type result :: :ok | {:error, term()} | nil
 
@@ -12,7 +14,9 @@ defmodule ExNVR.Devices.Onvif.AutoConfig do
           image_settings: result(),
           osd: result(),
           sd_card: result(),
-          sd_recording: result()
+          sd_recording: result(),
+          # the upgrade itself runs in background, see `ExNVR.Devices.Onvif.upgrade_firmware/3`
+          firmware: result() | {:upgrade, current_version :: String.t(), Firmware.t()}
         }
 
   defstruct [
@@ -23,6 +27,7 @@ defmodule ExNVR.Devices.Onvif.AutoConfig do
     :image_settings,
     :osd,
     :sd_card,
-    :sd_recording
+    :sd_recording,
+    :firmware
   ]
 end

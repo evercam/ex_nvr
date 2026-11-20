@@ -27,6 +27,7 @@ defmodule ExNVR.Devices.Cameras.HttpClient.Milesight do
   @lpr_image_path "/LPR"
   @search_path "/vb.htm"
   @download_path "/dataloader.cgi"
+  @update_path "/update.cgi"
   @page_size 100
   @osd_fields ~w(streamIndex osdEnable osdString osdTextPosition osdDateTimeEnable osdDateTimePosition
                  osdDateTimeFormat osdFontSize osdFontColor osdBackgroundEnable osdBackgroundColor)
@@ -243,6 +244,38 @@ defmodule ExNVR.Devices.Cameras.HttpClient.Milesight do
     |> case do
       {:ok, _body} -> :ok
       error -> error
+    end
+  end
+
+  @impl true
+  def firmware_info(url, opts) do
+    (url <> @admin_path <> "?action=get.upgrade.info&format=json")
+    |> HTTP.get(opts)
+    |> handle_http_response(&decode_json/1)
+    |> case do
+      {:ok, %{"upgradeInfo" => info}} when is_binary(info) ->
+        info = URI.decode_query(info)
+        {:ok, %{platform: info["platform"], version: info["softversion"], model: info["model"]}}
+
+      {:ok, body} ->
+        {:error, {:invalid_response, body}}
+
+      error ->
+        error
+    end
+  end
+
+  @impl true
+  def upgrade_firmware(url, path, opts) do
+    keep_config = (url <> @search_path <> "?keepconfig=1") |> HTTP.get(opts)
+
+    # the file is streamed by hackney instead of being loaded in memory
+    with {:ok, _body} <- handle_http_response(keep_config, & &1),
+         {:ok, _body} <-
+           (url <> @update_path)
+           |> HTTP.post({:file, path}, opts)
+           |> handle_http_response(& &1) do
+      :ok
     end
   end
 
