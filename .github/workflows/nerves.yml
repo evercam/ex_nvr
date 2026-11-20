@@ -35,7 +35,7 @@ on:
 
 jobs:
   define-matrix:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       targets: ${{ steps.targets.outputs.targets }}
     steps:
@@ -47,7 +47,7 @@ jobs:
             echo 'targets=["${{ inputs.target }}"]' >> $GITHUB_OUTPUT
           fi
   firmware:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: define-matrix
     defaults:
       run:

@@ -7,7 +7,7 @@ on:
 
 jobs:
   release:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     env:
       MIX_ENV: prod
       GENERATE_DEB_PACKAGE: true
@@ -94,7 +94,7 @@ jobs:
   publish-docs:
     needs: [release]
 
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Checkout code
