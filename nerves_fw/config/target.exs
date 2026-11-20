@@ -184,7 +184,8 @@ config :nerves_hub_link,
     NervesHubLink.Extensions.Geo,
     NervesHubLink.Extensions.Health,
     NervesHubLink.Extensions.NetworkIdentity,
-    NervesHubLink.Extensions.Logging
+    NervesHubLink.Extensions.Logging,
+    NervesHubLink.Extensions.ErrorReports
   ],
   network_identity: [
     providers: [ExNVR.Nerves.Netbird.Identity]
@@ -192,6 +193,11 @@ config :nerves_hub_link,
   # nginx writes its access log to Logger at :info, so sending :info would
   # mostly be one line per HLS request. Warnings and errors only.
   logging: [level: :warning],
+  # Crashes, and errors sent with ExNVR.ErrorReporter, also go to Sentry. See
+  # ExNVR.Nerves.ErrorReporting.
+  error_reports: [
+    context: {ExNVR.Nerves.ErrorReporting, :nerves_hub_context, []}
+  ],
   health: [
     metadata: %{
       "Router Mac Address" => {ExNVR.Nerves.Health.Metadata, :router_mac_address, []},
@@ -223,7 +229,18 @@ config :sentry,
   root_source_code_paths: root_source_code,
   context_lines: 5,
   environment_name: config_env(),
-  enable_source_code_context: true
+  enable_source_code_context: true,
+  before_send: {ExNVR.Nerves.ErrorReporting.SentryEnricher, :before_send}
+
+# Links Sentry events to the device's page in NervesHub. Left unset, and the
+# link left off, when the build doesn't say which NervesHub it is for.
+with uri when is_binary(uri) <- System.get_env("NERVES_HUB_URI"),
+     org when is_binary(org) <- System.get_env("NERVES_HUB_ORG"),
+     product when is_binary(product) <- System.get_env("NERVES_HUB_PRODUCT") do
+  config :ex_nvr_fw,
+    nerves_hub_devices_url:
+      "#{String.trim_trailing(uri, "/")}/org/#{URI.encode(org)}/#{URI.encode(product)}/devices"
+end
 
 # Loki config
 if System.get_env("LOKI_URL") do

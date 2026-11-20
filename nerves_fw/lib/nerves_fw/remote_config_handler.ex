@@ -53,7 +53,13 @@ defmodule ExNVR.Nerves.RemoteConfigHandler do
 
     with {:error, reason} <- RUT.set_scheduler(schedule) do
       Logger.error("Failed to set router schedule: #{inspect(reason)}")
-      Sentry.capture_message("Failed to set router schedule", extra: %{reason: reason})
+
+      ExNVR.ErrorReporter.report(
+        %RuntimeError{message: "Failed to set router schedule"},
+        [],
+        group: "rut:set_scheduler",
+        extra: %{reason: reason}
+      )
     end
   end
 

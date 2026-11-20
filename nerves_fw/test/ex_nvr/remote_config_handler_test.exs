@@ -19,6 +19,7 @@ defmodule ExNVR.Nerves.RemoteConfigHandlerTest do
     Mimic.copy(Init)
     Mimic.copy(Hardware.SerialPortChecker)
     Mimic.copy(InstallerMode)
+    Mimic.copy(ExNVR.ErrorReporter)
     :ok
   end
 
@@ -48,6 +49,21 @@ defmodule ExNVR.Nerves.RemoteConfigHandlerTest do
       RemoteConfigHandler.handle_message("config", config)
 
       assert SystemSettings.get_settings().power_schedule.schedule == %{"1" => ["10:00-15:00"]}
+    end
+
+    test "reports an error when the router schedule cannot be set" do
+      mark_configured()
+      expect(RUT, :set_scheduler, fn _schedule -> {:error, :timeout} end)
+
+      expect(ExNVR.ErrorReporter, :report, fn error, [], opts ->
+        assert error.message == "Failed to set router schedule"
+        assert opts[:group] == "rut:set_scheduler"
+        assert opts[:extra] == %{reason: :timeout}
+        :ok
+      end)
+
+      config = %{"power_schedule" => %{"schedule" => %{"1" => ["10:00-15:00"]}}}
+      RemoteConfigHandler.handle_message("config", config)
     end
 
     test "does not update the router schedule when the power schedule is unchanged" do
