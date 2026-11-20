@@ -11,7 +11,7 @@ on:
 
 jobs:
   prepare:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     if: github.event.issue.pull_request && contains(github.event.comment.body, '/build')
     outputs:
       version: ${{ steps.parse_command.outputs.version }}
@@ -39,7 +39,7 @@ jobs:
 
   post_results:
     needs: [prepare, build_firmware]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     if: ${{ needs.build_firmware.result != 'skipped' }}
     steps:
       - uses: actions/checkout@v4
