@@ -269,11 +269,11 @@ defmodule ExNVR.Devices.Cameras.HttpClient.Milesight do
   def upgrade_firmware(url, path, opts) do
     keep_config = (url <> @search_path <> "?keepconfig=1") |> HTTP.get(opts)
 
-    # the file is streamed by hackney instead of being loaded in memory
+    # same form as the camera web UI, the file is streamed instead of loaded in memory
     with {:ok, _body} <- handle_http_response(keep_config, & &1),
          {:ok, _body} <-
            (url <> @update_path)
-           |> HTTP.post({:file, path}, opts)
+           |> HTTP.upload("file", path, opts)
            |> handle_http_response(& &1) do
       :ok
     end

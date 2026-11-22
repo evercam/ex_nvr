@@ -7,8 +7,10 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
 
   alias ExNVR.Devices
   alias ExNVR.Devices.Cameras.{HttpClient.Milesight, NetworkInterface, NTP, StreamProfile}
+  alias ExNVR.Devices.Onvif.AutoConfig
 
   @auto_config_steps [
+    firmware: "Firmware",
     date_time: "Date & time",
     main_stream: "Main stream",
     sub_stream: "Sub stream",
@@ -16,17 +18,16 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
     image_settings: "Image settings",
     osd: "OSD",
     sd_card: "SD card",
-    sd_recording: "SD recording",
-    firmware: "Firmware"
+    sd_recording: "SD recording"
   ]
 
   @auto_config_step_labels [
+    firmware: "Firmware upgrade",
     date_time: "Date & time",
     streams: "Streams",
     image_settings: "Image settings",
     osd: "OSD",
-    sd_card: "SD card recording",
-    firmware: "Firmware upgrade"
+    sd_card: "SD card recording"
   ]
 
   defmodule DiscoverSettings do
@@ -505,7 +506,12 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
       <ul class="space-y-3 dark:text-white">
         <li
           :for={
-            {step, label, result} <- auto_config_rows(@auto_config_result, @selected_device.device)
+            {step, label, result} <-
+              auto_config_rows(
+                @auto_config_result,
+                @selected_device.device,
+                @auto_config_pending
+              )
           }
           id={"auto-config-#{step}"}
         >
@@ -516,6 +522,12 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
               class="flex items-center gap-1 text-green-600 dark:text-green-400"
             >
               <.icon name="hero-check-circle" class="w-5 h-5" />Success
+            </span>
+            <span
+              :if={result == :pending}
+              class="flex items-center gap-1 text-gray-500 dark:text-gray-400"
+            >
+              <.icon name="hero-clock" class="w-5 h-5" />Waiting for firmware
             </span>
             <span
               :if={is_nil(result)}
@@ -567,7 +579,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
       |> assign_discover_settings(%DiscoverSettings{timeout: 2})
       |> assign(devices: [], auth_form: to_form(%{"username" => nil, "password" => nil}))
       |> assign(selected_device: nil, auto_config_result: nil, auto_config_steps: [])
-      |> assign(firmware_progress: nil)
+      |> assign(firmware_progress: nil, auto_config_pending: [])
       |> assign_auto_config_settings(%AutoConfigSettings{timezone: browser_timezone(socket)})
 
     {:ok, socket}
@@ -726,7 +738,7 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
   end
 
   def handle_event("close-auto-config-result", _params, socket) do
-    {:noreply, assign(socket, auto_config_result: nil)}
+    {:noreply, assign(socket, auto_config_result: nil, auto_config_pending: [])}
   end
 
   def handle_info({:firmware_progress, id, :ok}, socket), do: firmware_done(socket, id, :ok)
@@ -738,6 +750,18 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
     {:noreply, assign(socket, firmware_progress: step)}
   end
 
+  def handle_info({:auto_config_done, id, result}, socket) do
+    case socket.assigns do
+      %{auto_config_result: %{} = auto_config, selected_device: %{id: ^id}} ->
+        result = %{result | firmware: auto_config.firmware}
+        {:noreply, socket |> assign(auto_config_pending: []) |> finish_auto_configure(result)}
+
+      # the result popup was closed
+      _other ->
+        {:noreply, put_flash(socket, :info, "Auto configuration of #{id} finished")}
+    end
+  end
+
   defp firmware_done(socket, id, result) do
     socket = assign(socket, firmware_progress: nil)
 
@@ -745,21 +769,55 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
       %{auto_config_result: %{} = auto_config, selected_device: %{id: ^id}} ->
         {:noreply, assign(socket, auto_config_result: %{auto_config | firmware: result})}
 
-      # the result popup was closed
       _other ->
         {:noreply, put_firmware_flash(socket, id, result)}
     end
   end
 
   defp run_auto_configure(socket) do
-    %{selected_device: camera_details, devices: devices, auto_config_settings: settings} =
-      socket.assigns
+    %{selected_device: camera_details, auto_config_settings: settings} = socket.assigns
+    device = camera_details.device
+    steps = List.delete(socket.assigns.auto_config_steps, :firmware)
+    opts = [timezone: settings.timezone, steps: steps]
 
-    auto_config_result =
-      Devices.Onvif.auto_configure(camera_details.device,
-        timezone: settings.timezone,
-        steps: socket.assigns.auto_config_steps
-      )
+    socket = push_event(socket, "js-exec", %{to: "#auto-config-settings", attr: "data-cancel"})
+
+    # the upgrade resets the camera config, the other steps run once it's done
+    case check_firmware(device, socket.assigns.auto_config_steps) do
+      {:upgrade, _from, _firmware} = upgrade ->
+        socket
+        |> assign(auto_config_result: %AutoConfig{firmware: upgrade}, auto_config_pending: steps)
+        |> upgrade_firmware(opts)
+
+      firmware_result ->
+        auto_config = Devices.Onvif.auto_configure(device, opts)
+        finish_auto_configure(socket, %{auto_config | firmware: firmware_result})
+    end
+  end
+
+  defp check_firmware(device, steps) do
+    if :firmware in steps,
+      do: Devices.Onvif.auto_configure(device, steps: [:firmware]).firmware
+  end
+
+  # not linked, closing the page must not stop an upload half-way
+  defp upgrade_firmware(socket, opts) do
+    %{selected_device: %{id: id, device: device}} = socket.assigns
+    {:upgrade, _from, firmware} = socket.assigns.auto_config_result.firmware
+    pid = self()
+    notify = &send(pid, {:firmware_progress, id, &1})
+
+    {:ok, _pid} =
+      Task.Supervisor.start_child(ExNVR.TaskSupervisor, fn ->
+        Devices.Onvif.upgrade_firmware(device, firmware, notify)
+        send(pid, {:auto_config_done, id, Devices.Onvif.auto_configure(device, opts)})
+      end)
+
+    assign(socket, firmware_progress: :starting)
+  end
+
+  defp finish_auto_configure(socket, auto_config) do
+    %{selected_device: camera_details, devices: devices} = socket.assigns
 
     camera_details =
       camera_details
@@ -771,30 +829,12 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
     idx = Enum.find_index(devices, &(&1.id == camera_details.id))
     devices = List.replace_at(devices, idx, camera_details)
 
-    socket
-    |> push_event("js-exec", %{to: "#auto-config-settings", attr: "data-cancel"})
-    |> assign(selected_device: camera_details, devices: devices)
-    |> assign(auto_config_result: auto_config_result)
-    |> maybe_upgrade_firmware()
+    assign(socket,
+      selected_device: camera_details,
+      devices: devices,
+      auto_config_result: auto_config
+    )
   end
-
-  # not linked, closing the page must not stop an upload half-way
-  defp maybe_upgrade_firmware(
-         %{assigns: %{auto_config_result: %{firmware: {:upgrade, _from, firmware}}}} = socket
-       ) do
-    %{selected_device: %{id: id, device: device}} = socket.assigns
-    pid = self()
-    notify = &send(pid, {:firmware_progress, id, &1})
-
-    {:ok, _pid} =
-      Task.Supervisor.start_child(ExNVR.TaskSupervisor, fn ->
-        Devices.Onvif.upgrade_firmware(device, firmware, notify)
-      end)
-
-    assign(socket, firmware_progress: :starting)
-  end
-
-  defp maybe_upgrade_firmware(socket), do: socket
 
   # checked steps are reset to the supported ones when another camera is selected
   defp assign_selected_device(socket, %{id: id} = device) do
@@ -835,12 +875,14 @@ defmodule ExNVRWeb.OnvifDiscoveryLive do
   end
 
   # only the steps supported by the camera, nil results were not run
-  defp auto_config_rows(auto_config, device) do
+  defp auto_config_rows(auto_config, device, pending) do
     steps = Devices.Onvif.auto_config_steps(device)
 
-    for {step, label} <- @auto_config_steps,
-        config_step(step) in steps,
-        do: {step, label, Map.get(auto_config, step)}
+    for {step, label} <- @auto_config_steps, config_step(step) in steps do
+      result = Map.get(auto_config, step)
+      pending? = is_nil(result) and config_step(step) in pending
+      {step, label, if(pending?, do: :pending, else: result)}
+    end
   end
 
   # the selectable step a result belongs to

@@ -89,7 +89,7 @@ defmodule ExNVR.Devices.Onvif do
   @spec auto_config_steps(ExOnvif.Device.t()) :: [step()]
   def auto_config_steps(%{manufacturer: vendor}) when vendor in @milesight_vendors do
     steps = [:date_time, :streams, :image_settings, :osd, :sd_card]
-    if Firmware.available?(), do: steps ++ [:firmware], else: steps
+    if Firmware.available?(), do: [:firmware | steps], else: steps
   end
 
   def auto_config_steps(_onvif_device), do: [:date_time, :streams]

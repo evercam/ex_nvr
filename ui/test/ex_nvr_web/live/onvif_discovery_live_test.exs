@@ -331,18 +331,25 @@ defmodule ExNVRWeb.OnvifDiscoveryLiveTest do
       assert has_element?(lv, "#auto-config-date_time", "Skipped")
     end
 
-    test "Auto configure upgrades the firmware in background", %{conn: conn} do
+    test "Auto configure upgrades the firmware before the other steps", %{conn: conn} do
       firmware = %ExNVR.Devices.Cameras.Firmware{version: "2.0", url: "https://fw", sha256: "abc"}
       test_pid = self()
 
-      stub(ExNVR.Devices.Onvif, :auto_config_steps, fn _device -> [:streams, :firmware] end)
+      stub(ExNVR.Devices.Onvif, :auto_config_steps, fn _device -> [:firmware, :streams] end)
 
-      expect(ExNVR.Devices.Onvif, :auto_configure, fn _device, _opts ->
-        %AutoConfig{main_stream: :ok, firmware: {:upgrade, "1.0", firmware}}
+      ExNVR.Devices.Onvif
+      |> expect(:auto_configure, fn _device, opts ->
+        assert opts[:steps] == [:firmware]
+        %AutoConfig{firmware: {:upgrade, "1.0", firmware}}
+      end)
+      |> expect(:auto_configure, fn _device, opts ->
+        assert opts[:steps] == [:streams]
+        %AutoConfig{main_stream: :ok}
       end)
 
       expect(ExNVR.Devices.Onvif, :upgrade_firmware, fn _device, ^firmware, notify ->
-        send(test_pid, {:upgrade_started, notify})
+        send(test_pid, {:upgrade_started, self(), notify})
+        assert_receive :continue, 1_000
         :ok
       end)
 
@@ -364,12 +371,17 @@ defmodule ExNVRWeb.OnvifDiscoveryLiveTest do
 
       assert has_element?(lv, "#auto-config-firmware", "Upgrading...")
       assert has_element?(lv, "#auto-config-firmware", "1.0 → 2.0")
+      assert has_element?(lv, "#auto-config-main_stream", "Waiting for firmware")
 
-      assert_receive {:upgrade_started, notify}
+      assert_receive {:upgrade_started, task_pid, notify}
       notify.(:uploading)
       assert has_element?(lv, "#auto-config-firmware", "Uploading...")
 
       notify.(:ok)
+      assert has_element?(lv, "#auto-config-firmware", "Success")
+
+      send(task_pid, :continue)
+      assert eventually(fn -> has_element?(lv, "#auto-config-main_stream", "Success") end)
       assert has_element?(lv, "#auto-config-firmware", "Success")
     end
 
@@ -477,6 +489,20 @@ defmodule ExNVRWeb.OnvifDiscoveryLiveTest do
 
       render_click(lv, "close-auto-config-result")
       refute has_element?(lv, "#auto-config-result")
+    end
+  end
+
+  defp eventually(fun, attempts \\ 50) do
+    cond do
+      fun.() ->
+        true
+
+      attempts == 0 ->
+        false
+
+      true ->
+        Process.sleep(20)
+        eventually(fun, attempts - 1)
     end
   end
 end

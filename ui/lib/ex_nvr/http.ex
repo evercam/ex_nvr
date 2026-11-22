@@ -26,6 +26,61 @@ defmodule ExNVR.HTTP do
     |> Req.request(into: File.stream!(dest), auth: auth_from_opts(opts))
   end
 
+  @doc """
+  Upload a file as multipart form data under `field`.
+
+  The digest challenge is fetched with an empty request first so the file is only sent once.
+  """
+  @spec upload(binary(), String.t(), Path.t(), Keyword.t()) ::
+          {:ok, Req.Response.t()} | {:error, term()}
+  def upload(url, field, path, opts \\ []) do
+    # quoted like browsers do, some cameras reject unquoted values
+    disposition = [name: ~s("#{field}"), filename: ~s("#{Path.basename(path)}")]
+    file = {:file, path, {"form-data", disposition}, []}
+    http_opts = [recv_timeout: Keyword.get(opts, :timeout, to_timeout(minute: 10))]
+
+    with {:ok, headers} <- upload_auth_headers(url, opts),
+         {:ok, response} <- HTTPoison.post(url, {:multipart, [file]}, headers, http_opts) do
+      {:ok, %Req.Response{status: response.status_code, body: response.body}}
+    end
+  end
+
+  defp upload_auth_headers(url, opts) do
+    case HTTPoison.get(url) do
+      {:ok, %HTTPoison.Response{status_code: 401, headers: headers}} ->
+        digest_challenge =
+          Enum.find_value(headers, fn {key, value} ->
+            String.downcase(key) == "www-authenticate" and
+              match?("Digest " <> _rest, value) and
+              String.replace_prefix(value, "Digest ", "")
+          end)
+
+        {:ok, upload_auth_header(digest_challenge, url, opts)}
+
+      {:ok, _response} ->
+        {:ok, []}
+
+      error ->
+        error
+    end
+  end
+
+  defp upload_auth_header(nil, _url, opts) do
+    case auth_from_opts(opts) do
+      {:basic, credentials} -> [{"Authorization", "Basic " <> Base.encode64(credentials)}]
+      _other -> []
+    end
+  end
+
+  defp upload_auth_header(digest_challenge, url, opts) do
+    digest =
+      digest_challenge
+      |> build_digest_auth_opts(:post, URI.parse(url), opts[:username], opts[:password])
+      |> encode_digest()
+
+    [{"Authorization", digest}]
+  end
+
   defp call(method, url, body, opts) do
     opts = Keyword.merge(opts, method: method, url: url)
     do_call(method, body, opts)

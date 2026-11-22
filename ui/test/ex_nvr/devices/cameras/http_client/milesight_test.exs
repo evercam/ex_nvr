@@ -421,12 +421,30 @@ defmodule ExNVR.Devices.Cameras.HttpClient.MilesightTest do
       Conn.resp(conn, 200, "OK keepconfig")
     end)
 
+    # the file must be sent once, already authenticated
+    Bypass.expect_once(bypass, "GET", "/update.cgi", fn conn ->
+      conn
+      |> Conn.put_resp_header(
+        "www-authenticate",
+        ~s(Digest qop="auth", realm="IPNC", nonce="abc")
+      )
+      |> Conn.resp(401, "")
+    end)
+
     Bypass.expect_once(bypass, "POST", "/update.cgi", fn conn ->
-      assert {:ok, "firmware content", conn} = Conn.read_body(conn)
+      assert ["Digest " <> digest] = Conn.get_req_header(conn, "authorization")
+      assert digest =~ ~s(uri="/update.cgi")
+      assert digest =~ ~s(nonce="abc")
+      assert [content_type] = Conn.get_req_header(conn, "content-type")
+      assert content_type =~ "multipart/form-data"
+
+      {:ok, body, conn} = Conn.read_body(conn)
+      assert body =~ ~s(form-data;name="file";filename="firmware")
+      assert body =~ "firmware content"
       Conn.resp(conn, 200, "{}")
     end)
 
-    assert :ok = Milesight.upgrade_firmware(url, path, [])
+    assert :ok = Milesight.upgrade_firmware(url, path, username: "admin", password: "pass")
   end
 
   defp osd_response do
