@@ -26,6 +26,73 @@ defmodule ExNVR.HTTP do
     |> Req.request(into: File.stream!(dest), auth: auth_from_opts(opts))
   end
 
+  @doc """
+  Upload a file as multipart form data under `field`.
+
+  The digest challenge is fetched with an empty request first so the file is only sent once.
+  """
+  @spec upload(binary(), String.t(), Path.t(), Keyword.t()) ::
+          {:ok, Req.Response.t()} | {:error, term()}
+  def upload(url, field, path, opts \\ []) do
+    multipart =
+      Multipart.add_part(
+        Multipart.new(),
+        Multipart.Part.file_field(path, field, [], filename: Path.basename(path))
+      )
+
+    # content length is set explicitly, cameras may not support chunked uploads
+    headers = [
+      {"content-length", to_string(Multipart.content_length(multipart))},
+      {"content-type", Multipart.content_type(multipart, "multipart/form-data")}
+    ]
+
+    with {:ok, auth_headers} <- upload_auth_headers(url, opts) do
+      Req.post(url,
+        headers: auth_headers ++ headers,
+        body: Multipart.body_stream(multipart),
+        receive_timeout: Keyword.get(opts, :timeout, to_timeout(minute: 10)),
+        retry: false
+      )
+    end
+  end
+
+  defp upload_auth_headers(url, opts) do
+    case Req.get(url, retry: false) do
+      {:ok, %Req.Response{status: 401} = response} ->
+        digest_challenge =
+          response
+          |> Req.Response.get_header("www-authenticate")
+          |> Enum.find_value(fn
+            "Digest " <> challenge -> challenge
+            _other -> nil
+          end)
+
+        {:ok, upload_auth_header(digest_challenge, url, opts)}
+
+      {:ok, _response} ->
+        {:ok, []}
+
+      error ->
+        error
+    end
+  end
+
+  defp upload_auth_header(nil, _url, opts) do
+    case auth_from_opts(opts) do
+      {:basic, credentials} -> [{"Authorization", "Basic " <> Base.encode64(credentials)}]
+      _other -> []
+    end
+  end
+
+  defp upload_auth_header(digest_challenge, url, opts) do
+    digest =
+      digest_challenge
+      |> build_digest_auth_opts(:post, URI.parse(url), opts[:username], opts[:password])
+      |> encode_digest()
+
+    [{"Authorization", digest}]
+  end
+
   defp call(method, url, body, opts) do
     opts = Keyword.merge(opts, method: method, url: url)
     do_call(method, body, opts)

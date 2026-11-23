@@ -4,7 +4,16 @@ defmodule ExNVR.Devices.Onvif do
   require Logger
 
   alias __MODULE__.AutoConfig
-  alias ExNVR.Devices.Cameras.{DateTimeSettings, ImageSettings, OSD, RecordingSettings, Timezones}
+
+  alias ExNVR.Devices.Cameras.{
+    DateTimeSettings,
+    Firmware,
+    ImageSettings,
+    OSD,
+    RecordingSettings,
+    Timezones
+  }
+
   alias ExNVR.Devices.Cameras.HttpClient.Milesight
   alias ExNVR.Model.Device
   alias ExOnvif.Devices.{NTP, SystemDateAndTime}
@@ -15,6 +24,8 @@ defmodule ExNVR.Devices.Onvif do
 
   @milesight_vendors ["Milesight Technology Co.,Ltd.", "EVERCAM LTD"]
   @ntp_server "time1.google.com"
+  @firmware_poll_interval to_timeout(second: 15)
+  @firmware_upgrade_timeout to_timeout(minute: 10)
 
   @spec discover(Keyword.t()) :: [ExOnvif.Discovery.Probe.t()]
   def discover(options) do
@@ -70,14 +81,16 @@ defmodule ExNVR.Devices.Onvif do
     do_get_recordings(onvif_device)
   end
 
-  @type step :: :date_time | :streams | :image_settings | :osd | :sd_card
+  @type step :: :date_time | :streams | :image_settings | :osd | :sd_card | :firmware
 
   @doc """
   Get the auto configuration steps supported by the camera.
   """
   @spec auto_config_steps(ExOnvif.Device.t()) :: [step()]
-  def auto_config_steps(%{manufacturer: vendor}) when vendor in @milesight_vendors,
-    do: [:date_time, :streams, :image_settings, :osd, :sd_card]
+  def auto_config_steps(%{manufacturer: vendor}) when vendor in @milesight_vendors do
+    steps = [:date_time, :streams, :image_settings, :osd, :sd_card]
+    if Firmware.available?(), do: [:firmware | steps], else: steps
+  end
 
   def auto_config_steps(_onvif_device), do: [:date_time, :streams]
 
@@ -99,6 +112,61 @@ defmodule ExNVR.Devices.Onvif do
       &configure_date_time(&1, onvif_device, opts[:timezone])
     )
     |> do_auto_configure(onvif_device, opts)
+  end
+
+  @doc """
+  Upgrade the firmware of a Milesight camera and wait for it to come back with the new version.
+
+  `notify` is called with the progress: `:downloading`, `:uploading`, `:rebooting` and
+  finally `:ok` or `{:error, reason}`.
+  """
+  @spec upgrade_firmware(ExOnvif.Device.t(), Firmware.t(), (term() -> any()), Keyword.t()) ::
+          :ok | {:error, term()}
+  def upgrade_firmware(onvif_device, %Firmware{} = firmware, notify, opts \\ []) do
+    camera_opts = [username: onvif_device.username, password: onvif_device.password]
+
+    result =
+      with _notified <- notify.(:downloading),
+           {:ok, path} <- Firmware.download(firmware),
+           _notified <- notify.(:uploading),
+           :ok <- upload_firmware(onvif_device.address, path, camera_opts) do
+        notify.(:rebooting)
+        wait_for_firmware(onvif_device.address, firmware.version, camera_opts, opts)
+      end
+
+    if result != :ok,
+      do: Logger.error("[Onvif] could not upgrade Milesight firmware: #{inspect(result)}")
+
+    notify.(result)
+    result
+  end
+
+  # the camera may drop the connection once it got the file
+  defp upload_firmware(url, path, opts) do
+    case Milesight.upgrade_firmware(url, path, opts) do
+      {:error, %Req.TransportError{reason: reason}} when reason in [:closed, :timeout] -> :ok
+      result -> result
+    end
+  end
+
+  defp wait_for_firmware(url, version, camera_opts, opts) do
+    interval = Keyword.get(opts, :poll_interval, @firmware_poll_interval)
+    timeout = Keyword.get(opts, :timeout, @firmware_upgrade_timeout)
+    deadline = System.monotonic_time(:millisecond) + timeout
+
+    Stream.repeatedly(fn ->
+      Process.sleep(interval)
+      Milesight.firmware_info(url, camera_opts)
+    end)
+    |> Enum.find_value(fn
+      {:ok, %{version: ^version}} ->
+        :ok
+
+      # the camera is down while upgrading
+      _not_yet ->
+        if System.monotonic_time(:millisecond) >= deadline,
+          do: {:error, {:upgrade_timeout, version}}
+    end)
   end
 
   defp do_auto_configure(auto_config, %{manufacturer: "AXIS"} = onvif_device, opts) do
@@ -138,6 +206,7 @@ defmodule ExNVR.Devices.Onvif do
       |> configure_milesight(:sd_card, fn -> prepare_sd_card(onvif_device.address, opts) end)
       |> configure_sd_recording(onvif_device.address, opts)
     end)
+    |> maybe_configure(steps, :firmware, &check_firmware(&1, onvif_device, opts))
   end
 
   defp do_auto_configure(auto_config, %{manufacturer: vendor} = onvif_device, opts) do
@@ -226,6 +295,34 @@ defmodule ExNVR.Devices.Onvif do
   end
 
   defp configure_sd_recording(auto_config, _url, _opts), do: auto_config
+
+  # the upgrade is slow and reboots the camera, only check if one is needed
+  defp check_firmware(auto_config, onvif_device, opts) do
+    with {:ok, info} <- Milesight.firmware_info(onvif_device.address, opts),
+         {:ok, firmware} <- Firmware.assigned(firmware_request(onvif_device, info)) do
+      case firmware do
+        %Firmware{version: version} when version != info.version ->
+          %{auto_config | firmware: {:upgrade, info.version, firmware}}
+
+        _up_to_date ->
+          %{auto_config | firmware: :ok}
+      end
+    else
+      {:error, reason} = error ->
+        Logger.error("[Onvif] could not check Milesight firmware: #{inspect(reason)}")
+        %{auto_config | firmware: error}
+    end
+  end
+
+  defp firmware_request(onvif_device, info) do
+    %{
+      vendor: onvif_device.manufacturer,
+      model: info.model,
+      platform: info.platform,
+      version: info.version,
+      serial: onvif_device.serial_number
+    }
+  end
 
   defp put_streams_error(auto_config, reason) do
     %{
