@@ -144,7 +144,7 @@ defmodule ExNVR.Devices.Onvif do
   # the camera may drop the connection once it got the file
   defp upload_firmware(url, path, opts) do
     case Milesight.upgrade_firmware(url, path, opts) do
-      {:error, %HTTPoison.Error{reason: reason}} when reason in [:closed, :timeout] -> :ok
+      {:error, %Req.TransportError{reason: reason}} when reason in [:closed, :timeout] -> :ok
       result -> result
     end
   end

@@ -34,25 +34,37 @@ defmodule ExNVR.HTTP do
   @spec upload(binary(), String.t(), Path.t(), Keyword.t()) ::
           {:ok, Req.Response.t()} | {:error, term()}
   def upload(url, field, path, opts \\ []) do
-    # quoted like browsers do, some cameras reject unquoted values
-    disposition = [name: ~s("#{field}"), filename: ~s("#{Path.basename(path)}")]
-    file = {:file, path, {"form-data", disposition}, []}
-    http_opts = [recv_timeout: Keyword.get(opts, :timeout, to_timeout(minute: 10))]
+    multipart =
+      Multipart.add_part(
+        Multipart.new(),
+        Multipart.Part.file_field(path, field, [], filename: Path.basename(path))
+      )
 
-    with {:ok, headers} <- upload_auth_headers(url, opts),
-         {:ok, response} <- HTTPoison.post(url, {:multipart, [file]}, headers, http_opts) do
-      {:ok, %Req.Response{status: response.status_code, body: response.body}}
+    # content length is set explicitly, cameras may not support chunked uploads
+    headers = [
+      {"content-length", to_string(Multipart.content_length(multipart))},
+      {"content-type", Multipart.content_type(multipart, "multipart/form-data")}
+    ]
+
+    with {:ok, auth_headers} <- upload_auth_headers(url, opts) do
+      Req.post(url,
+        headers: auth_headers ++ headers,
+        body: Multipart.body_stream(multipart),
+        receive_timeout: Keyword.get(opts, :timeout, to_timeout(minute: 10)),
+        retry: false
+      )
     end
   end
 
   defp upload_auth_headers(url, opts) do
-    case HTTPoison.get(url) do
-      {:ok, %HTTPoison.Response{status_code: 401, headers: headers}} ->
+    case Req.get(url, retry: false) do
+      {:ok, %Req.Response{status: 401} = response} ->
         digest_challenge =
-          Enum.find_value(headers, fn {key, value} ->
-            String.downcase(key) == "www-authenticate" and
-              match?("Digest " <> _rest, value) and
-              String.replace_prefix(value, "Digest ", "")
+          response
+          |> Req.Response.get_header("www-authenticate")
+          |> Enum.find_value(fn
+            "Digest " <> challenge -> challenge
+            _other -> nil
           end)
 
         {:ok, upload_auth_header(digest_challenge, url, opts)}

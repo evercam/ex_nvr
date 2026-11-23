@@ -282,7 +282,7 @@ defmodule ExNVR.Devices.OnvifTest do
       expect(Firmware, :download, fn @firmware -> {:ok, "/tmp/fw"} end)
 
       expect(Milesight, :upgrade_firmware, fn "http://camera", "/tmp/fw", _opts ->
-        {:error, %HTTPoison.Error{reason: :closed}}
+        {:error, %Req.TransportError{reason: :closed}}
       end)
 
       Milesight

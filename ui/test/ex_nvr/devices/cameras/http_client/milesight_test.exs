@@ -439,7 +439,9 @@ defmodule ExNVR.Devices.Cameras.HttpClient.MilesightTest do
       assert content_type =~ "multipart/form-data"
 
       {:ok, body, conn} = Conn.read_body(conn)
-      assert body =~ ~s(form-data;name="file";filename="firmware")
+      assert Conn.get_req_header(conn, "content-length") == [to_string(byte_size(body))]
+      assert body =~ ~s(name="file")
+      assert body =~ ~s(filename="firmware")
       assert body =~ "firmware content"
       Conn.resp(conn, 200, "{}")
     end)
