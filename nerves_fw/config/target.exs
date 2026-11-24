@@ -162,6 +162,10 @@ config :mdns_lite,
 
 config :nerves_hub_link,
   connect: true,
+  # Downloads firmware in checksummed parts that survive a dropped connection,
+  # falling back to streaming when /data is short of space. See
+  # ExNVR.Nerves.Updater.
+  updater: ExNVR.Nerves.Updater,
   host: URI.parse(System.fetch_env!("NERVES_HUB_DEVICES_URI")).host,
   remote_iex: true,
   shared_secret: [
