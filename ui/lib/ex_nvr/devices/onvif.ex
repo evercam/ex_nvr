@@ -191,7 +191,13 @@ defmodule ExNVR.Devices.Onvif do
     |> maybe_configure(steps, :streams, &do_configure_profiles(&1, onvif_device))
     |> maybe_configure(steps, :image_settings, fn auto_config ->
       configure_milesight(auto_config, :image_settings, fn ->
-        settings = %ImageSettings{brightness: 50, contrast: 65, saturation: 60}
+        settings = %ImageSettings{
+          brightness: 50,
+          contrast: 65,
+          saturation: 60,
+          ldc: true
+        }
+
         Milesight.set_image_settings(onvif_device.address, settings, opts)
       end)
     end)
