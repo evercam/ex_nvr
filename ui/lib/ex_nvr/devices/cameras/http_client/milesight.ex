@@ -149,18 +149,36 @@ defmodule ExNVR.Devices.Cameras.HttpClient.Milesight do
       %{
         brightness: settings.brightness,
         contrast: settings.contrast,
-        colorSaturation: settings.saturation
+        colorSaturation: settings.saturation,
+        distortCorrect: to_flag(settings.ldc)
       }
       |> Map.reject(fn {_key, value} -> is_nil(value) end)
 
-    (url <> @operator_path <> "?action=set.camera.setting&format=json")
-    |> HTTP.post(body, opts)
-    |> handle_http_response(& &1)
+    with {:ok, body} <- reject_unsupported_ldc(body, url, opts),
+         {:ok, _body} <-
+           (url <> @operator_path <> "?action=set.camera.setting&format=json")
+           |> HTTP.post(body, opts)
+           |> handle_http_response(& &1) do
+      :ok
+    end
+  end
+
+  defp reject_unsupported_ldc(%{distortCorrect: _value} = body, url, opts) do
+    (url <> @operator_path <> "?action=get.cap.image&format=json")
+    |> HTTP.get(opts)
+    |> handle_http_response(&decode_json/1)
     |> case do
-      {:ok, _body} -> :ok
+      {:ok, %{"distortCorrect" => %{"On" => _value}}} -> {:ok, body}
+      {:ok, _caps} -> {:ok, Map.delete(body, :distortCorrect)}
       error -> error
     end
   end
+
+  defp reject_unsupported_ldc(body, _url, _opts), do: {:ok, body}
+
+  defp to_flag(nil), do: nil
+  defp to_flag(true), do: 1
+  defp to_flag(false), do: 0
 
   @impl true
   def set_osd(url, %OSD{} = osd, opts) do

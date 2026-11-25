@@ -210,6 +210,43 @@ defmodule ExNVR.Devices.Cameras.HttpClient.MilesightTest do
       assert {:error, {401, "unauthorized"}} =
                Milesight.set_image_settings(url, %ImageSettings{brightness: 50}, [])
     end
+
+    test "enable lens distortion correction", %{bypass: bypass, url: url} do
+      Bypass.expect_once(bypass, "GET", "/cgi-bin/operator/operator.cgi", fn conn ->
+        assert %{"action" => "get.cap.image"} = URI.decode_query(conn.query_string)
+
+        Conn.resp(
+          conn,
+          200,
+          ~s({"defogMode": {"Off": 0, "On": 1}, "distortCorrect": {"Off": 0, "On": 1}})
+        )
+      end)
+
+      Bypass.expect_once(bypass, "POST", "/cgi-bin/operator/operator.cgi", fn conn ->
+        {:ok, body, conn} = Conn.read_body(conn)
+        assert %{"brightness" => 50, "distortCorrect" => 1} == Jason.decode!(body)
+        Conn.resp(conn, 200, ~s({"setState": "succeed"}))
+      end)
+
+      settings = %ImageSettings{brightness: 50, ldc: true}
+      assert :ok = Milesight.set_image_settings(url, settings, [])
+    end
+
+    test "skip lens distortion correction on unsupported models", %{bypass: bypass, url: url} do
+      Bypass.expect_once(bypass, "GET", "/cgi-bin/operator/operator.cgi", fn conn ->
+        assert %{"action" => "get.cap.image"} = URI.decode_query(conn.query_string)
+        Conn.resp(conn, 200, ~s({"defogMode": {"Off": 0, "On": 1}}))
+      end)
+
+      Bypass.expect_once(bypass, "POST", "/cgi-bin/operator/operator.cgi", fn conn ->
+        {:ok, body, conn} = Conn.read_body(conn)
+        assert %{"brightness" => 50} == Jason.decode!(body)
+        Conn.resp(conn, 200, ~s({"setState": "succeed"}))
+      end)
+
+      settings = %ImageSettings{brightness: 50, ldc: true}
+      assert :ok = Milesight.set_image_settings(url, settings, [])
+    end
   end
 
   test "set_osd/3 updates all streams", %{bypass: bypass, url: url} do

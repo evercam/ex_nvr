@@ -4,9 +4,10 @@ defmodule ExNVR.Devices.Cameras.ImageSettings do
   @type t :: %__MODULE__{
           brightness: 0..100 | nil,
           contrast: 0..100 | nil,
-          saturation: 0..100 | nil
+          saturation: 0..100 | nil,
+          ldc: boolean() | nil
         }
 
   # nil fields are left unchanged on the camera
-  defstruct [:brightness, :contrast, :saturation]
+  defstruct [:brightness, :contrast, :saturation, :ldc]
 end

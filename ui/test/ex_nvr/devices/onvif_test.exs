@@ -3,7 +3,14 @@ defmodule ExNVR.Devices.OnvifTest do
 
   import Mimic
 
-  alias ExNVR.Devices.Cameras.{DateTimeSettings, Firmware, RecordingSettings, Timezones}
+  alias ExNVR.Devices.Cameras.{
+    DateTimeSettings,
+    Firmware,
+    ImageSettings,
+    RecordingSettings,
+    Timezones
+  }
+
   alias ExNVR.Devices.Cameras.HttpClient.Milesight
   alias ExNVR.Devices.Onvif
   alias ExNVR.Devices.Onvif.AutoConfig
@@ -213,6 +220,22 @@ defmodule ExNVR.Devices.OnvifTest do
                  timezone: "Europe/Dublin",
                  steps: [:date_time, :streams, :image_settings, :osd]
                )
+    end
+
+    test "enable lens distortion correction with image settings", %{device: device} do
+      expect(Milesight, :set_image_settings, fn _url, settings, _opts ->
+        assert %ImageSettings{
+                 brightness: 50,
+                 contrast: 65,
+                 saturation: 60,
+                 ldc: true
+               } = settings
+
+        :ok
+      end)
+
+      assert %AutoConfig{image_settings: :ok} =
+               Onvif.auto_configure(device, steps: [:image_settings])
     end
 
     test "skip streams on other vendors" do
