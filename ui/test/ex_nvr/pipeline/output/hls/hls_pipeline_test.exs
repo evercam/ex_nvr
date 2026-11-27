@@ -16,7 +16,7 @@ defmodule ExNVR.Pipeline.Output.HLSPipelineTest do
 
   defp start_pipeline(in_file, out_dir, nb_streams \\ 1) do
     spec = [
-      child(:source, %Membrane.File.Source{location: in_file})
+      child(:source, %Testing.Source{output: in_file |> File.read!() |> chunk()})
       |> child(:parser, %H26xParser{framerate: {30, 1}})
       |> via_in(:video)
       |> child(:sink, %ExNVR.Pipeline.Output.HLS{
@@ -28,7 +28,7 @@ defmodule ExNVR.Pipeline.Output.HLSPipelineTest do
       if nb_streams > 1 do
         spec ++
           [
-            child(:source2, %Membrane.File.Source{location: in_file})
+            child(:source2, %Testing.Source{output: in_file |> File.read!() |> chunk()})
             |> child(:parser2, %H26xParser{framerate: {30, 1}})
             |> via_in(:video)
             |> child({:sink, :sub_stream}, %ExNVR.Pipeline.Output.HLS{
@@ -47,7 +47,7 @@ defmodule ExNVR.Pipeline.Output.HLSPipelineTest do
       pid = start_pipeline(@in_file, out_dir)
 
       assert_pipeline_notified(pid, :sink, {:track_playable, nil})
-      assert_end_of_stream(pid, :parser)
+      assert_end_of_stream(pid, :sink, :video)
 
       check_hls_playlist(out_dir, 2)
 
@@ -60,12 +60,15 @@ defmodule ExNVR.Pipeline.Output.HLSPipelineTest do
       assert_pipeline_notified(pid, :sink, {:track_playable, nil})
       assert_pipeline_notified(pid, {:sink, :sub_stream}, {:track_playable, nil})
 
-      assert_end_of_stream(pid, :parser)
-      assert_end_of_stream(pid, :parser2)
+      assert_end_of_stream(pid, :sink, :video)
+      assert_end_of_stream(pid, {:sink, :sub_stream}, :video)
 
       check_hls_playlist(out_dir, 2)
 
       Testing.Pipeline.terminate(pid)
     end
   end
+
+  defp chunk(<<chunk::binary-size(65_536), rest::binary>>), do: [chunk | chunk(rest)]
+  defp chunk(rest), do: [rest]
 end

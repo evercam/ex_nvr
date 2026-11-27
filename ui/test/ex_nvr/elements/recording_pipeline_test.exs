@@ -40,9 +40,7 @@ defmodule ExNVR.Elements.RecordingPipelineTest do
       :ok
     end
 
-    test "starting from keyframe before", %{device: device, tmp_dir: tmp_dir} do
-      out_path = Path.join(tmp_dir, "output.h264")
-
+    test "starting from keyframe before", %{device: device} do
       ref_path =
         "../../fixtures/h264/reference-recording-keyframe-before.h264" |> Path.expand(__DIR__)
 
@@ -53,7 +51,7 @@ defmodule ExNVR.Elements.RecordingPipelineTest do
         strategy: :keyframe_before
       }
 
-      perform_test(:h264, out_path, ref_path, source_params)
+      perform_test(:h264, ref_path, source_params)
     end
   end
 
@@ -80,8 +78,7 @@ defmodule ExNVR.Elements.RecordingPipelineTest do
       :ok
     end
 
-    test "starting from keyframe before", %{device: device, tmp_dir: tmp_dir} do
-      out_path = Path.join(tmp_dir, "output.h265")
+    test "starting from keyframe before", %{device: device} do
       ref_path = "../../fixtures/h265/ref-recording-keyframe-before.h265" |> Path.expand(__DIR__)
 
       source_params = %{
@@ -91,7 +88,7 @@ defmodule ExNVR.Elements.RecordingPipelineTest do
         strategy: :keyframe_before
       }
 
-      perform_test(:h265, out_path, ref_path, source_params)
+      perform_test(:h265, ref_path, source_params)
     end
   end
 
@@ -110,7 +107,7 @@ defmodule ExNVR.Elements.RecordingPipelineTest do
     end
   end
 
-  defp perform_test(encoding, out_path, ref_path, source_params) do
+  defp perform_test(encoding, ref_path, source_params) do
     pid =
       Pipeline.start_link_supervised!(spec: [child(:source, struct(Recording, source_params))])
 
@@ -124,14 +121,22 @@ defmodule ExNVR.Elements.RecordingPipelineTest do
       spec: [
         get_child(:source)
         |> via_out(Pad.ref(:video, track_id))
-        |> child(:sink, %Membrane.File.Sink{location: out_path})
+        |> child(:sink, Membrane.Testing.Sink)
       ]
     )
 
     assert_end_of_stream(pid, :sink, :input, 5_000)
     Pipeline.terminate(pid)
 
-    assert File.exists?(out_path)
-    assert File.read!(out_path) == File.read!(ref_path)
+    assert collect_payloads(pid) == File.read!(ref_path)
+  end
+
+  defp collect_payloads(pid, acc \\ []) do
+    receive do
+      {Pipeline, ^pid, {:handle_child_notification, {{:buffer, buffer}, :sink}}} ->
+        collect_payloads(pid, [acc, buffer.payload])
+    after
+      0 -> IO.iodata_to_binary(acc)
+    end
   end
 end

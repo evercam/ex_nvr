@@ -50,7 +50,6 @@ defmodule ExNVR.MixProject do
       {:httpoison, "~> 3.0"},
       {:membrane_h264_format, "~> 0.7"},
       {:membrane_h265_format, "~> 0.2"},
-      {:membrane_file_plugin, "~> 0.17.0", only: :test},
       {:membrane_realtimer_plugin, "~> 0.11.0"},
       {:ex_webrtc, "~> 0.18.0"},
       {:ex_m3u8, "~> 0.16.0"},

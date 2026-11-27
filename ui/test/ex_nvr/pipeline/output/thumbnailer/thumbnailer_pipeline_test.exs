@@ -24,7 +24,7 @@ defmodule ExNVR.Pipeline.Output.ThumbnailerPipelineTest do
 
   defp perform_test(file, dest, encoding) do
     spec = [
-      child(:source, %Membrane.File.Source{location: file})
+      child(:source, %Membrane.Testing.Source{output: file |> File.read!() |> chunk()})
       |> child(:parser, get_parser(encoding))
       |> child(:thumbnailer, %ExNVR.Pipeline.Output.Thumbnailer{
         interval: 2,
@@ -42,4 +42,7 @@ defmodule ExNVR.Pipeline.Output.ThumbnailerPipelineTest do
 
   defp get_parser(:H264), do: %H26xParser{codec: :h264, framerate: {30, 1}}
   defp get_parser(:H265), do: %H26xParser{codec: :h265, framerate: {30, 1}}
+
+  defp chunk(<<chunk::binary-size(65_536), rest::binary>>), do: [chunk | chunk(rest)]
+  defp chunk(rest), do: [rest]
 end
